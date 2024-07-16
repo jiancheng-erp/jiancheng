@@ -1,5 +1,8 @@
 <template>
-    <el-dialog title="生产数量表格" v-model="createVis" width="90%" :before-close="handleGenerateClose">
+    <el-dialog title="生产数量表" v-model="createVis" width="90%" :before-close="handleGenerateClose">
+        <h2>
+            配码编号：100
+        </h2>
         <el-table :data="tableData.uniqueData" show-summary border>
             <el-table-column prop="rowId" label="序号" />
             <el-table-column prop="name" label="姓名" />
