@@ -95,13 +95,20 @@
         <el-table :data="bomTestData" border style="height: 400px">
           <el-table-column prop="partName" label="部件名称" />
           <el-table-column prop="color" label="颜色" />
+          <el-table-column prop="materialType" label="材料类型" />
           <el-table-column prop="materialName" label="材料名称" />
-          <el-table-column prop="unit" label="单位" />
+          <el-table-column prop="materialSpecification" label="材料规格" />
+          <el-table-column prop="unit" label="单位" width="75" />
           <el-table-column prop="unitUsage" label="单位用量" />
           <el-table-column prop="approvedUsage" label="核定用量" />
           <el-table-column label="采购数量">
             <template #default="scope">
-              <el-input-number v-model="scope.row.purchaseAmount" :min="0" size="small" />
+              <el-input-number
+                v-model="scope.row.purchaseAmount"
+                :min="0"
+                size="small"
+                :disabled="sizeDisabled(scope.row, 0)"
+              />
             </template>
           </el-table-column>
           <el-table-column label="工厂名称">
@@ -116,8 +123,19 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column prop="internalModel" label="公司型号" />
-          <el-table-column prop="customerModel" label="客户型号" />
+          <el-table-column prop="department" label="使用工段" />
+          <el-table-column label="尺码信息" width="200">
+            <template #default="scope">
+              {{ scope.row.sizeStatus }}
+              <el-button
+                type="primary"
+                size="default"
+                @click="openSizeDialog(scope.row)"
+                :disabled="sizeDisabled(scope.row, 1)"
+                >尺码信息</el-button
+              >
+            </template>
+          </el-table-column>
         </el-table>
 
         <template #footer>
@@ -145,16 +163,88 @@
           >
             <el-col :span="23">
               <h3>{{ factory.factoryName }}</h3>
-              <el-table :data="factory.data" border style="width: 100%">
-                <el-table-column prop="num" label="编号" />
-                <el-table-column prop="materialName" label="材料名称" />
-                <el-table-column prop="unit" label="单位" />
-                <el-table-column prop="amount" label="数量" />
-                <el-table-column prop="customerId" label="客户ID" />
-                <el-table-column prop="internalModel" label="公司型号" />
-                <el-table-column prop="customerModel" label="客户型号" />
-                <el-table-column prop="comment" label="备注" />
-              </el-table>
+              <div v-if="factoryFieldJudge(factory.factoryField)">
+                <el-table :data="factory.data" border style="width: 100%">
+                  <el-table-column type="index" label="编号" />
+                  <el-table-column prop="materialType" label="材料类型"></el-table-column>
+                  <el-table-column prop="materialName" label="材料名称" />
+                  <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                  <el-table-column prop="unit" label="单位" />
+
+                  <el-table-column prop="amount" label="采购数量" />
+                  <el-table-column label="分码数量（中国/美标内码/美标外显）">
+                    <el-table-column label="35" width="50">
+                      <el-table-column label="7" width="50">
+                        <el-table-column prop="size35" label="7" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="36" width="50">
+                      <el-table-column label="7" width="50">
+                        <el-table-column prop="size36" label="7.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="37" width="50">
+                      <el-table-column label="8" width="50">
+                        <el-table-column prop="size37" label="8" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="38" width="50">
+                      <el-table-column label="8" width="50">
+                        <el-table-column prop="size38" label="8.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="39" width="50">
+                      <el-table-column label="9" width="50">
+                        <el-table-column prop="size39" label="9" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="40" width="50">
+                      <el-table-column label="9" width="50">
+                        <el-table-column prop="size40" label="9.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="41" width="50">
+                      <el-table-column label="10" width="50">
+                        <el-table-column prop="size41" label="10" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="42" width="50">
+                      <el-table-column label="10" width="50">
+                        <el-table-column prop="size42" label="10.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="43" width="50">
+                      <el-table-column label="11" width="50">
+                        <el-table-column prop="size43" label="11" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="44" width="50">
+                      <el-table-column label="12" width="50">
+                        <el-table-column prop="size44" label="12" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="45" width="50">
+                      <el-table-column label="13" width="50">
+                        <el-table-column prop="size45" label="13" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                  </el-table-column>
+                  <el-table-column prop="comment" label="备注" />
+                </el-table>
+              </div>
+              <div v-else>
+                <el-table :data="factory.data" border style="width: 100%">
+                  <el-table-column type="index" label="编号" />
+                  <el-table-column prop="materialType" label="材料类型"></el-table-column>
+                  <el-table-column prop="materialName" label="材料名称" />
+                  <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                  <el-table-column prop="unit" label="单位" />
+                  <el-table-column prop="unitUsage" label="单位用量" />
+                  <el-table-column prop="approvedUsage" label="核定用量" />
+                  <el-table-column prop="amount" label="采购数量" />
+                  <el-table-column prop="comment" label="备注" />
+                </el-table>
+              </div>
             </el-col>
           </el-row>
         </div>
@@ -232,18 +322,89 @@
                 </span>
               </el-col>
             </el-row>
-            <el-row :gutter="20" style="margin-top: 20px;">
+            <el-row :gutter="20" style="margin-top: 20px">
               <el-col :span="24" :offset="0">
-                <el-table :data="item.materialTableData" border stripe>
-                  <el-table-column type="index"></el-table-column>
+                <div v-if="factoryFieldJudge(item.factoryField)">
+                  <el-table :data="item.materialTableData" border style="width: 100%" height="500">
+                  <el-table-column type="index" label="编号" />
+                  <el-table-column prop="materialType" label="材料类型"></el-table-column>
                   <el-table-column prop="materialName" label="材料名称" />
+                  <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                   <el-table-column prop="unit" label="单位" />
-                  <el-table-column prop="amount" label="数量" />
-                  <el-table-column prop="customerId" label="客户ID" />
-                  <el-table-column prop="internalModel" label="公司型号" />
-                  <el-table-column prop="customerModel" label="客户型号" />
+
+                  <el-table-column prop="amount" label="采购数量" />
+                  <el-table-column label="分码数量（中国/美标内码/美标外显）">
+                    <el-table-column label="35" width="50">
+                      <el-table-column label="7" width="50">
+                        <el-table-column prop="size35" label="7" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="36" width="50">
+                      <el-table-column label="7" width="50">
+                        <el-table-column prop="size36" label="7.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="37" width="50">
+                      <el-table-column label="8" width="50">
+                        <el-table-column prop="size37" label="8" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="38" width="50">
+                      <el-table-column label="8" width="50">
+                        <el-table-column prop="size38" label="8.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="39" width="50">
+                      <el-table-column label="9" width="50">
+                        <el-table-column prop="size39" label="9" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="40" width="50">
+                      <el-table-column label="9" width="50">
+                        <el-table-column prop="size40" label="9.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="41" width="50">
+                      <el-table-column label="10" width="50">
+                        <el-table-column prop="size41" label="10" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="42" width="50">
+                      <el-table-column label="10" width="50">
+                        <el-table-column prop="size42" label="10.5" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="43" width="50">
+                      <el-table-column label="11" width="50">
+                        <el-table-column prop="size43" label="11" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="44" width="50">
+                      <el-table-column label="12" width="50">
+                        <el-table-column prop="size44" label="12" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                    <el-table-column label="45" width="50">
+                      <el-table-column label="13" width="50">
+                        <el-table-column prop="size45" label="13" width="50"></el-table-column>
+                      </el-table-column>
+                    </el-table-column>
+                  </el-table-column>
                   <el-table-column prop="comment" label="备注" />
                 </el-table>
+                </div>
+                <div v-else>
+                  <el-table :data="item.materialTableData" border stripe height="500">
+                  <el-table-column type="index"></el-table-column>
+                  <el-table-column prop="materialType" label="材料类型"></el-table-column>
+                  <el-table-column prop="materialName" label="材料名称" />
+                  <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                  <el-table-column prop="unit" label="单位" />
+                  <el-table-column prop="amount" label="数量" />
+                  <el-table-column prop="comment" label="备注" />
+                </el-table>
+                </div>
+
               </el-col>
             </el-row>
           </el-tab-pane>
@@ -261,6 +422,26 @@
       <!-- Main content -->
     </el-main>
   </el-container>
+  <el-dialog title="尺码数量填写" v-model="isSizeDialogVisible" width="60%">
+    <el-table :data="sizeData" border stripe>
+      <el-table-column prop="size" label="尺码"></el-table-column>
+      <el-table-column prop="USinnersize" label="内码美标尺码"></el-table-column>
+      <el-table-column prop="USoutersize" label="外显美标尺码"></el-table-column>
+      <el-table-column prop="usageAmount" label="BOM用量"></el-table-column>
+      <el-table-column label="采购数量">
+        <template #default="scope">
+          <el-input-number v-model="scope.row.purchaseAmount" :min="0" size="small" />
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <template #footer>
+      <span>
+        <el-button @click="">Cancel</el-button>
+        <el-button type="primary" @click="">OK</el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script>
@@ -277,10 +458,13 @@ export default {
       activeTab: '',
       isPurchaseOrderVis: false,
       createVis: false,
+      isSizeDialogVisible: false,
+      sizeData: [],
       tabPlaneData: [
         {
           purchaseOrderId: '20240718155400PR1',
           factoryName: '一一鞋材',
+          factoryField: '鞋面',
           unifiedRemark: '',
           shippingAddress: '',
           leadTime: '',
@@ -289,7 +473,8 @@ export default {
         },
         {
           purchaseOrderId: '20240718155400PR12',
-          factoryName: '深源皮革',
+          factoryName: '深博中底',
+          factoryField: '中底',
           unifiedRemark: '',
           shippingAddress: '',
           leadTime: '',
@@ -329,6 +514,7 @@ export default {
         {
           partName: '鞋面',
           color: '黑色',
+          materialType: '鞋面',
           materialName: '黑色超软镜面PU',
           unit: '米',
           unitUsage: 10.35,
@@ -337,7 +523,118 @@ export default {
           factoryName: '',
           internalModel: '0E202620',
           customerModel: 'VRA-1020',
-          comment: ''
+          comment: '',
+          sizeStatus: '无尺码'
+        },
+        {
+          partName: '中底',
+          color: '白色',
+          materialType: '中底',
+          materialName: '蓝色底',
+          unit: '米',
+          unitUsage: null,
+          approvedUsage: null,
+          purchaseAmount: null,
+          factoryName: '',
+          internalModel: '0E202620',
+          customerModel: 'VRA-1020',
+          comment: '',
+          department: '成型',
+          sizeStatus: '已填写',
+          sizeInfo: [
+            {
+              size: '35',
+              usageAmount: 20,
+              USinnersize: '7',
+              USoutersize: '7',
+              purchaseAmount: 0
+            },
+            {
+              size: '36',
+              usageAmount: 20,
+              USinnersize: '7',
+              USoutersize: '7.5',
+              purchaseAmount: 0
+            },
+            {
+              size: '37',
+              usageAmount: 20,
+              USinnersize: '8',
+              USoutersize: '8',
+              purchaseAmount: 0
+            },
+            {
+              size: '38',
+              usageAmount: 20,
+              USinnersize: '8',
+              USoutersize: '8.5',
+              purchaseAmount: 0
+            },
+            {
+              size: '39',
+              usageAmount: 20,
+              USinnersize: '9',
+              USoutersize: '9',
+              purchaseAmount: 0
+            },
+            {
+              size: '40',
+              usageAmount: 20,
+              USinnersize: '9',
+              USoutersize: '9.5',
+              purchaseAmount: 0
+            },
+            {
+              size: '41',
+              usageAmount: 20,
+              USinnersize: '10',
+              USoutersize: '10',
+              purchaseAmount: 0
+            },
+            {
+              size: '42',
+              usageAmount: 20,
+              USinnersize: '10',
+              USoutersize: '10.5',
+              purchaseAmount: 0
+            },
+            {
+              size: '43',
+              usageAmount: 20,
+              USinnersize: '11',
+              USoutersize: '11',
+              purchaseAmount: 0
+            },
+            {
+              size: '44',
+              usageAmount: 20,
+              USinnersize: '12',
+              USoutersize: '12',
+              purchaseAmount: 0
+            },
+            {
+              size: '45',
+              usageAmount: 20,
+              USinnersize: '13',
+              USoutersize: '13',
+              purchaseAmount: 0
+            }
+          ]
+        },
+        {
+          partName: '鞋面',
+          color: '蓝色',
+          materialType: '鞋面',
+          materialName: '蓝色超软镜面PU',
+          unit: '米',
+          unitUsage: 10.35,
+          approvedUsage: 186,
+          purchaseAmount: 0,
+          factoryName: '',
+          internalModel: '0E202620',
+          customerModel: 'VRA-1020',
+          comment: '',
+          sizeStatus: '无尺码'
         }
       ],
       originalBomTestData: [],
@@ -350,11 +647,14 @@ export default {
       purchaseTestData: [
         {
           factoryName: '一一鞋材',
+          factoryField: '鞋面',
           data: [
             {
               num: 1,
               materialName: '黑色超软镜面PU',
               unit: '米',
+              unitUsage: 10.35,
+              approvedUsage: 186,
               amount: '200',
               customerId: 'K24',
               internalModel: '0E202620',
@@ -384,7 +684,8 @@ export default {
           ]
         },
         {
-          factoryName: '深源皮革',
+          factoryName: '深博中底',
+          factoryField: '中底',
           data: [
             {
               num: 1,
@@ -420,6 +721,7 @@ export default {
         },
         {
           factoryName: '嘉泰皮革',
+          factoryField: '鞋面',
           data: [
             {
               num: 1,
@@ -455,6 +757,7 @@ export default {
         },
         {
           factoryName: '一一皮革',
+          factoryField: '鞋面',
           data: [
             {
               num: 1,
@@ -493,7 +796,30 @@ export default {
       selectedFile: null
     }
   },
+  mounted() {
+    this.activeTab = this.tabPlaneData[0].purchaseOrderId
+  },
   methods: {
+    factoryFieldJudge(field) {
+      if (field.includes('中底') || field.includes('大底') || field.includes('鞋楦')) {
+        return true
+      }
+      return false
+    },
+    openSizeDialog(row) {
+      this.sizeData = row.sizeInfo
+      this.isSizeDialogVisible = true
+    },
+    sizeDisabled(row, column) {
+      if (column === 1) {
+        return (
+          row.materialType !== '大底' && row.materialType !== '中底' && row.materialType !== '楦头'
+        )
+      }
+      return (
+        row.materialType === '大底' || row.materialType === '中底' || row.materialType === '楦头'
+      )
+    },
     handleGenerate(row) {
       this.originalBomTestData = JSON.parse(JSON.stringify(this.bomTestData))
       this.createVis = true

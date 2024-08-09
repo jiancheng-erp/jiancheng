@@ -40,9 +40,6 @@
                         <el-menu-item index="9">
                             <span>退出系统</span>
                         </el-menu-item>
-                        <el-menu-item index="10" @click="handleMenuClick(10)">
-                            <span>测试页面</span>
-                        </el-menu-item>
                     </el-menu>
                 </div>
             </el-aside>
