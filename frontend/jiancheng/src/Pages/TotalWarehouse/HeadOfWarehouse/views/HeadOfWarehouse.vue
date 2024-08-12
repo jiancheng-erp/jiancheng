@@ -14,25 +14,19 @@
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
                     <el-menu default-active="1" class="el-menu-vertical-demo">
                         <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>任务看板</span>
+                            <span>材料统一入库</span>
                         </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>一次采购入库</span>
+                            <span>出/入库历史</span>
                         </el-menu-item>
                         <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>二次采购入库</span>
-                        </el-menu-item>
-                        <el-menu-item index="4" @click="handleMenuClick(4)">
-                            <span>耗材/固定资产入库</span>
-                        </el-menu-item>
-                        <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>材料出库</span>
                         </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>材料管理</span>
+                        <el-menu-item index="4" @click="handleMenuClick(4)">
+                            <span>半成品入库/出库</span>
                         </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>仓库管理</span>
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
+                            <span>成品仓入库/出库</span>
                         </el-menu-item>
                         <el-menu-item index="8">
                             <span>个人信息</span>
@@ -56,18 +50,28 @@ import AllHeader from '@/components/AllHeader.vue'
 import Dashboard from '../components/HeadOfWarehouseDashboard.vue'
 import FirstWarehousing from '../components/FirstWarehousingListView.vue'
 import SecondWarehousing from '../components/SecondPurchaseListView.vue'
+import AllInstock from '../components/AllInstock.vue'
+import InstockOutstockHistory from '../components/InstockOutstockHistory.vue'
+import SemiInstockOutstock from '../components/SemiInstockOutstock.vue'
+import FinishedInstockOutstock from '../components/FinishedInstockOutstock.vue'
+import AllOutStock from '../components/AllOutStock.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 export default {
     components: {
         AllHeader,
         Dashboard,
         FirstWarehousing,
-        SecondWarehousing
+        SecondWarehousing,
+        AllInstock,
+        AllOutStock,
+        InstockOutstockHistory,
+        SemiInstockOutstock,
+        FinishedInstockOutstock
     },
     data() {
         return {
             UserFilled,
-            currentComponent:'Dashboard'
+            currentComponent:'AllInstock'
         }
     },
     methods: {
@@ -75,25 +79,28 @@ export default {
             console.log(index)
             switch(index) {
                 case 1:
-                    this.currentComponent = 'Dashboard'
+                    this.currentComponent = 'AllInstock'
                     break
                 case 2:
-                    this.currentComponent = 'FirstWarehousing'
+                    this.currentComponent = 'InstockOutstockHistory'
                     break
                 case 3:
-                    this.currentComponent = 'SecondWarehousing'
+                    this.currentComponent = 'AllOutStock'
                     break
                 case 4:
-                    this.currentComponent = 'FixedAssets'
+                    this.currentComponent = 'SemiInstockOutstock'
                     break
                 case 5:
-                    this.currentComponent = 'MaterialManagement'
+                    this.currentComponent = 'FinishedInstockOutstock'
                     break
                 case 6:
                     this.currentComponent = 'WarehouseManagement'
                     break
                 case 7:
                     this.currentComponent = 'SupplierManagement'
+                    break
+                case 8:
+                    this.currentComponent = 'AllInstock'
                     break
                 case 10:
                     this.currentComponent = 'TestPage' 
