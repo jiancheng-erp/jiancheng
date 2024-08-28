@@ -244,31 +244,40 @@ class EventProcessor:
     def dbQueryOrderStatus(self, orderId):
         queryResult = (
             db.session.query(OrderStatus)
-            .filter(OrderStatus.orderId == orderId)
+            .filter(OrderStatus.order_id == orderId)
             .first()
         )
         return queryResult.order_currentstatus, queryResult.order_status_value
 
     def validateEvent(self, event):
         ### TODO
-        return event.operation_id < 122
+        return event.operation_id < 122 and event.operation_id >= 0 
 
-    def operationSubjectExists(self, event, operation):
-        ### check  if order/orderShoe id exists in db
+    def operationSubjectExists(self, event, operation, current_status = None):
+        ### check if order/ordershoe id with specified status exists
         if operation.operation_type == 1:
+            query_db = OrderStatus
+            attr_name = "order_id"
+            attr_query_subject = event.event_order_id
+        else:
+            query_db = OrderShoeStatus
+            attr_name = "order_shoe_id"
+            attr_query_subject = event.event.event_order_shoe_id
+        
+        if current_status:
             entity = (
-                db.session.query(OrderStatus)
-                .filter(OrderStatus.orderId == event.event_orderId)
+                db.session.query(query_db)
+                .filter(getattr(query_db, attr_name) == attr_query_subject,
+                        getattr(query_db, "current_status") == current_status)
                 .first()
             )
-            result = entity != None
-        elif operation.operation_type == 2:
+        else:
             entity = (
-                db.session.query(OrderShoeStatus)
-                .filter(OrderShoeStatus.order_shoe_id == event.event_order_shoe_id)
+                db.session.query(query_db)
+                .filter(getattr(query_db, attr_name) == attr_query_subject)
                 .first()
             )
-            result = entity != None
+        result = entity != None
         return result
 
     def processOrderEvent(self, event, operation):
@@ -346,11 +355,40 @@ class EventProcessor:
                     result = self.processOrderShoeEvent(event, operation)
             else:
                 print("OrderID or OrderShoeId doesnt Exist")
-                return False
+                result = False
         else:
             print("Event Not valid, Operation ID out of Bound")
-            return False
+            result = False
         return result
+    
+    def processRejectEvent(self, event, current_status):
+        if self.validateEvent(event):
+            operation = self.dbQueryOperation(event.operation_id)
+            if operation.operation_type == 2:
+                if self.operationSubjectExists(event, operation, current_status = current_status):
+                    result = self.setOrderShoeRejectStatus(event, operation, current_status)
+                else:
+                    result = False
+                    print("OrderShoeStatus with current_status Doesnt exist in DB")
+            else:
+                result = False
+                print("cannot reject order status, use processEvent to set next status")
+        else:
+            result = False
+            print("bad operation id, should be between 121 and 0")
+        return result
+
+    def setOrderShoeRejectStatus(event, operation, current_status):
+        entity = (db.session.query(OrderShoeStatus)
+                  .filter(OrderShoeStatus.current_status == current_status,
+                  OrderShoeStatus.order_shoe_status_id == event.event_order_shoe_id)
+                  .first()
+                  )
+        entity.current_status = operation.operation_modified_status
+        entity.current_status_value = operation.operation_modified_value
+        db.session.commit()
+        return True
+
 
     def dbSetOrderStatus(self, event, operation, next_status=None):
         entity = (
@@ -468,6 +506,4 @@ class EventProcessor:
         else:
             idResult = None
         return idResult
-
-
 ## test
