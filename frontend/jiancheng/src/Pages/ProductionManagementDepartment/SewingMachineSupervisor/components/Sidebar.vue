@@ -7,10 +7,10 @@
             针车主任-姓名
         </div>
         <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-            <el-menu default-active="1" class="el-menu-vertical-demo">
-                <el-menu-item index="1" @click="handleMenuOption('Dashboard')">
+            <el-menu default-active="2" class="el-menu-vertical-demo">
+                <!-- <el-menu-item index="1" @click="handleMenuOption('Dashboard')">
                     <span>任务看板</span>
-                </el-menu-item>
+                </el-menu-item> -->
                 <el-menu-item index="2" @click="handleMenuOption('LaborPriceReport')">
                     <span>工价填报</span>
                 </el-menu-item>

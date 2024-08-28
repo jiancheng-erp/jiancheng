@@ -5,8 +5,8 @@
     <component :is="components[currentDash]" :taskData="taskData">
     </component>
 </template>
-<script setup>
 
+<script setup>
 import AmountProducedList from './AmountProduced/AmountOrderList.vue'
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
@@ -16,10 +16,9 @@ const components = {
 const taskData = ref([])
 onMounted(() => {
     const params = {
-        orderstatus: 9,
         ordershoestatus: 23
     };
-    axios.get("http://localhost:8000/order/getcurrentorders", { params }).then(response => {
+    axios.get("http://localhost:8000/order/getordersinproduction", { params }).then(response => {
         const newOrders = response.data.newOrders
         const progressOrders = response.data.progressOrders
         newOrders.forEach(element => {
@@ -34,13 +33,4 @@ onMounted(() => {
 })
 
 const currentDash = ref('AmountProducedList')
-// const changeToList = () => {
-//     currentDash.value = 'PriceReportList'
-// }
-// const changeToPend = () => {
-//     currentDash.value = 'PriceReportPend'
-// }
-// const changeToProgress = () => {
-//     currentDash.value = 'PriceReportProgress'
-// }
 </script>

@@ -7,108 +7,116 @@
             <el-row :gutter="20" style="text-align: center;">
                 <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">针车工价填报</el-col>
             </el-row>
+            <el-row :gutter="20" style="text-align: center;">
+                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{ props.taskName }}</el-col>
+            </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-descriptions title="订单信息" :column="2">
-                        <el-descriptions-item label="订单编号">{{ props.orderId }}</el-descriptions-item>
+                    <el-descriptions title="订单信息" :column="3" border>
+                        <el-descriptions-item label="订单编号">{{ props.orderRId }}</el-descriptions-item>
                         <el-descriptions-item label="订单创建时间">{{ props.createTime }}</el-descriptions-item>
-                        <el-descriptions-item label="前序流程下发时间">{{ props.prevTime }}</el-descriptions-item>
-                        <el-descriptions-item label="前序处理部门">{{ props.prevDepart }}</el-descriptions-item>
-                        <el-descriptions-item label="前序处理人">{{ props.prevUser }}</el-descriptions-item>
+                        <el-descriptions-item label="客户">{{ props.customerName }}</el-descriptions-item>
                     </el-descriptions></el-col>
             </el-row>
-            <el-table :data="taskData">
-                <el-table-column prop="shoeTypeId" label="鞋型号"></el-table-column>
-                <el-table-column prop="date" label="日期"></el-table-column>
-                <el-table-column prop="reportType" label="工组"></el-table-column>
-                <el-table-column prop="status" label="状态"></el-table-column>
+            <el-table :data="taskData" border>
+                <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
+                <el-table-column prop="date" label="提交日期"></el-table-column>
+                <el-table-column prop="statusName" label="状态"></el-table-column>
                 <el-table-column label="操作">
                     <template #default="scope">
-                        <el-button v-if="scope.row.status === '未生成工价表'" type="primary"
-                            @click="handleGenerate(scope.row)">生成</el-button>
-                        <el-button-group v-else-if="scope.row.status === '已保存工价表'">
-                            <el-button type="primary" class="block-button"
-                                @click="handleGenerate(scope.row)">编辑</el-button>
-                            <el-button type="success" class="block-button"
+                        <el-button-group v-if="scope.row.statusName === '未提交工价单'">
+                            <el-button type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button type="success"
                                 @click="openPreviewDialog(scope.row)">预览</el-button>
-                            <el-button type="warning" class="block-button"
-                                @click="handleConfirm(scope.row)">确认下发</el-button>
+                            <el-button type="warning"
+                                @click="handleSubmit(scope.row)">提交</el-button>
+                        </el-button-group>
+                        <el-button-group v-if="scope.row.statusName === '已提交工价单'">
+                            <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
                         </el-button-group>
                     </template>
                 </el-table-column>
             </el-table>
             <div v-if="createVis">
-                    <PriceReportCreator :tableInput="tableInput[currentId]" :handleSave="handleSave" :handleClose="handleClose"/>
+                <PriceReportCreator :currentRowData="currentRowData" :handleClose="handleClose" />
             </div>
-            <!-- <el-dialog :title="currentTitle" v-model="previewVis" width="90%"
-                @close="handleClose(1)">
-                hello
-            </el-dialog> -->
+            <div v-else-if="previewVis">
+                <PreviewReportPage :currentRowData="currentRowData" :handleClose="handleClose" />
+            </div>
         </el-main>
     </el-container>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import axios from 'axios';
 import PriceReportCreator from '../components/LaborPriceReport/PriceReportCreator.vue'
+import PreviewReportPage from '../components/LaborPriceReport/PreviewReportPage.vue';
 import AllHeader from '@/components/AllHeader.vue';
 const createVis = ref(false)
 const previewVis = ref(false)
-const currentTitle = ref('')
+const currentRowData = ref({})
 const props = defineProps({
-    'orderId': String,
+    'orderId': Number,
+    'orderRId': String,
     'createTime': String,
-    'prevTime': String,
-    'prevDepart': String,
-    'prevUser': String
+    'customerName': String,
+    'taskName': String
 })
-let taskData = []
-for (let i = 0; i < 2; i++) {
-    taskData.push(
-        {
-            shoeTypeId: "G20240601 " + i.toString(),
-            date: "2024-06-01",
-            status: "未生成工价表",
-            reportType: "线上组"
+const taskData = ref([])
+const orderShoeReportMapping = ref({})
+onMounted(async () => {
+    const params = {
+        "orderId": props.orderId,
+        "teams": "针车预备,针车"
+    }
+    const response = await axios.get("http://localhost:8000/production/getallordershoespricereports", { params })
+    response.data.forEach(element => {
+        if (!(element.orderShoeId in orderShoeReportMapping.value)) {
+            if (element.status == 0) element["statusName"] = "未提交工价单"
+            else if (element.status == 1) element["statusName"] = "已提交工价单"
+            else element["statusName"] = "已审核工价单"
+            taskData.value.push(element)
+            orderShoeReportMapping.value[element.orderShoeId] = {}
+            orderShoeReportMapping.value[element.orderShoeId][element["team"]] = element.reportId
         }
-    )
-}
-for (let i = 2; i < 4; i++) {
-    taskData.push(
-        {
-            shoeTypeId: "G20240601 " + i.toString(),
-            date: "2024-05-24",
-            status: "已保存工价表",
-            reportType: "预备组"
+        else {
+            orderShoeReportMapping.value[element.orderShoeId][element["team"]] = element.reportId
         }
-    )
-}
-const tableInput = ref({})
-const currentId = ref('')
-taskData.forEach((data) => {
-    tableInput.value[data.shoeTypeId+data.date] = []
+    });
+    console.log(orderShoeReportMapping.value)
 })
-const handleGenerate = (rowData) => {
+
+// const handleGenerate = async (rowData) => {
+//     currentRowData.value = rowData
+//     const data = {
+//         "orderShoeId": currentRowData.value.orderShoeId,
+//         "line": "cutting"
+//     }
+//     await axios.post("http://localhost:8000/production/createpricereport", data)
+//     window.location.reload()
+// }
+
+const handleEdit = (rowData) => {
     createVis.value = true
-    currentId.value = rowData.shoeTypeId+rowData.date
+    currentRowData.value = orderShoeReportMapping.value[rowData.orderShoeId]
+
 }
 const openPreviewDialog = (rowData) => {
-    currentTitle.value = "鞋型号 " + rowData.shoeTypeId
+    currentRowData.value = orderShoeReportMapping.value[rowData.orderShoeId]
+    currentRowData.value["shoeRId"] = rowData.shoeRId
     previewVis.value = true
 }
-const handleConfirm = (e) => {
-    console.log(e)
-}
-const handleSave = (data) => {
-    tableInput.value[currentId.value] = data
+const handleSubmit = async (rowData) => {
+    console.log(rowData)
+    const arr = Object.values(orderShoeReportMapping.value[rowData.orderShoeId])
+    const response = await axios.post("http://localhost:8000/production/submitpricereport", 
+    { "orderId": props.orderId, "orderShoeId": rowData.orderShoeId, "reportIdArr": arr })
+    console.log(response)
+    window.location.reload()
 }
 const handleClose = (option) => {
     if (option === 0) createVis.value = false
     else if (option === 1) previewVis.value = false
 }
 </script>
-<style scoped>
-.block-button {
-    display: block;
-}
-</style>

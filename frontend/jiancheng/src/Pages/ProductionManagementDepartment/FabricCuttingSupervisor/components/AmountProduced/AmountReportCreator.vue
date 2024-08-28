@@ -14,7 +14,7 @@
                         :max="scope.row.remainAmount" @blur="() => checkValue(scope.row)" />
                 </template>
             </el-table-column>
-            <el-table-column prop="remainAmount" label="剩余数量" />
+            <el-table-column prop="remainAmount" label="预计剩余数量" />
         </el-table>
 
         <template #footer>
@@ -42,8 +42,7 @@ onMounted(async () => {
     priceReport.value = response.data
     // get quantity report detail
     params = { "reportId": props.currentReport.reportId }
-    response = await axios.get("http://localhost:8000/production/fabriccutting/getquantityreportdetail", { params })
-    console.log(response)
+    response = await axios.get("http://localhost:8000/production/getquantityreportdetail", { params })
     response.data.forEach(row => {
         row["remainAmount"] = row["totalAmount"] - row["cuttingAmount"]
         tableData.value.push(row)
@@ -82,7 +81,7 @@ const handleSaveData = () => {
             "reportId": props.currentReport.reportId,
             "data": tableData.value
         }
-        const response = await axios.put("http://localhost:8000/production/fabriccutting/editquantityreportdetail", data)
+        const response = await axios.put("http://localhost:8000/production/editquantityreportdetail", data)
         console.log(response)
         ElMessage({
             type: 'success',

@@ -10,11 +10,10 @@ export default [
         props: route => (
             {
                 orderId: route.query.orderId,
+                orderRId: route.query.orderRId,
                 createTime: route.query.createTime,
-                prevTime: route.query.prevTime,
-                prevDepart: route.query.prevDepart,
-                prevUser: route.query.prevUser,
-                orderType: route.query.orderType
+                taskName: route.query.taskName,
+                customerName: route.query.customerName
             })
     },
     {
@@ -23,8 +22,12 @@ export default [
         component: AmountReportList,
         props: route => (
             {
-                shoeTypeId: route.query.shoeTypeId,
-                groupType: route.query.groupType
+                orderId: route.query.orderId,
+                orderRId: route.query.orderRId,
+                createTime: route.query.createTime,
+                customerName: route.query.customerName,
+                orderShoeId: route.query.orderShoeId,
+                shoeRId: route.query.shoeRId
             })
     },
     {
@@ -34,11 +37,10 @@ export default [
         props: route => (
             {
                 orderId: route.query.orderId,
+                orderRId: route.query.orderRId,
                 createTime: route.query.createTime,
-                prevTime: route.query.prevTime,
-                prevDepart: route.query.prevDepart,
-                prevUser: route.query.prevUser,
-                orderType: route.query.orderType
+                taskName: route.query.taskName,
+                customerName: route.query.customerName
             })
     }
 ]

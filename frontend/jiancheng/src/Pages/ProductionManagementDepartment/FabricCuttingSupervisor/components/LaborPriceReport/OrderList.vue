@@ -17,14 +17,8 @@
 const props = defineProps(['taskData'])
 const handleView = (row) => {
     let url = ""
-    // const orderId = row.orderId.replace(' ','-')
     const queryString = new URLSearchParams(row).toString();
     url = `${window.location.origin}/fabriccutting/pricereport?${queryString}`;
     window.open(url, '_blank');
 }
 </script>
-<style scoped>
-.block-button {
-  display: block;
-}
-</style>

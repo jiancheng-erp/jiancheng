@@ -7,32 +7,28 @@
 </template>
 <script setup>
 import OrderList from './LaborPriceReport/OrderList.vue'
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import axios from 'axios'
 const components = {
     OrderList
 }
-let taskData = []
-for (let i = 0; i < 2; i++) {
-    taskData.push(
-        {
-            orderId: "K24-024 " + i.toString(),
-            createTime: "2024-06-10",
-            prevTime: "2024-06-10 18:00:00",
-            prevDepart: "技术部",
-            prevUser: "XXX"
-        }
-    )
-}
-for (let i = 2; i < 4; i++) {
-    taskData.push(
-        {
-            orderId: "K24-024 " + i.toString(),
-            createTime: "2024-06-10",
-            prevTime: "2024-06-10 18:00:00",
-            prevDepart: "技术部",
-            prevUser: "XXX"
-        }
-    )
-}
+const taskData = ref([])
+onMounted(() => {
+    const params = {
+        ordershoestatus: 37
+    };
+    axios.get("http://localhost:8000/order/getordersinproduction", { params }).then(response => {
+        const newOrders = response.data.newOrders
+        const progressOrders = response.data.progressOrders
+        newOrders.forEach(element => {
+            element["orderStatus"] = "待处理"
+            taskData.value.push(element)
+        });
+        progressOrders.forEach(element => {
+            element["orderStatus"] = "处理中"
+            taskData.value.push(element)
+        });
+    })
+})
 const currentDash = ref('OrderList')
 </script>

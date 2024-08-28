@@ -4,10 +4,9 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="24" :offset="0">
-            <el-table :data="supplierData" border style="height: 500px;">
+            <el-table :data="supplierData" border style="height: 500px;" v-loading="datafinished">
                 <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
                 <el-table-column prop="supplierField" label="供应商供货类型"></el-table-column>
-                <el-table-column prop="addDate" label="添加日期"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
@@ -25,7 +24,7 @@
                 <el-input v-model="addSupplierData.supplierName"></el-input>
             </el-form-item>
             <el-form-item label="供应商供货类型: ">
-                <el-select v-model="addSupplierData.supplierField" placeholder="请选择供货类型" multiple>
+                <el-select v-model="addSupplierData.supplierField" placeholder="请选择供货类型">
                     <el-option v-for="item in FieldData" :key="item.value" :label="item.label" :value="item.value">
                     </el-option>
                     </el-select>
@@ -33,8 +32,8 @@
             </el-form>
         <template #footer>
         <span>
-            <el-button @click="">Cancel</el-button>
-            <el-button type="primary" @click="">OK</el-button>
+            <el-button @click="cancelCreateSupplier">取消</el-button>
+            <el-button type="primary" @click="confirmSubmit">确认</el-button>
         </span>
         </template>
     </el-dialog>
@@ -42,46 +41,62 @@
 </template>
 
 <script>
-
+import axios from 'axios'
+import { ElMessageBox } from 'element-plus';
 export default {
     data() {
         return {
+            datafinished: true,
             isCreateSupplierDialogVisible: false,
             supplierData: [],
             addSupplierData: {
                 supplierName: '',
-                supplierField: []
+                supplierField: ''
             },
             FieldData: [
                 {
-                    value: '面料',
-                    label: '面料'
+                    value: 'N',
+                    label: '普通供货商'
                 },
-                {
-                    value: '里料',
-                    label: '里料'
-                },
-                {
-                    value: '辅料',
-                    label: '辅料'
-                },
-                {
-                    value: '底材',
-                    label: '底材'
-                },
-                {
-                    value: '耗材',
-                    label: '耗材'
-                },
-                {
-                    value: '鞋楦',
-                    label: '鞋楦'
-                },
-                {
-                    value: '固定资产',
-                    label: '固定资产'
-                }
             ]
+        }
+    },
+    mounted() {
+        this.getSupplierData()
+    },
+    methods: {
+        async getSupplierData() {
+            const response = await axios.get('http://localhost:8000/logistics/allsuppliers')
+            console.log(response)
+            this.supplierData = response.data
+            this.datafinished = false
+
+        },
+        async createSupplier() {
+            this.datafinished = true
+            const response = await axios.post('http://localhost:8000/logistics/createsupplier', this.addSupplierData)
+            console.log(response)
+            this.isCreateSupplierDialogVisible = false
+            this.getSupplierData()
+        },
+        cancelCreateSupplier() {
+            this.addSupplierData.supplierName = ''
+            this.addSupplierData.supplierField = ''
+            this.isCreateSupplierDialogVisible = false
+        },
+        confirmSubmit() {
+            ElMessageBox.confirm('确认提交吗?', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.createSupplier()
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: '已取消提交'
+                });
+            });
         }
     }
 }

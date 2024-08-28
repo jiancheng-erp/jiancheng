@@ -1,5 +1,5 @@
 <template>
-    <el-table :data="taskData">
+    <el-table :data="props.taskData">
         <el-table-column prop="orderId" label="订单号"></el-table-column>
         <el-table-column prop="customerName" label="客户"></el-table-column>
         <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
@@ -14,6 +14,7 @@
 </template>
 
 <script setup>
+const props = defineProps(["taskData"])
 const handleView = (row) => {
     let url = ""
     const queryString = new URLSearchParams(row).toString();

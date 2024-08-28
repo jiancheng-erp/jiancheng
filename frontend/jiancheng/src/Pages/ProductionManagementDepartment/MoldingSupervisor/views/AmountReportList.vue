@@ -8,152 +8,97 @@
                 <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">成型数量填报</el-col>
             </el-row>
             <el-row>
-                <el-button link @click="handleGoBack">
-                    <el-icon>
-                        <Back />
-                    </el-icon>
-                    <span>返回</span>
-                </el-button>
-            </el-row>
-            <el-row>
                 <el-button type="primary" @click="handleCreateReport">
-                    <span>新建生产数量表</span>
+                    <span>新建生产数量单</span>
                 </el-button>
             </el-row>
-            <el-dialog title="请选择日期" v-model="createReportVis">
-                <div class="block">
-                    <el-date-picker v-model="dateValue" type="date" :disabled-date="disabledDate"
-                        value-format="YYYY-MM-DD" placeholder="请选择日期" />
-                </div>
-                <el-button type="primary" @click="handleConfirmCreate">
-                    <span>确定</span>
-                </el-button>
+            <el-dialog title="新建生产数量单" v-model="createReportVis">
+                <el-date-picker v-model="dateValue" type="date" :disabled-date="disabledDate" value-format="YYYY-MM-DD"
+                    placeholder="选择日期" />
+                <template #footer>
+                    <span>
+                        <el-button type="primary" @click="handleConfirmCreate">保存</el-button>
+                    </span>
+                </template>
             </el-dialog>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-descriptions>
-                        <el-descriptions-item label="订单编号">{{ currentOrderData.orderId }}</el-descriptions-item>
-                        <el-descriptions-item label="鞋型号">{{ reportList.shoeTypeId }}</el-descriptions-item>
-                        <el-descriptions-item label="订单创建时间">{{ currentOrderData.createTime }}</el-descriptions-item>
+                    <el-descriptions title="订单信息" :column="3" border>
+                        <el-descriptions-item label="订单编号">{{ props.orderRId }}</el-descriptions-item>
+                        <el-descriptions-item label="订单创建时间">{{ props.createTime }}</el-descriptions-item>
+                        <el-descriptions-item label="客户">{{ props.customerName }}</el-descriptions-item>
+                        <el-descriptions-item label="鞋型号">{{ props.shoeRId }}</el-descriptions-item>
                     </el-descriptions></el-col>
             </el-row>
             <hr />
-            <el-table :data="taskData" :default-sort="{ prop: 'date', order: 'ascending' }">
-                <el-table-column prop="date" label="日期" sortable></el-table-column>
+            <el-table :data="taskData" :default-sort="{ prop: 'date', order: 'ascending' }" border>
+                <el-table-column prop="creationDate" label="日期" sortable></el-table-column>
                 <el-table-column prop="status" label="状态"></el-table-column>
                 <el-table-column label="操作">
                     <template #default="scope">
-                        <el-button v-if="scope.row.status === '已填写生产数量表'" type="success"
+                        <el-button v-if="scope.row.status === '已提交生产数量单'" type="success"
                             @click="openPreviewDialog(scope.row)">查看</el-button>
-                        <el-button-group v-else-if="scope.row.status === '未填写生产数量表'">
+                        <el-button-group v-else-if="scope.row.status === '未提交生产数量单'">
                             <el-button type="primary" class="block-button"
-                                @click="handleGenerate(scope.row)">编辑</el-button>
+                                @click="handleEdit(scope.row)">编辑</el-button>
                             <el-button type="success" class="block-button"
                                 @click="openPreviewDialog(scope.row)">查看</el-button>
                             <el-button type="warning" class="block-button"
                                 @click="handleConfirm(scope.row)">提交</el-button>
                             <el-button type="danger" class="block-button"
-                                @click="handleDelete(scope.$index)">删除</el-button>
+                                @click="handleDelete(scope.row, scope.$index)">删除</el-button>
                         </el-button-group>
                     </template>
                 </el-table-column>
             </el-table>
             <div v-if="createVis">
-                <AmountReportCreator :tableInput="tableInput[currentId]" :handleSave="handleSave"
-                    :handleClose="handleClose" :shoesizeNumbers="shoesizeNumbers" />
+                <AmountReportCreator :currentReport="currentReport" :orderShoeId="props.orderShoeId"
+                    :handleClose="handleClose" />
             </div>
-            <!-- <el-dialog :title="currentTitle" v-model="previewVis" width="90%"
-                @close="handleClose(1)">
-                hello
-            </el-dialog> -->
+            <div v-else-if="previewVis">
+                <PreviewQuantityReport :shoeRId="props.shoeRId" :currentReport="currentReport" :handleClose="handleClose"/>
+            </div>
         </el-main>
     </el-container>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import AmountReportCreator from '../components/AmountProduced/AmountReportCreator.vue'
+import PreviewQuantityReport from '../components/AmountProduced/PreviewQuantityReport.vue';
 import AllHeader from '@/components/AllHeader.vue';
-import router from '@/router';
-import Cookies from 'js-cookie';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import axios from 'axios'
 const createVis = ref(false)
 const createReportVis = ref(false)
 const previewVis = ref(false)
-const currentTitle = ref('')
-const shoesizeNumbers = ["S12A","S12B","S6A1","S6A2","S6B1","S6B2","S8A1","S8A2","S8A3","S8B1","S8B2"]
-let shoesizeAmounts = []
-shoesizeNumbers.forEach(number => {
-    shoesizeAmounts.push({title: number, amount: '', remain: 500})    
-});
-const rawData = {
-    totalAmount: 0,
-    shoesizeAmounts: shoesizeAmounts,
-    uniqueData: [
-        {
-            "rowId": 1,
-            "name": "小明",
-            "procedure": "单鞋E",
-            "unitPrice": 0.03,
-            "totalPrice": 0
-        },
-        {
-            "rowId": 2,
-            "name": "小红",
-            "procedure": "单鞋E",
-            "unitPrice": 0.12,
-            "totalPrice": 0
-        },
-        {
-            "rowId": 3,
-            "name": "小明",
-            "procedure": "批-22片",
-            "unitPrice": 0.12,
-            "totalPrice": 0
-        },
-        {
-            "rowId": 4,
-            "name": "小红",
-            "procedure": "批-22片",
-            "unitPrice": 0.45,
-            "totalPrice": 0
-        }
-    ]
-}
-const props = defineProps({
-    'orderId': String,
-    'createTime': String,
-    'prevTime': String,
-    'prevDepart': String,
-    'prevUser': String
-})
+const props = defineProps([
+    "orderId", "orderRId", "createTime", 
+    "customerName", "orderShoeId", "shoeRId"
+])
 const taskData = ref([])
-for (let i = 0; i < 2; i++) {
-    taskData.value.push(
-        {
-            date: "2024-06-1" + i.toString(),
-            status: "未填写生产数量表"
-        }
-    )
-}
-for (let i = 2; i < 4; i++) {
-    taskData.value.push(
-        {
-            date: "2024-06-1" + i.toString(),
-            status: "已填写生产数量表"
-        }
-    )
-}
-
-const tableInput = ref({})
-const currentId = ref('')
+const currentReport = ref({})
 const dateValue = ref('')
-const reportList = JSON.parse(Cookies.get('currentAmountReportList'))
-const currentOrderData = JSON.parse(Cookies.get('currentOrderData'))
 const createdDates = ref(new Set())
-taskData.value.forEach((data) => {
-    tableInput.value[reportList.shoeTypeId + data.date] = JSON.parse(JSON.stringify(rawData))
-    createdDates.value.add(data.date)
+onMounted(async () => {
+    // get all quantity report for this order_shoe_id
+    let params = {
+        "orderShoeId": props.orderShoeId,
+        "team": "成型"
+    }
+    const response1 = await axios.get("http://localhost:8000/production/getallquantityreports", { params })
+    taskData.value = response1.data
+    taskData.value.forEach(row => {
+        if (row.status == 0) {
+            row.status = "未提交生产数量单"
+        }
+        else if (row.status == 1) {
+            row.status = "已提交生产数量单"
+        }
+        else if (row.status == 2) {
+            row.status = "已审核生产数量单"
+        }
+    })
 })
 
 const dateFormatter = (input) => {
@@ -166,19 +111,19 @@ const dateFormatter = (input) => {
 }
 
 watch(taskData, () => {
-    createdDates.value = new Set(taskData.value.map(e => e.date));
+    createdDates.value = new Set(taskData.value.map(e => e.creationDate));
 }, { deep: true })
 
-const handleGenerate = (rowData) => {
+const handleEdit = (rowData) => {
     createVis.value = true
-    currentId.value = reportList.shoeTypeId + rowData.date
+    currentReport.value = rowData
 }
 const disabledDate = (time) => {
-    const startDate = new Date(currentOrderData.createTime)
+    const startDate = new Date(props.createTime)
     const endDate = new Date()
     return time.getTime() < startDate || time.getTime() > endDate.getTime() || createdDates.value.has(dateFormatter(time));
 }
-const handleConfirmCreate = () => {
+const handleConfirmCreate = async () => {
     if (dateValue.value.length === 0) {
         ElMessage({ type: 'warning', message: '未选择一个日期!' })
         return
@@ -187,33 +132,45 @@ const handleConfirmCreate = () => {
         ElMessage({ type: 'warning', message: '已有该日期的报告!' })
         return
     }
-    taskData.value.push({
-        date: dateValue.value,
-        status: "未填写生产数量表"
-    })
+    let body = {
+        "orderShoeId": props.orderShoeId,
+        "creationDate": dateValue.value,
+        "team": "成型"
+    }
+    await axios.post("http://localhost:8000/production/createquantityreport", body)
     ElMessage({ type: 'success', message: '添加成功!' })
-    tableInput.value[reportList.shoeTypeId + dateValue.value] = JSON.parse(JSON.stringify(rawData))
+    taskData.value.push({
+        reportId: response.data.reportId,
+        date: dateValue.value,
+        status: "未提交生产数量表"
+    })
+    body = {
+        reportId: response.data.reportId,
+        orderShoeId: props.orderShoeId
+    }
+    await axios.post("http://localhost:8000/production/createquantityreportdetail", body)
+    window.location.reload()
 }
 const handleCreateReport = () => {
     createReportVis.value = true
 }
 
 const openPreviewDialog = (rowData) => {
-    currentTitle.value = "鞋型号 " + rowData.shoeTypeId
+    currentReport.value = rowData
     previewVis.value = true
 }
 const handleConfirm = (e) => {
     console.log(e)
 }
-const handleSave = (data) => {
-    tableInput.value[currentId.value] = data
-}
-const handleDelete = (index) => {
+
+const handleDelete = (row, index) => {
     ElMessageBox.confirm('确定删除此行吗？', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-    }).then(() => {
+    }).then(async () => {
+        const params = {"reportId": row.reportId}
+        await axios.delete("http://localhost:8000/production/deletequantityreport", {params})
         taskData.value.splice(index, 1)
         ElMessage({
             type: 'success',
@@ -226,16 +183,8 @@ const handleDelete = (index) => {
         });
     });
 }
-const handleGoBack = () => {
-    router.push({ name: 'molding-ordershoelist' })
-}
 const handleClose = (option) => {
     if (option === 0) createVis.value = false
     else if (option === 1) previewVis.value = false
 }
 </script>
-<style scoped>
-.block-button {
-    display: block;
-}
-</style>

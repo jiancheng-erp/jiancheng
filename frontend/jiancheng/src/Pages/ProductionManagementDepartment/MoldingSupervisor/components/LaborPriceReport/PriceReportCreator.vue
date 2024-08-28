@@ -1,17 +1,18 @@
 <template>
     <el-dialog title="工价表格" v-model="createVis" width="90%" :before-close="handleGenerateClose">
+        <h1>成型工价单</h1>
         <el-table :data="tableData" border>
             <el-table-column prop="rowId" label="序号" />
             <el-table-column prop="procedure" label="工序">
                 <template #default="scope">
                     <el-select v-model="scope.row.procedure" filterable placeholder="请选择" style="width: 240px">
-                        <el-option v-for="item in options" :value="item.value" />
+                        <el-option v-for="(value, key) in procedureInfo" :value="key" />
                     </el-select>
                 </template>
             </el-table-column>
-            <el-table-column prop="unitPrice" label="单位价格">
+            <el-table-column prop="price" label="单位价格">
                 <template #default="scope">
-                    <p>{{ priceOptions[scope.row.procedure] }}</p>
+                    <p>{{ procedureInfo[scope.row.procedure] ? procedureInfo[scope.row.procedure]["price"] : '' }}</p>
                 </template>
             </el-table-column>
             <el-table-column prop="note" label="备注">
@@ -21,11 +22,11 @@
             </el-table-column>
             <el-table-column label="操作">
                 <template #default="scope">
-                    <el-button type="danger" @click="deleteRow(scope.$index)">删除</el-button>
+                    <el-button type="danger" @click="deleteRow(tableData, scope.$index)">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>
-        <el-button type="primary" size="default" @click="addRow">添加新一行</el-button>
+        <el-button type="primary" size="default" @click="addRow(tableData)">添加新一行</el-button>
         <template #footer>
             <span>
                 <el-button @click="handleGenerateClose">取消</el-button>
@@ -38,56 +39,53 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-const props = defineProps(['tableInput', 'handleSave', 'handleClose'])
-
-const tableData = ref(JSON.parse(JSON.stringify(props.tableInput)))
-const rowId = ref(tableData.value.length + 1)
+import axios from 'axios';
+const props = defineProps(['currentRowData', 'handleClose'])
+const tableData = ref([])
 const createVis = ref(true)
-const options = [
-    {
-        value: '单鞋E',
-        label: 'Option1',
-    },
-    {
-        value: '批-22片',
-        label: 'Option2',
+const procedureInfo = ref({})
+onMounted(async () => {
+    let response = null
+    try {
+        response = await axios.get("http://localhost:8000/production/getallprocedures", {
+            params: {
+                teams: ['成型'].toString()
+            }
+        })
+        response.data.forEach(row => {
+            procedureInfo.value[row.procedureName] = { "price": row.price, "id": row.procedureId }
+        });
+    } catch (error) {
+        console.error('There was an error!', error);
     }
-]
-const priceOptions = {
-    "单鞋E": 0.03,
-    "批-22片": 0.45
-}
-
-const addRow = () => {
-    tableData.value.push(
+    try {
+        response = await axios.get("http://localhost:8000/production/getpricereportdetail", {
+            params: {
+                reportId: props.currentRowData.reportId,
+            }
+        })
+        tableData.value = response.data
+    } catch (error) {
+        console.error('There was an error!', error);
+    }
+})
+const addRow = (arrRef) => {
+    const newRowId = arrRef.length + 1;
+    arrRef.push(
         {
-            "rowId": rowId.value,
+            "rowId": newRowId,
             "procedure": "",
-            "unitPrice": "",
+            "price": "",
             "note": ""
         }
     )
-    rowId.value++
 }
 
-const deleteRow = (index) => {
-    ElMessageBox.confirm('确定删除此行吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-    }).then(() => {
-        tableData.value.splice(index, 1);
-        ElMessage({
-            type: 'success',
-            message: '删除成功!'
-        });
-    }).catch(() => {
-        ElMessage({
-            type: 'info',
-            message: '已取消删除'
-        });
-    });
-    rowId.value--
+const deleteRow = (tableData, index) => {
+    tableData.splice(index, 1)
+    tableData.forEach((row, index) => {
+        row.rowId = index + 1
+    })
 }
 
 const handleSaveData = () => {
@@ -95,7 +93,14 @@ const handleSaveData = () => {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-    }).then(() => {
+    }).then(async () => {
+        // insert price to table data
+        tableData.value.forEach(row => {
+            row["price"] = procedureInfo.value[row.procedure]["price"]
+            row["procedureId"] = procedureInfo.value[row.procedure]["id"]
+        })
+        await axios.post("http://localhost:8000/production/storepricereportdetail",
+            { reportId: props.currentRowData.reportId, newData: tableData.value })
         ElMessage({
             type: 'success',
             message: '保存成功!'
@@ -106,7 +111,6 @@ const handleSaveData = () => {
             message: '已取消保存'
         });
     });
-    props.handleSave(tableData.value)
 }
 const handleGenerateClose = () => {
     ElMessageBox.confirm('确定退出编辑表格吗？', '提示', {
@@ -116,6 +120,6 @@ const handleGenerateClose = () => {
     }).then(() => {
         createVis.value = false
         props.handleClose(0)
-    }).catch(() => {})
+    }).catch(() => { })
 }
 </script>

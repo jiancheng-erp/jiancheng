@@ -15,10 +15,9 @@ const components = {
 const taskData = ref([])
 onMounted(() => {
     const params = {
-        orderstatus: 9,
         ordershoestatus: 20
     };
-    axios.get("http://localhost:8000/order/getcurrentorders", { params }).then(response => {
+    axios.get("http://localhost:8000/order/getordersinproduction", { params }).then(response => {
         const newOrders = response.data.newOrders
         const progressOrders = response.data.progressOrders
         newOrders.forEach(element => {
@@ -30,7 +29,6 @@ onMounted(() => {
             taskData.value.push(element)
         });
     })
-    console.log(taskData)
 })
 const currentDash = ref('OrderList')
 </script>

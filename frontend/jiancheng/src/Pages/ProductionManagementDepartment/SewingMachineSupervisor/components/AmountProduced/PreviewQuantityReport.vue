@@ -23,7 +23,6 @@ const columns = ref([])
 const tableData = ref([])
 const currentTitle = ref('')
 onMounted(async () => {
-    console.log(props.currentReport)
     currentTitle.value = "鞋型号_" + props.shoeRId + "_生产数量单_" + props.currentReport.creationDate
     let params = { reportId: props.currentReport.reportId }
     const response = await axios.get("http://localhost:8000/production/getquantityreportdetail", { params })

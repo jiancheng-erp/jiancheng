@@ -34,8 +34,8 @@ const textData = ref([])
 const textData2 = ref([])
 
 onMounted(() => {
-    let params = { orderstatus: 9, ordershoestatus: 20 };
-    axios.get("http://localhost:8000/order/getcurrentorders", { params }).then(response => {
+    let params = { ordershoestatus: 20 };
+    axios.get("http://localhost:8000/order/getordersinproduction", { params }).then(response => {
         const newOrders = response.data.newOrders
         const progressOrders = response.data.progressOrders
         newOrders.forEach(element => {
@@ -46,8 +46,8 @@ onMounted(() => {
         });
         console.log(textData2)
     })
-    params = { orderstatus: 9, ordershoestatus: 23 };
-    axios.get("http://localhost:8000/order/getcurrentorders", { params }).then(response => {
+    params = { ordershoestatus: 23 };
+    axios.get("http://localhost:8000/order/getordersinproduction", { params }).then(response => {
         const newOrders = response.data.newOrders
         const progressOrders = response.data.progressOrders
         newOrders.forEach(element => {

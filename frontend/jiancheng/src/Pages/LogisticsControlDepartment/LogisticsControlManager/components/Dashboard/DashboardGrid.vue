@@ -6,7 +6,8 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="6" :offset="0" v-for="colIndex in 4">
-            <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getPendingItem(colIndex)" @click="openNewWindow(getPendingItem(colIndex))">
+            <el-skeleton animated :loading="datafinished">
+                <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getPendingItem(colIndex)" @click="openNewWindow(getPendingItem(colIndex))">
                 <template #header>
                     <div style="text-align: center;">
                         {{ getPendingItem(colIndex).taskName }}
@@ -14,10 +15,12 @@
                 </template>
                 <div>订单号：{{ getPendingItem(colIndex).orderId }}</div>
                 <div>订单创建时间：{{ getPendingItem(colIndex).createTime }}</div>
-                <div>前序流程下发时间：{{ getPendingItem(colIndex).prevTime }}</div>
+                <!-- <div>前序流程下发时间：{{ getPendingItem(colIndex).prevTime }}</div>
                 <div>前序处理部门：{{ getPendingItem(colIndex).prevDepart }}</div>
-                <div>前序处理人：{{ getPendingItem(colIndex).prevUser }}</div>
+                <div>前序处理人：{{ getPendingItem(colIndex).prevUser }}</div> -->
             </el-card>
+            </el-skeleton>
+
 
         </el-col>
     </el-row>
@@ -34,7 +37,8 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="6" :offset="0" v-for="colIndex in 4">
-            <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getinProgressItem(colIndex)" @click="openNewWindow(getinProgressItem(colIndex))">
+            <el-skeleton animated :loading="datafinished">
+                <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getinProgressItem(colIndex)" @click="openNewWindow(getinProgressItem(colIndex))">
                 <template #header>
                     <div style="text-align: center;">
                         <span>{{ getinProgressItem(colIndex).taskName }}</span>
@@ -42,10 +46,12 @@
                 </template>
                 <div>订单号：{{ getinProgressItem(colIndex).orderId }}</div>
                 <div>订单创建时间：{{ getinProgressItem(colIndex).createTime }}</div>
-                <div>前序流程下发时间：{{ getinProgressItem(colIndex).prevTime }}</div>
+                <!-- <div>前序流程下发时间：{{ getinProgressItem(colIndex).prevTime }}</div>
                 <div>前序处理部门：{{ getinProgressItem(colIndex).prevDepart }}</div>
-                <div>前序处理人：{{ getinProgressItem(colIndex).prevUser }}</div>
+                <div>前序处理人：{{ getinProgressItem(colIndex).prevUser }}</div> -->
             </el-card>
+            </el-skeleton>
+
 
         </el-col>
     </el-row>
@@ -57,7 +63,7 @@
     </el-row></template>
 <script>
 export default {
-    props: ['pendingTaskData', 'inProgressTaskData'],
+    props: ['pendingTaskData', 'inProgressTaskData','datafinished'],
     data() {
         return {
             
@@ -82,7 +88,7 @@ export default {
         },
         openNewWindow(task) {
             let url = ""
-            const orderId = task.orderId.replace(' ','-')
+            const orderId = task.orderId
             switch(task.taskName) {
                 case "一次采购订单生成":
                     url = `${window.location.origin}/logistics/firstpurchase/orderid=${orderId}`;

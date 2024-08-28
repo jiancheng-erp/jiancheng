@@ -30,22 +30,12 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import AmountOrderList from '../components/AmountProduced/AmountOrderList.vue';
 import axios from 'axios';
 import AllHeader from '@/components/AllHeader.vue';
-import router from '@/router';
-import Cookies from 'js-cookie';
 
-
-const dialogVisible = ref(false);
-const orderShoeId = ref('')
-const components = {
-    AmountOrderList
-}
 const taskData = ref([])
-
 const props = defineProps({
-    'orderId': Number,
+    'orderId': String,
     'orderRId': String,
     'createTime': String,
     'customerName': String,
@@ -55,34 +45,15 @@ const props = defineProps({
 onMounted(async () => {
     const params = {
         "orderId": props.orderId,
-        "ordershoestatus": 23
+        "team": "裁断"
     }
-    const response = await axios.get("http://localhost:8000/production/fabriccutting/getallordershoesquantityreports", { params })
+    const response = await axios.get("http://localhost:8000/production/getallordershoesquantityreports", { params })
     for (const key in response.data) {
         let value = response.data[key]
         let obj = { "orderShoeId": key, "shoeRId": value.shoeRId, "status": value.status }
         taskData.value.push(obj)
     }
 })
-
-const handleGenerate = (rowData) => {
-    dialogVisible.value = true
-    orderShoeId.value = rowData["orderShoeId"]
-}
-
-const handleSaveTeam = async () => {
-    const data = {
-        "order_shoe_id": orderShoeId.value,
-        "team": selectedTeam.value
-    }
-    try {
-        await axios.post('http://localhost:8000/fabriccutting/createquantityreport', data)
-        dialogVisible.value = false
-        window.location.reload();
-    } catch (error) {
-        console.log(error)
-    }
-}
 
 const handleClick = (rowData) => {
     let url = ""

@@ -31,7 +31,7 @@ const components = {
     LogOut,
     History
 }
-const currentTab = ref('Dashboard')
+const currentTab = ref('LaborPriceReport')
 const optionFn = (option) => {
     currentTab.value = option
 }

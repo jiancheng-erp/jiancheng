@@ -37,14 +37,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import axios from 'axios';
 const props = defineProps(['currentRowData', 'handleClose'])
 const cuttingTableData = ref([])
 const createVis = ref(true)
 const cuttingInfo = ref({})
-const cuttingReportId = ref('')
 onMounted(async () => {
     let response = null
     try {
@@ -101,7 +100,7 @@ const handleSaveData = () => {
             row["procedureId"] = cuttingInfo.value[row.procedure]["id"]
         })
         await axios.post("http://localhost:8000/production/storepricereportdetail",
-            { reportId: cuttingReportId.value, newData: cuttingTableData.value })
+            { reportId: props.currentRowData.reportId, newData: cuttingTableData.value })
         ElMessage({
             type: 'success',
             message: '保存成功!'

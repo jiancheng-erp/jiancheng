@@ -67,7 +67,7 @@
                 </el-col>
             </el-row>
 
-            <el-dialog title="一次BOM填写 0E20620-VRA-1020" v-model="createVis" width="90%" @close="handleGenerateClose">
+            <el-dialog title="一次BOM填写 0E20620-VRA-1020" v-model="createVis" width="100%" @close="handleGenerateClose">
                 <el-descriptions title="订单信息" :column="2">
                     <el-descriptions-item label="订单编号">{{ orderId }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间">{{ testOrderData.createTime }}</el-descriptions-item>
@@ -111,9 +111,19 @@
                                     <el-input v-model="scope.row.color" size="default" />
                                 </template>
                             </el-table-column>
+                            <el-table-column prop="materialType" label="材料类型">
+                                <template #default="scope">
+                                    <el-input v-model="scope.row.materialType" size="default" />
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="materialName" label="材料名称">
                                 <template #default="scope">
                                     <el-input v-model="scope.row.materialName" size="default" />
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格">
+                                <template #default="scope">
+                                    <el-input v-model="scope.row.materialSpecification" size="default" />
                                 </template>
                             </el-table-column>
                             <el-table-column prop="unit" label="单位">
