@@ -424,7 +424,7 @@ def get_order_shoe_timeline():
 
         # Main query to fetch the latest records
         event = (
-            db.session.query(Event, Operation, Order, OrderStatus, OrderStatusReference)
+            db.session.query(Event, Operation, Order, OrderStatus, OrderStatusReference, OrderShoeStatusReference)
             .join(Operation, Event.operation_id == Operation.operation_id)
             .join(Order, Event.event_order_id == Order.order_id)
             .join(
@@ -432,6 +432,10 @@ def get_order_shoe_timeline():
                 Operation.operation_modified_status == OrderStatusReference.order_status_id,
             )
             .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(
+                OrderShoeStatusReference,
+                Operation.operation_modified_status == OrderShoeStatusReference.status_id,
+            )
             .join(
                 latest_event_subquery,
                 (Event.operation_id == latest_event_subquery.c.operation_id) &
@@ -450,7 +454,9 @@ def get_order_shoe_timeline():
                     {
                         "operationId": e.Operation.operation_id,
                         "operationName": e.Operation.operation_name,
-                        "operationModifiedStatus": e.OrderStatusReference.order_status_name,
+                        "operationModifiedStatus": (e.OrderStatusReference.order_status_name
+                                                    if e.Operation.operation_type == 1
+                                                    else e.OrderShoeStatusReference.status_name),
                         "handleTime": e.Event.handle_time.strftime("%Y-%m-%d %H:%M:%S"),
                     }
                 )
