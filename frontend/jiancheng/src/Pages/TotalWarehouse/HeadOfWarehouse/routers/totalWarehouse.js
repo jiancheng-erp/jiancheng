@@ -1,5 +1,6 @@
 import FirstWarehouseCreate from '../views/FirstWarehousingView.vue'
 import SecondWarehouseCreate from '../views/SecondWarehousingView.vue'
+import AdjustUpload from '@/Pages/TechnologyDepartment/TechnicalManager/views/AdjustUpload.vue'
 export default [
   {
     path: '/headofwarehouse/firstWarehousing/orderid=:orderId',
@@ -21,4 +22,14 @@ export default [
       role: 8
     }
   },
+  {
+    path: '/headofwarehouse/viewprocessheet/orderid=:orderId',
+    name: 'headofwarehouse-viewprocessheet',
+    component: AdjustUpload,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: 8
+    }
+},
 ]

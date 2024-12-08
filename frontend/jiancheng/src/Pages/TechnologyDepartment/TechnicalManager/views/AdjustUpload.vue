@@ -73,7 +73,7 @@
                         <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center">
                             <template #default="scope">
-                                <el-button v-if="scope.row.status === '未上传'" type="primary"
+                                <el-button v-if="scope.row.status === '未上传' && userRole === '5'" type="primary"
                                     @click="openUploadDialog(scope.row)">创建工艺单（生产指令单）</el-button>
                                 <div v-else-if="scope.row.status === '已下发'">
                                     <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
@@ -90,17 +90,19 @@
                                 </div>
 
                                 <div v-else-if="scope.row.status === '已上传'">
-                                    <el-button type="primary"
+                                    <el-button v-if="userRole === '5'" type="primary"
                                         @click="openEditDialog(scope.row)">编辑工艺单（生产指令单）</el-button>
-                                    <el-button type="success"
+                                    <el-button v-if="userRole === '5'" type="success"
                                         @click="openPreviewDialog(scope.row)">预览工艺单（生产指令单）</el-button>
                                 </div>
                             </template></el-table-column>
                     </el-table></el-col>
             </el-row>
             <el-row :gutter="22" style="margin-top: 10px">
-                <el-col :span="6" :offset="20"><el-button type="primary" size="default"
-                        @click="openIssueDialog">下发工艺单（生产指令单）</el-button>
+                <el-col :span="6" :offset="20">
+                    <el-button v-if="userRole === '5'" type="primary" size="default"
+                        @click="openIssueDialog">下发工艺单（生产指令单）
+                    </el-button>
                 </el-col>
             </el-row>
             <el-dialog title="正式工艺单下发页面" v-model="isFinalBOM" width="90%">
@@ -1274,6 +1276,7 @@ export default {
     props: ['orderId'],
     data() {
         return {
+            userRole: localStorage.getItem('role'),
             orderShoeData: {},
             departmentOptions: [],
             activeTab: '',

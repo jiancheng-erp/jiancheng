@@ -18,13 +18,9 @@
             <el-table-column label="文件">
                 <template #default="scope">
                     <el-button-group>
-                        <el-button type="text" size="small" @click="downloadFirstBOM(scope.row)">一次BOM
+                        <el-button type="text" size="small" @click="downloadSecondBOM(scope.row)">生产BOM
                         </el-button>
-                        <el-button type="text" size="small" @click="downloadFirstMaterialSheet(scope.row)">一次材料统计表
-                        </el-button>
-                        <el-button type="text" size="small" @click="downloadSecondBOM(scope.row)">二次BOM
-                        </el-button>
-                        <el-button type="text" size="small" @click="downloadSecondMaterialSheet(scope.row)">二次次材料统计表
+                        <el-button type="text" size="small" @click="OpenCraftSheet(scope.row)">生产工艺单
                         </el-button>
                     </el-button-group>
                 </template>
@@ -62,26 +58,31 @@ export default {
             this.totalPages = response.data.length
             console.log(this.orderShoeTableData)
         },
-        downloadFirstBOM(row) {
-            window.open(
-                `${this.$apiBaseUrl}/firstbom/download?ordershoerid=${row.orderShoeId}&orderid=${row.orderId}`
-            )
-        },
+        // downloadFirstBOM(row) {
+        //     window.open(
+        //         `${this.$apiBaseUrl}/firstbom/download?ordershoerid=${row.orderShoeId}&orderid=${row.orderId}`
+        //     )
+        // },
         downloadSecondBOM(row) {
             window.open(
-                `${this.$apiBaseUrl}/secondbom/download?ordershoerid=${row.orderShoeId}&orderid=${row.orderId}`
+                `${this.$apiBaseUrl}/secondbom/download?ordershoerid=${row.shoeRId}&orderid=${row.orderRId}`
             )
         },
-        downloadFirstMaterialSheet(row) {
-            window.open(
-                `${this.$apiBaseUrl}/firstpurchase/downloadmaterialstatistics?orderrid=${row.orderRId}&ordershoerid=${row.shoeRId}`
-            )
+        OpenCraftSheet(row) {
+            let url = ''
+            url = `${window.location.origin}/headofwarehouse/viewprocessheet/orderid=${row.orderId}`
+            window.open(url, '_blank')
         },
-        downloadSecondMaterialSheet(row) {
-            window.open(
-                `${this.$apiBaseUrl}/secondpurchase/downloadmaterialstatistics?orderrid=${row.orderRId}&ordershoerid=${row.shoeRId}`
-            )
-        }
+        // downloadFirstMaterialSheet(row) {
+        //     window.open(
+        //         `${this.$apiBaseUrl}/firstpurchase/downloadmaterialstatistics?orderrid=${row.orderRId}&ordershoerid=${row.shoeRId}`
+        //     )
+        // },
+        // downloadSecondMaterialSheet(row) {
+        //     window.open(
+        //         `${this.$apiBaseUrl}/secondpurchase/downloadmaterialstatistics?orderrid=${row.orderRId}&ordershoerid=${row.shoeRId}`
+        //     )
+        // }
     }
 }
 </script>
