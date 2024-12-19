@@ -131,22 +131,20 @@ def delete_shoe_type():
         shoe_rid = existing_shoe.shoe_rid
         shoe_color_name = existing_shoe_type
         path_to_img = existing_shoe_type.shoe_image_url
-        img_path = os.path.join(IMAGE_UPLOAD_PATH, path_to_img)
-        path_to_delete = '/'.join(path_to_img.split('/')[:-1])
-        folder_path = os.path.join(IMAGE_UPLOAD_PATH, path_to_delete)
-        print(folder_path)
-        if os.path.exists(img_path):
-            os.remove(img_path)
-        if os.path.exists(folder_path):
-            os.rmdir(folder_path)
-        if not os.path.exists(img_path) and not os.path.exists(folder_path):
-            print("delete dir successfully")
-            db.session.delete(existing_shoe_type)
-            db.session.commit()
-            return jsonify({"success":"entity and local path removed"}), 200
-        else:
-            print("delete dir failed")
-            return jsonify({"error": "removing path failed"}), 400
+        if path_to_img:
+            img_path = os.path.join(IMAGE_UPLOAD_PATH, path_to_img)
+            path_to_delete = '/'.join(path_to_img.split('/')[:-1])
+            folder_path = os.path.join(IMAGE_UPLOAD_PATH, path_to_delete)
+            if os.path.exists(img_path):
+                os.remove(img_path)
+            if os.path.exists(folder_path):
+                os.rmdir(folder_path)
+            if os.path.exists(img_path) or os.path.exists(folder_path):
+                print("delete dir failed")
+                return jsonify({"error": "removing path failed"}), 400
+        db.session.delete(existing_shoe_type)
+        db.session.commit()
+        return jsonify({"success":"entity and local path removed"}), 200
     # if existing_shoe_type:
     #     db.sesison.delete(existing_shoe_type)
     #     return jsonify({"message":"delete shoe type OK"}), 200
