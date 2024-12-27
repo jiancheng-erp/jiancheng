@@ -3,9 +3,9 @@
         <el-tab-pane label="原材料" name="原材料">
             <MaterialOutbound></MaterialOutbound>
         </el-tab-pane>
-        <el-tab-pane label="复合材料" name="复合材料">
+        <!-- <el-tab-pane label="复合材料" name="复合材料">
             <CompositeMaterialOutbound></CompositeMaterialOutbound>
-        </el-tab-pane>
+        </el-tab-pane> -->
     </el-tabs>
     </template>
     <script>

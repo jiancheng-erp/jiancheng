@@ -13,9 +13,6 @@
                 </div>
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
                     <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>任务看板</span>
-                        </el-menu-item>
                         <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>二次（总仓）采购订单创建</span>
                         </el-menu-item>
@@ -24,6 +21,9 @@
                         </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>材料待出库</span>
+                        </el-menu-item>
+                        <el-menu-item index="9" @click="handleMenuClick(9)">
+                            <span>出入库记录</span>
                         </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>库存</span>
@@ -56,7 +56,6 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import Dashboard from '../components/HeadOfWarehouseDashboard.vue'
 import MaterialInbound from '../components/MaterialInbound.vue'
 import InboundOutboundHistory from '../components/InboundOutboundHistory.vue'
 import MaterialOutbound from '../components/MaterialOutbound.vue'
@@ -70,11 +69,11 @@ import OutboundView from '../components/OutboundView.vue'
 import FixedAssetsConsumablesView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/FixedAssetsConsumablesView.vue'
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
 import SecondPurchaseListView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SecondPurchaseListView.vue'
+import InOutboundRecords from '../components/InOutboundRecords.vue'
 
 export default {
     components: {
         AllHeader,
-        Dashboard,
         MaterialInbound,
         MaterialOutbound,
         InboundOutboundHistory,
@@ -84,7 +83,8 @@ export default {
         OutboundView,
         FixedAssetsConsumablesView,
         LogisticsBatchTypeManagement,
-        SecondPurchaseListView
+        SecondPurchaseListView,
+        InOutboundRecords
     },
     data() {
         return {
@@ -105,9 +105,6 @@ export default {
         },
         handleMenuClick(index){
             switch(index) {
-                case 9:
-                    this.currentComponent = 'Dashboard'
-                    break
                 case 10:
                     this.currentComponent = 'SecondPurchaseListView'
                     break
@@ -131,6 +128,9 @@ export default {
                     break
                 case 7:
                     this.currentComponent = 'LogisticsBatchTypeManagement'
+                    break
+                case 9:
+                    this.currentComponent = 'InOutboundRecords'
                     break
             }
         }

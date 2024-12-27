@@ -32,3 +32,15 @@ def create_supplier():
     db.session.add(supplier)
     db.session.commit()
     return jsonify({"message": "success"})
+
+@supplier_page_bp.route("/logistics/addcompositesupplier", methods=["POST"])
+def add_composite_supplier():
+    supplier_name = request.json.get("supplierName")
+    # search whether the supplier exists
+    supplier = Supplier.query.filter_by(supplier_name=supplier_name).first()
+    if supplier:
+        return jsonify({"message": "供应商已存在"}), 400
+    supplier = Supplier(supplier_name=supplier_name, supplier_type="W")
+    db.session.add(supplier)
+    db.session.commit()
+    return jsonify({"message": "success"})

@@ -310,11 +310,11 @@
                         :key="color"
                         :name="color"
                     >
-                        <!-- <el-row>
+                        <el-row>
                             <el-col :span="2" :offset="20">
                                 <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
                             </el-col>
-                        </el-row> -->
+                        </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 面料： </el-col>
                             <el-col :span="4" :offset="0">
@@ -1454,11 +1454,11 @@
                         :key="color"
                         :name="color"
                     >
-                        <!-- <el-row>
+                        <el-row>
                             <el-col :span="2" :offset="20">
-                                <el-button>同步所有材料至所有颜色</el-button>
+                                <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
                             </el-col>
-                        </el-row> -->
+                        </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 面料： </el-col>
                             <el-col :span="4" :offset="0">
@@ -2384,7 +2384,25 @@ export default {
             )
             this.pastMaterialData = response.data
         },
-        syncMaterials(materialTypeNumber) {
+        syncAllMaterials() {
+			ElMessageBox.alert('确认复制所有材料至所有颜色吗', '警告', {
+				confirmButtonText: '确认',
+				showCancelButton: true,
+				cancelButtonText: '取消'
+			}).then(async () => {
+				try {
+                    for (let i = 0 ; i < 7 ; i++) {
+                        this.syncMaterials(i, true)
+                    }
+                    ElMessage.success("复制成功")
+				}
+				catch (error) {
+					console.log(error)
+					ElMessage.error("复制异常")
+				}
+			}).catch(() => {ElMessage.info("取消复制")})
+        },
+        syncMaterials(materialTypeNumber, isSyncAll = false) {
             switch (materialTypeNumber) {
                 case 0:
                     let surfaceMaterialData = this.getMaterialDataByType('surfaceMaterialData')
@@ -2447,7 +2465,9 @@ export default {
                     })
                     break
             }
-            ElMessage.success('复制成功')
+            if (!isSyncAll) {
+                ElMessage.success('复制成功')
+            }
         },
         async addPastMaterialToCurrent() {
             console.log(this.selectShoeTypeRow[0].shoeTypeId)
@@ -2770,9 +2790,15 @@ export default {
             this.currentShoeId = row.inheritId
             await this.getInstructionData(row)
             this.tabcolor = row.typeInfos.map((info) => info.color)
-            if (this.materialWholeData.length === 0) {
-                // create a empty template for it
-                this.tabcolor.forEach((colorName) => {
+            
+            // get color names in materialwholedata
+            let colorSet = new Set()
+            this.materialWholeData.forEach((row) => {
+                colorSet.add(row.color)
+            })
+            // create a empty template for it
+            this.tabcolor.forEach((colorName) => {
+                if (!(colorName in colorSet)) {
                     let obj = {
                         color: colorName,
                         surfaceMaterialData: [],
@@ -2783,8 +2809,8 @@ export default {
                         hotsoleMaterialData: []
                     }
                     this.materialWholeData.push(obj)
-                })
-            }
+                }
+            })
             this.productionInstructionDetail.designer = row.designer
             this.activeTab = this.tabcolor[0]
             this.isEditDialogVisible = true

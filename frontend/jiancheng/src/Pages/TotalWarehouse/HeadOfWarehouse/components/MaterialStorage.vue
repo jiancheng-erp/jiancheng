@@ -21,7 +21,15 @@
             </template>
         </el-table-column>
         <el-table-column prop="materialType" label="材料类型"></el-table-column>
-        <el-table-column prop="materialName" label="材料名称"></el-table-column>
+        <el-table-column prop="materialName" label="材料名称" width="100">
+            <template #default="scope">
+                <el-tooltip effect="dark" :content="scope.row.materialName" placement="bottom">
+                    <span class="truncate-text">
+                        {{ scope.row.materialName }}
+                    </span>
+                </el-tooltip>
+            </template>
+        </el-table-column>
         <el-table-column prop="materialModel" label="材料型号"></el-table-column>
         <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
         <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
@@ -33,13 +41,12 @@
         <el-table-column prop="supplierName" label="材料供应商"></el-table-column>
         <el-table-column prop="orderRId" label="材料订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="材料鞋型号"></el-table-column>
-        <el-table-column prop="status" label="状态"></el-table-column>
-        <el-table-column fixed="right" label="操作">
+        <el-table-column fixed="right" label="操作" width="150">
             <template #default="scope">
                 <el-button-group>
                     <!-- <el-button type="primary" size="small" @click="openInboundDialog">入库</el-button>
                     <el-button type="primary" size="small" @click="openOutboundDialog">出库</el-button> -->
-                    <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small" @click="">查看多鞋码库存</el-button>
+                    <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small" @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
                     <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
                 </el-button-group>
             </template>
@@ -54,30 +61,91 @@
     </el-row>
 
     <el-dialog title="材料入库/出库记录" v-model="isRecordDialogVisible" width="60%">
-        <el-table :data="recordData" border stripe>
-            <el-table-column prop="operation" label="操作类型"></el-table-column>
-            <el-table-column prop="purpose" label="用途"></el-table-column>
-            <el-table-column prop="date" label="操作时间"></el-table-column>
-            <el-table-column prop="amount" label="操作数量"></el-table-column>
-        </el-table>
+        <el-descriptions border size="default" title="材料信息">
+                <el-descriptions-item label="材料名称">
+                    {{ currentRow.materialName }}
+                </el-descriptions-item>
+                <el-descriptions-item label="材料型号">
+                    {{ currentRow.materialModel }}
+                </el-descriptions-item>
+                <el-descriptions-item label="材料规格">
+                    {{ currentRow.materialSpecification }}
+                </el-descriptions-item>
+                <el-descriptions-item label="颜色">
+                    {{ currentRow.colorName }}
+                </el-descriptions-item>
+                <el-descriptions-item label="材料供应商">
+                    {{ currentRow.supplierName }}
+                </el-descriptions-item>
+                <el-descriptions-item label="材料单位">
+                    {{ currentRow.materialUnit }}
+                </el-descriptions-item>
+                <el-descriptions-item label="材料库存">
+                    {{ currentRow.currentAmount }}
+                </el-descriptions-item>
+
+            </el-descriptions>
+        <el-tabs>
+            <el-tab-pane label="入库记录">
+                <el-table v-if="currentRow.materialCategory == 0" :data="materialInboundRecordData" border stripe>
+                    <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
+                    <el-table-column prop="inboundType" label="用途"></el-table-column>
+                    <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column prop="inboundAmount" label="数量"></el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+                <el-table v-if="currentRow.materialCategory == 1" :data="sizeMaterialInboundRecordData" border stripe>
+                    <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
+                    <el-table-column prop="inboundType" label="用途"></el-table-column>
+                    <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column v-for="column in shoeSizeColumns" :key="column.prop" :prop="column.prop"
+                        :label="column.label"></el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+            </el-tab-pane>
+            <el-tab-pane label="出库记录">
+                <el-table v-if="currentRow.materialCategory == 0" :data="materialOutboundRecordData" border stripe>
+                    <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
+                    <el-table-column prop="outboundType" label="用途"></el-table-column>
+                    <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column prop="outboundAmount" label="数量"></el-table-column>
+                    <el-table-column prop="outboundDestination" label="出库至"></el-table-column>
+                    <el-table-column prop="picker" label="领料人"></el-table-column>
+                    <el-table-column prop="outboundAddress" label="出库地址"></el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+                <el-table v-if="currentRow.materialCategory == 1" :data="sizeMaterialOutboundRecordData" border stripe>
+                    <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
+                    <el-table-column prop="outboundType" label="用途"></el-table-column>
+                    <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column v-for="column in shoeSizeColumns" :key="column.prop" :prop="column.prop"
+                        :label="column.label"></el-table-column>
+                    <el-table-column prop="outboundDestination" label="出库至"></el-table-column>
+                    <el-table-column prop="picker" label="领料人"></el-table-column>
+                    <el-table-column prop="outboundAddress" label="出库地址"></el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
+                </el-table>
+            </el-tab-pane>
+        </el-tabs>
     </el-dialog>
-    <el-dialog title="分尺码材料入库/出库记录" v-model="isSizeRecordDialogVisible" width="60%">
-        <el-table :data="sizeRecordData" border stripe>
-            <el-table-column prop="operation" label="操作类型"></el-table-column>
-            <el-table-column prop="purpose" label="用途"></el-table-column>
-            <el-table-column prop="date" label="操作时间"></el-table-column>
-            <el-table-column v-for="column in columns" :key="column.prop" :prop="column.prop"
-                :label="column.label"></el-table-column>
+    <el-dialog title="尺码材料库存" v-model="isViewSizeMaterialStockOpen" width="60%">
+        <el-table :data="filteredSizeMaterialStock" border stripe>
+            <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
+            <el-table-column prop="currentQuantity" label="材料数量"></el-table-column>
         </el-table>
     </el-dialog>
 </template>
 <script>
 import axios from 'axios'
-import { getShoeSizesName } from '@/Pages/utils/getShoeSizesName';
 import MaterialSearchDialog from './MaterialSearchDialog.vue';
 export default {
     components: {
         MaterialSearchDialog
+    },
+    computed: {
+        filteredSizeMaterialStock() {
+            return this.sizeMaterialStockData.filter(item => item.predictQuantity > 0)
+        }
     },
     data() {
         return {
@@ -102,13 +170,20 @@ export default {
             tableData: [],
             columns: [],
             totalRows: 0,
-            getShoeSizesName
+            currentRow: {},
+            isViewSizeMaterialStockOpen: false,
+            sizeMaterialStockData: [],
+            materialInboundRecordData: [],
+            sizeMaterialInboundRecordData: [],
+            materialOutboundRecordData: [],
+            sizeMaterialOutboundRecordData: [],
+            shoeSizeColumns: []
         }
     },
     mounted() {
         this.getAllMaterialTypes()
         this.getAllSuppliers()
-        this.getTableData()
+        this.getMaterialTableData()
     },
     methods: {
         openInboundDialog() {
@@ -116,6 +191,12 @@ export default {
         },
         openOutboundDialog() {
 
+        },
+        async viewSizeMaterialStock(row) {
+            let params = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
+            let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
+            this.sizeMaterialStockData = response.data
+            this.isViewSizeMaterialStockOpen = true
         },
         updateDialogVisible(newVal) {
             this.isMaterialDialogVisible = newVal
@@ -132,7 +213,7 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallsuppliernames`)
             this.materialSupplierOptions = response.data
         },
-        async getTableData(sortColumn, sortOrder) {
+        async getMaterialTableData(sortColumn, sortOrder) {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
@@ -155,30 +236,46 @@ export default {
         },
         handleSizeChange(val) {
             this.pageSize = val
-            this.getTableData()
+            this.getMaterialTableData()
         },
         handlePageChange(val) {
             this.currentPage = val
-            this.getTableData()
+            this.getMaterialTableData()
         },
         async viewRecords(row) {
-            let response = null;
-            let params = null;
+            this.currentRow = row
+            let tempShoeSizeColumns = []
             if (row.materialCategory == 1) {
-                params = { "storageId": row.materialStorageId, "storageName": "sizeMaterial" }
-                response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getmaterialinoutboundrecords`, { params })
-                this.sizeRecordData = response.data
-                this.columns = await this.getShoeSizesName(row.orderId)
-                this.isSizeRecordDialogVisible = true
-            } else {
-                params = { "storageId": row.materialStorageId, "storageName": "material" }
-                response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getmaterialinoutboundrecords`, { params })
+                let params = { "storageId": row.materialStorageId }
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordsforsizematerial`, { params })
+                this.sizeMaterialInboundRecordData = response.data
+
+                let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
+                this.sizeMaterialOutboundRecordData = sizeResponse.data
+
+                let params1 = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
+                let response1 = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params: params1 })
+                response1.data.forEach((element, index) => {
+                    let obj = {
+                        "prop": `amount${index}`,
+                        "label": element.shoeSizeName
+                    }
+                    tempShoeSizeColumns.push(obj)
+                });
+                this.shoeSizeColumns = [...tempShoeSizeColumns]
                 this.isRecordDialogVisible = true
-                this.recordData = response.data
+            } else {
+                let params = { "storageId": row.materialStorageId }
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordsformaterial`, { params })
+                this.materialInboundRecordData = response.data
+
+                let response1 = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsformaterial`, { params })
+                this.materialOutboundRecordData = response1.data
+                this.isRecordDialogVisible = true
             }
         },
         async sortData({ prop, order }) {
-            await this.getTableData(prop, order)
+            await this.getMaterialTableData(prop, order)
         }
     }
 }

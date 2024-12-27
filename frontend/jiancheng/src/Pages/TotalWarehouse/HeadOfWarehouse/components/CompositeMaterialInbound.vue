@@ -2,46 +2,56 @@
     <el-row :gutter="20">
         <el-col :span="6" :offset="0">
             <el-button-group>
-                <el-button type="primary" size="default" @click="openDialog">搜索条件设置</el-button>
+                <el-button type="primary" size="default" @click="openSearchDialog">搜索条件设置</el-button>
             </el-button-group>
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
+            :materialTypeOptions="materialTypeOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
+            @confirm="handleSearch" />
     </el-row>
     <el-row :gutter="20">
-        <el-button v-if="isMultipleSelection" @click="openFinishOutboundDialog">
-            完成入库
-        </el-button>
-        <el-button @click="toggleSelectionMode">
-            {{ isMultipleSelection ? "退出" : "选择材料" }}
-        </el-button>
+        <el-col :span="24">
+            <el-button v-if="isMultipleSelection" @click="openInboundDialog">
+                入库
+            </el-button>
+            <!-- <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
+                完成入库
+            </el-button> -->
+            <el-button @click="toggleSelectionMode">
+                {{ isMultipleSelection ? "退出" : "选择材料" }}
+            </el-button>
+        </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-table :data="materialTableData" border stripe height="600" @sort-change="sortData"
-            @selection-change="handleSelectionChange">
-            <el-table-column v-if="isMultipleSelection" type="selection" width="55" :selectable="isSelectable" />
-            <el-table-column prop="materialName" label="材料名称"></el-table-column>
-            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-            <el-table-column prop="colorName" label="颜色"></el-table-column>
-            <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
-            <el-table-column prop="estimatedInboundAmount" label="材料应入库数量" :formatter="formatDecimal"></el-table-column>
-            <el-table-column prop="actualInboundAmount" label="材料实入库数量" :formatter="formatDecimal"></el-table-column>
-            <el-table-column prop="currentAmount" label="材料库存" :formatter="formatDecimal"></el-table-column>
-            <el-table-column prop="compositeUnitCost" label="加工单价" :formatter="formatDecimal"></el-table-column>
-            <el-table-column prop="compositeTotalPrice" label="加工总价" :formatter="formatDecimal"></el-table-column>
-            <el-table-column prop="supplierName" label="复合供应商"></el-table-column>
-            <el-table-column prop="orderRId" label="材料订单号"></el-table-column>
-            <el-table-column prop="shoeRId" label="材料鞋型号"></el-table-column>
-            <el-table-column prop="status" label="状态"></el-table-column>
-            <el-table-column fixed="right" label="操作" width="80">
-                <template #default="scope">
-                    <el-button-group>
-                        <el-button type="primary" size="small" @click="editMaterial(scope.row)">入库</el-button>
-                    </el-button-group>
-                </template>
-            </el-table-column>
-        </el-table>
+        <el-col :span="24">
+            <el-table :data="materialTableData" border stripe height="600" @sort-change="sortData"
+                @selection-change="handleSelectionChange">
+                <el-table-column v-if="isMultipleSelection" type="selection" width="55" :selectable="isSelectable" />
+                <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                <el-table-column prop="colorName" label="颜色"></el-table-column>
+                <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
+                <el-table-column prop="estimatedInboundAmount" label="材料应入库数量"
+                    :formatter="formatDecimal"></el-table-column>
+                <el-table-column prop="actualInboundAmount" label="材料实入库数量"
+                    :formatter="formatDecimal"></el-table-column>
+                <el-table-column prop="currentAmount" label="材料库存" :formatter="formatDecimal"></el-table-column>
+                <el-table-column prop="compositeUnitCost" label="加工单价" :formatter="formatDecimal"></el-table-column>
+                <el-table-column prop="compositeTotalPrice" label="加工总价" :formatter="formatDecimal"></el-table-column>
+                <el-table-column prop="supplierName" label="复合供应商"></el-table-column>
+                <el-table-column prop="orderRId" label="材料订单号"></el-table-column>
+                <el-table-column prop="shoeRId" label="材料鞋型号"></el-table-column>
+                <el-table-column prop="status" label="状态"></el-table-column>
+                <el-table-column fixed="right" label="操作" width="80">
+                    <template #default="scope">
+                        <el-button-group>
+                            <el-button type="primary" size="small" @click="editMaterial(scope.row)">入库</el-button>
+                        </el-button-group>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="12" :offset="14">
@@ -51,66 +61,98 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="入库对话框" v-model="isInboundDialogVisible" width="30%">
+    <el-dialog title="入库对话框" v-model="isInboundDialogVisible" width="80%">
         <el-form :model="inboundForm" :rules="rules" ref="inboundForm">
             <el-form-item prop="date" label="入库日期">
                 <el-date-picker v-model="inboundForm.date" type="datetime" placeholder="选择日期时间" style="width: 100%"
                     value-format="YYYY-MM-DD HH:mm:ss"></el-date-picker>
             </el-form-item>
-            <el-form-item prop="quantity" label="入库数量">
-                <el-input-number :min="0" :precision="5" :step="0.00001" v-model="inboundForm.quantity"
-                    placeholder="请输入入库数量"></el-input-number>
-            </el-form-item>
             <el-form-item prop="inboundType" label="入库类型">
                 <el-radio-group v-model="inboundForm.inboundType">
                     <el-radio :value="2">复合入库</el-radio>
-                    <el-radio :value="1">生产剩余</el-radio>
                 </el-radio-group>
             </el-form-item>
-            <el-form-item prop="compositeUnitCost" label="复合单价" v-if="inboundForm.inboundType == 2">
-                <el-input-number v-model="inboundForm.compositeUnitCost" :min="0" :precision="2"
-                    :step="2"></el-input-number>
+            <el-form-item prop="groupedSelectedRows" label="入库材料">
+                <div v-for="(group, index) in inboundForm.groupedSelectedRows" :key="index" style="width: 100%;">
+                    <el-card :header="`供应商: ${group.supplierName}`">
+                        <el-table :data="group.items" border stripe width="100%">
+                            <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                            <el-table-column prop="colorName" label="颜色" width="80"></el-table-column>
+                            <el-table-column prop="materialUnit" label="单位" width="80"></el-table-column>
+                            <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                            <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                            <el-table-column label="入库数量" width="150">
+                                <template #default="scope">
+                                    <el-input-number v-model="scope.row.inboundQuantity" :min="0" size="small">
+                                    </el-input-number>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="复合单价" width="150">
+                                <template #default="scope">
+                                    <el-input-number v-model="scope.row.compositeUnitCost" :min="0" :precision="2"
+                                        size="small" :step="0.01"></el-input-number>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="总价" width="100">
+                                <template #default="scope">
+                                    {{ scope.row.inboundQuantity * scope.row.compositeUnitCost }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="备注">
+                                <template #default="scope">
+                                    <el-input v-model="scope.row.remark" placeholder="请输入备注" type="textarea"></el-input>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </el-card>
+                </div>
             </el-form-item>
         </el-form>
         <template #footer>
             <span>
                 <el-button @click="isInboundDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="submitInboundForm">入库</el-button>
+                <el-button type="primary" @click="openReceiptDialog">入库</el-button>
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="多鞋码入库对话框" v-model="isMultiInboundDialogVisible" width="50%">
-        <el-form :model="inboundForm" :rules="rules" ref="inboundForm">
-            <el-form-item prop="date" label="入库日期">
-                <el-date-picker v-model="inboundForm.date" type="datetime" placeholder="选择日期时间" style="width: 100%"
-                    value-format="YYYY-MM-DD HH:mm:ss"></el-date-picker>
-            </el-form-item>
-            <el-form-item prop="inboundType" label="入库类型">
-                <el-radio-group v-model="inboundForm.inboundType">
-                    <el-radio :value="0">采购入库</el-radio>
-                    <el-radio :value="1">生产剩余</el-radio>
-                    <el-radio :value="2">复合入库</el-radio>
-                </el-radio-group>
-            </el-form-item>
-            <el-form-item prop="sizeMaterialInboundTable" label="入库数量">
-                <el-table :data="inboundForm.sizeMaterialInboundTable" border stripe>
-                    <el-table-column prop="shoeSizeName" label="鞋码" width="100"></el-table-column>
-                    <el-table-column prop="predictQuantity" label="预计数量"></el-table-column>
-                    <el-table-column prop="actualQuantity" label="实际数量"></el-table-column>
-                    <el-table-column prop="currentQuantity" label="库存"></el-table-column>
-                    <el-table-column prop="inboundQuantity" label="入库数量">
-                        <template #default="scope">
-                            <el-input-number v-model="scope.row.inboundQuantity" :min="0"></el-input-number>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-form-item>
-        </el-form>
+
+    <el-dialog title="入库预览" v-model="isReceiptDialogVisible" width="80%">
+        <div v-for="(group, index) in inboundForm.groupedSelectedRows" :key="index">
+            <div :id="`inboundRecipt${index}`" style="padding:10px;background-color:#fff;">
+                <el-card>
+                    <h2 style="text-align: center; margin-bottom: 10px">健诚鞋业入库单</h2>
+                    <el-descriptions :column="4" border>
+                        <el-descriptions-item label="供应商">{{ group.supplierName }}</el-descriptions-item>
+                        <el-descriptions-item label="入库时间">{{ inboundForm.date }}</el-descriptions-item>
+                        <el-descriptions-item label="入库方式">复合入库</el-descriptions-item>
+                    </el-descriptions>
+                    <el-table :data="group.items" border>
+                        <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                        <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                        <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                        <el-table-column prop="colorName" label="颜色"></el-table-column>
+                        <el-table-column prop="materialUnit" label="单位"></el-table-column>
+                        <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                        <el-table-column prop="inboundQuantity" label="入库数量">
+                        </el-table-column>
+                        <el-table-column prop="compositeUnitCost" label="复合单价">
+                        </el-table-column>
+                        <el-table-column label="总价" width="100">
+                            <template #default="scope">
+                                {{ scope.row.inboundQuantity * scope.row.compositeUnitCost }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="remark" label="备注">
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </div>
+        </div>
         <template #footer>
-            <span>
-                <el-button @click="isMultiInboundDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="submitSizeInboundForm">入库</el-button>
-            </span>
+            <el-button @click="goBackToInboundDialog">返回</el-button>
+            <el-button type="primary" @click="submitInboundForm">确认入库</el-button>
         </template>
     </el-dialog>
 
@@ -158,12 +200,10 @@ export default {
             pageSize: 10,
             currentPage: 1,
             inboundFormTemplate: {
-                quantity: 0,
-                date: '',
-                inboundType: null,
-                unitPrice: 0,
-                sizeMaterialInboundTable: [],
-                compositeUnitCost: 0,
+                date: null,
+                inboundType: 2,
+                // contains inboundQuantity, remark, compositeUnitCost
+                groupedSelectedRows: [],
             },
             inboundForm: {},
             materialTableData: [],
@@ -171,6 +211,7 @@ export default {
             totalRows: 0,
             isMultipleSelection: false,
             selectedRows: [],
+            selectedRowsCopy: [],
             isFinishInboundDialogOpen: false,
             rules: {
                 date: [
@@ -193,20 +234,8 @@ export default {
                         trigger: "change",
                     },
                 ],
-                sizeMaterialInboundTable: [
-                    {
-                        validator: (rule, value, callback) => {
-                            const validRows = value.filter((row) => row.inboundQuantity > 0);
-                            if (validRows.length == 0) {
-                                callback(new Error("出库数量不能为空"));
-                            } else {
-                                callback();
-                            }
-                        },
-                        trigger: "change",
-                    },
-                ],
             },
+            isReceiptDialogVisible: false,
         }
     },
     mounted() {
@@ -215,15 +244,57 @@ export default {
         this.getMaterialTableData()
     },
     methods: {
-        openDialog() {
+        openReceiptDialog() {
+            this.isInboundDialogVisible = false
+            this.isReceiptDialogVisible = true
+        },
+        goBackToInboundDialog() {
+            this.isReceiptDialogVisible = false
+            this.isInboundDialogVisible = true
+        },
+        getFormattedDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        },
+        openInboundDialog() {
+            if (this.selectedRows.length == 0) {
+                ElMessage.error("未选择材料")
+                return
+            }
+            this.groupSelectedRows()
+            this.isInboundDialogVisible = true
+        },
+        groupSelectedRows() {
+            this.inboundForm = { ...this.inboundFormTemplate }
+            let groupedData = []
+            this.selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
+            for (let item of this.selectedRowsCopy) {
+                let newItem = { ...item, inboundQuantity: 0, remark: '', compositeUnitCost: Number(item.compositeUnitCost) }
+                let group = groupedData.find(r => r.supplierName == item.supplierName)
+                if (group) {
+                    group.items.push(newItem)
+                }
+                else {
+                    groupedData.push({ supplierName: item.supplierName, items: [newItem] })
+                }
+            }
+            this.inboundForm.date = this.getFormattedDateTime()
+            this.inboundForm.groupedSelectedRows = groupedData
+        },
+        openSearchDialog() {
             this.isMaterialDialogVisible = true
         },
         updateDialogVisible(newVal) {
             this.isMaterialDialogVisible = newVal
-
         },
         handleSearch(values) {
-            this.searchForm = {...values}
+            this.searchForm = { ...values }
             this.getMaterialTableData()
         },
         isSelectable(row) {
@@ -260,7 +331,7 @@ export default {
                 "supplier": this.searchForm.materialSupplierSearch,
                 "orderRId": this.searchForm.orderNumberSearch,
                 "shoeRId": this.searchForm.shoeNumberSearch,
-                "purchaseDivideOrderRId":  this.searchForm.purchaseDivideOrderRIdSearch,
+                "purchaseDivideOrderRId": this.searchForm.purchaseDivideOrderRIdSearch,
                 "sortColumn": sortColumn,
                 "sortOrder": sortOrder
             }
@@ -271,15 +342,26 @@ export default {
         async submitInboundForm() {
             this.$refs.inboundForm.validate(async (valid) => {
                 if (valid) {
-                    let data = {
-                        "materialStorageId": this.currentRow.materialStorageId,
-                        "date": this.inboundForm.date,
-                        "amount": this.inboundForm.quantity,
-                        "inboundType": this.inboundForm.inboundType,
-                        "unitPrice": this.inboundForm.unitPrice,
-                        "compositeUnitCost": this.inboundForm.compositeUnitCost
+                    let data = []
+                    for (let row of this.inboundForm.groupedSelectedRows) {
+                        let obj = {
+                            inboundTimestamp: this.inboundForm.date,
+                            inboundType: this.inboundForm.inboundType,
+                            items: []
+                        }
+                        for (let item of row.items) {
+                            obj.items.push({
+                                materialStorageId: item.materialStorageId,
+                                materialCategory: item.materialCategory,
+                                inboundQuantity: item.inboundQuantity,
+                                compositeUnitCost: item.compositeUnitCost,
+                                remark: item.remark
+                            })
+                        }
+                        data.push(obj)
                     }
                     try {
+                        console.log(data)
                         await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundmaterial`, data)
                         ElMessage.success("入库成功")
                     }
@@ -292,32 +374,6 @@ export default {
                 }
                 else {
                     console.log("invalid")
-                }
-            })
-        },
-        async submitSizeInboundForm() {
-            this.$refs.inboundForm.validate(async (valid) => {
-                if (valid) {
-                    try {
-                        let data = {
-                            "sizeMaterialStorageId": this.currentRow.materialStorageId,
-                            "date": this.inboundForm.date,
-                            "type": this.inboundForm.inboundType
-                        }
-                        this.inboundForm.sizeMaterialInboundTable.forEach(row => {
-                            data["size" + row.shoeSize + "Amount"] = row.inboundQuantity
-                        })
-                        // await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundsizematerial`, data)
-                        // ElMessage.success("入库成功")
-                    }
-                    catch (error) {
-                        ElMessage.error("入库失败")
-                    }
-                    this.getMaterialTableData()
-                    this.isMultiInboundDialogVisible = False
-                }
-                else {
-                    console.log("Form validation error")
                 }
             })
         },
@@ -337,19 +393,8 @@ export default {
             this.inboundForm = { ...this.inboundFormTemplate }
             this.inboundForm.unitPrice = row.unitPrice
             this.inboundForm.compositeUnitCost = row.compositeUnitCost
-            if (row.materialCategory == 1) {
-                let params = { "sizeMaterialStorageId": row.materialStorageId, "orderId": row.orderId }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
-                this.inboundForm.sizeMaterialInboundTable = response.data
-                this.inboundForm.sizeMaterialInboundTable.forEach(row => {
-                    row.inboundQuantity = 0
-                })
-                this.isMultiInboundDialogVisible = true
-                this.currentRow = row
-            } else {
-                this.isInboundDialogVisible = true
-                this.currentRow = row
-            }
+            this.isInboundDialogVisible = true
+            this.currentRow = row
             console.log(this.inboundForm)
         },
         async finishInbound() {
