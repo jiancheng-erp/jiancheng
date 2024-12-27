@@ -137,17 +137,10 @@
         <el-tabs v-model="activeTab" tab-position="top" @tab-click="">
             <el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
                 <el-row :gutter="20">
-                    <!-- <el-col :span="10" :offset="0">
-                        <span style="white-space: nowrap">
-                            {{ tab.lineLabel }}：
-                            <el-select v-model="tab.lineValue" placeholder="" @change="" multiple
-                                :disabled="!(role == 6)">
-                                <el-option v-for="item in productionLines[tab.name]" :key="item" :label="item"
-                                    :value="item">
-                                </el-option>
-                            </el-select>
-                        </span>
-                    </el-col> -->
+                    <el-col :span="4" v-for="subTab in tabs">
+                        {{ `${subTab.dateLabel}: ${subTab.dateValue[0] ? subTab.dateValue[0] + '至' + subTab.dateValue[1] : '未设置'}` }}
+                    </el-col>
+
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="10" :offset="0">
@@ -237,13 +230,13 @@
         </el-row>
         <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="24" :offset="0">
-                工艺备注
+                商务部工艺备注
                 <el-input v-model="currentRow.technicalRemark" autosize type="textarea" readonly />
             </el-col>
         </el-row>
         <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="24" :offset="0">
-                材料备注
+                商务部材料备注
                 <el-input v-model="currentRow.materialRemark" autosize type="textarea" readonly />
             </el-col>
         </el-row>
@@ -448,7 +441,7 @@ export default {
                     name: 'preSewing',
                     label: '针车预备排产',
                     lineLabel: '针车预备线号',
-                    dateLabel: '针车预备工期',
+                    dateLabel: '预备工期',
                     lineValue: [],
                     dateValue: [],
                     dateStatusTable: [],

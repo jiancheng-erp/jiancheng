@@ -977,6 +977,7 @@ class InboundRecord(db.Model):
     inbound_type = db.Column(db.SmallInteger, nullable=False)
     material_storage_id = db.Column(db.BigInteger, nullable=True)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
+    remark = db.Column(db.String(40), nullable=True)
 
     def __repr__(self):
         return f"<InboundRecord {self.inbound_rid}>"
