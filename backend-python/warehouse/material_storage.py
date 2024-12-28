@@ -493,22 +493,22 @@ def get_size_material_info_by_id():
                 shoe_size_names.append(obj)
             if locale == None:
                 break
-        for i, shoe_size in enumerate(shoe_size_names):
-            shoe_size_db_name = i + 34
-            obj = {
-                "typeName": shoe_size_names[i]["type"],
-                "shoeSizeName": shoe_size_names[i]["label"],
-                "predictQuantity": getattr(
-                    storage, f"size_{shoe_size_db_name}_estimated_inbound_amount"
-                ),
-                "actualQuantity": getattr(
-                    storage, f"size_{shoe_size_db_name}_actual_inbound_amount"
-                ),
-                "currentQuantity": getattr(
-                    storage, f"size_{shoe_size_db_name}_current_amount"
-                ),
-            }
-            result.append(obj)
+    for i, shoe_size in enumerate(shoe_size_names):
+        shoe_size_db_name = i + 34
+        obj = {
+            "typeName": shoe_size_names[i]["type"],
+            "shoeSizeName": shoe_size_names[i]["label"],
+            "predictQuantity": getattr(
+                storage, f"size_{shoe_size_db_name}_estimated_inbound_amount"
+            ),
+            "actualQuantity": getattr(
+                storage, f"size_{shoe_size_db_name}_actual_inbound_amount"
+            ),
+            "currentQuantity": getattr(
+                storage, f"size_{shoe_size_db_name}_current_amount"
+            ),
+        }
+        result.append(obj)
 
     return result
 

@@ -49,9 +49,9 @@
                 </el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
-                <el-table-column prop="estimatedInboundAmount" label="材料应入库数量"
+                <el-table-column prop="estimatedInboundAmount" label="材料应出库数量"
                     :formatter="formatDecimal"></el-table-column>
-                <el-table-column prop="actualInboundAmount" label="材料实入库数量"
+                <el-table-column prop="actualInboundAmount" label="材料实出库数量"
                     :formatter="formatDecimal"></el-table-column>
                 <el-table-column prop="currentAmount" label="材料库存" :formatter="formatDecimal"></el-table-column>
                 <el-table-column prop="unitPrice" label="材料单价" :formatter="formatDecimal"></el-table-column>
@@ -71,11 +71,11 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="多选材料出库" v-model="isMultiMaterialDialogOpen" width="70%">
+    <el-dialog title="多选材料出库" v-model="isMultiOutboundDialogVisible" width="70%" :close-on-click-modal="false">
         <el-tabs v-model="activeTab">
-            <el-tab-pane v-for="group in outboundForm.groupedSelectedRows" :key="group.orderShoeId"
+            <el-tab-pane v-for="(group, index) in outboundForm.groupedSelectedRows" :key="group.orderShoeId"
                 :label="`订单鞋型 ${group.items[0].orderRId} - ${group.items[0].shoeRId}`" :name="group.orderShoeId">
-                <el-form :model="group" :rules="rules" ref="outboundForm">
+                <el-form :model="group" :rules="rules" :ref="'outboundForm' + index" :key="index">
                     <el-form-item prop="timestamp" label="出库日期" :rules="rules">
                         <el-date-picker v-model="group.timestamp" type="datetime" placeholder="选择日期时间"
                             style="width: 50%" value-format="YYYY-MM-DD HH:mm:ss" :default-value="new Date()">
@@ -137,10 +137,10 @@
                             <el-table-column prop="materialSpecification" label="材料规格" />
                             <el-table-column prop="colorName" label="颜色" />
                             <el-table-column prop="currentAmount" label="库存" />
-                            <el-table-column prop="outboundAmount" label="出库数量">
+                            <el-table-column prop="outboundQuantity" label="出库数量">
                                 <template #default="scope">
                                     <el-input-number v-if="scope.row.materialCategory == 0" size="small"
-                                        v-model="scope.row.outboundAmount" :min="0" :precision="5"
+                                        v-model="scope.row.outboundQuantity" :min="0" :precision="5"
                                         :step="0.00001"></el-input-number>
                                     <el-button v-else type="primary"
                                         @click="openSizeMaterialQuantityDialog(scope.row)">打开</el-button>
@@ -156,9 +156,9 @@
                                     <el-table :data="props.row.craftNameList" border stripe
                                         @selection-change="handleCompositeSelectionChange">
                                         <el-table-column prop="craftName" label="复合工艺" />
-                                        <el-table-column prop="outboundAmount" label="出库数量">
+                                        <el-table-column prop="outboundQuantity" label="出库数量">
                                             <template #default="scope">
-                                                <el-input-number size="small" v-model="scope.row.outboundAmount"
+                                                <el-input-number size="small" v-model="scope.row.outboundQuantity"
                                                     :min="0" :max="Number(props.row.currentAmount)" :precision="5"
                                                     :step="0.00001"
                                                     @change="(newVal, oldVal) => handleCompositeAmountChange(newVal, oldVal, props.row)"></el-input-number>
@@ -180,35 +180,92 @@
         </el-tabs>
         <template #footer>
             <span>
-                <el-button @click="isMultiMaterialDialogOpen = false">取消</el-button>
-                <el-button type="primary" @click="submitOutboundForm">出库</el-button>
+                <el-button @click="isMultiOutboundDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="openReceiptDialog">出库</el-button>
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="多鞋码材料出库数量" v-model="isSizeMaterialStockOpen" width="50%">
+
+    <el-dialog title="出库收据" v-model="isReceiptDialogVisible" width="80%">
+        <el-tabs v-model="activeTab">
+            <el-tab-pane v-for="(group, index) in outboundForm.groupedSelectedRows" :key="group.orderShoeId"
+                :label="`订单鞋型 ${group.items[0].orderRId} - ${group.items[0].shoeRId}`" :name="group.orderShoeId">
+                <div :id="`outboundRecipt${index}`" style="padding:10px;background-color:#fff;">
+                    <el-card>
+                        <h2 style="text-align: center; margin-bottom: 10px">健诚鞋业出库单</h2>
+                        <el-descriptions :column="4" border>
+                            <el-descriptions-item label="订单号">{{ group.items[0].orderRId }}</el-descriptions-item>
+                            <el-descriptions-item label="工厂型号">{{ group.items[0].shoeRId }}</el-descriptions-item>
+                            <el-descriptions-item label="出库时间">{{ group.timestamp }}</el-descriptions-item>
+                            <el-descriptions-item label="出库方式">{{ getOutboundName(group.outboundType)
+                                }}</el-descriptions-item>
+                        </el-descriptions>
+                        <el-table :data="group.items" border>
+                            <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                            <el-table-column prop="colorName" label="颜色"></el-table-column>
+                            <el-table-column prop="materialUnit" label="单位"></el-table-column>
+                            <el-table-column prop="outboundQuantity" label="出库数量">
+                            </el-table-column>
+                            <el-table-column prop="remark" label="备注">
+                            </el-table-column>
+                        </el-table>
+                        <!-- <el-table v-else :data="group.items" border>
+                            <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                            <el-table-column prop="colorName" label="颜色"></el-table-column>
+                            <el-table-column prop="materialUnit" label="单位"></el-table-column>
+                            <el-table-column :label="`分码数量`" header-align="center">
+                                <el-table-column v-for="column in group.shoeSizeColumns" :key="column.prop"
+                                    :prop="column.prop" :label="column.label" width="50">
+                                </el-table-column>
+                            </el-table-column>
+                            <el-table-column prop="remark" label="备注">
+                            </el-table-column>
+                        </el-table> -->
+                        <template #footer>
+                            <el-descriptions :column="4" border>
+                            <el-descriptions-item label="出库至">{{ group.section }}</el-descriptions-item>
+                            <el-descriptions-item label="领料人">{{ group.receiver }}</el-descriptions-item>
+                        </el-descriptions>
+                        </template>
+                    </el-card>
+                </div>
+                <el-button type="primary" @click="downloadPDF('健诚鞋业出库单', `outboundRecipt${index}`)">下载 PDF</el-button>
+            </el-tab-pane>
+        </el-tabs>
+        <template #footer>
+            <el-button @click="goBackToOutboundDialog">返回</el-button>
+            <el-button type="primary" @click="submitOutboundForm">确认出库</el-button>
+        </template>
+    </el-dialog>
+    <el-dialog title="多鞋码材料出库数量" v-model="isOpenSizeMaterialQuantityDialogVisible" width="50%">
         <el-form :rules="rules" ref="">
             <el-form-item>
-                <el-table :data="selectedSizeMaterialData.quantityList" border stripe :rules>
+                <el-table :data="filteredData" border stripe :rules>
                     <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
                     <el-table-column prop="currentQuantity" label="库存"></el-table-column>
                     <el-table-column label="出库数量">
                         <template #default="scope">
-                            <el-input-number v-model.number="scope.row.outboundAmount" type="number" :min="0"
-                                :max="Number(scope.row.currentQuantity)" @input="calculateSum()"></el-input-number>
+                            <el-input-number v-model.number="scope.row.outboundQuantity" type="number" :min="0"
+                                :max="Number(scope.row.currentQuantity)"
+                                @change="updateSizeMaterialTotal"></el-input-number>
                         </template>
                     </el-table-column>
                 </el-table>
             </el-form-item>
         </el-form>
         <template #footer>
-            <el-button type="primary" @click="isSizeMaterialStockOpen = false">
+            <el-button type="primary" @click="isOpenSizeMaterialQuantityDialogVisible = false">
                 确认
             </el-button>
         </template>
     </el-dialog>
 
-    <el-dialog title="确认订单鞋型" v-model="isConfirmOrderShoesDialogOpen" width="50%">
-        <el-table :data="filteredIndepentPurchase" border stripe>
+    <el-dialog title="确认订单鞋型" v-model="isConfirmOrderShoesDialogOpen" width="50%" :close-on-click-modal="false">
+        <el-table :data="outboundForm.assetRows" border stripe>
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
             <el-table-column prop="materialName" label="材料名称"></el-table-column>
@@ -222,26 +279,26 @@
             </el-table-column>
         </el-table>
         <template #footer>
-            <el-button @click="isConfirmOrderShoesDialogOpen = false">返回</el-button>
+            <!-- <el-button @click="isConfirmOrderShoesDialogOpen = false">返回</el-button> -->
             <el-button type="primary" @click="openMultipleOutboundDialog">继续</el-button>
         </template>
     </el-dialog>
 
-    <el-dialog title="选择订单" v-model="isSelectOrderDialogOpen" width="50%">
-        <el-input v-model="shoeSearch"
-            placeholder="搜索订单号或工厂型号" class="mb-2" clearable>
+    <el-dialog title="选择订单" v-model="isSelectOrderDialogOpen" width="50%" :close-on-click-modal="false">
+        <el-input v-model="shoeSearch" placeholder="搜索订单号或工厂型号" class="mb-2" clearable>
         </el-input>
-        <el-table :data="filteredShoes(currentSelectedAssetRow.orderId)" border stripe>
+        <el-table :data="filterOrderShoes(currentSelectedAssetRow.orderId)" border stripe>
             <el-table-column width="55">
                 <template #default="scope">
-                    <el-radio :value="scope.row.orderShoeId" v-model="currentSelectedAssetRow.orderShoeId">
+                    <el-radio :value="scope.row.orderShoeId" v-model="currentSelectedAssetRow.orderShoeId"
+                        @change="handleShoeSelection(scope.row)">
                     </el-radio>
                 </template>
             </el-table-column>
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
         </el-table>
-        <el-pagination :current-page="currentShoePage" :page-size="shoePageSize" :total="activeOrderShoes.length"
+        <el-pagination :current-page="currentShoePage" :page-size="shoePageSize" :total="filteredOrderShoes.length"
             @current-change="handleShoePageChange" layout="prev, pager, next"></el-pagination>
         <!-- <div v-else>
             <el-descriptions :column="2" border>
@@ -250,11 +307,11 @@
             </el-descriptions>
         </div> -->
         <template #footer>
-            <el-button @click="isSelectOrderDialogOpen = false">确定</el-button>
+            <el-button @click="confirmSelectOrderShoe">确定</el-button>
         </template>
     </el-dialog>
 
-    <el-dialog title="推进出库流程" v-model="isFinishOutboundDialogOpen" width="50%">
+    <el-dialog title="推进出库流程" v-model="isFinishOutboundDialogOpen" width="50%" :close-on-click-modal="false">
         <el-descriptions title="已选择订单鞋型" style="margin-top: 20px;">
         </el-descriptions>
         <el-table :data="selectedRows" border stripe>
@@ -282,7 +339,6 @@ export default {
     },
     data() {
         return {
-            isMultiOutboundDialogVisible: false,
             searchForm: {
                 orderNumberSearch: '',
                 shoeNumberSearch: '',
@@ -295,7 +351,9 @@ export default {
             materialTypeOptions: [],
             materialSupplierOptions: [],
             outboundForm: {
-                groupedSelectedRows: []
+                groupedSelectedRows: [],
+                compositeMaterials: [],
+                assetRows: [],
             },
             formItemTemplate: {
                 timestamp: null,
@@ -309,7 +367,6 @@ export default {
                 outsourceInfo: [],
                 selectedOutsource: null,
                 materials: [],
-                compositeMaterials: [],
                 selectedCompositeSupplier: null,
             },
             currentPage: 1,
@@ -325,8 +382,8 @@ export default {
             selectedRows: [],
             isSelectedRowsEmpty: false,
             getShoeSizesName,
-            isMultiMaterialDialogOpen: false,
-            isSizeMaterialStockOpen: false,
+            isMultiOutboundDialogVisible: false,
+            isOpenSizeMaterialQuantityDialogVisible: false,
             selectedSizeMaterialData: [],
             isFinishOutboundDialogOpen: false,
             uniqueSelectedRows: [],
@@ -379,7 +436,7 @@ export default {
                 materials: [
                     {
                         validator: (rule, value, callback) => {
-                            const invalidRows = value.filter((row) => !row.outboundAmount);
+                            const invalidRows = value.filter((row) => !row.outboundQuantity);
                             if (invalidRows.length > 0) {
                                 callback(new Error("出库数量不能为空"));
                             } else {
@@ -390,7 +447,7 @@ export default {
                     },
                     {
                         validator: (rule, value, callback) => {
-                            const invalidRows = value.filter((row) => row.outboundAmount <= 0);
+                            const invalidRows = value.filter((row) => row.outboundQuantity <= 0);
                             if (invalidRows.length > 0) {
                                 callback(new Error("出库数量需为正数"));
                             } else {
@@ -418,6 +475,7 @@ export default {
             selectedCompositeRows: [],
             compositeSuppliersOptions: [],
             activeOrderShoes: [],
+            filteredOrderShoes: [],
             currentShoePage: 1,
             shoePageSize: 5,
             shoeSearch: "",
@@ -425,6 +483,9 @@ export default {
             isSelectOrderDialogOpen: false,
             isConfirmOrderShoesDialogOpen: false,
             activeTab: null,
+            selectedRowsCopy: [],
+            currentSizeMaterialQuantityRow: {},
+            isReceiptDialogVisible: false,
         }
     },
     computed: {
@@ -433,19 +494,58 @@ export default {
                 this.orderShoeBatchInfo.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
             );
         },
-        filteredIndepentPurchase() {
-            return this.selectedRows.filter(row => row.orderShoeId === null)
-        }
+        filteredData() {
+            return this.currentSizeMaterialQuantityRow.sizeMaterialOutboundTable.filter((row) => {
+                return (
+                    row.predictQuantity > 0
+                );
+            });
+        },
     },
     mounted() {
         this.getAllMaterialTypes()
         this.getAllSuppliers()
-        this.getAllCompositeSuppliers(),
-            this.getActiveOrderShoes()
+        this.getAllCompositeSuppliers()
+        this.getActiveOrderShoes()
         this.getMaterialTableData()
         this.getAllDeparments()
     },
     methods: {
+        goBackToOutboundDialog() {
+            this.isReceiptDialogVisible = false
+            this.isMultiOutboundDialogVisible = true
+        },
+        getOutboundName(type) {
+            switch (type) {
+                case 0:
+                    return "生产使用"
+                case 1:
+                    return "废料处理"
+                case 2:
+                    return "外包发货"
+                case 3:
+                    return "外发复合"
+            }
+        },
+        openReceiptDialog() {
+            let isValid = true;
+            this.outboundForm.groupedSelectedRows.forEach((group, index) => {
+                this.$refs[`outboundForm${index}`][0].validate((valid) => {
+                    if (!valid) {
+                        isValid = false;
+                    }
+                });
+            });
+            if (isValid) {
+                this.isMultiOutboundDialogVisible = false
+                this.isReceiptDialogVisible = true
+            } else {
+                console.log("invalid")
+            }
+        },
+        confirmSelectOrderShoe() {
+            this.isSelectOrderDialogOpen = false
+        },
         handleShoePageChange(val) {
             this.currentShoePage = val
         },
@@ -456,16 +556,24 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
             this.teamOptions = response.data
         },
-        filteredShoes(orderId = null) {
+        filterOrderShoes(orderId = null) {
+            if (orderId !== null) {
+                this.filteredOrderShoes = this.activeOrderShoes.filter(shoe =>
+                    shoe.orderId == orderId
+                )
+            }
+            else {
+                this.filteredOrderShoes = this.activeOrderShoes
+            }
             let filtered = []
             if (orderId === null) {
-                filtered = this.activeOrderShoes.filter(shoe =>
+                filtered = this.filteredOrderShoes.filter(shoe =>
                     shoe.orderRId.includes(this.shoeSearch) ||
                     shoe.shoeRId.includes(this.shoeSearch)
                 )
             }
             else {
-                filtered = this.activeOrderShoes.filter(shoe =>
+                filtered = this.filteredOrderShoes.filter(shoe =>
                     shoe.shoeRId.includes(this.shoeSearch)
                 );
             }
@@ -477,7 +585,10 @@ export default {
             this.isSelectOrderDialogOpen = true
         },
         handleShoeSelection(selectedShoe) {
-            this.outboundForm.orderShoeId = selectedShoe.orderShoeId;
+            this.currentSelectedAssetRow.orderShoeId = selectedShoe.orderShoeId
+            this.currentSelectedAssetRow.orderRId = selectedShoe.orderRId
+            this.currentSelectedAssetRow.shoeRId = selectedShoe.shoeRId
+            this.currentSelectedAssetRow.orderId = selectedShoe.orderId
         },
         async getActiveOrderShoes() {
             let response = await axios.get(`${this.$apiBaseUrl}/order/getactiveordershoes`)
@@ -499,22 +610,41 @@ export default {
             this.selectedCompositeRows = selection
         },
         isSelectable(row) {
-            // return row.status !== '已完成入库'
+            // return row.status !== '已完成出库'
         },
-        calculateSum() {
-            this.selectedSizeMaterialData.metaData["enteredAmount"] = this.selectedSizeMaterialData.quantityList.reduce((sum, row) => sum + (row.outboundAmount || 0), 0);
+        updateSizeMaterialTotal() {
+            this.currentSizeMaterialQuantityRow.sizeMaterialInboundTable.forEach((element, index) => {
+                this.currentSizeMaterialQuantityRow[`amount${index}`] = element.outboundQuantity
+            })
+            this.currentSizeMaterialQuantityRow.outboundQuantity = this.filteredData.reduce((acc, row) => {
+                return acc + row.outboundQuantity;
+            }, 0);
         },
-        openSizeMaterialStockDialog(row) {
-            console.log(row)
-            this.selectedSizeMaterialData = row
-            this.isSizeMaterialStockOpen = true
+        openSizeMaterialQuantityDialog(row) {
+            this.currentSizeMaterialQuantityRow = row
+            this.isOpenSizeMaterialQuantityDialogVisible = true
         },
         async confirmOrderShoesToOutbound() {
+            // reset all ref variables
+            this.currentSelectedAssetRow = {}
+            this.filteredOrderShoes = []
+            this.currentShoePage = 1
+            this.shoeSearch = ""
+
             if (this.selectedRows.length == 0) {
                 ElMessage.error("未选择材料")
                 return
             }
-            if (this.selectedRows.some(row => row.orderShoeId === null)) {
+            this.selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
+            // collect all orderShoeId that are null
+            let assetRows = []
+            this.selectedRowsCopy.forEach(row => {
+                if (row.orderShoeId === null) {
+                    assetRows.push(row)
+                }
+            })
+            if (assetRows.length > 0) {
+                this.outboundForm.assetRows = assetRows
                 this.isConfirmOrderShoesDialogOpen = true
                 return
             }
@@ -527,7 +657,7 @@ export default {
             }
             // await this.getOutsourceInfo()
             await this.groupSelectedRows()
-            this.isMultiMaterialDialogOpen = true
+            this.isMultiOutboundDialogVisible = true
         },
         toggleSelectionMode() {
             this.isMultipleSelection = !this.isMultipleSelection;
@@ -537,12 +667,15 @@ export default {
         },
         async groupSelectedRows() {
             let groupedData = [];
-            for (let item of this.selectedRows) {
+            for (let item of this.selectedRowsCopy) {
                 let templateObj = JSON.parse(JSON.stringify(this.formItemTemplate))
-                let craftNameList = item.craftName.split("@")
-                let newItem = { ...item, outboundAmount: 0, remark: "", sizeMaterialOutboundTable: [], craftNameList: [] }
+                let craftNameList = []
+                if (item.craftName) {
+                    craftNameList = item.craftName.split("@")
+                }
+                let newItem = { ...item, outboundQuantity: 0, remark: "", sizeMaterialOutboundTable: [], craftNameList: [] }
                 craftNameList.forEach(craftName => {
-                    newItem.craftNameList.push({ craftName: craftName, outboundAmount: 0 })
+                    newItem.craftNameList.push({ craftName: craftName, outboundQuantity: 0 })
                 })
                 let shoeSizeColumns = []
                 if (item.materialCategory == 1) {
@@ -614,65 +747,79 @@ export default {
             this.totalRows = response.data.total
         },
         async submitOutboundForm() {
-            console.log(this.outboundForm)
-            this.$refs.outboundForm.validate(async (valid) => {
-                if (valid) {
-                    console.log("Form is valid. Proceeding with submission.");
-                    let materialOutboundList = []
-                    if (this.outboundForm.outboundType != 3) {
-                        this.outboundForm.materials.forEach(row => {
-                            materialOutboundList.push({ "storageId": row.materialStorageId, "amount": row.outboundAmount })
-                        })
+            let isValid = true;
+            this.outboundForm.groupedSelectedRows.forEach((group, index) => {
+                this.$refs[`outboundForm${index}`][0].validate((valid) => {
+                    if (!valid) {
+                        isValid = false;
                     }
-                    else {
-                        let amount = 0
-                        this.outboundForm.compositeMaterials.forEach(row => {
-                            let obj = { "storageId": row.materialStorageId, "craftNameList": row["craftNameList"], "amount": 0 }
-                            row["craftNameList"].forEach(subRow => {
-                                amount += subRow["outboundAmount"]
+                });
+            });
+            if (isValid) {
+                console.log("Form is valid. Proceeding with submission.");
+                this.outboundForm.groupedSelectedRows.forEach(group => {
+                    group.items.forEach(item => {
+                        if (item.materialCategory == 1) {
+                            item.sizeMaterialOutboundTable.forEach(row => {
+                                row.outboundQuantity = row.predictQuantity
                             })
-                            obj["amount"] = amount
-                            materialOutboundList.push(obj)
-                        })
-                    }
-                    let sizeMaterialOutboundList = []
-                    this.outboundForm.sizeMaterials.forEach(row => {
-                        let obj = { "storageId": row.metaData.materialStorageId, outboundAmounts: [] }
-                        row.quantityList.forEach(shoeSizeInfo => {
-                            obj.outboundAmounts.push({ shoeSizeName: shoeSizeInfo["shoeSizeName"], amount: shoeSizeInfo["outboundAmount"] })
-                        })
-                        sizeMaterialOutboundList.push(obj)
+                        }
                     })
-                    console.log(this.outboundForm.selectedCompositeSupplier)
-                    let data = {
-                        "materialOutboundList": materialOutboundList,
-                        "sizeMaterialOutboundList": sizeMaterialOutboundList,
-                        "timestamp": this.outboundForm.timestamp,
-                        "type": this.outboundForm.outboundType,
-                        "outboundDepartment": this.outboundForm.section,
-                        "outboundAddress": this.outboundForm.address,
-                        "picker": this.outboundForm.receiver,
-                        "outsourceInfoId": null,
-                        "compositeSupplierId": this.outboundForm.selectedCompositeSupplier
-                    }
-                    if (this.outboundForm.selectedOutsource) {
-                        data["outsourceInfoId"] = this.outboundForm.selectedOutsource.outsourceInfoId
-                    }
-                    console.log(data)
-                    try {
-                        await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundmaterial`, data)
-                        ElMessage.success("出库成功")
-                    }
-                    catch (error) {
-                        console.log(error)
-                        ElMessage.error(error.response.data.message)
-                    }
-                    this.isMultiMaterialDialogOpen = false
-                    this.getMaterialTableData()
-                } else {
-                    console.log("invalid")
+                })
+                let materialOutboundList = []
+                if (this.outboundForm.outboundType != 3) {
+                    this.outboundForm.materials.forEach(row => {
+                        materialOutboundList.push({ "storageId": row.materialStorageId, "amount": row.outboundQuantity })
+                    })
                 }
-            })
+                else {
+                    let amount = 0
+                    this.outboundForm.compositeMaterials.forEach(row => {
+                        let obj = { "storageId": row.materialStorageId, "craftNameList": row["craftNameList"], "amount": 0 }
+                        row["craftNameList"].forEach(subRow => {
+                            amount += subRow["outboundQuantity"]
+                        })
+                        obj["amount"] = amount
+                        materialOutboundList.push(obj)
+                    })
+                }
+                let sizeMaterialOutboundList = []
+                this.outboundForm.sizeMaterials.forEach(row => {
+                    let obj = { "storageId": row.metaData.materialStorageId, outboundQuantitys: [] }
+                    row.quantityList.forEach(shoeSizeInfo => {
+                        obj.outboundQuantitys.push({ shoeSizeName: shoeSizeInfo["shoeSizeName"], amount: shoeSizeInfo["outboundQuantity"] })
+                    })
+                    sizeMaterialOutboundList.push(obj)
+                })
+                console.log(this.outboundForm.selectedCompositeSupplier)
+                let data = {
+                    "materialOutboundList": materialOutboundList,
+                    "sizeMaterialOutboundList": sizeMaterialOutboundList,
+                    "timestamp": this.outboundForm.timestamp,
+                    "type": this.outboundForm.outboundType,
+                    "outboundDepartment": this.outboundForm.section,
+                    "outboundAddress": this.outboundForm.address,
+                    "picker": this.outboundForm.receiver,
+                    "outsourceInfoId": null,
+                    "compositeSupplierId": this.outboundForm.selectedCompositeSupplier
+                }
+                if (this.outboundForm.selectedOutsource) {
+                    data["outsourceInfoId"] = this.outboundForm.selectedOutsource.outsourceInfoId
+                }
+                console.log(data)
+                try {
+                    // await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundmaterial`, data)
+                    ElMessage.success("出库成功")
+                }
+                catch (error) {
+                    console.log(error)
+                    ElMessage.error(error.response.data.message)
+                }
+                this.isMultiOutboundDialogVisible = false
+                this.getMaterialTableData()
+            } else {
+                console.log("invalid")
+            }
         },
 
         openFinishOutboundDialog() {
@@ -694,7 +841,7 @@ export default {
             return Number(cellValue).toFixed(2)
         },
         async getOutsourceInfo() {
-            let params = { "orderShoeId": this.selectedRows[0].orderShoeId }
+            let params = { "orderShoeId": this.selectedRowsCopy[0].orderShoeId }
             let response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getordershoeoutsourceinfo`, { params })
             this.outboundForm.outsourceInfo = []
             console.log(response.data)
