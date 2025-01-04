@@ -100,7 +100,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-table :data="paginatedDisplayData" border stripe height="500">
-            <el-table-column prop="orderRid" label="订单号" />
+            <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderCid" label="客户订单号" />
             <el-table-column prop="customerName" label="客户名" />
             <el-table-column prop="customerBrand" label="客户商标" />

@@ -49,9 +49,17 @@ def get_all_shoes():
 
 @shoe_bp.route("/shoe/getallshoesnew", methods=["GET"])
 def get_all_shoes_new():
-    shoe_entities = (
-        db.session.query(Shoe)
-    ).all()
+    shoe_rid = request.args.get("shoerid")
+    if shoe_rid is None:
+        shoe_entities = (
+            db.session.query(Shoe)
+        ).all()
+    else:
+        shoe_entities = (
+            db.session.query(Shoe)
+            .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+            .all()
+        )
     result_data = []
     for shoe in shoe_entities:
         shoe_response_data = dict()

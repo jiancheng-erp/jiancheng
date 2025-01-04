@@ -224,7 +224,7 @@ export default {
             this.shoeTableData = response.data
         },
         async getFilterShoes() {
-            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoes`, {
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
                 params: { shoerid: this.inheritIdSearch }
             })
             this.shoeTableData = response.data
