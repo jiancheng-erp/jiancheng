@@ -21,12 +21,13 @@
                     @input="filterByCid()"
                 ></el-input>
             </el-col>
-            <el-button :disabled="!flagShow" type="primary" @click="showexamineData()"
-                >审批订单</el-button
-            >
-            <el-button :disabled="flagShow" type="primary" @click="showAllData()"
-                >所有订单</el-button
-            >
+            <el-col :span="6" :offset="0">
+                <el-radio-group v-model="radio" @change="dataPagination()">
+                    <el-radio-button label="所有订单" value="all" />
+                    <el-radio-button label="已审批订单" value="已审批" />
+                    <el-radio-button label="待审批订单" value="待审批" />
+                </el-radio-group>
+            </el-col>
         </el-row>
         <el-row :gutter="20">
             <el-table :data="displayData" stripe height="650">
@@ -40,14 +41,14 @@
                 <el-table-column label="操作" width="300">
                     <template #default="scope">
                         <el-button
-                            v-show="!flagShow"
+                            v-show="scope.row.orderStatus == '生产订单总经理确认'"
                             type="primary"
                             @click="openOrderDetail(scope.row.orderDbId)"
                             >审批生产订单</el-button
                         >
                         <el-button
-                            v-show="flagShow"
-                            type="primary"
+                            v-show="scope.row.orderStatus != '生产订单总经理确认'"
+                            type="danger"
                             @click="deleteOrder(scope.row.orderRid)"
                             >删除订单</el-button
                         >
@@ -78,11 +79,10 @@ import { ElMessage } from 'element-plus'
 let orderRidFilter = ref('')
 let orderCidFilter = ref('')
 let displayData = ref([])
-let unfilteredData = ref([])
-let filterData = ref([])
 let allData = ref([])
-let flagShow = ref(false)
-let isFilter = ref(false)
+let examineData = ref([])
+let approvedData = ref([])
+let radio = ref('all')
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 let currentPage = ref(1)
@@ -93,19 +93,55 @@ onMounted(() => {
     getAllOrders()
 })
 
+function sortByAscII(val1, val2) {
+    if(val1 > val2){
+        return 1;
+      }else if(val1 < val2){
+        return -1;
+      }else{
+        return 0;
+      }
+}
 async function getAllOrders() {
     const response = await axios.get(`${$api_baseUrl}/order/getallorders`)
-    allData.value = response.data
+    allData.value = response.data.sort((a,b) => sortByAscII(a.orderRid, b.orderRid));
     // 此处需要增加订单状态筛选功能，保留状态为生产订单确认的数据
-    const arr = []
+    const arr1 = []
+    const arr2 = []
     for (let i = 0; i < response.data.length; i++) {
         if (response.data[i].orderStatus === '生产订单总经理确认') {
-            arr.push(response.data[i])
+            arr1.push(response.data[i])
+        } else {
+            arr2.push(response.data[i])
         }
     }
-    unfilteredData.value = arr
-    displayData.value = unfilteredData.value
-    currentTotalRows.value = displayData.value.length
+    examineData.value = arr1.sort((a,b) => sortByAscII(a.orderRid, b.orderRid))
+    approvedData.value = arr2.sort((a,b) => sortByAscII(a.orderRid, b.orderRid))
+    dataPagination()
+}
+
+function dataPagination() {
+    orderRidFilter.value = ''
+    orderCidFilter.value = ''
+    if (radio.value == 'all') {
+        displayData.value = allData.value.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = allData.value.length
+    } else if (radio.value == '待审批') {
+        displayData.value = examineData.value.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = examineData.value.length
+    } else {
+        displayData.value = approvedData.value.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = approvedData.value.length
+    }
 }
 
 async function deleteOrder(value) {
@@ -125,122 +161,84 @@ function openOrderDetail(orderId) {
     url = `${window.location.origin}/companyManager/orderConfirmDetail/orderid=${orderId}`
     window.open(url, '_blank')
 }
-
 function filterByRid() {
-    if (!orderRidFilter.value) {
-        if (!flagShow.value) {
-            displayData.value = unfilteredData.value
-        } else {
-            displayData.value = allData.value
-        }
-    } else {
-        if (flagShow.value) {
-            filterData.value = allData.value.filter((task) => {
+    if (radio.value == 'all') {
+        const arr = allData.value.filter((task) => {
                 const filterMatch = task.orderRid.includes(orderRidFilter.value)
                 return filterMatch
             })
-        } else {
-            filterData.value = unfilteredData.value.filter((task) => {
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = arr.length
+    } else if (radio.value == '待审批') {
+        const arr = examineData.value.filter((task) => {
                 const filterMatch = task.orderRid.includes(orderRidFilter.value)
                 return filterMatch
             })
-        }
-        isFilter.value = true
-    }
-    if (isFilter.value) {
-        dataCut2()
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
     } else {
-        dataCut()
+        const arr = approvedData.value.filter((task) => {
+                const filterMatch = task.orderRid.includes(orderRidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
     }
 }
 function filterByCid() {
-    if (!orderCidFilter.value) {
-        if (!flagShow.value) {
-            displayData.value = unfilteredData.value
-        } else {
-            displayData.value = allData.value
-        }
-    } else {
-        if (flagShow.value) {
-            filterData.value = allData.value.filter((task) => {
+    if (radio.value == 'all') {
+        const arr = allData.value.filter((task) => {
                 const filterMatch = task.orderCid.includes(orderCidFilter.value)
                 return filterMatch
             })
-        } else {
-            filterData.value = unfilteredData.value.filter((task) => {
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = arr.length
+    } else if (radio.value == '待审批') {
+        const arr = examineData.value.filter((task) => {
                 const filterMatch = task.orderCid.includes(orderCidFilter.value)
                 return filterMatch
             })
-        }
-        isFilter.value = true
-    }
-    if (isFilter.value) {
-        dataCut2()
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
     } else {
-        dataCut()
+        const arr = approvedData.value.filter((task) => {
+                const filterMatch = task.orderCid.includes(orderCidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
     }
-}
 
-function showAllData() {
-    displayData.value = allData.value
-    currentTotalRows.value = displayData.value.length
-    flagShow.value = true
-    orderRidFilter.value = ''
-    orderCidFilter.value = ''
-    isFilter.value = false
-    dataCut()
-}
-
-function showexamineData() {
-    displayData.value = unfilteredData.value
-    currentTotalRows.value = displayData.value.length
-    flagShow.value = false
-    orderRidFilter.value = ''
-    orderCidFilter.value = ''
-    isFilter.value = false
-    dataCut()
 }
 
 function chageCurrentPageSize(val) {
-    if (currentPageSize.value !== val) {
-        currentPageSize.value = val
-        if (isFilter.value) {
-            dataCut2()
-        } else {
-            dataCut()
-        }
-    }
+    currentPageSize.value = val
+    dataPagination()
 }
 
 function changeCurrentPage(val) {
-    if (currentPage.value !== val) {
-        currentPage.value = val
-        if (isFilter.value) {
-            dataCut2()
-        } else {
-            dataCut()
-        }
-    }
-}
-function dataCut() {
-    if (!flagShow.value) {
-        displayData.value = unfilteredData.value.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        displayData.value = allData.value.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
-}
-function dataCut2() {
-    currentTotalRows.value = filterData.value.length
-    displayData.value = filterData.value.slice(
-        (currentPage.value - 1) * currentPageSize.value,
-        currentPageSize.value * currentPage.value
-    )
+    currentPage.value = val
+    dataPagination()
 }
 </script>
 

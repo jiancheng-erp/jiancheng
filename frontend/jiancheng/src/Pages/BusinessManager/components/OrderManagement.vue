@@ -5,55 +5,72 @@
         >
     </el-row>
     <el-row :gutter="10" style="margin-top: 20px">
-        <el-button size="default" type="primary" @click="openCreateOrderDialog"
-            >创建订单</el-button
-        >
-        <el-button size="default" type="primary" @click="displayContent" v-if="this.userRole == 21 ? false : true"
-            >{{buttonText}}</el-button
-        >
-        <el-col :span="2" :offset="0"
+        <el-col :span="4" :offset="0">
+            <el-button size="default" type="primary" @click="openCreateOrderDialog"
+                >创建订单</el-button
+            >
+            <el-button
+                size="default"
+                type="primary"
+                @click="displayContent"
+                v-if="this.userRole == 21 ? false : true"
+                >{{ buttonText }}</el-button
+            >
+        </el-col>
+        <el-col :span="4" :offset="1"
             ><el-input
                 v-model="orderRidFilter"
-                placeholder="订单号"
+                placeholder="订单号筛选"
                 size="default"
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(1)"
+                style="width: 300px"
             ></el-input>
         </el-col>
-        <el-col :span="2" :offset="0"
+        <el-col :span="4" :offset="2"
             ><el-input
                 v-model="orderCidFilter"
-                placeholder="客户订单号"
+                placeholder="客户订单号筛选"
                 size="default"
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(2)"
+                style="width: 300px"
             ></el-input>
         </el-col>
-        <el-col :span="2" :offset="0"
+        <el-col :span="4" :offset="2"
             ><el-input
                 v-model="orderCustomerNameFilter"
-                placeholder="客户名称"
+                placeholder="客户名称筛选"
                 size="default"
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(3)"
+                style="width: 300px"
             ></el-input>
         </el-col>
-
-        <el-col :span="2" :offset="0"
+    </el-row>
+    <el-row :gutter="10" style="margin-top: 20px">
+        <el-col :span="4" :offset="0">
+            <el-radio-group v-model="radio" size="small" @change="switchRadio(radio)">
+                <el-radio-button label="全部订单" value="all" />
+                <el-radio-button label="已下发订单" value="已下发" />
+                <el-radio-button label="未下发订单" value="未下发" />
+            </el-radio-group>
+        </el-col>
+        <el-col :span="4" :offset="1"
             ><el-input
                 v-model="orderCustomerBrandFilter"
-                placeholder="客户商标"
+                placeholder="客户商标筛选"
                 size="default"
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(4)"
+                style="width: 300px"
             ></el-input>
         </el-col>
-
-        <el-col :span="4" :offset="0">
+        <el-col :span="4" :offset="2">
             <div class="demo-date-picker">
                 <div class="block">
                     <span class=""></span>
@@ -62,17 +79,18 @@
                         type="daterange"
                         unlink-panels
                         range-separator="至"
-                        start-placeholder="起始开始日期"
-                        end-placeholder="日期筛选"
+                        start-placeholder="订单开始日期起"
+                        end-placeholder="订单开始日期终"
                         :shortcuts="shortcuts"
                         size="default"
                         @change="filterDisplayOrder(5)"
+                        style="width: 300px"
                     />
                 </div>
             </div>
         </el-col>
 
-        <el-col :span="4" :offset="1">
+        <el-col :span="4" :offset="2">
             <div class="demo-date-picker">
                 <div class="block">
                     <span class=""></span>
@@ -81,26 +99,20 @@
                         type="daterange"
                         unlink-panels
                         range-separator="至"
-                        start-placeholder="起始结束日期"
-                        end-placeholder="日期筛选"
+                        start-placeholder="订单结束日期起"
+                        end-placeholder="订单结束日期终"
                         :shortcuts="shortcuts"
                         size="default"
                         @change="filterDisplayOrder(6)"
+                        style="width: 300px"
                     />
                 </div>
             </div>
         </el-col>
-        <el-col :span="3" :offset="1">
-            <el-radio-group v-model="radio" size="small" @change="switchRadio(radio)">
-                <el-radio-button label="全部订单" value="all" />
-                <el-radio-button label="已下发订单" value="已下发" />
-                <el-radio-button label="未下发订单" value="未下发" />
-            </el-radio-group>
-        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-table :data="paginatedDisplayData" border stripe height="500">
-            <el-table-column prop="orderRid" label="订单号" sortable />
+            <el-table-column prop="orderRid" label="订单号" sortable/>
             <el-table-column prop="orderCid" label="客户订单号" />
             <el-table-column prop="customerName" label="客户名" />
             <el-table-column prop="customerBrand" label="客户商标" />
@@ -279,7 +291,7 @@
             >
                 <el-input v-model="newOrderForm.salesman" disabled></el-input>
             </el-form-item>
-            
+
             <el-form-item
                 label="选择审批经理"
                 prop="supervisorId"
@@ -329,20 +341,26 @@
             >
                 <el-table-column type="expand">
                     <template #default="props">
-                        <el-table 
-                            :data="props.row.shoeTypeData" 
-                            border 
-                            :row-key="(row) => {
-                                return `${row.shoeId}`
-                            }"
+                        <el-table
+                            :data="props.row.shoeTypeData"
+                            border
+                            :row-key="
+                                (row) => {
+                                    return `${row.shoeId}`
+                                }
+                            "
                             @selection-change="handleSelectionShoeType"
                             ref="shoeSelectionTable"
-                            >
-                            <el-table-column size="small" type="selection" align="center"> </el-table-column>
+                        >
+                            <el-table-column size="small" type="selection" align="center">
+                            </el-table-column>
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px" />
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
-                                    <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px" />
+                                    <el-image
+                                        :src="scope.row.shoeImageUrl"
+                                        style="width: 150px; height: 100px"
+                                    />
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -475,13 +493,9 @@
 
             <el-table-column label="添加客户鞋型颜色名称">
                 <template #default="scope">
-                    <el-input
-                        size="default"
-                        v-model="scope.row.customerColorName"
-                    ></el-input>
+                    <el-input size="default" v-model="scope.row.customerColorName"></el-input>
                 </template>
             </el-table-column>
-
         </el-table>
         <!-- <el-row :gutter="20">
             <el-table :data="customerDisplayBatchData" border stripe height="500">
@@ -662,7 +676,7 @@ export default {
     data() {
         return {
             token: localStorage.getItem('token'),
-            staffId:localStorage.getItem('staffid'), 
+            staffId: localStorage.getItem('staffid'),
             orderNotInCurStatus: '',
             orderInCurStatus: '',
             currentPage: 1,
@@ -741,14 +755,14 @@ export default {
                 //显示名字用 建议改为salesmanName
                 salesman: '',
                 //新参数, 应该为当前用户的staff_id
-                salesmanId:'',
+                salesmanId: '',
                 orderShoeTypes: [],
                 batchInfoQuantity: [],
                 customerShoeName: {},
                 customerShoeColorName: {},
                 //新参数 应该为被下发经理用户的staff_id
-                supervisorId:'',
-                flag: false,
+                supervisorId: '',
+                flag: false
             },
             batchForm: {
                 customerId: '',
@@ -901,8 +915,7 @@ export default {
             this.newOrderForm.salesmanId = this.staffId
             this.orderCreationInfoVis = true
             this.shoeTableDisplayData = this.shoeTableData
-            console.log(this.shoeTableDisplayData);
-            
+            console.log(this.shoeTableDisplayData)
         },
         async openPreviewDialog(row) {
             this.orderData = row
@@ -1056,7 +1069,9 @@ export default {
             this.customerNameList = [...new Set(response.data.map((item) => item.customerName))]
         },
         async getAllBatchTypes() {
-            const response = await axios.get(`${this.$apiBaseUrl}/batchtype/getallbatchtypesbusiness`)
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/batchtype/getallbatchtypesbusiness`
+            )
             this.batchTypes = response.data.batchDataTypes
             this.batchTypeNameList = [
                 ...new Set(this.batchTypes.map((item) => item.batchInfoTypeName))
@@ -1160,9 +1175,12 @@ export default {
         },
         async getAllOrders() {
             // const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-            const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
-                currentStaffId: this.staffId
-            })
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
+                {
+                    currentStaffId: this.staffId
+                }
+            )
             this.unfilteredData = response.data
             this.displayData = this.unfilteredData
             this.totalItems = this.unfilteredData.length
@@ -1630,13 +1648,12 @@ export default {
                                     batchInfoQuantity: [],
                                     customerShoeName: {},
                                     flag: false,
-                                    salesmanId: '',
+                                    salesmanId: ''
                                 }
                                 this.getAllOrders()
                             } else {
                                 ElMessage.error('创建订单失败，请稍后重试')
                             }
-                            
                         })
                     }
                 }
@@ -1664,7 +1681,7 @@ export default {
             }
             this.filterDisplayOrder()
         },
-        async displayContent () {
+        async displayContent() {
             if (this.buttonFlag) {
                 this.buttonText = '需我审批订单'
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
@@ -1674,9 +1691,12 @@ export default {
                 this.radio = 'all'
             } else {
                 this.buttonText = '查看所有订单'
-                const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
-                    currentStaffId: this.staffId
-                })
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
+                    {
+                        currentStaffId: this.staffId
+                    }
+                )
                 this.unfilteredData = response.data
                 this.displayData = this.unfilteredData
                 this.totalItems = this.unfilteredData.length
@@ -1686,7 +1706,7 @@ export default {
         }
     },
     watch: {
-        async orderCreationInfoVis(newValue, oldValue){
+        async orderCreationInfoVis(newValue, oldValue) {
             if (newValue) {
                 const response = await axios.get(`${this.$apiBaseUrl}/general/getbusinessmanagers`)
                 this.departmentNameList = response.data

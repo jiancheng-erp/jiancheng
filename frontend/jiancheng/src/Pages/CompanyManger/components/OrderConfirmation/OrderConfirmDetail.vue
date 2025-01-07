@@ -5,6 +5,30 @@
         </el-header>
         <el-container>
             <el-main>
+                <el-row :gutter="0">
+                    <el-col :span="24" :offset="0">
+                        <el-descriptions title="" :column="3" border>
+                            <el-descriptions-item label="订单编号" align="center">{{
+                                orderData.orderRid
+                            }}</el-descriptions-item>
+                            <el-descriptions-item label="客户订单" align="center">
+                                {{ orderData.orderCid }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="客户信息" align="center">{{
+                                orderData.customerInfo
+                            }}</el-descriptions-item>
+                            <el-descriptions-item label="订单周期" align="center">{{
+                                orderData.dateInfo
+                            }}</el-descriptions-item>
+                            <el-descriptions-item label="配码类型" align="center">{{
+                                orderData.batchInfoTypeName
+                            }}</el-descriptions-item>
+                            <el-descriptions-item label="订单业务员" align="center">
+                                {{ orderData.orderStaffName }}
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
                 <el-table
                     :data="orderShoeData"
                     border
@@ -16,6 +40,8 @@
                         }
                     "
                     :default-expand-all="true"
+                    :header-row-style="tableHeaderStyle"
+                    style="margin-top: 20px"
                 >
                     <el-table-column type="expand">
                         <template #default="props">
@@ -28,16 +54,16 @@
                                     }
                                 "
                                 :default-expand-all="true"
-
+                                :header-row-style="tableHeaderStyle"
                             >
                                 <el-table-column type="expand">
                                     <template #default="scope">
-                                        <el-table :data="scope.row.shoeTypeBatchInfoList">
+                                        <el-table :data="scope.row.shoeTypeBatchInfoList" :header-row-style="tableHeaderStyle">
                                             <el-table-column type="index"></el-table-column>
                                             <el-table-column
                                                 prop="packagingInfoName"
                                                 label="配码名称"
-                                                width="150"
+                                                width="180"
                                             />
                                             <el-table-column
                                                 v-for="col in Object.keys(
@@ -45,7 +71,7 @@
                                                 ).filter((key) => batchInfoType[key] != null)"
                                                 :prop="attrMappingToRatio[col]"
                                                 :label="batchInfoType[col]"
-                                                width="90"
+                                                width="60"
                                             ></el-table-column>
                                             <el-table-column
                                                 prop="totalQuantityRatio"
@@ -61,9 +87,13 @@
                                 </el-table-column>
                                 <el-table-column
                                     prop="shoeTypeColorName"
-                                    label="颜色名称"
-                                    width="150"
-                                    sortable
+                                    label="中文颜色"
+                                    width="90"
+                                />
+                                <el-table-column
+                                    prop="customerColorName"
+                                    label="英文颜色"
+                                    width="90"
                                 />
                                 <el-table-column
                                     v-for="col in Object.keys(attrMappingToAmount).filter(
@@ -71,7 +101,7 @@
                                     )"
                                     :prop="`shoeTypeBatchData.${attrMappingToAmount[col]}`"
                                     :label="batchInfoType[col]"
-                                    width="90"
+                                    width="60"
                                 ></el-table-column>
                                 <el-table-column
                                     prop="shoeTypeBatchData.totalAmount"
@@ -109,9 +139,11 @@
                                 <el-table-column label="鞋型">
                                     <template #default="scope">
                                         <el-image
-                                            :src="scope.row.shoeImageUrl"
+                                            :src="imagerUrl(scope.row.shoeTypeImgUrl)"
                                             style="width: 150px; height: 100px"
+                                            v-if="scope.row.shoeTypeImgUrl"
                                         ></el-image>
+                                        <span v-else>暂无图片数据</span>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -131,7 +163,7 @@
                                 >添加备注
                             </el-button>
 
-                            <el-text v-if="scope.row.orderShoeRemarkExist">{{
+                            <el-text v-if="scope.row.orderShoeRemarkExist"  style="display: inline-block;">{{
                                 scope.row.orderShoeRemarkRep
                             }}</el-text>
                             <el-button
@@ -139,7 +171,7 @@
                                 type="warning"
                                 size="default"
                                 @click="openEditRemarkDialog(scope.row)"
-                                style="margin-left: 20px; margin-top: -20px"
+                                style="margin-left: 20px; margin-top: -20px;"
                             >
                                 编辑备注
                             </el-button>
@@ -185,7 +217,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 const { orderId } = defineProps(['orderId'])
-let orderData = reactive({})
+let orderData = ref({})
 let orderShoeData = ref([])
 let priceChangeNotAllowed = ref(false)
 let remarkDialogVis = ref(false)
@@ -236,10 +268,10 @@ async function getOrderInfo() {
     const response = await axios.get(
         `${$api_baseUrl}/order/getbusinessorderinfo?orderid=${orderId}`
     )
-    orderData = response.data
+    orderData.value = response.data
     orderShoeData.value = response.data.orderShoeAllData
     batchInfoType = response.data.batchInfoType
-    orderData.orderShoeAllData.forEach((orderShoe) =>
+    orderData.value.orderShoeAllData.forEach((orderShoe) =>
         orderShoe.orderShoeTypes.forEach((orderShoeType) => {
             orderShoeTypeIdToUnitPrice[orderShoeType.orderShoeTypeId] =
                 orderShoeType.shoeTypeBatchData.unitPrice
@@ -247,6 +279,14 @@ async function getOrderInfo() {
                 orderShoeType.shoeTypeBatchData.currencyType
         })
     )
+}
+function tableHeaderStyle({ row, rowIndex }) {
+    return 'background: #ccc; color: #000; font-weight: bolder;'
+}
+function imagerUrl(url) {
+    if (url) {
+        return 'http://localhost:12667/' + url
+    }
 }
 function updateValue(row) {
     row.shoeTypeBatchData.totalPrice =

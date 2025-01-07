@@ -18,6 +18,7 @@ import CompanyManager from '@/Pages/CompanyManger/views/CompanyManager.vue'
 import SemifinishedWarehouse from '@/Pages/TotalWarehouse/SemifinishedWarehouse/views/SemifinishedWarehouse.vue'
 import FinishedWarehouse from '@/Pages/TotalWarehouse/FinishedWarehouse/views/FinishedWarehouse.vue'
 import ProductionClerk from '@/Pages/ProductionManagementDepartment/ProductionClerk/views/ProductionClerk.vue'
+import FinancialManager from '@/Pages/FinancialManager/views/FinancialManager.vue'
 
 //引入子路由
 import LogisticsRoutes from '../Pages/LogisticsControlDepartment/LogisticsControlManager/routers/logistics'
@@ -216,6 +217,15 @@ const router = createRouter({
       meta:{
         requiresAuth: true,
         role: 22
+      }
+    },
+    {
+      path :'/financialManager',
+      name : 'financialManager',
+      component: FinancialManager,
+      meta:{
+        requiresAuth: true,
+        role: 2
       }
     },
     ...LogisticsRoutes,
