@@ -45,7 +45,7 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.pendingTaskData
             }
-            this.displayData = this.pendingTaskData.filter(task => task.orderId.includes(this.searchOrder));
+            this.displayData = this.pendingTaskData.filter(task => task.orderRid.includes(this.searchOrder));
         },
         handleRowClick(row) {
             let url;

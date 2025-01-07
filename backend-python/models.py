@@ -224,7 +224,7 @@ class MaterialStorage(db.Model):
         default=0,
     )
     current_amount = db.Column(db.DECIMAL(10, 5), default=0, nullable=False)
-    unit_price = db.Column(db.DECIMAL(10, 2))
+    unit_price = db.Column(db.DECIMAL(10, 2), nullable=False, default=0.00)
     material_specification = db.Column(db.String(40), default='', nullable=True)
     material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
     material_outsource_outbound_date = db.Column(db.Date)
@@ -434,8 +434,8 @@ class OrderShoe(db.Model):
     process_sheet_upload_status = db.Column(db.String(1), nullable=True)
     production_order_upload_status = db.Column(db.String(1), nullable=True)
     customer_product_name = db.Column(db.String(50), nullable=False)
-    business_technical_remark = db.Column(db.String(50), nullable=True)
-    business_material_remark = db.Column(db.String(50), nullable=True)
+    business_technical_remark = db.Column(db.String(100), nullable=True)
+    business_material_remark = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         return f"<OrderShoe(order_shoe_id={self.order_shoe_id})>"
@@ -834,7 +834,7 @@ class SizeMaterialStorage(db.Model):
     size_material_color = db.Column(db.String(40), default='', nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
-    unit_price = db.Column(db.Numeric(10, 2), nullable=True)
+    unit_price = db.Column(db.Numeric(10, 2), nullable=True, default=0.00)
     purchase_divide_order_id = db.Column(db.BigInteger)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
