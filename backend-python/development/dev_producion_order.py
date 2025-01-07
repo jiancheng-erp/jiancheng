@@ -819,19 +819,27 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "烫底")
-                            .first()
-                            .material_type_id
-                        )
+                        if material_data.get("materialType") == "烫底":
+                            material_type_id = (
+                                db.session.query(MaterialType)
+                                .filter(MaterialType.material_type_name == "烫底")
+                                .first()
+                                .material_type_id
+                            )
+                        elif material_data.get("materialType") == "里料":
+                            material_type_id = (
+                                db.session.query(MaterialType)
+                                .filter(MaterialType.material_type_name == "里料")
+                                .first()
+                                .material_type_id
+                            )
                         material = Material(
                             material_name=material_data.get("materialName"),
                             material_supplier=supplier_id,
                             material_unit=material_data.get("unit"),
                             material_creation_date=datetime.datetime.now(),
                             material_type_id=material_type_id,
-                            material_category=1,
+                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
                         )
                         db.session.add(material)
                         db.session.flush()
@@ -1025,6 +1033,7 @@ def edit_production_instruction():
     production_instruction_rid = request.json.get("productionInstructionId")
     order_shoe_rid = request.json.get("orderShoeId")
     upload_data = request.json.get("uploadData")
+    print(upload_data)
     production_instruction_details = request.json.get("productionInstructionDetail")
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
@@ -1612,12 +1621,20 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "烫底")
-                            .first()
-                            .material_type_id
-                        )
+                        if material_data.get("materialType") == "烫底":
+                            material_type_id = (
+                                db.session.query(MaterialType)
+                                .filter(MaterialType.material_type_name == "烫底")
+                                .first()
+                                .material_type_id
+                            )
+                        elif material_data.get("materialType") == "里料":
+                            material_type_id = (
+                                db.session.query(MaterialType)
+                                .filter(MaterialType.material_type_name == "里料")
+                                .first()
+                                .material_type_id
+                            )
                         material = Material(
                             material_name=material_data.get("materialName"),
                             material_supplier=supplier_id,
@@ -1775,6 +1792,7 @@ def issue_production_order():
         db.session.add(craft_sheet)
         db.session.flush()
         for order_shoe_type in order_shoe_types:
+            random_string = randomIdGenerater(6)
             order_shoe_type_id = order_shoe_type.order_shoe_type_id
             first_bom_rid = current_time_stamp + random_string + "F"
             second_bom_rid = current_time_stamp + random_string + "S"
@@ -1919,30 +1937,27 @@ def issue_production_order():
             image_path = os.path.join(
                 IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid, "shoe_image.jpg"
             )
-        try:
-            generate_instruction_excel_file(
-                os.path.join(FILE_STORAGE_PATH, "投产指令单模版.xlsx"),
-                os.path.join(
-                    FILE_STORAGE_PATH, order_rid, order_shoe_rid, "投产指令单.xlsx"
-                ),
-                {
-                    "order_id": order_rid,
-                    "inherit_id": order_shoe_rid,
-                    "customer_id": customer_shoe_name,
-                    "last_type": last_type,
-                    "size_range": size_range,
-                    "size_difference": size_difference,
-                    "origin_size": origin_size,
-                    "designer": designer,
-                    "brand": brand,
-                    "colors": color_string,
-                },
-                insert_data,
-                image_path,
-                image_save_path,
-            )
-        except Exception:
-            return jsonify({"error": "EXCEL GENERATION FAILED"}), 500
+        generate_instruction_excel_file(
+            os.path.join(FILE_STORAGE_PATH, "投产指令单模版.xlsx"),
+            os.path.join(
+                FILE_STORAGE_PATH, order_rid, order_shoe_rid, "投产指令单.xlsx"
+            ),
+            {
+                "order_id": order_rid,
+                "inherit_id": order_shoe_rid,
+                "customer_id": customer_shoe_name,
+                "last_type": last_type,
+                "size_range": size_range,
+                "size_difference": size_difference,
+                "origin_size": origin_size,
+                "designer": designer,
+                "brand": brand,
+                "colors": color_string,
+            },
+            insert_data,
+            image_path,
+            image_save_path,
+        )
         event_arr = []
         processor: EventProcessor = current_app.config["event_processor"]
         try:

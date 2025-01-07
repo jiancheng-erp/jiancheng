@@ -45,7 +45,7 @@ def get_order_shoe_list():
         .join(Color, ShoeType.color_id == Color.color_id)
         .outerjoin(TotalBom, OrderShoe.order_shoe_id == TotalBom.order_shoe_id)
         .outerjoin(
-            Bom, TotalBom.total_bom_id == Bom.total_bom_id
+            Bom, OrderShoeType.order_shoe_type_id == Bom.order_shoe_type_id
         )  # Assuming BOM is optional
         .outerjoin(PurchaseOrder, PurchaseOrder.bom_id == TotalBom.total_bom_id)
         .filter(Order.order_id == order_id)
@@ -132,6 +132,7 @@ def get_order_shoe_list():
 
         # Set BOM details based on bom_type
         if bom:
+            print(bom.bom_rid)
             if bom.bom_type == 0:
                 first_bom_id = bom.bom_rid
                 first_bom_status = {

@@ -4,6 +4,8 @@ from app_config import app, db
 from models import *
 from file_locations import IMAGE_STORAGE_PATH
 from api_utility import to_camel, to_snake
+from login.login import current_user, current_user_info
+
 shoe_bp = Blueprint("shoe_bp", __name__)
 
 SHOE_TABLE_ATTRNAMES = Shoe.__table__.columns.keys()
@@ -50,16 +52,34 @@ def get_all_shoes():
 @shoe_bp.route("/shoe/getallshoesnew", methods=["GET"])
 def get_all_shoes_new():
     shoe_rid = request.args.get("shoerid")
+    current_user_role, current_user_id, current_department_name = current_user_info()
+    shoe_department = current_department_name
     if shoe_rid is None:
-        shoe_entities = (
-            db.session.query(Shoe)
-        ).all()
+        if shoe_department in ["开发一部", "开发二部", "开发三部"]:
+            shoe_entities = (
+                db.session.query(Shoe)
+                .filter(Shoe.shoe_department_id == shoe_department)
+                .all()
+            )
+        else:
+            shoe_entities = (
+                db.session.query(Shoe)
+                .all()
+            )
     else:
-        shoe_entities = (
-            db.session.query(Shoe)
-            .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
-            .all()
-        )
+        if shoe_department in ["开发一部", "开发二部", "开发三部"]:
+            shoe_entities = (
+                db.session.query(Shoe)
+                .filter(Shoe.shoe_department_id == shoe_department)
+                .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+                .all()
+            )
+        else:
+            shoe_entities = (
+                db.session.query(Shoe)
+                .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+                .all()
+            )
     result_data = []
     for shoe in shoe_entities:
         shoe_response_data = dict()

@@ -227,7 +227,7 @@ def get_shoe_bom_items():
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Bom, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Bom.bom_rid == bom_rid).scalar()
+        .filter(Bom.bom_rid == bom_rid).first().order_id
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
     for entity in entities:

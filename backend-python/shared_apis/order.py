@@ -919,6 +919,9 @@ def get_order_full_info():
     page = request.args.get("page", 1, type=int)
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
+    inherit_search = request.args.get("inheritSearch", "", type=str)
+    order_status = request.args.get("orderStatus", "", type=int)
+    status_value = request.args.get("statusValue", "", type=int)
 
     # Set the pagination variables
     per_page = 10  # Define how many results per page
@@ -957,10 +960,14 @@ def get_order_full_info():
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
+            Shoe.shoe_rid.like(f"%{inherit_search}%"),
         )
         .order_by(Order.order_id.desc())
-        .all()
     )
+    if order_status == 1:
+        query = query.filter(OrderShoeStatus.current_status > status_value).all()
+    else:
+        query = query.all()
 
     # Initialize a dictionary to group orders
     orders_dict = {}
@@ -1072,15 +1079,43 @@ def get_order_full_info():
 def get_order_page_info():
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
-    # Query to get the total number of orders
-    total_orders = (
-        db.session.query(Order, Customer)
+    inherit_search = request.args.get("inheritSearch", "", type=str)
+    order_status = request.args.get("orderStatus", "", type=int)
+    status_value = request.args.get("statusValue", "", type=int)
+
+    # Base query for filtering orders
+    base_query = (
+        db.session.query(Order.order_id)
         .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
+            Shoe.shoe_rid.like(f"%{inherit_search}%"),
         )
-    ).count()
+    )
+
+    if order_status == 1:
+        # Subquery to find OrderShoe IDs with any status > status_value
+        matching_shoes_subquery = (
+            db.session.query(OrderShoe.order_shoe_id)
+            .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+            .filter(OrderShoeStatus.current_status > status_value)
+            .distinct()
+            .subquery()
+        )
+
+        # Count distinct orders related to the matching shoes
+        total_orders = (
+            base_query.filter(OrderShoe.order_shoe_id.in_(matching_shoes_subquery))
+            .distinct(Order.order_id)
+            .count()
+        )
+    else:
+        # Count distinct orders in the default case
+        total_orders = base_query.distinct(Order.order_id).count()
 
     # Calculate the total number of pages
     total_pages = math.ceil(total_orders / 10)

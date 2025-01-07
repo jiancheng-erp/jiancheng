@@ -252,7 +252,7 @@
                 v-model="isProductionOrderCreateDialogVisible"
                 width="90%"
                 style="height: 700px; overflow-y: scroll"
-            >   
+            >
                 <el-descriptions title="投产指令单公用信息" border :column="2">
                     <el-descriptions-item label="本码">
                         <el-input
@@ -296,7 +296,11 @@
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
+                    <el-col :span="12" :offset="0"
+                        ><el-button type="primary" size="default" @click="openLoadMaterialDialog"
+                            >加载过往订单</el-button
+                        ></el-col
+                    >
                 </el-row>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
@@ -1004,7 +1008,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
-                            <el-col :span="4" :offset="0">
+                            <el-col :span="6" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(6)"
                                     >添加烫底</el-button
                                 >
@@ -1012,7 +1016,13 @@
                                     type="primary"
                                     size="default"
                                     @click="addMaterialByManual(6)"
-                                    >手动添加烫底</el-button
+                                    >手动添加独立烫底</el-button
+                                >
+                                <el-button
+                                    type="primary"
+                                    size="default"
+                                    @click="addMaterialByManual(7)"
+                                    >手动添加加工烫底</el-button
                                 >
                             </el-col>
                             <el-col :span="2" :offset="0">
@@ -1086,8 +1096,7 @@
                                             <el-input
                                                 type="textarea"
                                                 autosize
-                                                v-model="scope.row.materialSpecification
-                                                "
+                                                v-model="scope.row.materialSpecification"
                                                 size="default"
                                             ></el-input>
                                         </template>
@@ -1165,14 +1174,16 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog
-                title="加载过往鞋型材料"
-                v-model="isLoadMaterialDialogVisible"
-                width="50%">
+            <el-dialog title="加载过往鞋型材料" v-model="isLoadMaterialDialogVisible" width="50%">
                 <el-table :data="pastShoeInfoTable" border>
                     <el-table-column type="expand">
                         <template #default="scope">
-                            <el-table ref="orderShoeTypeTable" :data="scope.row.shoeColors" border @selection-change="handleShoeTypeSelectionChange">
+                            <el-table
+                                ref="orderShoeTypeTable"
+                                :data="scope.row.shoeColors"
+                                border
+                                @selection-change="handleShoeTypeSelectionChange"
+                            >
                                 <el-table-column type="selection"></el-table-column>
                                 <el-table-column prop="color" label="颜色"></el-table-column>
                                 <el-table-column label="鞋图">
@@ -1200,16 +1211,25 @@
                     <el-table-column prop="designer" label="设计员"></el-table-column>
                 </el-table>
                 <template #footer>
-                <span>
-                    <el-button @click="isLoadMaterialDialogVisible = false;selectShoeTypeRow = {}">取消</el-button>
-                    <el-button type="primary" @click="addPastMaterialToCurrent">确认加载</el-button>
-                </span>
+                    <span>
+                        <el-button
+                            @click="
+                                isLoadMaterialDialogVisible = false;
+                                selectShoeTypeRow = {}
+                            "
+                            >取消</el-button
+                        >
+                        <el-button type="primary" @click="addPastMaterialToCurrent"
+                            >确认加载</el-button
+                        >
+                    </span>
                 </template>
             </el-dialog>
             <el-dialog
                 title="过往订单材料查看"
                 v-model="isPastShoeMaterialDetailDialogVisible"
-                width="80%">
+                width="80%"
+            >
                 <el-descriptions title="鞋型基本信息" border column="2">
                     <el-descriptions-item label="鞋图" rowspan="2" align="center">
                         <el-image
@@ -1217,28 +1237,42 @@
                             :src="pastShoeDescription.shoeImageUrl"
                         />
                     </el-descriptions-item>
-                    <el-descriptions-item label="工厂型号" align="center">{{ pastShoeDescription.shoeId }}</el-descriptions-item>
-                    <el-descriptions-item label="颜色" align="center">{{ pastShoeDescription.color }}</el-descriptions-item>
+                    <el-descriptions-item label="工厂型号" align="center">{{
+                        pastShoeDescription.shoeId
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="颜色" align="center">{{
+                        pastShoeDescription.color
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
-                    <el-table-column prop="materialDetailType" label="材料二级类型"></el-table-column>
+                    <el-table-column
+                        prop="materialDetailType"
+                        label="材料二级类型"
+                    ></el-table-column>
                     <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
                     <el-table-column prop="materialName" label="材料名称"></el-table-column>
                     <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                    <el-table-column
+                        prop="materialSpecification"
+                        label="材料规格"
+                    ></el-table-column>
                     <el-table-column prop="craftName" label="工艺名称"></el-table-column>
                     <el-table-column prop="color" label="颜色"></el-table-column>
                     <el-table-column prop="unit" label="单位"></el-table-column>
                     <el-table-column prop="comment" label="备注"></el-table-column>
                 </el-table>
                 <template #footer>
-                <span>
-                    <el-button type="primary" @click="isPastShoeMaterialDetailDialogVisible = false">确认</el-button>
-                </span>
+                    <span>
+                        <el-button
+                            type="primary"
+                            @click="isPastShoeMaterialDetailDialogVisible = false"
+                            >确认</el-button
+                        >
+                    </span>
                 </template>
             </el-dialog>
-            
+
             <el-dialog title="添加新材料" v-model="newMaterialVis" width="50%">
                 <el-row :gutter="20">
                     <el-col :span="6" :offset="0">
@@ -1508,7 +1542,11 @@
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
+                    <el-col :span="12" :offset="0"
+                        ><el-button type="primary" size="default" @click="openLoadMaterialDialog"
+                            >加载过往订单</el-button
+                        ></el-col
+                    >
                 </el-row>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
@@ -2186,7 +2224,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
-                            <el-col :span="4" :offset="0">
+                            <el-col :span="6" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(6)"
                                     >添加烫底</el-button
                                 >
@@ -2194,7 +2232,13 @@
                                     type="primary"
                                     size="default"
                                     @click="addMaterialByManual(6)"
-                                    >手动添加烫底</el-button
+                                    >手动添加独立烫底</el-button
+                                >
+                                <el-button
+                                    type="primary"
+                                    size="default"
+                                    @click="addMaterialByManual(7)"
+                                    >手动添加加工烫底</el-button
                                 >
                             </el-col>
                             <el-col :span="2" :offset="0">
@@ -2333,6 +2377,7 @@ import Arrow from '@/components/OrderArrowView.vue'
 import { Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MaterialDataTable from '../components/MaterialDataTable.vue'
+import { withTimeout } from '@/Pages/utils/timeout'
 import axios from 'axios'
 export default {
     components: {
@@ -2441,7 +2486,7 @@ export default {
             selectShoeTypeRow: {
                 shoeTypeId: '',
                 color: ''
-            },
+            }
         }
     },
     async mounted() {
@@ -2575,7 +2620,7 @@ export default {
                 `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
                 {
                     params: {
-                        shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId,
+                        shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
                     }
                 }
             )
@@ -2587,7 +2632,6 @@ export default {
             this.materialWholeData[0].outsoleMaterialData = pastMaterialData.outsoleMaterialData
             this.materialWholeData[0].midsoleMaterialData = pastMaterialData.midsoleMaterialData
             this.materialWholeData[0].hotsoleMaterialData = pastMaterialData.hotsoleMaterialData
-
         },
         addMaterialByManual(typeSymbol) {
             const preActiveMaterialData = this.materialWholeData.find(
@@ -2705,6 +2749,23 @@ export default {
                         materialModel: '',
                         materialSpecification: '',
                         craftName: '',
+                        color: '',
+                        unit: '',
+                        supplierName: '',
+                        comment: '',
+                        isPurchase: false,
+                        manualSymbol: 1
+                    }
+                    break
+                case 7:
+                    this.defaultManuallyAddedMaterial.materialType = '里料'
+                    activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
+                    this.defaultManuallyAddedMaterial = {
+                        materialType: '',
+                        materialDetailType: '',
+                        materialName: '',
+                        materialModel: '',
+                        materialSpecification: '',
                         color: '',
                         unit: '',
                         supplierName: '',
@@ -2919,66 +2980,127 @@ export default {
             return []
         },
         async editProductionInstrucion() {
+            for (const materialData of this.materialWholeData) {
+                for (const materialType of [
+                    'surfaceMaterialData',
+                    'insideMaterialData',
+                    'accessoryMaterialData',
+                    'outsoleMaterialData',
+                    'midsoleMaterialData',
+                    'hotsoleMaterialData'
+                ]) {
+                    for (const item of materialData[materialType]) {
+                        if (!item.supplierName || !item.materialName) {
+                            this.$message({
+                                type: 'error',
+                                message: '所有材料的供应商名称和材料名称不能为空'
+                            })
+                            return
+                        }
+                    }
+                }
+            }
             const loadingInstance = this.$loading({
                 lock: true,
                 text: '等待中，请稍后...',
                 background: 'rgba(0, 0, 0, 0.7)'
             })
-            const response = await axios.post(
-                `${this.$apiBaseUrl}/devproductionorder/editproductioninstruction`,
-                {
-                    orderId: this.orderData.orderId,
-                    productionInstructionId: this.newProductionInstructionId,
-                    orderShoeId: this.currentShoeId,
-                    uploadData: this.materialWholeData,
-                    productionInstructionDetail: this.productionInstructionDetail
+            try {
+                const response = await axios.post(
+                    `${this.$apiBaseUrl}/devproductionorder/editproductioninstruction`,
+                    {
+                        orderId: this.orderData.orderId,
+                        productionInstructionId: this.newProductionInstructionId,
+                        orderShoeId: this.currentShoeId,
+                        uploadData: this.materialWholeData,
+                        productionInstructionDetail: this.productionInstructionDetail
+                    }
+                )
+
+                if (response.status !== 200) {
+                    this.$message({
+                        type: 'error',
+                        message: '保存失败'
+                    })
+                    return
                 }
-            )
-            loadingInstance.close()
-            if (response.status !== 200) {
+
+                this.$message({
+                    type: 'success',
+                    message: '保存成功'
+                })
+                this.isEditDialogVisible = false
+                this.getAllShoeListInfo()
+            } catch (error) {
                 this.$message({
                     type: 'error',
-                    message: '保存失败'
+                    message: error.message || '请求失败，请稍后再试'
                 })
-                return
+            } finally {
+                loadingInstance.close()
             }
-            this.$message({
-                type: 'success',
-                message: '保存成功'
-            })
-            this.isEditDialogVisible = false
-            this.getAllShoeListInfo()
         },
         async saveProductionInstruction() {
+            // Check if all items have non-null supplierName and materialName
+            for (const materialData of this.materialWholeData) {
+                for (const materialType of [
+                    'surfaceMaterialData',
+                    'insideMaterialData',
+                    'accessoryMaterialData',
+                    'outsoleMaterialData',
+                    'midsoleMaterialData',
+                    'hotsoleMaterialData'
+                ]) {
+                    for (const item of materialData[materialType]) {
+                        if (!item.supplierName || !item.materialName) {
+                            this.$message({
+                                type: 'error',
+                                message: '所有材料的供应商名称和材料名称不能为空'
+                            })
+                            return
+                        }
+                    }
+                }
+            }
             const loadingInstance = this.$loading({
                 lock: true,
                 text: '等待中，请稍后...',
                 background: 'rgba(0, 0, 0, 0.7)'
             })
-            const response = await axios.post(
-                `${this.$apiBaseUrl}/devproductionorder/saveproductioninstruction`,
-                {
-                    orderId: this.orderData.orderId,
-                    productionInstructionId: this.newProductionInstructionId,
-                    orderShoeId: this.currentShoeId,
-                    uploadData: this.materialWholeData,
-                    productionInstructionDetail: this.productionInstructionDetail
+            try {
+                const response = await axios.post(
+                    `${this.$apiBaseUrl}/devproductionorder/saveproductioninstruction`,
+                    {
+                        orderId: this.orderData.orderId,
+                        productionInstructionId: this.newProductionInstructionId,
+                        orderShoeId: this.currentShoeId,
+                        uploadData: this.materialWholeData,
+                        productionInstructionDetail: this.productionInstructionDetail
+                    }
+                )
+
+                if (response.status !== 200) {
+                    this.$message({
+                        type: 'error',
+                        message: '保存失败'
+                    })
+                    return
                 }
-            )
-            loadingInstance.close()
-            if (response.status !== 200) {
+
+                this.$message({
+                    type: 'success',
+                    message: '保存成功'
+                })
+                this.isProductionOrderCreateDialogVisible = false
+                this.getAllShoeListInfo()
+            } catch (error) {
                 this.$message({
                     type: 'error',
-                    message: '保存失败'
+                    message: error.message || '保存失败，请稍后再试'
                 })
-                return
+            } finally {
+                loadingInstance.close()
             }
-            this.$message({
-                type: 'success',
-                message: '保存成功'
-            })
-            this.isProductionOrderCreateDialogVisible = false
-            this.getAllShoeListInfo()
         },
         closePreviewDialog() {
             this.isPreviewDialogVisible = false
@@ -3084,7 +3206,6 @@ export default {
                 this.selectShoeTypeRow = selection
                 console.log(this.selectShoeTypeRow)
             }
-            
         },
         handleMaterialSelectionChange(selection) {
             if (selection.length > 1) {
@@ -3195,7 +3316,7 @@ export default {
             window.open(
                 `${this.$apiBaseUrl}/devproductionorder/downloadpicnotes?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`
             )
-        }
+        },
     }
 }
 </script>

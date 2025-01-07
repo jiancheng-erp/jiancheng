@@ -16,7 +16,7 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="6" :offset="6" style="white-space: nowrap">
+        <el-col :span="6" :offset="2" style="white-space: nowrap">
             客人名称搜索：
             <el-input
                 v-model="customerSearch"
@@ -27,9 +27,31 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
+        <el-col :span="6" :offset="2" style="white-space: nowrap">
+            工厂型号搜索：
+            <el-input
+                v-model="inheritSearch"
+                placeholder=""
+                size="normal"
+                :suffix-icon="Search"
+                clearable
+                @change="tableFilter"
+            ></el-input>
+        </el-col>
     </el-row>
+    <el-row :gutter="20">
+        <el-col :span="4" :offset="0">
+            <el-radio-group v-model="orderStatus" @change="tableFilter">
+                <el-radio-button label="全部订单" :value="0"></el-radio-button>
+                <el-radio-button label="已完成订单" :value="1"></el-radio-button>
+            </el-radio-group>
+            
+            
+        </el-col>
+    </el-row>
+    
     <el-row>
-        <el-table :data="orderFilterData" border stripe height="600">
+        <el-table :data="orderFilterData" border stripe height="550" :default-expand-all="isExpand">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.shoes" :border="true">
@@ -123,7 +145,10 @@ export default {
     data() {
         return {
             Search,
+            orderStatus: 0,
+            isExpand: false,
             orderSearch: '',
+            inheritSearch: '',
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
@@ -146,6 +171,9 @@ export default {
                         pageSize: this.pageSize,
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
+                        inheritSearch: this.inheritSearch,
+                        orderStatus: this.orderStatus,
+                        statusValue: 0,
                     },
                 })
                 this.orderFilterData = response.data // Update table data
@@ -153,11 +181,15 @@ export default {
                 params: {
                     orderSearch: this.orderSearch,
                     customerSearch: this.customerSearch,
+                    inheritSearch: this.inheritSearch,
+                    orderStatus: this.orderStatus,
+                    statusValue: 0,
                 },
                 })
                 this.totalData = response2.data.totalOrders // Total orders for pagination
                 console.log("Total orders:", response2)
                 console.log("Total orders:", this.totalData)
+                this.isExpand = true
             } catch (error) {
                 console.error("Error fetching order data:", error)
             }

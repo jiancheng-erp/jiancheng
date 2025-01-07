@@ -1314,6 +1314,7 @@ def get_craft_sheet_info():
             "materialCraftNameList": material_craft_list,
             "materialDetailType": item.CraftSheetItem.material_second_type,
             "materialSource": item.CraftSheetItem.material_source,
+            "productionInstructionItemId": item.CraftSheetItem.production_instruction_item_id,
         }
 
         if item.CraftSheetItem.material_type == "S":
@@ -1530,7 +1531,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("insideMaterialData")) > 0:
@@ -1644,7 +1646,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("accessoryMaterialData")) > 0:
@@ -1753,7 +1756,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
 
@@ -1862,7 +1866,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("midsoleMaterialData")) > 0:
@@ -1970,7 +1975,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("lastMaterialData")) > 0:
@@ -2078,7 +2084,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("hotsoleMaterialData")) > 0:
@@ -2186,7 +2193,8 @@ def edit_craft_sheet():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol=0
+                    after_usage_symbol=0,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
     order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")

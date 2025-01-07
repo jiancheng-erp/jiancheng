@@ -194,6 +194,7 @@ export default {
             shoeTableData: [],
             colorOptions: [],
             userRole: localStorage.getItem('role'),
+            staffRole : localStorage.getItem('staffid'),
             shoeModel: false,
             colorModel: '',
             idModel: '',
@@ -220,12 +221,15 @@ export default {
         },
         async getAllShoes() {
             // new api call
-            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`)
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
+                params: { shoerid: '', role: this.staffRole }
+            })
             this.shoeTableData = response.data
         },
         async getFilterShoes() {
+            console.log(this.userRole)
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
-                params: { shoerid: this.inheritIdSearch }
+                params: { shoerid: this.inheritIdSearch, role: this.staffRole }
             })
             this.shoeTableData = response.data
         },
