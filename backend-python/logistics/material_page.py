@@ -7,6 +7,8 @@ from sqlalchemy import text
 material_page_bp = Blueprint("material_page_bp", __name__)
 
 
+from sqlalchemy.orm import joinedload
+
 @material_page_bp.route("/logistics/allmaterial", methods=["GET"])
 def get_all_materials():
     material_name = request.args.get("materialname", None)
@@ -14,7 +16,8 @@ def get_all_materials():
     factory_name = request.args.get("factoryname", None)
     material_type = request.args.get("materialtype", None)
     print(material_name, material_warehouse, factory_name, material_type)
-    # Start building the query
+
+    # Start building the query with joinedload to reduce query count
     query = (
         db.session.query(Material, MaterialWarehouse, Supplier, MaterialType)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
@@ -37,30 +40,72 @@ def get_all_materials():
     if material_type:
         query = query.filter(MaterialType.material_type_name.like(f"%{material_type}%"))
 
+    # Fetch all materials in a single query
     materials = query.all()
 
-    # Prepare the result
-    result = []
+    # Preload ProductionInstructionItem data to avoid per-item queries
+    material_ids = [material.Material.material_id for material in materials]
+    instruction_items = (
+        db.session.query(ProductionInstructionItem.material_id, ProductionInstructionItem.material_model)
+        .filter(ProductionInstructionItem.material_id.in_(material_ids))
+        .distinct()
+        .all()
+    )
+
+    # Create a mapping of material_id to models
+    material_models_map = {}
+    for item in instruction_items:
+        if item.material_id not in material_models_map:
+            material_models_map[item.material_id] = []
+        material_models_map[item.material_id].append(item.material_model)
+
+    # Consolidate results
+    consolidated_results = {}
     for material in materials:
-        result.append(
-            {
-                "materialId": material.Material.material_id,
+        key = (material.Material.material_name, material.MaterialType.material_type_name)
+        supplier_name = material.Supplier.supplier_name
+        material_id = material.Material.material_id
+        material_models = material_models_map.get(material_id, [])
+
+        if key not in consolidated_results:
+            consolidated_results[key] = {
                 "materialName": material.Material.material_name,
                 "materialType": material.MaterialType.material_type_name,
                 "unit": material.Material.material_unit,
                 "warehouseName": material.MaterialWarehouse.material_warehouse_name,
-                "factoryName": material.Supplier.supplier_name,
                 "addDate": material.Material.material_creation_date.isoformat(),
+                "factoryInfo": [],  # Initialize as empty list
             }
-        )
+
+        # Add supplier and model info separately for each model
+        for model in material_models:
+            consolidated_results[key]["factoryInfo"].append(
+                {
+                    "supplierName": supplier_name,
+                    "materialModel": model,
+                }
+            )
+        # If no models, still add supplier entry with null model
+        if not material_models:
+            consolidated_results[key]["factoryInfo"].append(
+                {
+                    "supplierName": supplier_name,
+                    "materialModel": None,
+                }
+            )
 
     # Prepare the final response
+    result = list(consolidated_results.values())
     fin_result = {
         "amount": len(result),
         "materials": result,
     }
 
     return jsonify(fin_result)
+
+
+
+
 
 
 @material_page_bp.route("/logistics/allwarehousenames", methods=["GET"])
@@ -90,7 +135,7 @@ def get_all_material_types():
             MaterialWarehouse,
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
         )
-        .join(Material, Material.material_type_id == MaterialType.material_type_id)
+        .outerjoin(Material, Material.material_type_id == MaterialType.material_type_id)
         .distinct(MaterialType.material_type_name)
         .order_by(MaterialType.material_type_name)
         .all()

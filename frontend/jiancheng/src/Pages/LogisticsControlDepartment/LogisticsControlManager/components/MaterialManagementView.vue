@@ -74,7 +74,7 @@
                         </el-col>
                     </el-row>
 
-                    <el-row :gutter="20" style="margin-top: 20px" >
+                    <el-row :gutter="20" style="margin-top: 20px">
                         <el-col :span="24" :offset="0">
                             <el-table
                                 :data="materialTypeFilterData"
@@ -82,6 +82,22 @@
                                 style="height: 500px"
                                 v-loading="datafinished"
                             >
+                                <el-table-column type="expand">
+                                    <template #default="scope">
+                                        <el-table :data="scope.row.factoryInfo">
+                                            <el-table-column
+                                                prop="materialModel"
+                                                label="材料型号"
+                                            >
+                                            </el-table-column>
+                                            <el-table-column
+                                                prop="supplierName"
+                                                label="厂家名称"
+                                            >
+                                            </el-table-column>
+                                        </el-table>
+                                    </template>
+                                </el-table-column>
                                 <el-table-column
                                     prop="warehouseName"
                                     label="仓库名称"
@@ -95,10 +111,6 @@
                                     label="材料名称"
                                 ></el-table-column>
                                 <el-table-column prop="unit" label="单位"></el-table-column>
-                                <el-table-column
-                                    prop="factoryName"
-                                    label="厂家名称"
-                                ></el-table-column>
                                 <el-table-column prop="addDate" label="添加日期"></el-table-column>
                                 <el-table-column label="操作">
                                     <template #default="scope">
@@ -198,18 +210,6 @@
                                     >
                                     </el-option>
                                 </el-select>
-                            </div>
-                        </el-col>
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                厂家名称查询：<el-input
-                                    v-model="factoryNameSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
                             </div>
                         </el-col>
                         <el-col :span="4" :offset="0">
@@ -399,11 +399,7 @@
             </el-table-column>
             <el-table-column label="材料分类" width="150">
                 <template #default="scope">
-                    <el-select
-                        v-model="scope.row.materialCategory"
-                        placeholder=""
-                        filterable
-                    >
+                    <el-select v-model="scope.row.materialCategory" placeholder="" filterable>
                         <el-option
                             v-for="item in materialCategoryOptions"
                             :key="item.value"
@@ -500,12 +496,22 @@
                 <el-text>{{ editMaterialForm.materialFactory }}</el-text>
             </el-form-item>
             <el-form-item label="">
-                <el-button type="primary" size="default" @click="checkMaterialName">检查材料名称</el-button>
-                
-                <el-icon v-if="editMaterialForm.existenceStatus === 'same'" :size="20" class="status-icon">
+                <el-button type="primary" size="default" @click="checkMaterialName"
+                    >检查材料名称</el-button
+                >
+
+                <el-icon
+                    v-if="editMaterialForm.existenceStatus === 'same'"
+                    :size="20"
+                    class="status-icon"
+                >
                     <Close />
                 </el-icon>
-                <el-icon v-if="editMaterialForm.existenceStatus === 'none'" :size="20" class="status-icon">
+                <el-icon
+                    v-if="editMaterialForm.existenceStatus === 'none'"
+                    :size="20"
+                    class="status-icon"
+                >
                     <Check />
                 </el-icon>
                 <el-button
@@ -521,7 +527,8 @@
                     type="success"
                     size="default"
                     @click="
-                        (editMaterialForm.existenceStatus = 'none'), (editMaterialForm.similiarMaterials = [])
+                        (editMaterialForm.existenceStatus = 'none'),
+                            (editMaterialForm.similiarMaterials = [])
                     "
                     >确认材料</el-button
                 >
@@ -531,9 +538,7 @@
         <template #footer>
             <span>
                 <el-button @click="isModifyMaterialTypeDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="editMaterialSubmit"
-                    >确认</el-button
-                >
+                <el-button type="primary" @click="editMaterialSubmit">确认</el-button>
             </span>
         </template>
     </el-dialog>
@@ -548,8 +553,8 @@ export default {
             Check,
             Close,
             materialCategoryOptions: [
-                { value: 0, label: '普通材料'},
-                { value: 1, label: '分尺码材料'},
+                { value: 0, label: '普通材料' },
+                { value: 1, label: '分尺码材料' }
             ],
             materialTypeSelectOption: [],
             materialTypeData: [],
@@ -567,7 +572,7 @@ export default {
                 materialName: '',
                 materialUnit: '',
                 materialFactory: '',
-                existenceStatus: 'unchecked',
+                existenceStatus: 'unchecked'
             },
             isModifyMaterialTypeDialogVisible: false,
             isAddNewMaterialTypeDialogVisible: false,
@@ -589,7 +594,7 @@ export default {
             warehouseOptions: [],
             factoryOptions: [],
             currentPage1: 1,
-            currentPage2: 1,
+            currentPage2: 1
         }
     },
     async mounted() {
@@ -605,7 +610,7 @@ export default {
         async checkMaterialName() {
             const response = await axios.post(`${this.$apiBaseUrl}/logistics/checkmaterial`, {
                 materialname: this.editMaterialForm.materialName,
-                factoryname: this.editMaterialForm.materialFactory,
+                factoryname: this.editMaterialForm.materialFactory
             })
             if (response.data.message === 'same') {
                 this.$message({
@@ -877,12 +882,9 @@ export default {
                 type: 'warning'
             })
                 .then(async () => {
-                    const response = await axios.post(
-                        `${this.$apiBaseUrl}/logistics/addmaterial`,
-                        {
-                            materials: this.newMaterialData
-                        }
-                    )
+                    const response = await axios.post(`${this.$apiBaseUrl}/logistics/addmaterial`, {
+                        materials: this.newMaterialData
+                    })
                     console.log(response.status)
                     if (response.status === 200) {
                         this.$message({
@@ -917,7 +919,10 @@ export default {
             if (this.editMaterialForm.existenceStatus === 'unchecked') {
                 await this.checkMaterialName()
             }
-            if (this.editMaterialForm.existenceStatus === 'same' || this.editMaterialForm.existenceStatus === 'similar') {
+            if (
+                this.editMaterialForm.existenceStatus === 'same' ||
+                this.editMaterialForm.existenceStatus === 'similar'
+            ) {
                 this.$message({
                     type: 'warning',
                     message: '存在相同或相似材料，请检查'

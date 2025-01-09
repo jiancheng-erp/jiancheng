@@ -103,6 +103,20 @@ def get_material_type_and_name():
         )
     return jsonify(result)
 
+@assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
+def get_all_material_name():
+    material_name_list = db.session.query(Material.material_name).distinct().all()
+    print(material_name_list)
+    result = []
+    for material_name in material_name_list:
+        result.append(
+            {
+                "value": material_name.material_name,
+                "label": material_name.material_name
+            }
+        )
+    print(result)
+    return jsonify(result)
 
 @assets_purchase_page_bp.route("/logistics/newpurchaseordersave", methods=["POST"])
 def new_purchase_order_save():
