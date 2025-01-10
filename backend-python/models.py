@@ -17,8 +17,6 @@ class BomItem(db.Model):
     material_id = db.Column(
         db.BigInteger,
     )
-    material_specification = db.Column(db.String(50), nullable=True)
-    material_model = db.Column(db.String(50), nullable=True)
     unit_usage = db.Column(db.Numeric(10, 5), nullable=False)
     total_usage = db.Column(db.Numeric(10, 5), nullable=False)
     department_id = db.Column(
@@ -27,7 +25,6 @@ class BomItem(db.Model):
     bom_item_add_type = db.Column(db.String(1), nullable=False)
     remark = db.Column(db.String(100), nullable=True)
     bom_id = db.Column(db.BigInteger)
-    bom_item_color = db.Column(db.String(40), nullable=True)
     size_34_total_usage = db.Column(db.Integer, nullable=True)
     size_35_total_usage = db.Column(db.Integer, nullable=True)
     size_36_total_usage = db.Column(db.Integer, nullable=True)
@@ -155,15 +152,16 @@ class Department(db.Model):
 class Material(db.Model):
     __tablename__ = "material"
     material_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    material_name = db.Column(db.String(60), nullable=False)
+    material_model = db.Column(db.String(60), nullable=True)
+    material_specification = db.Column(db.String(60), nullable=True)
     material_type_id = db.Column(db.Integer, nullable=False)
     material_unit = db.Column(db.String(4), nullable=True)
     material_supplier = db.Column(db.Integer, nullable=False)
-    material_creation_date = db.Column(db.Date, nullable=True)
     material_category = db.Column(db.SmallInteger, nullable=False, default=0)
+    color = db.Column(db.String(20), nullable=True)
 
     __table_args__ = (
-        db.UniqueConstraint("material_supplier", "material_name", name="unq_material"),
+        db.UniqueConstraint("material_supplier", "material_model", "material_specification","color", name="unq_material"),
     )
 
     def __repr__(self):
@@ -176,11 +174,10 @@ class Material(db.Model):
 class MaterialType(db.Model):
     __tablename__ = "material_type"
     material_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    material_first_type_id = db.Column(db.Integer, nullable=False)
+    material_type_default_unit = db.Column(db.String(4), nullable=False)
     material_type_name = db.Column(db.String(50), nullable=False)
-    warehouse_id = db.Column(
-        db.Integer,
-        nullable=False,
-    )
+    material_type_creation_date = db.Column(db.Date, nullable=True)
 
     def __repr__(self):
         return f"<MaterialType(material_type_id={self.material_type_id})>"
@@ -211,7 +208,6 @@ class MaterialStorage(db.Model):
     material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True, nullable=False
     )
-    material_model = db.Column(db.String(50), default='', nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     material_id = db.Column(db.BigInteger, nullable=False)
@@ -225,10 +221,8 @@ class MaterialStorage(db.Model):
     )
     current_amount = db.Column(db.DECIMAL(10, 5), default=0, nullable=False)
     unit_price = db.Column(db.DECIMAL(10, 2), nullable=False, default=0.00)
-    material_specification = db.Column(db.String(40), default='', nullable=True)
     material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
     material_outsource_outbound_date = db.Column(db.Date)
-    material_storage_color = db.Column(db.String(40), default='', nullable=True)
     purchase_divide_order_id = db.Column(db.BigInteger)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
@@ -620,7 +614,6 @@ class AssetsPurchaseOrderItem(db.Model):
     purchase_amount = db.Column(db.Numeric(10, 5), nullable=True)
     material_specification = db.Column(db.String(50), nullable=True)
     material_model = db.Column(db.String(50), nullable=True)
-    color = db.Column(db.String(40), nullable=True)
     size_34_purchase_amount = db.Column(db.Integer, nullable=True)
     size_35_purchase_amount = db.Column(db.Integer, nullable=True)
     size_36_purchase_amount = db.Column(db.Integer, nullable=True)
@@ -778,8 +771,6 @@ class SizeMaterialStorage(db.Model):
     size_material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True
     )
-    size_material_specification = db.Column(db.String(40), default='', nullable=False)
-    size_material_model = db.Column(db.String(50), default='', nullable=True)
     size_34_estimated_inbound_amount = db.Column(db.Integer, default=0)
     size_35_estimated_inbound_amount = db.Column(db.Integer, default=0)
     size_36_estimated_inbound_amount = db.Column(db.Integer, default=0)
@@ -831,7 +822,6 @@ class SizeMaterialStorage(db.Model):
     department_id = db.Column(
         db.Integer,
     )
-    size_material_color = db.Column(db.String(40), default='', nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     unit_price = db.Column(db.Numeric(10, 2), nullable=True, default=0.00)
@@ -1045,7 +1035,6 @@ class DefaultBomItem(db.Model):
     __tablename__ = "default_bom_item"
     default_bom_item_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     default_bom_id = db.Column(db.BigInteger, nullable=False)
-    bom_item_color = db.Column(db.String(50), nullable=True)
     department_id = db.Column(db.Integer, nullable=False)
     remark = db.Column(db.String(50), nullable=True)
     material_specification = db.Column(db.String(50), nullable=True)
@@ -1122,9 +1111,6 @@ class ProductionInstructionItem(db.Model):
     material_id = db.Column(db.BigInteger, nullable=False)
     remark = db.Column(db.String(50), nullable=True)
     department_id = db.Column(db.Integer, nullable=False)
-    material_specification = db.Column(db.String(50), nullable=True)
-    material_model = db.Column(db.String(50), nullable=True)
-    color = db.Column(db.String(20), nullable=True)
     is_pre_purchase = db.Column(db.Boolean, nullable=False)
     material_type = db.Column(db.String(1), nullable=False)
     order_shoe_type_id = db.Column(db.BigInteger, nullable=False)
@@ -1159,9 +1145,6 @@ class CraftSheetItem(db.Model):
     craft_sheet_id = db.Column(db.BigInteger, nullable=False)
     material_id = db.Column(db.BigInteger, nullable=False)
     department_id = db.Column(db.Integer, nullable=False)
-    material_specification = db.Column(db.String(50), nullable=True)
-    material_model = db.Column(db.String(50), nullable=True)
-    color = db.Column(db.String(20), nullable=True)
     material_type = db.Column(db.String(1), nullable=False)
     material_second_type = db.Column(db.String(10), nullable=False)
     order_shoe_type_id = db.Column(db.BigInteger, nullable=False)
@@ -1186,3 +1169,12 @@ class ProductionLine(db.Model):
 
     def __repr__(self):
         return f"<ProductionLine(production_line_id={self.production_line_id})>"
+
+class MaterialFirstType(db.Model):
+    __tablename__ = "material_first_type"
+    material_first_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    material_first_type_name = db.Column(db.String(20), nullable=False)
+    warehouse_id = db.Column(db.Integer, nullable=False)
+
+    def __repr__(self):
+        return f"<MaterialFirstType(material_first_type_id={self.material_first_type_id})>"

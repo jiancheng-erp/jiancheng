@@ -308,7 +308,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -333,33 +334,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -388,8 +378,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -410,7 +398,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -435,33 +424,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -485,8 +463,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -506,7 +482,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -531,33 +508,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -581,8 +547,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -602,7 +566,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -627,33 +592,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=1,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -677,8 +631,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -698,7 +650,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -723,33 +676,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=1,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -773,8 +715,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -794,7 +734,8 @@ def save_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -819,33 +760,22 @@ def save_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=1 if material_data.get("materialType") == "烫底" else 0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -869,8 +799,6 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -971,10 +899,10 @@ def get_production_instruction():
         # Map material type to the appropriate array in the dictionary
         material_data = {
             "materialId": item.material_id,
-            "materialType": material.MaterialType.material_type_name,
-            "materialName": material.Material.material_name,
-            "materialModel": item.material_model,
-            "materialSpecification": item.material_specification,
+            "materialType": material.MaterialType.material_type_category,
+            "materialName": material.MaterialType.material_type_name,
+            "materialModel": item.Material.material_model,
+            "materialSpecification": item.Material.material_specification,
             "craftName": item.pre_craft_name,
             "color": item.color,
             "unit": material.Material.material_unit,
@@ -1101,7 +1029,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1126,33 +1055,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1181,8 +1099,6 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -1203,7 +1119,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1228,33 +1145,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1278,8 +1184,6 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -1299,7 +1203,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1324,34 +1229,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1375,8 +1268,6 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -1396,7 +1287,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1421,33 +1313,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=1,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1471,8 +1352,6 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -1492,7 +1371,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1517,33 +1397,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
                             material_category=1,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1567,8 +1436,6 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
@@ -1588,7 +1455,8 @@ def edit_production_instruction():
                             Supplier, Material.material_supplier == Supplier.supplier_id
                         )
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
+                            Material.material_model == material_data.get("materialModel"),
+                            Material.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                         )
                         .first()
@@ -1613,33 +1481,22 @@ def edit_production_instruction():
                             db.session.add(supplier)
                             db.session.flush()
                             supplier_id = supplier.supplier_id
-                        material_type_id = (
+                        material_type = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                            .filter(MaterialType.material_type_category == material_data.get("materialType"), MaterialType.material_type_name == material_data.get("materialName"))
                             .first()
-                            .material_type_id
                         )
                         material = Material(
-                            material_name=material_data.get("materialName"),
+                            material_model=material_data.get("materialModel"),
+                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
+                            material_unit=material_type.material_type_default_unit,
+                            material_type_id=material_type.material_type_id,
+                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
                         )
                         db.session.add(material)
                         db.session.flush()
                         material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
                 material_color = (
                     material_data.get("color") if material_data.get("color") else None
                 )
@@ -1663,15 +1520,13 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
                     color=material_color,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
                     material_type=material_type,
-                    pre_craft_name=material_data.get("craftName", None),
                     order_shoe_type_id=order_shoe_type_id,
+                    pre_craft_name=material_data.get("craftName", None),
                     material_second_type=material_data.get("materialDetailType", None),
                 )
                 db.session.add(production_instruction_item)
@@ -1795,8 +1650,6 @@ def issue_production_order():
                     first_bom_item = BomItem(
                         bom_id=first_bom_id,
                         material_id=item.material_id,
-                        material_model=item.material_model,
-                        material_specification=item.material_specification,
                         bom_item_color=item.color,
                         remark=item.remark,
                         department_id=item.department_id,
@@ -1810,8 +1663,6 @@ def issue_production_order():
                     craft_sheet_item = CraftSheetItem(
                         craft_sheet_id=craft_sheet_id,
                         material_id=item.material_id,
-                        material_model=item.material_model,
-                        material_specification=item.material_specification,
                         color=item.color,
                         remark=item.remark,
                         department_id=item.department_id,
@@ -1869,15 +1720,16 @@ def issue_production_order():
             material_type = transdict[item.material_type]
             material_second_type = item.material_second_type
             material = (
-                db.session.query(Material, Supplier)
+                db.session.query(MaterialType, Material, Supplier)
+                .join(Material, Material.material_type_id == MaterialType.material_type_id)
                 .join(Supplier, Material.material_supplier == Supplier.supplier_id)
                 .filter(Material.material_id == item.material_id)
                 .first()
             )
-            material_name = material.Material.material_name
+            material_name = material.MaterialType.material_type_name
             unit = material.Material.material_unit
-            material_model = item.material_model
-            material_specification = item.material_specification
+            material_model = material.Material.material_model
+            material_specification = material.Material.material_specification
             color = item.color
             remark = item.remark
             supplier_name = material.Supplier.supplier_name
@@ -1985,9 +1837,9 @@ def upload_pic_notes():
 def get_auto_finished_material_name():
     material_name = request.args.get("materialName")
     material = (
-        db.session.query(Material)
+        db.session.query(MaterialType)
         .filter(
-            Material.material_name.like(f"%{material_name}%"),
+            MaterialType.material_type_name.like(f"%{material_name}%"),
         )
         .distinct()
         .all()
@@ -1997,7 +1849,7 @@ def get_auto_finished_material_name():
         for item in material:
             material_list.append(
                 {
-                    "name": item.material_name,
+                    "name": item.material_type_name,
                 }
             )
         return jsonify(material_list), 200
@@ -2105,13 +1957,13 @@ def get_past_material_data():
     for item in bom_items:
         result_list.append(
             {
-                "materialType": item.MaterialType.material_type_name,
+                "materialType": item.MaterialType.material_type_category,
                 "materialId": item.Material.material_id if item.Material else None,
-                "materialName": item.Material.material_name if item.Material else None,
+                "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                 "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                 "unit": item.Material.material_unit if item.Material else None,
-                "materialModel": item.BomItem.material_model if item.BomItem else None,
-                "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                "materialModel": item.Material.material_model if item.Material else None,
+                "materialSpecification": item.Material.material_specification if item.Material else None,
                 "color": item.BomItem.bom_item_color if item.BomItem else None,
                 "comment": item.BomItem.remark if item.BomItem else None,
                 "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2155,13 +2007,13 @@ def get_format_past_material_data():
             if item.ProductionInstructionItem.material_type == "S":
                 result_list["surfaceMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2173,13 +2025,13 @@ def get_format_past_material_data():
             elif item.ProductionInstructionItem.material_type == "I":
                 result_list["insideMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2191,13 +2043,13 @@ def get_format_past_material_data():
             elif item.ProductionInstructionItem.material_type == "A":
                 result_list["accessoryMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2209,13 +2061,13 @@ def get_format_past_material_data():
             elif item.ProductionInstructionItem.material_type == "O":
                 result_list["outsoleMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2227,13 +2079,13 @@ def get_format_past_material_data():
             elif item.ProductionInstructionItem.material_type == "M":
                 result_list["midsoleMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2245,13 +2097,13 @@ def get_format_past_material_data():
             elif item.ProductionInstructionItem.material_type == "H":
                 result_list["hotsoleMaterialData"].append(
                     {
-                        "materialType": item.MaterialType.material_type_name,
+                        "materialType": item.MaterialType.material_type_category,
                         "materialId": item.Material.material_id if item.Material else None,
-                        "materialName": item.Material.material_name if item.Material else None,
+                        "materialName": item.MaterialType.material_type_name if item.MaterialType else None,
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": item.BomItem.material_model if item.BomItem else None,
-                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+                        "materialModel": item.Material.material_model if item.Material else None,
+                        "materialSpecification": item.Material.material_specification if item.Material else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2298,14 +2150,14 @@ def get_material_detail():
     material = (
         db.session.query(Material, MaterialType)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .filter(Material.material_name == material_name)
+        .filter(MaterialType.material_type_name == material_name)
         .first()
     )
     if material:
         return jsonify(
             {
                 "unit": material.Material.material_unit,
-                "materialType": material.MaterialType.material_type_name,
+                "materialType": material.MaterialType.material_type_category,
             }
         )
     else:
