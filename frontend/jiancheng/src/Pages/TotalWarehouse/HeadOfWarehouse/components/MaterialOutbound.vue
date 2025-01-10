@@ -104,15 +104,15 @@
                     </div>
                     <!-- 外包发货的form item -->
                     <div v-else-if="group.outboundType == 2">
-                        <el-form-item prop="selectedOutsource" label="现有外包">
+                        <el-form-item prop="selectedOutsourceId" label="现有外包">
                             <el-table border stripe :data="group.outsourceInfo" style="width: 100%">
                                 <el-table-column width="55">
                                     <template #default="scope">
-                                        <el-radio v-model="group.selectedOutsource"
-                                            :value="scope.row.outsourceInfoId" />
+                                        <el-radio v-model="group.selectedOutsourceId"
+                                            :value="scope.row.outsourceInfoId" @change="(arg) => handleFactoryChange(arg, scope.row)" />
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="outsourceFactory" label="工厂名称" />
+                                <el-table-column prop="outsourceFactory.value" label="工厂名称" />
                                 <el-table-column prop="outsourceAmount" label="外包数量" />
                                 <el-table-column prop="outsourceType" label="外包类型" />
                             </el-table>
@@ -266,7 +266,7 @@
                             <el-descriptions-item label="领料人">{{ group.receiver }}</el-descriptions-item>
                         </el-descriptions>
                         <el-descriptions v-else-if="group.outboundType == 2" :column="4" border>
-                            <el-descriptions-item label="外包工厂">{{ group.outsourceInfo[0].outsourceFactory }}
+                            <el-descriptions-item label="外包工厂">{{ group.selectedOutsourceFactory }}
                             </el-descriptions-item>
                             <el-descriptions-item label="出库地址">{{ group.outboundAddress }}</el-descriptions-item>
                         </el-descriptions>
@@ -411,7 +411,8 @@ export default {
                 deadlineDate: null,
                 outsourceInfoId: null,
                 outsourceInfo: [],
-                selectedOutsource: '',
+                selectedOutsourceId: '',
+                selectedOutsourceFactory: '',
                 materials: [],
                 selectedCompositeSupplier: null,
                 selectedCompositeSupplierDisplay: '',
@@ -504,7 +505,7 @@ export default {
                         trigger: 'change'
                     }
                 ],
-                selectedOutsource: [
+                selectedOutsourceId: [
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ],
             },
@@ -542,6 +543,9 @@ export default {
         this.getAllDeparments()
     },
     methods: {
+        handleFactoryChange(value, row) {
+            this.outboundForm.selectedOutsourceFactory = row.outsourceFactory.value
+        },
         syncTimestamp(source_group) {
             return this.outboundForm.groupedSelectedRows.map(group => {
                 group.timestamp = source_group.timestamp
@@ -884,8 +888,8 @@ export default {
                 let data = []
                 for (let row of this.outboundForm.groupedSelectedRows) {
                     let outsourceInfoId = null
-                    if (row.outboundType == 2 && row.selectedOutsource) {
-                        outsourceInfoId = row.selectedOutsource.outsourceInfoId
+                    if (row.outboundType == 2 && row.selectedOutsourceId) {
+                        outsourceInfoId = row.selectedOutsourceId.outsourceInfoId
                     }
                     let obj = {
                         "outboundTimestamp": row.timestamp,

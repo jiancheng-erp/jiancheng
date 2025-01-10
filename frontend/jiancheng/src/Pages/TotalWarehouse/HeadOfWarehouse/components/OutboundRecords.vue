@@ -74,6 +74,7 @@
                     </el-descriptions>
                     <el-descriptions v-else-if="currentRow.outboundType == 2" :column="4" border>
                         <el-descriptions-item label="外包工厂">
+                            {{ currentRow.outsourceFactoryName }}
                         </el-descriptions-item>
                         <el-descriptions-item label="出库地址">{{ currentRow.outboundAddress }}</el-descriptions-item>
                     </el-descriptions>

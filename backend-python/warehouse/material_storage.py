@@ -1212,6 +1212,7 @@ def get_material_outbound_records():
             Order.order_id,
             Order.order_rid,
             Shoe.shoe_rid,
+            OutsourceFactory.factory_name,
         )
         .join(
             OrderShoe,
@@ -1224,6 +1225,14 @@ def get_material_outbound_records():
         .join(
             Shoe,
             OrderShoe.shoe_id == Shoe.shoe_id,
+        )
+        .outerjoin(
+            OutsourceInfo,
+            OutboundRecord.outsource_info_id == OutsourceInfo.outsource_info_id,
+        )
+        .outerjoin(
+            OutsourceFactory,
+            OutsourceInfo.factory_id == OutsourceFactory.factory_id,
         )
         .outerjoin(
             Department,
@@ -1260,6 +1269,7 @@ def get_material_outbound_records():
             order_id,
             order_rid,
             shoe_rid,
+            factory_name,
         ) = row
         obj = {
             "outboundBatchId": outbound_batch_id,
@@ -1273,6 +1283,7 @@ def get_material_outbound_records():
             "orderId": order_id,
             "orderRId": order_rid,
             "shoeRId": shoe_rid,
+            "outsourceFactoryName": factory_name,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
