@@ -14,7 +14,7 @@ class User(db.Model):
 class BomItem(db.Model):
     __tablename__ = "bom_item"
     bom_item_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    material_id = db.Column(
+    material_variant_id = db.Column(
         db.BigInteger,
     )
     unit_usage = db.Column(db.Numeric(10, 5), nullable=False)
@@ -149,12 +149,12 @@ class Department(db.Model):
         return f"<Department(department_id={self.department_id})>"
 
 
-class Material(db.Model):
-    __tablename__ = "material"
-    material_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+class MaterialVariant(db.Model):
+    __tablename__ = "material_variant"
+    material_variant_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_model = db.Column(db.String(60), nullable=True)
     material_specification = db.Column(db.String(60), nullable=True)
-    material_type_id = db.Column(db.Integer, nullable=False)
+    material_id = db.Column(db.Integer, nullable=False)
     material_unit = db.Column(db.String(4), nullable=True)
     material_supplier = db.Column(db.Integer, nullable=False)
     material_category = db.Column(db.SmallInteger, nullable=False, default=0)
@@ -165,25 +165,36 @@ class Material(db.Model):
     )
 
     def __repr__(self):
-        return f"<Material(material_id={self.material_id})>"
+        return f"<MaterialVariant(material_variant_id={self.material_variant_id})>"
 
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
+class Material(db.Model):
+    __tablename__ = "material"
+    material_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    material_type_id = db.Column(db.Integer, nullable=False)
+    material_default_unit = db.Column(db.String(4), nullable=False)
+    material_name = db.Column(db.String(50), nullable=False)
+    material_creation_date = db.Column(db.Date, nullable=True)
+    material_category = db.Column(db.SmallInteger, nullable=False, default=0)
+
+    def __repr__(self):
+        return f"<Material(material_id={self.material_id})>"
+
+    def __name__(self):
+        return "Material"
+    
+
 class MaterialType(db.Model):
     __tablename__ = "material_type"
     material_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    material_first_type_id = db.Column(db.Integer, nullable=False)
-    material_type_default_unit = db.Column(db.String(4), nullable=False)
-    material_type_name = db.Column(db.String(50), nullable=False)
-    material_type_creation_date = db.Column(db.Date, nullable=True)
+    material_type_name = db.Column(db.String(20), nullable=False)
+    warehouse_id = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
         return f"<MaterialType(material_type_id={self.material_type_id})>"
-
-    def __name__(self):
-        return "MaterialType"
 
 
 class Event(db.Model):
@@ -210,7 +221,7 @@ class MaterialStorage(db.Model):
     )
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
-    material_id = db.Column(db.BigInteger, nullable=False)
+    material_variant_id = db.Column(db.BigInteger, nullable=False)
     estimated_inbound_amount = db.Column(
         db.DECIMAL(10, 5),
         default=0,
@@ -608,7 +619,7 @@ class AssetsPurchaseOrderItem(db.Model):
     assets_purchase_order_item_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True
     )
-    material_id = db.Column(db.BigInteger)
+    material_variant_id = db.Column(db.BigInteger)
     remark = db.Column(db.String(50), nullable=True)
     purchase_divide_order_id = db.Column(db.BigInteger)
     purchase_amount = db.Column(db.Numeric(10, 5), nullable=True)
@@ -816,7 +827,7 @@ class SizeMaterialStorage(db.Model):
     total_current_amount = db.Column(db.Integer, default=0)
     size_storage_type = db.Column(db.String(10), nullable=False, default="E")
     material_outsource_date = db.Column(db.Date, nullable=True)
-    material_id = db.Column(
+    material_variant_id = db.Column(
         db.BigInteger,
     )
     department_id = db.Column(
@@ -1039,7 +1050,7 @@ class DefaultBomItem(db.Model):
     remark = db.Column(db.String(50), nullable=True)
     material_specification = db.Column(db.String(50), nullable=True)
     material_model = db.Column(db.String(50), nullable=True)
-    material_id = db.Column(db.BigInteger, nullable=False)
+    material_variant_id = db.Column(db.BigInteger, nullable=False)
 
     def __repr__(self):
         return f"<DefaultBomItem(default_bom_item_id={self.default_bom_item_id})>"
@@ -1108,7 +1119,7 @@ class ProductionInstructionItem(db.Model):
         db.BigInteger, primary_key=True, autoincrement=True
     )
     production_instruction_id = db.Column(db.BigInteger, nullable=False)
-    material_id = db.Column(db.BigInteger, nullable=False)
+    material_variant_id = db.Column(db.BigInteger, nullable=False)
     remark = db.Column(db.String(50), nullable=True)
     department_id = db.Column(db.Integer, nullable=False)
     is_pre_purchase = db.Column(db.Boolean, nullable=False)
@@ -1143,7 +1154,7 @@ class CraftSheetItem(db.Model):
     __tablename__ = "craft_sheet_item"
     craft_sheet_item_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     craft_sheet_id = db.Column(db.BigInteger, nullable=False)
-    material_id = db.Column(db.BigInteger, nullable=False)
+    material_variant_id = db.Column(db.BigInteger, nullable=False)
     department_id = db.Column(db.Integer, nullable=False)
     material_type = db.Column(db.String(1), nullable=False)
     material_second_type = db.Column(db.String(10), nullable=False)
@@ -1169,12 +1180,3 @@ class ProductionLine(db.Model):
 
     def __repr__(self):
         return f"<ProductionLine(production_line_id={self.production_line_id})>"
-
-class MaterialFirstType(db.Model):
-    __tablename__ = "material_first_type"
-    material_first_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    material_first_type_name = db.Column(db.String(20), nullable=False)
-    warehouse_id = db.Column(db.Integer, nullable=False)
-
-    def __repr__(self):
-        return f"<MaterialFirstType(material_first_type_id={self.material_first_type_id})>"
