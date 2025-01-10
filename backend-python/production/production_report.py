@@ -75,7 +75,8 @@ def get_outsource_summary():
         return jsonify({"message": "请选择一个日期"}), 400
 
     response = (
-        db.session.query(OutsourceInfo)
+        db.session.query(OutsourceInfo, OutsourceFactory)
+        .join(OutsourceFactory, OutsourceInfo.factory_id == OutsourceFactory.factory_id)
         .filter(
             or_(
                 and_(
@@ -100,10 +101,11 @@ def get_outsource_summary():
     )
     print(response)
     result = []
-    for outsource_info in response:
+    for row in response:
+        outsource_info, factory = row
         obj = {
             "outsourceInfoId": outsource_info.outsource_info_id,
-            "outsourceFactory": outsource_info.factory_name,
+            "outsourceFactory": factory.factory_name,
             "outsourceStatus": outsource_status_converter(outsource_info.outsource_status),
             "outsourceAmount": outsource_info.outsource_amount
         }

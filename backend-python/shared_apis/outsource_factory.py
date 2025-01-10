@@ -34,8 +34,10 @@ def add_new_outsource_factory():
         return jsonify({"message": "厂家已存在"}), 400
     entity = OutsourceFactory(factory_name=data["name"])
     db.session.add(entity)
+    db.session.flush()
+    factory_id = entity.factory_id
     db.session.commit()
-    return jsonify({"message": "添加成功"})
+    return jsonify({"message": "添加成功", "factoryId": factory_id})
 
 
 @outsource_factory_bp.route("/general/editoutsourcefactory", methods=["PUT"])

@@ -451,7 +451,7 @@ class OutsourceInfo(db.Model):
         db.Integer, primary_key=True, nullable=False, autoincrement=True
     )
     outsource_type = db.Column(db.String(20), nullable=False)
-    factory_name = db.Column(db.String(50), nullable=False)
+    factory_id = db.Column(db.Integer, nullable=False)
     outsource_amount = db.Column(db.Integer, nullable=False)
     outsource_start_date = db.Column(db.Date, nullable=True)
     outsource_end_date = db.Column(db.Date, nullable=True)

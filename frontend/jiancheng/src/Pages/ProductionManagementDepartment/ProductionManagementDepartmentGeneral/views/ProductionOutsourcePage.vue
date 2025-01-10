@@ -34,7 +34,7 @@
 				现有外包流程
 				<el-table :data="outsourceInfo" border stripe scrollbar-always-on>
 					<el-table-column prop="outsourceType" label="外包类型"></el-table-column>
-					<el-table-column prop="outsourceFactory" label="外包厂家"></el-table-column>
+					<el-table-column prop="outsourceFactory.value" label="外包厂家"></el-table-column>
 					<el-table-column prop="outsourceAmount" label="外包数量"></el-table-column>
 					<el-table-column prop="outsourceStartDate" label="外包开始日期"></el-table-column>
 					<el-table-column prop="outsourceEndDate" label="外包结束日期"></el-table-column>
@@ -82,14 +82,14 @@
 				</el-select>
 				<span v-if="this.readOnly">{{ outsourceForm.outsourceType }}</span>
 			</el-form-item>
-			<el-form-item label="外包厂家" prop="outsourceFactory">
+			<el-form-item label="外包厂家" prop="selectedOutsourceValue">
 				<template #default="scope">
 					<div style="display: flex; align-items: center; gap: 10px;">
-						<el-autocomplete v-model="outsourceForm.outsourceFactory" :fetch-suggestions="querySearch"
-							placeholder="" clearable  v-if="!this.readOnly">
+						<el-autocomplete v-model="outsourceForm.selectedOutsourceValue" :fetch-suggestions="querySearch"
+							placeholder="" clearable  v-if="!this.readOnly" value-key="value" @select="onProductSelect">
 						</el-autocomplete>
-						<el-input v-model="outsourceForm.outsourceFactory" readonly v-if="this.readOnly"></el-input>
-						<el-button @click="addOutsourceFactory(outsourceForm.outsourceFactory)">添加厂家</el-button>
+						<el-input v-model="outsourceForm.selectedOutsourceValue" readonly v-if="this.readOnly"></el-input>
+						<el-button @click="addOutsourceFactory(outsourceForm.selectedOutsourceValue)">添加厂家</el-button>
 					</div>
 				</template>
 			</el-form-item>
@@ -248,7 +248,7 @@ export default {
 				outsourceType: [
 					{ required: true, message: '此项为必填项', trigger: 'change' },
 				],
-				outsourceFactory: [
+				selectedOutsourceValue: [
 					{ required: true, message: '此项为必填项', trigger: 'change' },
 				],
 				outsourcePeriodArr: [
@@ -307,14 +307,14 @@ export default {
 		}
 	},
 	methods: {
-		// onProductSelect(info,) {
-		// 	console.log(info, this.currentRow)
-		// 	this.currentRow.outsourceFactory = info.value
-		// },
+		onProductSelect(item) {
+			this.outsourceForm.selectedOutsourceId = item.id
+			this.outsourceForm.selectedOutsourceValue = item.value
+		},
 		querySearch(queryString, cb) {
 			let result = []
 			if (queryString === "null" || queryString === '') {
-				this.factoryOptions.forEach(factory => {result.push({value: factory.value})})
+				this.factoryOptions.forEach(factory => {result.push({id: factory.id, value: factory.value})})
 				cb(result);
 			}
 			else {
@@ -324,7 +324,7 @@ export default {
 					)
 					: []
 				matchObj.forEach(row => {
-					result.push({ value: row.value })
+					result.push({ id: row.id, value: row.value })
 				})
 				cb(result)
 			}
@@ -334,6 +334,7 @@ export default {
 				let data = {"name": name}
                 const response = await axios.post(`${this.$apiBaseUrl}/general/addnewoutsourcefactory`, data)
                 ElMessage.success(response.data.message)
+				this.outsourceForm.selectedOutsourceId = response.data.factoryId
 				this.getAllOutsourceFactories()
             }
             catch (error) {
@@ -356,7 +357,7 @@ export default {
 			this.getAllOutsourceFactories()
 			// 0: read only, 1: edit
 			if (rowData === null) {
-				this.outsourceForm = { ...this.template }
+				this.outsourceForm = { ...this.template, selectedOutsourceId: null, selectedOutsourceValue: null }
 				this.outsourceForm.outsourceShoeBatchInfo = JSON.parse(JSON.stringify(this.shoeInfo));
 				this.readOnly = false
 				// this.outsourceForm.outsourceShoeBatchInfo.forEach(row => {
@@ -367,7 +368,7 @@ export default {
 				// })
 			}
 			else {
-				this.outsourceForm = rowData
+				this.outsourceForm = {...rowData, selectedOutsourceId: rowData.outsourceFactory.id, selectedOutsourceValue: rowData.outsourceFactory.value}
 				let params = { "orderShoeId": this.$props.orderShoeId, "outsourceInfoId": rowData.outsourceInfoId }
 				let response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getoutsourcebatchinfo`, { params })
 				this.outsourceForm.outsourceShoeBatchInfo = response.data
@@ -428,10 +429,12 @@ export default {
 			this.$refs.outsourceForm.validate(async (valid) => {
 				if (valid) {
 					console.log("Form is valid. Proceeding with submission.");
+					console.log(this.outsourceForm.selectedOutsourceId)
+					console.log(this.outsourceForm.selectedOutsourceValue)
 					let element = {
 						"outsourceInfoId": this.outsourceForm.outsourceInfoId,
 						"type": this.outsourceForm.outsourceType,
-						"factoryName": this.outsourceForm.outsourceFactory,
+						"factoryId": this.outsourceForm.selectedOutsourceId,
 						"outsourceStartDate": this.outsourceForm.outsourcePeriodArr[0],
 						"outsourceEndDate": this.outsourceForm.outsourcePeriodArr[1],
 						"semifinishedRequired": this.outsourceForm.semifinishedRequired,

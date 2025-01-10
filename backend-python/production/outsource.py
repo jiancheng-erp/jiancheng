@@ -88,15 +88,16 @@ def get_order_shoe_outsource_info():
     order_shoe_id = request.args.get("orderShoeId")
     response = (
         (
-            db.session.query(OutsourceInfo)
+            db.session.query(OutsourceInfo, OutsourceFactory)
             .join(OrderShoe, OrderShoe.order_shoe_id == OutsourceInfo.order_shoe_id)
+            .join(OutsourceFactory, OutsourceFactory.factory_id == OutsourceInfo.factory_id)
         )
         .filter(OrderShoe.order_shoe_id == order_shoe_id)
         .all()
     )
     result = []
     for row in response:
-        outsource_info = row
+        outsource_info, factory = row
         temp = ''
         if outsource_info.outsource_type == '0,1':
             temp = '裁断+针车'
@@ -105,7 +106,7 @@ def get_order_shoe_outsource_info():
         obj = {
             "outsourceInfoId": outsource_info.outsource_info_id,
             "outsourceType": temp,
-            "outsourceFactory": outsource_info.factory_name,
+            "outsourceFactory": {"id": outsource_info.factory_id, "value": factory.factory_name},
             "outsourceAmount": outsource_info.outsource_amount,
             "outsourceStartDate": format_date(outsource_info.outsource_start_date),
             "outsourceEndDate": format_date(outsource_info.outsource_end_date),
@@ -194,7 +195,7 @@ def store_outsource_for_order_shoe():
     departments = departments[:-1]
     obj = {
         "outsource_type": departments,
-        "factory_name": outsource_input["factoryName"],
+        "factory_id": outsource_input["factoryId"],
         "outsource_start_date": outsource_input["outsourceStartDate"],
         "outsource_end_date": outsource_input["outsourceEndDate"],
         "deadline_date": outsource_input["deadlineDate"],
@@ -465,11 +466,12 @@ def get_outsource_approval_overview():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     query = (
-        db.session.query(Order, OrderShoe, Shoe, OutsourceInfo)
+        db.session.query(Order, OrderShoe, Shoe, OutsourceInfo, OutsourceFactory)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(OutsourceInfo, OutsourceInfo.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OutsourceFactory, OutsourceFactory.factory_id == OutsourceInfo.factory_id)
         .filter(OutsourceInfo.outsource_status != 0)
     )
     if order_rid and order_rid != "":
@@ -481,7 +483,7 @@ def get_outsource_approval_overview():
     result = []
     mapping = {"0": "裁断", "1": "针车", "2": "成型"}
     for row in response:
-        (order, order_shoe, shoe, outsource_info) = row
+        (order, order_shoe, shoe, outsource_info, factory) = row
 
         arr = [
             mapping[team_int] for team_int in outsource_info.outsource_type.split(",")
@@ -496,7 +498,7 @@ def get_outsource_approval_overview():
             "orderEndDate": format_date(order.end_date),
             "outsourceInfoId": outsource_info.outsource_info_id,
             "outsourceType": arr,
-            "factoryName": outsource_info.factory_name,
+            "factoryName": factory.factory_name,
             "outsourceAmount": outsource_info.outsource_amount,
             "outsourceStartDate": format_date(outsource_info.outsource_start_date),
             "outsourceEndDate": format_date(outsource_info.outsource_end_date),
