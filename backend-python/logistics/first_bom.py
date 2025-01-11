@@ -230,7 +230,6 @@ def save_bom():
             .filter(
                 Material.material_name == item["materialName"],
                 MaterialVariant.material_model == item["materialModel"],
-                MaterialVariant.material_specification == item["materialSpecification"],
                 Supplier.supplier_name == item["supplierName"],
             )
             .first()
@@ -239,6 +238,7 @@ def save_bom():
         bom_item = BomItem(
             bom_id=bom_id,
             material_variant_id=material_variant_id,
+            material_specification=item["materialSpecification"],
             total_usage=0,
             department_id=item["useDepart"] if "useDepart" in item else None,
             remark=item["comment"] if "comment" in item else None,
@@ -299,7 +299,7 @@ def get_bom_details():
                 "materialName": material.material_name,
                 "materialType": material_type.material_type_name,
                 "materialModel": material_variant.material_model,
-                "materialSpecification": material_variant.material_specification,
+                "materialSpecification": item.material_specification,
                 "supplierName": supplier.supplier_name,
                 "useDepart": department.department_id,
                 "unit": material_variant.material_unit,
@@ -339,30 +339,27 @@ def edit_bom():
     db.session.commit()
 
     for item in bom_data:
-        material_id = (
-            db.session.query(Material, Supplier)
+        material_variant_id = (
+            db.session.query(MaterialVariant, Material, Supplier)
+            .join(MaterialVariant, MaterialVariant.material_id == Material.material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
             .filter(
                 Material.material_name == item["materialName"],
+                MaterialVariant.material_model == item["materialModel"],
                 Supplier.supplier_name == item["supplierName"],
+                MaterialVariant.color == item["color"],
             )
             .first()
-            .Material.material_id
+            .MaterialVariant.material_variant_id
         )
         bom_item = BomItem(
             bom_id=bom_id,
-            material_id=material_id,
+            material_variant_id=material_variant_id,
+            material_specification=item["materialSpecification"],
             total_usage=0,
             department_id=item["useDepart"] if "useDepart" in item else None,
             remark=item["comment"] if "comment" in item else None,
-            material_model=item["materialModel"] if "materialModel" in item else None,
-            material_specification=(
-                item["materialSpecification"]
-                if "materialSpecification" in item
-                else None
-            ),
             bom_item_add_type=0,
-            bom_item_color=item["color"] if "color" in item else None,
         )
         db.session.add(bom_item)
     db.session.commit()

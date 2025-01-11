@@ -201,7 +201,6 @@ def new_purchase_order_save():
                     .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
                     .filter(
                         Material.material_name == material_name,
-                        MaterialVariant.material_specification == material_specification,
                         MaterialVariant.material_model == material_model,
                         Supplier.supplier_name == supplier_name,
                     )
@@ -210,7 +209,6 @@ def new_purchase_order_save():
                 if not material_info:
                     material_info = MaterialVariant(
                         material_id=material_id,
-                        material_specification=material_specification,
                         material_model=material_model,
                         material_supplier=supplier_id,
                         material_unit=item["unit"],
@@ -225,6 +223,7 @@ def new_purchase_order_save():
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
                         material_variant_id=material_variant_id,
+                        material_specification=material_specification,
                         purchase_amount=material_quantity,
                         remark=remark,
                         size_type=shoe_batch_type,
@@ -235,6 +234,7 @@ def new_purchase_order_save():
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
                         material_variant_id=material_variant_id,
+                        material_specification=material_specification,
                         purchase_amount=material_quantity,
                         remark=remark,
                         size_type=shoe_batch_type,
@@ -342,7 +342,7 @@ def get_assets_purchase_order_items():
                     "isPurchaseOrder": purchase_order.purchase_order_type,
                     "materialType": material_type.material_type_name,
                     "materialName": material.material_name,
-                    "materialSpecification": material_variant.material_specification,
+                    "materialSpecification": assets_item.material_specification,
                     "materialModel": material_variant.material_model,
                     "color": material_variant.color,
                     "unit": material_variant.material_unit,
@@ -366,7 +366,7 @@ def get_assets_purchase_order_items():
                     "orderId": order.order_rid if order else "",
                     "materialType": material_type.material_type_name,
                     "materialName": material.material_name,
-                    "materialSpecification": material_variant.material_specification,
+                    "materialSpecification": assets_item.material_specification,
                     "materialModel": material_variant.material_model,
                     "color": material_variant.color,
                     "craftName": assets_item.craft_name,
@@ -518,7 +518,7 @@ def get_purchase_divide_orders():
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
             "materialModel": material_variant.material_model,
-            "materialSpecification": material_variant.material_specification,
+            "materialSpecification": assets_item.material_specification,
             "color": material_variant.color,
             "unit": material_variant.material_unit,
             "purchaseAmount": assets_item.purchase_amount,
@@ -610,6 +610,7 @@ def submit_purchase_order():
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 material_variant_id=material_variant_id,
+                material_specification=assets_item.material_specification,
                 estimated_inbound_amount=material_quantity,
                 actual_inbound_amount=0,
                 current_amount=0,
@@ -629,6 +630,7 @@ def submit_purchase_order():
             material_total_quantity = sum(quantity_list)
             size_material_storage = SizeMaterialStorage(
                 material_variant_id=material_variant_id,
+                material_specification=assets_item.material_specification,
                 total_estimated_inbound_amount=material_total_quantity,
                 unit_price=0,
                 material_outsource_status="0",
@@ -704,8 +706,8 @@ def submit_purchase_order():
                         + (material_variant.material_model if material_variant.material_model else "")
                         + " "
                         + (
-                            material_variant.material_specification
-                            if material_variant.material_specification
+                            assets_item.material_specification
+                            if assets_item.material_specification
                             else ""
                         )
                         + " "
@@ -744,8 +746,8 @@ def submit_purchase_order():
                     + (material_variant.material_model if material_variant.material_model else "")
                     + " "
                     + (
-                        material_variant.material_specification
-                        if material_variant.material_specification
+                        assets_item.material_specification
+                        if assets_item.material_specification
                         else ""
                     )
                     + " "
@@ -906,7 +908,6 @@ def edit_saved_purchase_order_items():
                     .join(Supplier, Material.material_supplier == Supplier.supplier_id)
                     .filter(
                         Material.material_name == material_name,
-                        MaterialVariant.material_specification == item["materialSpecification"],
                         MaterialVariant.material_model == item["materialModel"],
                         Supplier.supplier_name == supplier_name,
                     )
@@ -935,6 +936,7 @@ def edit_saved_purchase_order_items():
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
                         material_variant_id=material_variant_id,
+                        material_specification=item["materialSpecification"],
                         purchase_amount=total_quantity,
                         size_35_purchase_amount=material_quantities[0],
                         size_36_purchase_amount=material_quantities[1],

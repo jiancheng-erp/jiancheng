@@ -379,7 +379,7 @@ def get_outsource_material_shipping():
             OutsourceInfo,
             MaterialStorage.material_outsource_status,
             MaterialStorage.current_amount,
-            MaterialStorage.material_storage_color,
+            MaterialVariant,
             Material,
             MaterialType,
             OutboundRecord,
@@ -390,8 +390,12 @@ def get_outsource_material_shipping():
             MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
         )
         .join(
+            MaterialVariant,
+            MaterialVariant.material_variant_id == MaterialStorage.material_variant_id,
+        )
+        .join(
             Material,
-            Material.material_id == MaterialStorage.material_id,
+            Material.material_id == MaterialVariant.material_id,
         )
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(
@@ -407,7 +411,7 @@ def get_outsource_material_shipping():
             OutsourceInfo,
             SizeMaterialStorage.material_outsource_status,
             SizeMaterialStorage.total_current_amount.label("current_amount"),
-            SizeMaterialStorage.size_material_color,
+            MaterialVariant,
             Material,
             MaterialType,
             OutboundRecord,
@@ -418,8 +422,12 @@ def get_outsource_material_shipping():
             SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
         )
         .join(
+            MaterialVariant,
+            MaterialVariant.material_variant_id == SizeMaterialStorage.material_variant_id,
+        )
+        .join(
             Material,
-            Material.material_id == SizeMaterialStorage.material_id,
+            Material.material_id == MaterialVariant.material_id,
         )
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(
@@ -438,7 +446,7 @@ def get_outsource_material_shipping():
             outsource_info,
             material_outsource_status,
             current_amount,
-            color_name,
+            material_variant,
             material,
             material_type,
             record,
@@ -446,12 +454,12 @@ def get_outsource_material_shipping():
         obj = {
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
-            "materialUnit": material.material_unit,
+            "materialUnit": material_variant.material_unit,
             "outsourceStatus": material_outsource_status,
             "outboundAmount": current_amount,
             "materialEstimateOutboundDate": outsource_info.material_estimated_outbound_date,
             "outboundDatetime": record.outbound_datetime,
-            "colorName": color_name,
+            "colorName": material_variant.color,
         }
         result.append(obj)
     return result

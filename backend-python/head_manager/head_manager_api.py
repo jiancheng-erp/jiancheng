@@ -604,7 +604,7 @@ def get_material_price_info():
     for ms in material_storage:
         if (
             (not material_name or ms.Material.material_name == material_name)
-            and (not material_model or ms.MaterialStorage.material_model == material_model)
+            and (not material_model or ms.MaterialVariant.material_model == material_model)
             and (
                 not material_specification
                 or ms.MaterialStorage.material_specification == material_specification
@@ -624,11 +624,11 @@ def get_material_price_info():
                     "materialType": ms.MaterialType.material_type_name,
                     "materialStorageId": ms.MaterialStorage.material_storage_id,
                     "materialName": ms.Material.material_name,
-                    "materialModel": ms.MaterialStorage.material_model,
+                    "materialModel": ms.MaterialVariant.material_model,
                     "materialSpecification": ms.MaterialStorage.material_specification,
                     "supplierName": ms.Supplier.supplier_name,
                     "unitPrice": ms.MaterialStorage.unit_price,
-                    "color": ms.MaterialStorage.material_storage_color,
+                    "color": ms.MaterialVariant.color,
                     "purchaseAmount": ms.MaterialStorage.actual_inbound_amount,  # Assuming 'amount' is the quantity field
                     "purchaseDate": purchase_date,  # Set to "未入库" if no inbound record exists,
                     "purchaseCost": round(ms.MaterialStorage.actual_inbound_amount * ms.MaterialStorage.unit_price, 3),
@@ -639,7 +639,7 @@ def get_material_price_info():
     for sms in size_material_storage:
         if (
             (not material_name or sms.Material.material_name == material_name)
-            and (not material_model or sms.SizeMaterialStorage.size_material_model == material_model)
+            and (not material_model or sms.MaterialVariant.material_model == material_model)
             and (
                 not material_specification
                 or sms.SizeMaterialStorage.material_specification == material_specification
@@ -656,17 +656,17 @@ def get_material_price_info():
             material_price_info.append(
                 {
                     "type": "S",
-                    "materialType": sms.MaterialType.material_type_name, 
-                    "materialStorageId": sms.SizeMaterialStorage.size_material_storage_id,
-                    "materialName": sms.Material.material_name,
-                    "materialModel": sms.SizeMaterialStorage.size_material_model,
-                    "materialSpecification": sms.SizeMaterialStorage.size_material_specification,
-                    "supplierName": sms.Supplier.supplier_name,
-                    "unitPrice": sms.SizeMaterialStorage.unit_price,
-                    "color": sms.SizeMaterialStorage.size_material_color,
-                    "purchaseAmount": sms.SizeMaterialStorage.total_actual_inbound_amount,  # Assuming 'amount' is the quantity field
-                    "purchaseDate": purchase_date,  # Set to "未入库" if no inbound record exists
-                    "purchaseCost": round(sms.SizeMaterialStorage.total_actual_inbound_amount * sms.SizeMaterialStorage.unit_price, 3),
+                    "materialType": ms.MaterialType.material_type_name,
+                    "materialStorageId": ms.MaterialStorage.material_storage_id,
+                    "materialName": ms.Material.material_name,
+                    "materialModel": ms.MaterialVariant.material_model,
+                    "materialSpecification": ms.SizeMaterialStorage.material_specification,
+                    "supplierName": ms.Supplier.supplier_name,
+                    "unitPrice": ms.MaterialStorage.unit_price,
+                    "color": ms.MaterialVariant.color,
+                    "purchaseAmount": ms.MaterialStorage.actual_inbound_amount,  # Assuming 'amount' is the quantity field
+                    "purchaseDate": purchase_date,  # Set to "未入库" if no inbound record exists,
+                    "purchaseCost": round(ms.MaterialStorage.actual_inbound_amount * ms.MaterialStorage.unit_price, 3),
                 }
             )
     time_t = time.time()

@@ -294,7 +294,7 @@ def get_shoe_bom_items():
             material_type.material_type_name,
             material.material_name,
             material_variant.material_model,
-            material_variant.material_specification,
+            bom_item.material_specification,
             material_variant.color if material_variant.color else "",
             supplier.supplier_name,
         )
@@ -312,10 +312,10 @@ def get_shoe_bom_items():
                 "materialType": material_type.material_type_name,
                 "materialProductionInstructionType": production_instruction_item.material_type,
                 "materialName": material.material_name,
-                "materialModel": bom_item.material_model,
+                "materialModel": material_variant.material_model,
                 "materialSpecification": bom_item.material_specification,
-                "color": bom_item.bom_item_color if bom_item.bom_item_color else "",
-                "unit": material.material_unit,
+                "color": material_variant.color if material_variant.color else "",
+                "unit": material_variant.material_unit,
                 "unitUsage": bom_item.unit_usage
                 or (0.00 if material.material_category == 0 else None),
                 "approvalUsage": bom_item.total_usage or 0.00,
@@ -479,6 +479,7 @@ def get_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
+            MaterialVariant,
             Material,
             MaterialType,
             Supplier,
@@ -493,7 +494,11 @@ def get_purchase_divide_orders():
             == PurchaseOrderItem.purchase_divide_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(
+            MaterialVariant,
+            BomItem.material_variant_id == MaterialVariant.material_variant_id,
+        )
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
@@ -507,6 +512,7 @@ def get_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
+        material_variant,
         material,
         material_type,
         supplier,
@@ -530,9 +536,9 @@ def get_purchase_divide_orders():
             "materialId": bom_item.material_id,
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
-            "materialModel": bom_item.material_model,
+            "materialModel": material_variant.material_model,
             "materialSpecification": bom_item.material_specification,
-            "color": bom_item.bom_item_color,
+            "color": material_variant.color,
             "unit": material.material_unit,
             "purchaseAmount": purchase_order_item.purchase_amount,
             "remark": bom_item.remark,
@@ -628,6 +634,7 @@ def submit_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
+            MaterialVariant,
             Material,
             MaterialType,
             Supplier,
@@ -642,7 +649,11 @@ def submit_purchase_divide_orders():
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(
+            MaterialVariant,
+            BomItem.material_variant_id == MaterialVariant.material_variant_id,
+        )
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
@@ -653,6 +664,7 @@ def submit_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
+        material_variant,
         material,
         material_type,
         supplier,
@@ -661,7 +673,7 @@ def submit_purchase_divide_orders():
             {
                 "supplier_name": supplier.supplier_name,
                 "material_name": material.material_name,
-                "model": bom_item.material_model or "",
+                "model": material_variant.material_model or "",
                 "specification": bom_item.material_specification or "",
                 "approval_amount": bom_item.total_usage,  # Assuming bom_item has approval quantity
                 "purchase_amount": purchase_order_item.purchase_amount,
@@ -671,7 +683,7 @@ def submit_purchase_divide_orders():
         material_id = bom_item.material_id
         material_quantity = purchase_order_item.purchase_amount
         material_specification = bom_item.material_specification
-        material_model = bom_item.material_model
+        material_model = material_variant.material_model
         color = bom_item.bom_item_color
         remark = bom_item.remark
         size_type = bom_item.size_type
@@ -682,16 +694,14 @@ def submit_purchase_divide_orders():
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 order_shoe_id=order_shoe_id,
-                material_id=material_id,
+                material_variant_id=bom_item.material_variant_id,
                 estimated_inbound_amount=material_quantity,
                 actual_inbound_amount=0,
                 department_id=bom_item.department_id,
                 current_amount=0,
                 unit_price=0,
                 material_outsource_status="0",
-                material_model=material_model,
                 material_specification=material_specification,
-                material_storage_color=color,
                 purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
                 craft_name=craft_name,
                 production_instruction_item_id=bom_item.production_instruction_item_id,
@@ -706,13 +716,12 @@ def submit_purchase_divide_orders():
 
             size_material_storage = SizeMaterialStorage(
                 order_shoe_id=order_shoe_id,
-                material_id=material_id,
+                material_variant_id=bom_item.material_variant_id,
                 total_estimated_inbound_amount=material_quantity,
                 unit_price=0,
                 material_outsource_status="0",
                 department_id=bom_item.department_id,
-                size_material_specification=material_specification,
-                size_material_color=color,
+                material_specification=material_specification,
                 purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
                 size_storage_type=batch_info_type_name,
                 craft_name=craft_name,
@@ -737,6 +746,7 @@ def submit_purchase_divide_orders():
             PurchaseOrder,
             BomItem,
             ProductionInstructionItem,
+            MaterialVariant,
             Material,
             Supplier,
         )
@@ -755,7 +765,11 @@ def submit_purchase_divide_orders():
             ProductionInstructionItem.production_instruction_item_id
             == BomItem.production_instruction_item_id,
         )
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(
+            MaterialVariant,
+            BomItem.material_variant_id == MaterialVariant.material_variant_id,
+        )
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
         .all()
@@ -781,6 +795,7 @@ def submit_purchase_divide_orders():
         purchase_order,
         bom_item,
         production_instruction_item,
+        material_variant,
         material,
         supplier,
     ) in purchase_divide_orders:
@@ -805,7 +820,7 @@ def submit_purchase_divide_orders():
                     "物品名称": (
                         material.material_name
                         + " "
-                        + (bom_item.material_model if bom_item.material_model else "")
+                        + (material_variant.material_model if material_variant.material_model else "")
                         + " "
                         + (
                             bom_item.material_specification
@@ -813,7 +828,7 @@ def submit_purchase_divide_orders():
                             else ""
                         )
                         + " "
-                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                        + (material_variant.color if material_variant.color else "")
                     ),
                     "数量": purchase_order_item.purchase_amount,
                     "单位": material.material_unit,
@@ -853,7 +868,7 @@ def submit_purchase_divide_orders():
                 "物品名称": (
                     material.material_name
                     + " "
-                    + (bom_item.material_model if bom_item.material_model else "")
+                    + (material_variant.material_model if material_variant.material_model else "")
                     + " "
                     + (
                         bom_item.material_specification
@@ -861,7 +876,7 @@ def submit_purchase_divide_orders():
                         else ""
                     )
                     + " "
-                    + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                    + (material_variant.color if material_variant.color else "")
                 ),
                 "备注": bom_item.remark,
             }

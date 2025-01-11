@@ -309,7 +309,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -342,7 +341,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -351,6 +349,11 @@ def save_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -376,6 +379,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -396,7 +400,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -429,7 +432,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -438,6 +440,11 @@ def save_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -463,6 +470,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -482,7 +490,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -515,7 +522,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -524,6 +530,11 @@ def save_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -549,6 +560,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -568,7 +580,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -601,7 +612,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -610,6 +620,11 @@ def save_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -635,6 +650,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -654,7 +670,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -687,7 +702,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -696,6 +710,11 @@ def save_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -721,6 +740,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -740,7 +760,6 @@ def save_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -773,7 +792,6 @@ def save_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -807,6 +825,7 @@ def save_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -909,7 +928,7 @@ def get_production_instruction():
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
             "materialModel": item.MaterialVariant.material_model,
-            "materialSpecification": item.MaterialVariant.material_specification,
+            "materialSpecification": item.material_specification,
             "craftName": item.pre_craft_name,
             "color": item.color,
             "unit": materialVariant.material_unit,
@@ -1037,7 +1056,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1070,7 +1088,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1079,6 +1096,11 @@ def edit_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -1104,6 +1126,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1124,7 +1147,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1157,7 +1179,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1166,6 +1187,11 @@ def edit_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -1191,6 +1217,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1210,7 +1237,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1243,7 +1269,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1252,6 +1277,11 @@ def edit_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -1277,6 +1307,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1296,7 +1327,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1329,7 +1359,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1338,6 +1367,11 @@ def edit_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -1363,6 +1397,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1382,7 +1417,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1415,7 +1449,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1424,6 +1457,11 @@ def edit_production_instruction():
                         db.session.add(material)
                         db.session.flush()
                         material_variant_id = material.material_variant_id
+                material_specification = (
+                    material_data.get("materialSpecification")
+                    if material_data.get("materialSpecification")
+                    else None
+                )
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
@@ -1449,6 +1487,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1468,7 +1507,6 @@ def edit_production_instruction():
                         )
                         .filter(
                             MaterialVariant.material_model == material_data.get("materialModel"),
-                            MaterialVariant.material_specification == material_data.get("materialSpecification"),
                             Supplier.supplier_name == material_data.get("supplierName"),
                             MaterialVariant.color == material_data.get("color"),
                         )
@@ -1501,7 +1539,6 @@ def edit_production_instruction():
                         )
                         material = MaterialVariant(
                             material_model=material_data.get("materialModel"),
-                            material_specification=material_data.get("materialSpecification"),
                             material_supplier=supplier_id,
                             material_unit=material_type.Material.material_default_unit,
                             material_id=material_type.Material.material_id,
@@ -1535,6 +1572,7 @@ def edit_production_instruction():
                 production_instruction_item = ProductionInstructionItem(
                     production_instruction_id=production_instruction_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     is_pre_purchase=is_pre_purchase if is_pre_purchase else False,
@@ -1663,6 +1701,7 @@ def issue_production_order():
                     first_bom_item = BomItem(
                         bom_id=first_bom_id,
                         material_variant_id=item.material_variant_id,
+                        material_specification=item.material_specification,
                         remark=item.remark,
                         department_id=item.department_id,
                         size_type="E",
@@ -1675,6 +1714,7 @@ def issue_production_order():
                     craft_sheet_item = CraftSheetItem(
                         craft_sheet_id=craft_sheet_id,
                         material_variant_id=item.material_variant_id,
+                        material_specification=item.material_specification,
                         remark=item.remark,
                         department_id=item.department_id,
                         pairs=0,
@@ -1741,7 +1781,7 @@ def issue_production_order():
             material_name = material.Material.material_name
             unit = material.MaterialVariant.material_unit
             material_model = material.MaterialVariant.material_model
-            material_specification = material.MaterialVariant.material_specification
+            material_specification = item.material_specification
             color = item.color
             remark = item.remark
             supplier_name = material.Supplier.supplier_name
@@ -1976,7 +2016,7 @@ def get_past_material_data():
                 "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                 "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                 "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                 "color": item.BomItem.bom_item_color if item.BomItem else None,
                 "comment": item.BomItem.remark if item.BomItem else None,
                 "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2027,7 +2067,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2045,7 +2085,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2063,7 +2103,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2081,7 +2121,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2099,7 +2139,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,
@@ -2117,7 +2157,7 @@ def get_format_past_material_data():
                         "supplierName": item.Supplier.supplier_name if item.Supplier else None,
                         "unit": item.MaterialVariant.material_unit if item.MaterialVariant else None,
                         "materialModel": item.MaterialVariant.material_model if item.MaterialVariant else None,
-                        "materialSpecification": item.MaterialVariant.material_specification if item.MaterialVariant else None,
+                        "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
                         "color": item.BomItem.bom_item_color if item.BomItem else None,
                         "comment": item.BomItem.remark if item.BomItem else None,
                         "useDepart": item.BomItem.department_id if item.BomItem else None,

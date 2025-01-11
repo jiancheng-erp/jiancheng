@@ -19,7 +19,8 @@ def get_all_materials():
 
     # Start building the query with joinedload to reduce query count
     query = (
-        db.session.query(Material, MaterialWarehouse, Supplier, MaterialType)
+        db.session.query(MaterialVariant, Material, MaterialWarehouse, Supplier, MaterialType)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(
@@ -41,13 +42,15 @@ def get_all_materials():
         query = query.filter(MaterialType.material_type_name.like(f"%{material_type}%"))
 
     # Fetch all materials in a single query
-    materials = query.all()
+    material_variants = query.all()
 
     # Preload ProductionInstructionItem data to avoid per-item queries
-    material_ids = [material.Material.material_id for material in materials]
+    material_ids = [material.Material.material_id for material_variant in material_variants]
     instruction_items = (
-        db.session.query(ProductionInstructionItem.material_id, ProductionInstructionItem.material_model)
-        .filter(ProductionInstructionItem.material_id.in_(material_ids))
+        db.session.query(ProductionInstructionItem, MaterialVariant, Material)
+        .join(MaterialVariant, ProductionInstructionItem.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
+        .filter(Material.material_id.in_(material_ids))
         .distinct()
         .all()
     )
@@ -55,9 +58,9 @@ def get_all_materials():
     # Create a mapping of material_id to models
     material_models_map = {}
     for item in instruction_items:
-        if item.material_id not in material_models_map:
-            material_models_map[item.material_id] = []
-        material_models_map[item.material_id].append(item.material_model)
+        if item.Material.material_id not in material_models_map:
+            material_models_map[item.Material.material_id] = []
+        material_models_map[item.Material.material_id].append(item.MaterialVariant.material_model)
 
     # Consolidate results
     consolidated_results = {}
@@ -71,7 +74,7 @@ def get_all_materials():
             consolidated_results[key] = {
                 "materialName": material.Material.material_name,
                 "materialType": material.MaterialType.material_type_name,
-                "unit": material.Material.material_unit,
+                "unit": material.MaterialVariant.material_unit,
                 "warehouseName": material.MaterialWarehouse.material_warehouse_name,
                 "addDate": material.Material.material_creation_date.isoformat(),
                 "factoryInfo": [],  # Initialize as empty list
@@ -203,8 +206,9 @@ def check_material():
     print(material_name, factory_name)
     # Check if the material already exists
     existing_material = (
-        db.session.query(Material)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        db.session.query(MaterialVariant, Material, Supplier)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .filter(
             Material.material_name == material_name,
             Supplier.supplier_name == factory_name,
@@ -219,7 +223,8 @@ def check_material():
             200,
         )
     similiar_material = (
-        db.session.query(Material, Supplier)
+        db.session.query(MaterialVariant, Material, Supplier)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(
             Material.material_name.like(f"%{material_name}%"),
@@ -284,7 +289,8 @@ def create_material():
 
         # Check if the material already exists
         existing_material = (
-            db.session.query(Material, Supplier)
+            db.session.query(Material, MaterialVariant, Supplier)
+            .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
             .filter(Material.material_name == material_name, Supplier.supplier_name == factory_name)
             .first()
@@ -298,8 +304,7 @@ def create_material():
         material = Material(
             material_name=material_name,
             material_type_id=material_type_record.material_type_id,
-            material_unit=unit,
-            material_supplier=factory.supplier_id,
+            material_default_unit=unit,
             material_creation_date=datetime.now().strftime("%Y-%m-%d"),
             material_category=material_category,
         )
@@ -313,6 +318,7 @@ def get_all_material_storage():
     material_type = request.args.get("materialtype", None)
     material_name = request.args.get("materialname", None)
     material_spec = request.args.get("materialspec", None)
+    material_model = request.args.get("materialmodel", None)
     warehouse_name = request.args.get("warehousename", None)
     factory_name = request.args.get("factoryname", None)
     order_id = request.args.get("orderid", None)
@@ -320,6 +326,7 @@ def get_all_material_storage():
     print(
         material_type,
         material_name,
+        material_model,
         material_spec,
         warehouse_name,
         factory_name,
@@ -342,12 +349,13 @@ def get_all_material_storage():
             Order.order_rid,
         )
         .join(Material, MaterialType.material_type_id == Material.material_type_id)
-        .join(MaterialStorage, Material.material_id == MaterialStorage.material_id)
+        .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
+        .join(MaterialStorage, MaterialStorage.material_variant_id == MaterialVariant.material_variant_id)
         .join(
             MaterialWarehouse,
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
         )
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
@@ -368,14 +376,15 @@ def get_all_material_storage():
             Order.order_rid,
         )
         .join(Material, MaterialType.material_type_id == Material.material_type_id)
+        .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
         .join(
-            SizeMaterialStorage, Material.material_id == SizeMaterialStorage.material_id
+            SizeMaterialStorage,SizeMaterialStorage.material_variant_id == MaterialVariant.material_variant_id
         )
         .join(
             MaterialWarehouse,
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
         )
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .outerjoin(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
@@ -388,6 +397,8 @@ def get_all_material_storage():
         query = query.filter(MaterialType.material_type_name.like(f"%{material_type}%"))
     if material_name:
         query = query.filter(Material.material_name.like(f"%{material_name}%"))
+    if material_model:
+        query = query.filter(MaterialVariant.material_model.like(f"%{material_model}%"))
     if material_spec:
         query = query.filter(text("specification LIKE :spec")).params(spec=f"%{material_spec}%")
     if warehouse_name:
@@ -409,6 +420,7 @@ def get_all_material_storage():
                 "materialId": material_storage.material_id,
                 "materialType": material_storage.material_type_name,
                 "materialName": material_storage.material_name,
+                "materialModel": material_storage.material_model,
                 "materialSpecification": material_storage.specification,
                 "warehouseName": material_storage.material_warehouse_name,
                 "unit": material_storage.material_unit,
@@ -446,7 +458,8 @@ def edit_material_type():
         db.session.query(Material).filter(Material.material_id == material_id).first()
     )
     material.material_name = material_name
-    material.material_unit = material_unit
+    material.material_default_unit = material_unit
     db.session.commit()
 
     return jsonify({"message": "success"}), 200
+ 
