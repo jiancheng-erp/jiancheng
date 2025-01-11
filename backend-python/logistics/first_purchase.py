@@ -246,6 +246,7 @@ def get_shoe_bom_items():
     entities = (
         db.session.query(
             BomItem,
+            MaterialVariant,
             Material,
             MaterialType,
             Supplier,
@@ -254,7 +255,8 @@ def get_shoe_bom_items():
         )
         .join(Bom, BomItem.bom_id == Bom.bom_id)
         .join(TotalBom, Bom.total_bom_id == TotalBom.total_bom_id)
-        .join(Material, Material.material_id == BomItem.material_id)
+        .join(MaterialVariant, BomItem.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .outerjoin(
@@ -279,6 +281,7 @@ def get_shoe_bom_items():
     for entity in entities:
         (
             bom_item,
+            material_variant,
             material,
             material_type,
             supplier,
@@ -290,9 +293,9 @@ def get_shoe_bom_items():
         key = (
             material_type.material_type_name,
             material.material_name,
-            bom_item.material_model,
-            bom_item.material_specification,
-            bom_item.bom_item_color if bom_item.bom_item_color else "",
+            material_variant.material_model,
+            material_variant.material_specification,
+            material_variant.color if material_variant.color else "",
             supplier.supplier_name,
         )
 

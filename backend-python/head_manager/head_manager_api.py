@@ -549,10 +549,11 @@ def get_material_price_info():
 
     # Main query to get material price info with the newest inbound record
     material_storage = (
-        db.session.query(MaterialStorage, Material, MaterialType, Supplier, InboundRecord)
-        .join(Material, MaterialStorage.material_id == Material.material_id)
+        db.session.query(MaterialStorage, MaterialVariant, Material, MaterialType, Supplier, InboundRecord)
+        .join(MaterialVariant, MaterialStorage.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .outerjoin(
             latest_material_inbound_subquery,
             MaterialStorage.material_storage_id
@@ -574,10 +575,11 @@ def get_material_price_info():
 
     # Main query to get size material price info with the newest inbound record
     size_material_storage = (
-        db.session.query(SizeMaterialStorage, Material, MaterialType, Supplier, InboundRecord)
-        .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+        db.session.query(SizeMaterialStorage, MaterialVariant, Material, MaterialType, Supplier, InboundRecord)
+        .join(MaterialVariant, SizeMaterialStorage.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .outerjoin(
             latest_size_inbound_subquery,
             SizeMaterialStorage.size_material_storage_id

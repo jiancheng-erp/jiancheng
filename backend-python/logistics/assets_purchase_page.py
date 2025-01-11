@@ -74,13 +74,14 @@ def get_material_type_and_name():
     supplier_name = request.args.get("suppliername")
     print(material_type, material_name, supplier_name)
     query = (
-        db.session.query(Material, MaterialType, MaterialWarehouse, Supplier)
+        db.session.query(MaterialVariant, Material, MaterialType, MaterialWarehouse, Supplier)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(
             MaterialWarehouse,
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
         )
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
     )
     if material_type:
         query = query.filter(MaterialType.material_type_name.like(f"%{material_type}%"))
@@ -105,14 +106,14 @@ def get_material_type_and_name():
 
 @assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
 def get_all_material_name():
-    material_name_list = db.session.query(MaterialType.material_type_name).distinct().all()
+    material_name_list = db.session.query(Material.material_name).distinct().all()
     print(material_name_list)
     result = []
     for material_name in material_name_list:
         result.append(
             {
-                "value": material_name.material_type_name,
-                "label": material_name.material_type_name
+                "value": material_name.material_name,
+                "label": material_name.material_name
             }
         )
     print(result)
@@ -190,39 +191,41 @@ def new_purchase_order_save():
             for item in items:
                 print(item)
                 material_name = item["materialName"]
+                material_specification = item["materialSpecification"]
+                material_model = item["materialModel"]
+                material_id = db.session.query(Material).filter(
+                    Material.material_name == material_name
+                ).first().material_id
                 material_info = (
-                    db.session.query(Material)
-                    .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                    db.session.query(MaterialVariant, Material, Supplier)
+                    .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
                     .filter(
                         Material.material_name == material_name,
+                        MaterialVariant.material_specification == material_specification,
+                        MaterialVariant.material_model == material_model,
                         Supplier.supplier_name == supplier_name,
                     )
                     .first()
                 )
                 if not material_info:
-                    material_info = Material(
-                        material_name=material_name,
-                        material_type_id=item["materialType"]["materialTypeId"],
-                        material_unit=item["unit"],
+                    material_info = MaterialVariant(
+                        material_id=material_id,
+                        material_specification=material_specification,
+                        material_model=material_model,
                         material_supplier=supplier_id,
-                        material_creation_date=datetime.datetime.now(),
+                        material_unit=item["unit"],
+                        color=item["color"],
                     )
                     db.session.add(material_info)
                     db.session.flush()
-                material_id = material_info.material_id
+                material_variant_id = material_info.material_variant_id
                 material_quantity = item["purchaseAmount"]
-                material_specification = item["materialSpecification"]
-                material_model = item["materialModel"]
-                color = item["color"]
                 remark = item["comment"]
                 if items[0]["materialCategory"] == 0:
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
-                        material_id=material_id,
+                        material_variant_id=material_variant_id,
                         purchase_amount=material_quantity,
-                        material_specification=material_specification,
-                        material_model=material_model,
-                        color=color,
                         remark=remark,
                         size_type=shoe_batch_type,
                         craft_name=item["craftName"],
@@ -231,11 +234,8 @@ def new_purchase_order_save():
                 elif items[0]["materialCategory"] == 1:
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
-                        material_id=material_id,
+                        material_variant_id=material_variant_id,
                         purchase_amount=material_quantity,
-                        material_specification=material_specification,
-                        material_model=material_model,
-                        color=color,
                         remark=remark,
                         size_type=shoe_batch_type,
                         craft_name=item["craftName"],
@@ -278,6 +278,7 @@ def get_assets_purchase_order_items():
             PurchaseDivideOrder,
             PurchaseOrder,
             AssetsPurchaseOrderItem,
+            MaterialVariant,
             Material,
             MaterialType,
             MaterialWarehouse,
@@ -295,7 +296,11 @@ def get_assets_purchase_order_items():
             PurchaseOrder,
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
-        .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
+        .join(
+            MaterialVariant,
+            AssetsPurchaseOrderItem.material_variant_id == MaterialVariant.material_variant_id,
+        )
+        .join(Material,MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(
             MaterialWarehouse,
@@ -315,6 +320,7 @@ def get_assets_purchase_order_items():
         purchase_divide_order,
         purchase_order,
         assets_item,
+        material_variant,
         material,
         material_type,
         material_warehouse,
@@ -336,10 +342,10 @@ def get_assets_purchase_order_items():
                     "isPurchaseOrder": purchase_order.purchase_order_type,
                     "materialType": material_type.material_type_name,
                     "materialName": material.material_name,
-                    "materialSpecification": assets_item.material_specification,
-                    "materialModel": assets_item.material_model,
-                    "color": assets_item.color,
-                    "unit": material.material_unit,
+                    "materialSpecification": material_variant.material_specification,
+                    "materialModel": material_variant.material_model,
+                    "color": material_variant.color,
+                    "unit": material_variant.material_unit,
                     "craftName": assets_item.craft_name,
                     "purchaseAmount": float(assets_item.purchase_amount),
                     "comment": assets_item.remark if assets_item.remark else "",
@@ -360,10 +366,11 @@ def get_assets_purchase_order_items():
                     "orderId": order.order_rid if order else "",
                     "materialType": material_type.material_type_name,
                     "materialName": material.material_name,
-                    "materialSpecification": assets_item.material_specification,
-                    "color": assets_item.color,
+                    "materialSpecification": material_variant.material_specification,
+                    "materialModel": material_variant.material_model,
+                    "color": material_variant.color,
                     "craftName": assets_item.craft_name,
-                    "unit": material.material_unit,
+                    "unit": material_variant.material_unit,
                     "comment": assets_item.remark if assets_item.remark else "",
                     "sizeInfo": [
                         {
@@ -455,6 +462,7 @@ def get_purchase_divide_orders():
             PurchaseDivideOrder,
             PurchaseOrder,
             AssetsPurchaseOrderItem,
+            MaterialVariant,
             Material,
             MaterialType,
             Supplier,
@@ -468,7 +476,11 @@ def get_purchase_divide_orders():
             PurchaseOrder,
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
-        .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
+        .join(
+            MaterialVariant,
+            AssetsPurchaseOrderItem.material_variant_id == MaterialVariant.material_variant_id,
+        )
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_id == purchase_order_id)
@@ -481,6 +493,7 @@ def get_purchase_divide_orders():
         purchase_divide_order,
         purchase_order,
         assets_item,
+        material_variant,
         material,
         material_type,
         supplier,
@@ -501,13 +514,13 @@ def get_purchase_divide_orders():
 
         # Append the assets item details to the corresponding group
         obj = {
-            "materialId": assets_item.material_id,
+            "materialId": assets_item.material_variant_id,
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
-            "materialModel": assets_item.material_model,
-            "materialSpecification": assets_item.material_specification,
-            "color": assets_item.color,
-            "unit": material.material_unit,
+            "materialModel": material_variant.material_model,
+            "materialSpecification": material_variant.material_specification,
+            "color": material_variant.color,
+            "unit": material_variant.material_unit,
             "purchaseAmount": assets_item.purchase_amount,
             "remark": assets_item.remark,
             "sizeType": assets_item.size_type,
@@ -580,7 +593,8 @@ def submit_purchase_order():
             PurchaseOrder,
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
-        .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
+        .join(MaterialVariant, AssetsPurchaseOrderItem.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_id == purchase_order_id)
@@ -591,22 +605,16 @@ def submit_purchase_order():
         purchase_order,
         assets_item,
     ) in query:
-        material_id = assets_item.material_id
+        material_variant_id = assets_item.material_variant_id
         material_quantity = assets_item.purchase_amount
-        material_specification = assets_item.material_specification
-        material_model = assets_item.material_model
-        color = assets_item.color
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
-                material_id=material_id,
+                material_variant_id=material_variant_id,
                 estimated_inbound_amount=material_quantity,
                 actual_inbound_amount=0,
                 current_amount=0,
                 unit_price=0,
                 material_outsource_status="0",
-                material_specification=material_specification,
-                material_model=material_model,
-                material_storage_color=color,
                 purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
                 order_id=purchase_order.order_id,
                 order_shoe_id=purchase_order.order_shoe_id,
@@ -620,12 +628,10 @@ def submit_purchase_order():
             print(quantity_list)
             material_total_quantity = sum(quantity_list)
             size_material_storage = SizeMaterialStorage(
-                material_id=material_id,
+                material_variant_id=material_variant_id,
                 total_estimated_inbound_amount=material_total_quantity,
                 unit_price=0,
                 material_outsource_status="0",
-                size_material_specification=material_specification,
-                size_material_color=color,
                 purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
                 order_id=purchase_order.order_id,
                 order_shoe_id=purchase_order.order_shoe_id,
@@ -640,6 +646,7 @@ def submit_purchase_order():
             PurchaseDivideOrder,
             PurchaseOrder,
             AssetsPurchaseOrderItem,
+            MaterialVariant,
             Material,
             Supplier,
         )
@@ -648,7 +655,8 @@ def submit_purchase_order():
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
         .join(AssetsPurchaseOrderItem, AssetsPurchaseOrderItem.purchase_divide_order_id == PurchaseDivideOrder.purchase_divide_order_id)
-        .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
+        .join(MaterialVariant, AssetsPurchaseOrderItem.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, MaterialVariant.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
         .all()
@@ -664,6 +672,7 @@ def submit_purchase_order():
         purchase_divide_order,
         purchase_order,
         assets_item,
+        material_variant,
         material,
         supplier,
     ) in purchase_divide_orders:
@@ -692,18 +701,18 @@ def submit_purchase_order():
                     "物品名称": (
                         material.material_name
                         + " "
-                        + (assets_item.material_model if assets_item.material_model else "")
+                        + (material_variant.material_model if material_variant.material_model else "")
                         + " "
                         + (
-                            assets_item.material_specification
-                            if assets_item.material_specification
+                            material_variant.material_specification
+                            if material_variant.material_specification
                             else ""
                         )
                         + " "
-                        + (assets_item.color if assets_item.color else "")
+                        + (material_variant.color if material_variant.color else "")
                     ),
                     "数量": assets_item.purchase_amount,
-                    "单位": material.material_unit,
+                    "单位": material_variant.material_unit,
                     "备注": assets_item.remark,
                     "用途说明": "",
                 }
@@ -732,15 +741,15 @@ def submit_purchase_order():
                 "物品名称": (
                     material.material_name
                     + " "
-                    + (assets_item.material_model if assets_item.material_model else "")
+                    + (material_variant.material_model if material_variant.material_model else "")
                     + " "
                     + (
-                        assets_item.material_specification
-                        if assets_item.material_specification
+                        material_variant.material_specification
+                        if material_variant.material_specification
                         else ""
                     )
                     + " "
-                    + (assets_item.color if assets_item.color else "")
+                    + (material_variant.color if material_variant.color else "")
                 ),
                 "备注": assets_item.remark,
             }
@@ -885,31 +894,34 @@ def edit_saved_purchase_order_items():
             # Add assets items
             for item in items:
                 material_name = item["materialName"]
+                material_id = (
+                    db.session.query(Material)
+                    .filter(Material.material_name == material_name)
+                    .first()
+                    .material_id
+                )
                 material_info = (
-                    db.session.query(Material, Supplier)
+                    db.session.query(MaterialVariant, Material, Supplier)
+                    .join(Material, MaterialVariant.material_id == Material.material_id)
                     .join(Supplier, Material.material_supplier == Supplier.supplier_id)
                     .filter(
                         Material.material_name == material_name,
+                        MaterialVariant.material_specification == item["materialSpecification"],
+                        MaterialVariant.material_model == item["materialModel"],
                         Supplier.supplier_name == supplier_name,
                     )
                     .first()
                 )
 
-                material_id = material_info.Material.material_id
-                material_specification = item["materialSpecification"]
-                material_model = item["materialModel"]
-                color = item["color"]
+                material_variant_id = material_info.MaterialVariant.material_variant_id
                 remark = item["comment"]
 
                 if purchase_divide_order_type == "N":
                     material_quantity = item["purchaseAmount"]
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
-                        material_id=material_id,
+                        material_variant_id=material_variant_id,
                         purchase_amount=material_quantity,
-                        material_specification=material_specification,
-                        material_model=material_model,
-                        color=color,
                         remark=remark,
                         craft_name=item["craftName"],
                         size_type="N",
@@ -922,7 +934,7 @@ def edit_saved_purchase_order_items():
                     total_quantity = sum(material_quantities)
                     assets_item = AssetsPurchaseOrderItem(
                         purchase_divide_order_id=purchase_divide_order_id,
-                        material_id=material_id,
+                        material_variant_id=material_variant_id,
                         purchase_amount=total_quantity,
                         size_35_purchase_amount=material_quantities[0],
                         size_36_purchase_amount=material_quantities[1],
@@ -935,9 +947,6 @@ def edit_saved_purchase_order_items():
                         size_43_purchase_amount=material_quantities[8],
                         size_44_purchase_amount=material_quantities[9],
                         size_45_purchase_amount=material_quantities[10],
-                        material_specification=material_specification,
-                        material_model=material_model,
-                        color=color,
                         remark=remark,
                         craft_name=item["craftName"],
                         size_type="E",

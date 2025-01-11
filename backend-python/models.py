@@ -22,6 +22,7 @@ class BomItem(db.Model):
     department_id = db.Column(
         db.Integer,
     )
+    material_specification = db.Column(db.String(50), nullable=True)
     bom_item_add_type = db.Column(db.String(1), nullable=False)
     remark = db.Column(db.String(100), nullable=True)
     bom_id = db.Column(db.BigInteger)
@@ -153,7 +154,6 @@ class MaterialVariant(db.Model):
     __tablename__ = "material_variant"
     material_variant_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_model = db.Column(db.String(60), nullable=True)
-    material_specification = db.Column(db.String(100), nullable=True)
     material_id = db.Column(db.Integer, nullable=False)
     material_unit = db.Column(db.String(4), nullable=True)
     material_supplier = db.Column(db.Integer, nullable=False)
@@ -222,6 +222,7 @@ class MaterialStorage(db.Model):
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     material_variant_id = db.Column(db.BigInteger, nullable=False)
+    material_specification = db.Column(db.String(50), nullable=True)
     estimated_inbound_amount = db.Column(
         db.DECIMAL(10, 5),
         default=0,
@@ -624,7 +625,6 @@ class AssetsPurchaseOrderItem(db.Model):
     purchase_divide_order_id = db.Column(db.BigInteger)
     purchase_amount = db.Column(db.Numeric(10, 5), nullable=True)
     material_specification = db.Column(db.String(50), nullable=True)
-    material_model = db.Column(db.String(50), nullable=True)
     size_34_purchase_amount = db.Column(db.Integer, nullable=True)
     size_35_purchase_amount = db.Column(db.Integer, nullable=True)
     size_36_purchase_amount = db.Column(db.Integer, nullable=True)
@@ -833,6 +833,7 @@ class SizeMaterialStorage(db.Model):
     department_id = db.Column(
         db.Integer,
     )
+    material_specification = db.Column(db.String(50), nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     unit_price = db.Column(db.Numeric(10, 2), nullable=True, default=0.00)
@@ -1120,6 +1121,7 @@ class ProductionInstructionItem(db.Model):
     )
     production_instruction_id = db.Column(db.BigInteger, nullable=False)
     material_variant_id = db.Column(db.BigInteger, nullable=False)
+    material_specification = db.Column(db.String(50), nullable=True)
     remark = db.Column(db.String(50), nullable=True)
     department_id = db.Column(db.Integer, nullable=False)
     is_pre_purchase = db.Column(db.Boolean, nullable=False)
@@ -1155,6 +1157,7 @@ class CraftSheetItem(db.Model):
     craft_sheet_item_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     craft_sheet_id = db.Column(db.BigInteger, nullable=False)
     material_variant_id = db.Column(db.BigInteger, nullable=False)
+    material_specification = db.Column(db.String(50), nullable=True)
     department_id = db.Column(db.Integer, nullable=False)
     material_type = db.Column(db.String(1), nullable=False)
     material_second_type = db.Column(db.String(10), nullable=False)
