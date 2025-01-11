@@ -105,16 +105,23 @@ def get_material_type_and_name():
 
 @assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
 def get_all_material_name():
-    material_name_list = db.session.query(Material.material_name).distinct().all()
-    print(material_name_list)
-    result = []
-    for material_name in material_name_list:
-        result.append(
-            {
-                "value": material_name.material_name,
-                "label": material_name.material_name
+    # Query for all material names and their types
+    material_name_list = db.session.query(Material).all()
+    
+    # Use a dictionary to store unique material names
+    unique_materials = {}
+    for material in material_name_list:
+        if material.material_name not in unique_materials:
+            unique_materials[material.material_name] = {
+                "value": material.material_name,
+                "label": material.material_name,
+                "type": material.material_type_id,
             }
-        )
+    
+    # Convert the dictionary values into a list
+    result = list(unique_materials.values())
+    
+    # Print and return the result
     print(result)
     return jsonify(result)
 

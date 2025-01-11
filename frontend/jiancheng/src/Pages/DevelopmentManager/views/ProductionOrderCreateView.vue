@@ -312,7 +312,9 @@
                     >
                         <el-row>
                             <el-col :span="2" :offset="20">
-                                <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
+                                <el-button @click="syncAllMaterials"
+                                    >同步所有材料至所有颜色</el-button
+                                >
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -358,7 +360,10 @@
                                                 "
                                             >
                                                 <el-option
-                                                    v-for="item in materialNameOptions"
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [1]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -479,8 +484,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -600,8 +608,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [3,5]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -721,8 +732,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [7]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -842,8 +856,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [7]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -969,8 +986,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2,16]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -1456,7 +1476,9 @@
                     >
                         <el-row>
                             <el-col :span="2" :offset="20">
-                                <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
+                                <el-button @click="syncAllMaterials"
+                                    >同步所有材料至所有颜色</el-button
+                                >
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1501,8 +1523,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [1]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -1625,8 +1650,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -1747,8 +1775,11 @@
                                                     handleMaterialNameSelect(scope.row, $event)
                                                 "
                                             >
-                                                <el-option
-                                                    v-for="item in materialNameOptions"
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [3,5]
+                                                    )"
                                                     :key="item.value"
                                                     :value="item.value"
                                                     :label="item.label"
@@ -1875,10 +1906,28 @@
                                     </el-table-column>
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-input
+                                            <el-select
+                                                v-if="
+                                                    scope !== undefined &&
+                                                    scope.row.manualSymbol === 1
+                                                "
                                                 v-model="scope.row.materialName"
-                                                size="default"
-                                            ></el-input>
+                                                filterable
+                                                @change="
+                                                    handleMaterialNameSelect(scope.row, $event)
+                                                "
+                                            >
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [7]
+                                                    )"
+                                                    :key="item.value"
+                                                    :value="item.value"
+                                                    :label="item.label"
+                                                >
+                                                </el-option>
+                                            </el-select>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -1990,10 +2039,28 @@
                                     </el-table-column>
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-input
+                                            <el-select
+                                                v-if="
+                                                    scope !== undefined &&
+                                                    scope.row.manualSymbol === 1
+                                                "
                                                 v-model="scope.row.materialName"
-                                                size="default"
-                                            ></el-input>
+                                                filterable
+                                                @change="
+                                                    handleMaterialNameSelect(scope.row, $event)
+                                                "
+                                            >
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [7]
+                                                    )"
+                                                    :key="item.value"
+                                                    :value="item.value"
+                                                    :label="item.label"
+                                                >
+                                                </el-option>
+                                            </el-select>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -2111,10 +2178,28 @@
                                     </el-table-column>
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-input
+                                            <el-select
+                                                v-if="
+                                                    scope !== undefined &&
+                                                    scope.row.manualSymbol === 1
+                                                "
                                                 v-model="scope.row.materialName"
-                                                size="default"
-                                            ></el-input>
+                                                filterable
+                                                @change="
+                                                    handleMaterialNameSelect(scope.row, $event)
+                                                "
+                                            >
+                                            <el-option
+                                                    v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2,16]
+                                                    )"
+                                                    :key="item.value"
+                                                    :value="item.value"
+                                                    :label="item.label"
+                                                >
+                                                </el-option>
+                                            </el-select>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -2334,9 +2419,13 @@ export default {
         },
         SearchIcon() {
             return Search
-        }
+        },
+
     },
     methods: {
+        filterByTypes(options, types) {
+            return options.filter((option) => types.includes(option.type))
+        },
         async getAllDepartmentOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
             this.departmentOptions = response.data
@@ -2385,22 +2474,25 @@ export default {
             this.pastMaterialData = response.data
         },
         syncAllMaterials() {
-			ElMessageBox.alert('确认复制所有材料至所有颜色吗', '警告', {
-				confirmButtonText: '确认',
-				showCancelButton: true,
-				cancelButtonText: '取消'
-			}).then(async () => {
-				try {
-                    for (let i = 0 ; i < 7 ; i++) {
-                        this.syncMaterials(i, true)
+            ElMessageBox.alert('确认复制所有材料至所有颜色吗', '警告', {
+                confirmButtonText: '确认',
+                showCancelButton: true,
+                cancelButtonText: '取消'
+            })
+                .then(async () => {
+                    try {
+                        for (let i = 0; i < 7; i++) {
+                            this.syncMaterials(i, true)
+                        }
+                        ElMessage.success('复制成功')
+                    } catch (error) {
+                        console.log(error)
+                        ElMessage.error('复制异常')
                     }
-                    ElMessage.success("复制成功")
-				}
-				catch (error) {
-					console.log(error)
-					ElMessage.error("复制异常")
-				}
-			}).catch(() => {ElMessage.info("取消复制")})
+                })
+                .catch(() => {
+                    ElMessage.info('取消复制')
+                })
         },
         syncMaterials(materialTypeNumber, isSyncAll = false) {
             switch (materialTypeNumber) {
@@ -2790,7 +2882,7 @@ export default {
             this.currentShoeId = row.inheritId
             await this.getInstructionData(row)
             this.tabcolor = row.typeInfos.map((info) => info.color)
-            
+
             // get color names in materialwholedata
             let colorSet = new Set()
             this.materialWholeData.forEach((row) => {
