@@ -46,7 +46,8 @@ def getCraftSheetInfo():
         .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
         .join(Color, ShoeType.color_id == Color.color_id)
         .join(Material, CraftSheetItem.material_id == Material.material_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
+        .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
         .all()
     )
@@ -68,12 +69,13 @@ def getCraftSheetInfo():
                 "hotsoleMaterialData": [],
             }
         material = (
-            db.session.query(Material, MaterialType, Supplier)
+            db.session.query(Material, MaterialVariant, MaterialType, Supplier)
+            .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
             .join(
                 MaterialType, Material.material_type_id == MaterialType.material_type_id
             )
-            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-            .filter(Material.material_id == item.CraftSheetItem.material_id)
+            .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
+            .filter(MaterialVariant.material_variant_id == item.CraftSheetItem.material_variant_id)
             .first()
         )
         if item.CraftSheetItem.craft_name != None:
@@ -87,10 +89,10 @@ def getCraftSheetInfo():
             "materialId": item.CraftSheetItem.material_id,
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
-            "materialModel": item.CraftSheetItem.material_model,
-            "materialSpecification": item.CraftSheetItem.material_specification,
-            "color": item.CraftSheetItem.color,
-            "unit": material.Material.material_unit,
+            "materialModel": material.MaterialVariant.material_model,
+            "materialSpecification": material.MaterialVariant.material_specification,
+            "color": material.MaterialVariant.color,
+            "unit": material.MaterialVariant.material_unit,
             "pairs": item.CraftSheetItem.pairs,
             "unitUsage": item.CraftSheetItem.unit_usage,
             "supplierName": material.Supplier.supplier_name,

@@ -6,9 +6,9 @@
                 <el-button v-if="isMultipleSelection" @click="confirmOrderShoesToOutbound">
                     出库
                 </el-button>
-                <!-- <el-button v-if="isMultipleSelection" @click="openFinishOutboundDialog">
-            完成出库
-        </el-button> -->
+                <el-button v-if="isMultipleSelection" @click="openFinishOutboundDialog">
+                    完成出库
+                </el-button>
                 <el-button @click="toggleSelectionMode">
                     {{ isMultipleSelection ? "退出" : "选择材料" }}
                 </el-button>
@@ -364,6 +364,12 @@
             <el-table-column prop="shoeRId" label="鞋型号">
             </el-table-column>
             <el-table-column prop="materialName" label="材料名称">
+            </el-table-column>
+            <el-table-column prop="materialModel" label="型号">
+            </el-table-column>
+            <el-table-column prop="materialSpecification" label="规格">
+            </el-table-column>
+            <el-table-column prop="colorName" label="颜色">
             </el-table-column>
         </el-table>
         <template #footer>

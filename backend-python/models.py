@@ -153,7 +153,7 @@ class MaterialVariant(db.Model):
     __tablename__ = "material_variant"
     material_variant_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_model = db.Column(db.String(60), nullable=True)
-    material_specification = db.Column(db.String(60), nullable=True)
+    material_specification = db.Column(db.String(100), nullable=True)
     material_id = db.Column(db.Integer, nullable=False)
     material_unit = db.Column(db.String(4), nullable=True)
     material_supplier = db.Column(db.Integer, nullable=False)
@@ -161,7 +161,7 @@ class MaterialVariant(db.Model):
     color = db.Column(db.String(20), nullable=True)
 
     __table_args__ = (
-        db.UniqueConstraint("material_supplier", "material_model", "material_specification","color", name="unq_material"),
+        db.UniqueConstraint("material_supplier", "material_model", "material_specification","color", "material_id", name="unq_material"),
     )
 
     def __repr__(self):

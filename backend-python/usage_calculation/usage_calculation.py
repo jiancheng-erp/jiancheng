@@ -212,11 +212,12 @@ def get_order_first_bom():
 def get_shoe_bom_items():
     bom_rid = request.args.get("bomrid")
     entities = (
-        db.session.query(BomItem, Material, MaterialType, Supplier)
+        db.session.query(BomItem, MaterialVariant, Material, MaterialType, Supplier)
         .join(Bom, Bom.bom_id == BomItem.bom_id)
-        .join(Material, Material.material_id == BomItem.material_id)
+        .join(MaterialVariant, MaterialVariant.material_variant_id == BomItem.material_variant_id)
+        .join(Material, Material.material_id == MaterialVariant.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
-        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .join(Supplier, Supplier.supplier_id == MaterialVariant.material_supplier)
         .filter(Bom.bom_rid == bom_rid)
         .all()
     )
@@ -231,7 +232,7 @@ def get_shoe_bom_items():
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
     for entity in entities:
-        bom_item, material, material_type, supplier = entity
+        bom_item, material_variant, material, material_type, supplier = entity
         sizeInfo = []
         for i in range(len(shoe_size_names)):
             index = i + 34
@@ -251,10 +252,10 @@ def get_shoe_bom_items():
                 "materialDetailType": bom_item.material_second_type,
                 "materialType": material_type.material_type_name,
                 "materialName": material.material_name,
-                "materialModel": bom_item.material_model,
-                "materialSpecification": bom_item.material_specification,
-                "color": bom_item.bom_item_color,
-                "unit": material.material_unit,
+                "materialModel": material_variant.material_model,
+                "materialSpecification": material_variant.material_specification,
+                "color": material_variant.color,
+                "unit": material_variant.material_unit,
                 "unitUsage": (
                     bom_item.unit_usage
                     if bom_item.unit_usage
@@ -360,13 +361,14 @@ def issue_bom_usage():
             db.session.flush()
             bom_id = bom.bom_id
             bom_items = (
-                db.session.query(BomItem, Material, MaterialType, Supplier, Department)
-                .join(Material, Material.material_id == BomItem.material_id)
+                db.session.query(BomItem, MaterialVariant, Material, MaterialType, Supplier, Department)
+                .join(MaterialVariant, MaterialVariant.material_variant_id == BomItem.material_variant_id)
+                .join(Material, Material.material_id == MaterialVariant.material_id)
                 .join(
                     MaterialType,
                     MaterialType.material_type_id == Material.material_type_id,
                 )
-                .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
                 .outerjoin(
                     Department, Department.department_id == BomItem.department_id
                 )
@@ -378,10 +380,10 @@ def issue_bom_usage():
                 key = (
                     bom_item.MaterialType.material_type_name,
                     bom_item.Material.material_name,
-                    bom_item.BomItem.material_model,
-                    bom_item.BomItem.material_specification,
+                    bom_item.MaterialVariant.material_model,
+                    bom_item.MaterialVariant.material_specification,
                     bom_item.Supplier.supplier_name,
-                    bom_item.BomItem.bom_item_color,
+                    bom_item.MaterialVariant.color,
                 )
 
                 # Update the dictionary: sum the total_usage and add other details
@@ -389,10 +391,10 @@ def issue_bom_usage():
                     material_dict[key] = {
                         "材料类型": bom_item.MaterialType.material_type_name,
                         "材料名称": bom_item.Material.material_name,
-                        "材料型号": bom_item.BomItem.material_model,
-                        "材料规格": bom_item.BomItem.material_specification,
-                        "颜色": bom_item.BomItem.bom_item_color,
-                        "单位": bom_item.Material.material_unit,
+                        "材料型号": bom_item.MaterialVariant.material_model,
+                        "材料规格": bom_item.MaterialVariant.material_specification,
+                        "颜色": bom_item.MaterialVariant.color,
+                        "单位": bom_item.MaterialVariant.material_unit,
                         "厂家名称": bom_item.Supplier.supplier_name,
                         "单位用量": (
                             bom_item.BomItem.unit_usage

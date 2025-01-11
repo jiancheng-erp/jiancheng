@@ -14,9 +14,9 @@
             <el-button v-if="isMultipleSelection" @click="openInboundDialog">
                 入库
             </el-button>
-            <!-- <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
+            <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
                 完成入库
-            </el-button> -->
+            </el-button>
             <el-button @click="toggleSelectionMode">
                 {{ isMultipleSelection ? "退出" : "选择材料" }}
             </el-button>
@@ -303,7 +303,7 @@ export default {
         handleSelectionChange(selection) {
             this.selectedRows = selection
         },
-        openFinishOutboundDialog() {
+        openFinishInboundDialog() {
             if (this.selectedRows.length == 0) {
                 ElMessage.error("未选择材料")
                 return

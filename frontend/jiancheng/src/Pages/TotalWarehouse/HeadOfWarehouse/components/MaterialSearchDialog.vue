@@ -4,9 +4,11 @@
         <el-select v-model="searchForm.materialTypeSearch" value-key="" placeholder="" clearable filterable>
             <el-option v-for="item in materialTypeOptions" :value="item" />
         </el-select>
-        请选择材料名称：
+        请输入材料名称：
         <el-input v-model="searchForm.materialNameSearch" placeholder="" clearable />
-        请选择材料规格：
+        请输入材料型号：
+        <el-input v-model="searchForm.materialModel" placeholder="" />
+        请输入材料规格：
         <el-input v-model="searchForm.materialSpecificationSearch" placeholder="" />
         请选择材料供应商：
         <el-select v-model="searchForm.materialSupplierSearch" value-key="" placeholder="" clearable filterable>
