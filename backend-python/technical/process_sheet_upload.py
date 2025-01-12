@@ -269,8 +269,6 @@ def create_craft_sheet_item(
                     Material.material_name == material_data.get("materialName"),
                     MaterialVariant.material_model
                     == material_data.get("materialModel"),
-                    MaterialVariant.material_specification
-                    == material_data.get("materialSpecification"),
                     MaterialVariant.color == material_data.get("color"),
                     Supplier.supplier_name == material_data.get("supplierName"),
                 )
@@ -296,9 +294,6 @@ def create_craft_sheet_item(
                 material_variant = MaterialVariant(
                     material_id=material_data.get("materialId"),
                     material_model=material_data.get("materialModel", None),
-                    material_specification=material_data.get(
-                        "materialSpecification", None
-                    ),
                     color=material_data.get("color", None),
                     material_supplier=supplier_id,
                 )
@@ -314,6 +309,7 @@ def create_craft_sheet_item(
             and material_data.get("materialSource") != None
             else "C"
         )
+        material_specification = material_data.get("materialSpecification", None)
         remark = material_data.get("comment") if material_data.get("comment") else None
         department_id = (
             material_data.get("useDepart") if material_data.get("useDepart") else None
@@ -336,6 +332,7 @@ def create_craft_sheet_item(
         craft_sheet_item = CraftSheetItem(
             craft_sheet_id=craft_sheet_id,
             material_variant_id=material_variant_id,
+            material_specification=material_specification,
             color=material_color,
             remark=remark,
             department_id=department_id,
@@ -538,7 +535,7 @@ def get_origin_material_info():
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
             "materialModel": material.MaterialVariant.material_model,
-            "materialSpecification": material.MaterialVariant.material_specification,
+            "materialSpecification": item.material_specification,
             "color": material.MaterialVariant.color,
             "unit": material.MaterialVariant.material_unit,
             "supplierName": material.Supplier.supplier_name,
@@ -663,7 +660,7 @@ def get_craft_sheet_info():
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
             "materialModel": material.MaterialVariant.material_model,
-            "materialSpecification": material.MaterialVariant.material_specification,
+            "materialSpecification": item.CraftSheetItem.material_specification,
             "color": material.MaterialVariant.color,
             "unit": material.MaterialVariant.material_unit,
             "supplierName": material.Supplier.supplier_name,
@@ -927,8 +924,12 @@ def issue_production_order():
             db.session.flush()
             second_bom_id = second_bom.bom_id
             for item in craft_sheet_items:
-                material_storage = (
-                    db.session.query(MaterialStorage)
+                material_storage, material_variant = (
+                    db.session.query(MaterialStorage, MaterialVariant)
+                    .join(
+                        MaterialVariant,
+                        MaterialStorage.material_variant_id == MaterialVariant.material_variant_id,
+                    )
                     .filter(
                         MaterialStorage.order_shoe_id == order_shoe_id,
                         MaterialStorage.material_variant_id == item.material_variant_id,
@@ -937,8 +938,8 @@ def issue_production_order():
                 )
                 if material_storage:
                     material_storage.craft_name = item.craft_name
-                size_material_storage = (
-                    db.session.query(SizeMaterialStorage)
+                size_material_storage, material_variant = (
+                    db.session.query(SizeMaterialStorage, MaterialVariant)
                     .filter(
                         SizeMaterialStorage.order_shoe_id == order_shoe_id,
                         SizeMaterialStorage.material_variant_id == item.material_variant_id,
@@ -952,10 +953,10 @@ def issue_production_order():
                     for craft in craft_list:
                         bom_item = BomItem(
                             bom_id=second_bom_id,
-                            material_id=item.material_id,
-                            material_model=item.material_model,
+                            material_variant_id=item.material_variant_id,
+                            material_model=material_variant.material_model,
                             material_specification=item.material_specification,
-                            bom_item_color=item.color,
+                            bom_item_color=material_variant.color,
                             remark=item.remark,
                             department_id=item.department_id,
                             size_type="E",

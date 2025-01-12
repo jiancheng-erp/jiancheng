@@ -45,8 +45,7 @@ def getCraftSheetInfo():
         )
         .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
         .join(Color, ShoeType.color_id == Color.color_id)
-        .join(Material, CraftSheetItem.material_id == Material.material_id)
-        .join(MaterialVariant, Material.material_id == MaterialVariant.material_id)
+        .join(MaterialVariant, CraftSheetItem.material_variant_id == MaterialVariant.material_id)
         .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
         .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
         .all()
@@ -90,7 +89,7 @@ def getCraftSheetInfo():
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
             "materialModel": material.MaterialVariant.material_model,
-            "materialSpecification": material.MaterialVariant.material_specification,
+            "materialSpecification": item.CraftSheetItem.material_specification,
             "color": material.MaterialVariant.color,
             "unit": material.MaterialVariant.material_unit,
             "pairs": item.CraftSheetItem.pairs,
@@ -133,10 +132,6 @@ def getCraftSheetInfo():
         "oilyGlue": craft_sheet.oily_glue,
         "cutDieImgPath": craft_sheet.cut_die_img_path,
         "picNoteImgPath": craft_sheet.pic_note_img_path,
-
-
-
-        
     }
     fin_result = {
         "craftSheetId": craft_sheet_rid,

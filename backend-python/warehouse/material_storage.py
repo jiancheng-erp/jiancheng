@@ -169,7 +169,7 @@ def get_all_material_info():
             MaterialStorage.unit_price,
             MaterialStorage.material_estimated_arrival_date,
             MaterialStorage.material_storage_status,
-            MaterialVariant.material_specification,
+            MaterialStorage.material_specification,
             MaterialVariant.material_model,
             MaterialVariant.material_unit,
             MaterialVariant.color,
@@ -231,7 +231,7 @@ def get_all_material_info():
             SizeMaterialStorage.unit_price,
             SizeMaterialStorage.material_estimated_arrival_date,
             SizeMaterialStorage.material_storage_status,
-            MaterialVariant.material_specification,
+            SizeMaterialStorage.material_specification,
             MaterialVariant.material_model,
             MaterialVariant.material_unit,
             MaterialVariant.color,
@@ -631,60 +631,6 @@ def notify_required_material_arrival():
     return jsonify({"message": "no"})
 
 
-@material_storage_bp.route(
-    "/warehouse/warehousemanager/inboundsizematerial", methods=["PATCH"]
-)
-def inbound_size_material():
-    data = request.get_json()
-    storage = SizeMaterialStorage.query.get(data["sizeMaterialStorageId"])
-    storage.total_actual_inbound_amount = 0
-    storage.total_current_amount = 0
-
-    if data["inboundType"] != 2:
-        storage.unit_price = data["unitPrice"]
-    if data["inboundType"] == 2:
-        storage.composite_unit_cost = data["compositeUnitCost"]
-
-    for i, shoe_size in enumerate(SHOESIZERANGE):
-        # actual inbound amount
-        column_name = f"size_{shoe_size}_actual_inbound_amount"
-        current_value = getattr(storage, column_name)
-        new_value = current_value + int(data[f"size{i}Amount"])
-        setattr(storage, column_name, new_value)
-        storage.total_actual_inbound_amount += new_value
-
-        # current_amount
-        column_name = f"size_{shoe_size}_current_amount"
-        current_value = getattr(storage, column_name)
-        new_value = current_value + int(data[f"size{i}Amount"])
-        setattr(storage, column_name, new_value)
-        storage.total_current_amount += new_value
-
-    flag = True
-    for shoe_size in SHOESIZERANGE:
-        if getattr(storage, f"size_{shoe_size}_estimated_inbound_amount") > getattr(
-            storage, f"size_{shoe_size}_actual_inbound_amount"
-        ):
-            flag = False
-    if flag:
-        storage.material_storage_status = 1
-
-    record = InboundRecord(
-        inbound_datetime=data["date"],
-        inbound_type=data["inboundType"],
-        size_material_storage_id=data["sizeMaterialStorageId"],
-    )
-    for shoe_size in SHOESIZERANGE:
-        column_name = f"size_{shoe_size}_inbound_amount"
-        setattr(record, column_name, int(data[f"size{i}Amount"]))
-    db.session.add(record)
-    db.session.flush()
-    rid = "IR" + datetime.now().strftime("%Y%m%d%H%M%S") + str(record.inbound_record_id)
-    record.inbound_rid = rid
-    db.session.commit()
-    return jsonify({"message": "success"})
-
-
 def _create_composite_materials(new_material_list):
     columns = ", ".join(new_material_list[0].keys())
     values_placeholder = ", ".join([f":{key}" for key in new_material_list[0].keys()])
@@ -699,7 +645,6 @@ def _create_composite_materials(new_material_list):
         (
             row["material_supplier"],
             row["material_id"],
-            row["material_specification"],
             row["material_model"],
             row["color"],
         )
@@ -707,10 +652,10 @@ def _create_composite_materials(new_material_list):
     ]
     id_query = text(
         f"""
-        SELECT material_variant.material_variant_id, material_variant.material_id, material_variant.material_specification, material_variant.material_model, material_variant.color, material_variant.material_supplier
+        SELECT material_variant.material_variant_id, material_variant.material_id, material_variant.material_model, material_variant.color, material_variant.material_supplier
         FROM
         jiancheng.material_variant
-        WHERE (material_supplier, material_id, material_specification, material_model, color) IN :composite_keys;
+        WHERE (material_supplier, material_id, material_model, color) IN :composite_keys;
     """
     )
     # Execute the query to fetch the IDs
@@ -719,7 +664,6 @@ def _create_composite_materials(new_material_list):
 
 
 def process_composite_materials(composite_material_list):
-    new_material_list = []
     storage_id_list = [row["materialStorageId"] for row in composite_material_list]
     # 原材料仓库
     response = (
@@ -742,7 +686,8 @@ def process_composite_materials(composite_material_list):
             "material": material,
             "material_variant": material_variant,
         }
-    storage_mapping = {}
+    new_storage_list = []
+    composite_storage_result = []
     for row in composite_material_list:
         for composite in row["craftNameList"]:
             storage = storage_material_cache[row["materialStorageId"]]["storage"]
@@ -756,85 +701,23 @@ def process_composite_materials(composite_material_list):
                     + "/复合: "
                     + composite["craftName"]
                 )
-                new_material = MaterialVariant(
-                    material_id=material.material_id,
-                    material_specification=composite_material_specification,
-                    material_model=material_variant.material_model,
-                    material_unit=material_variant.material_unit,
-                    material_supplier=row["compositeSupplierId"],
-                    color=material_variant.color,
-                )
-                new_material_list.append(new_material.to_dict())
-                storage_mapping[
-                    (
-                        material.material_id,
-                        composite_material_specification,
-                        material_variant.material_model,
-                        material_variant.color,
-                        row["compositeSupplierId"],
-                    )
-                ] = [
-                    storage,
-                    composite["outboundQuantity"],
-                    row,
-                ]
-    composite_storage_result = []
-    if len(new_material_list) > 0:
-        material_result = _create_composite_materials(new_material_list)
-        new_storage_list = []
-        for row in material_result:
-            (
-                material_variant_id,
-                material_id,
-                material_specification,
-                material_model,
-                color,
-                supplier_id,
-            ) = row
-            entry = storage_mapping[
-                (
-                    material_id,
-                    material_specification,
-                    material_model,
-                    color,
-                    supplier_id,
-                )
-            ]
-            storage = entry[0]
-            existed_storage = (
-                db.session.query(MaterialStorage)
-                .filter_by(
-                    order_shoe_id=storage.order_shoe_id,
-                    material_variant_id=material_variant_id,
-                )
-                .first()
-            )
-            if existed_storage:
-                existed_storage.estimated_inbound_amount += entry[1]
-                composite_storage_result.append(
-                    (
-                        existed_storage,
-                        entry[1],
-                        entry[2],
-                    )
-                )
-            else:
                 new_storage = MaterialStorage(
                     order_shoe_id=storage.order_shoe_id,
-                    material_variant_id=material_variant_id,
-                    estimated_inbound_amount=entry[1],
+                    material_variant_id=material_variant.material_variant_id,
+                    estimated_inbound_amount=composite["outboundQuantity"],
+                    composite_material_specification=composite_material_specification,
                     material_storage_status=0,
                 )
                 new_storage_list.append(new_storage)
                 composite_storage_result.append(
                     (
                         new_storage,
-                        entry[1],
-                        entry[2],
+                        composite["outboundQuantity"],
+                        row,
                     )
                 )
-        db.session.add_all(new_storage_list)
-        db.session.flush()
+    db.session.add_all(new_storage_list)
+    db.session.flush()
     return composite_storage_result
 
 
@@ -1110,6 +993,7 @@ def get_inbound_record_by_batch_id():
                 MaterialVariant,
                 Material,
                 MaterialStorage.material_storage_id.label("material_storage_id"),
+                MaterialStorage.material_specification.label("material_specification"),
                 MaterialStorage.unit_price.label("unit_price"),
                 MaterialStorage.composite_unit_cost.label("composite_unit_cost"),
                 Supplier,
@@ -1137,6 +1021,9 @@ def get_inbound_record_by_batch_id():
                 Material,
                 SizeMaterialStorage.size_material_storage_id.label(
                     "material_storage_id"
+                ),
+                SizeMaterialStorage.material_specification.label(
+                    "material_specification"
                 ),
                 SizeMaterialStorage.unit_price.label("unit_price"),
                 literal(0).label("composite_unit_cost"),
@@ -1169,6 +1056,7 @@ def get_inbound_record_by_batch_id():
             material_variant,
             material,
             material_storage_id,
+            material_specification,
             unit_price,
             composite_unit_cost,
             supplier,
@@ -1186,7 +1074,7 @@ def get_inbound_record_by_batch_id():
             "remark": record.remark,
             "materialName": material.material_name,
             "materialModel": material_variant.material_model,
-            "materialSpecification": material_variant.material_specification,
+            "materialSpecification": material_specification,
             "colorName": material_variant.material_storage_color,
             "materialUnit": material.material_unit,
             "materialStorageId": material_storage_id,
@@ -1306,11 +1194,10 @@ def get_outbound_record_by_batch_id():
         for row in response:
             (
                 record,
+                material_variant,
                 material,
                 material_storage_id,
-                material_model,
                 material_specification,
-                material_storage_color,
                 supplier,
                 *size_amounts,
             ) = row
@@ -1324,9 +1211,9 @@ def get_outbound_record_by_batch_id():
                 "recordDatetime": record.outbound_datetime,
                 "remark": record.remark,
                 "materialName": material.material_name,
-                "materialModel": material_model,
+                "materialModel": material_variant.material_model,
                 "materialSpecification": material_specification,
-                "colorName": material_storage_color,
+                "colorName": material_variant.material_storage_color,
                 "materialUnit": material.material_unit,
                 "materialStorageId": material_storage_id,
                 "supplierName": supplier.supplier_name,
@@ -1346,6 +1233,7 @@ def get_outbound_record_by_batch_id():
             MaterialVariant,
             Material,
             MaterialStorage.material_storage_id.label("material_storage_id"),
+            MaterialStorage.material_specification.label("material_specification"),
             Supplier,
         )
         .join(
@@ -1367,6 +1255,7 @@ def get_outbound_record_by_batch_id():
             MaterialVariant,
             Material,
             SizeMaterialStorage.size_material_storage_id.label("material_storage_id"),
+            SizeMaterialStorage.material_specification.label("material_specification"),
             Supplier,
         )
         .join(

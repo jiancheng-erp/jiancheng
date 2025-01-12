@@ -244,8 +244,8 @@ def get_current_bom_item():
     print(bom)
     bom_items = (
         db.session.query(BomItem, MaterialVariant, Material, MaterialType, Department, Supplier)
-        .join(Material, BomItem.material_id == Material.material_id)
-        .join(MaterialVariant, BomItem.material_id == MaterialVariant.material_id)
+        .join(MaterialVariant, BomItem.material_variant_id == MaterialVariant.material_variant_id)
+        .join(Material, Material.material_id == MaterialVariant.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .outerjoin(Department, BomItem.department_id == Department.department_id)
         .join(Supplier, MaterialVariant.material_supplier == Supplier.supplier_id)
@@ -297,7 +297,7 @@ def get_current_bom_item():
                 "materialName": material.material_name,
                 "materialType": material_type.material_type_name,
                 "materialModel": material_variant.material_model,
-                "materialSpecification": material_variant.material_specification,
+                "materialSpecification": bom_item.material_specification,
                 "supplierName": supplier.supplier_name,
                 "firstBomUsage": first_bom_usage,
                 "useDepart": department.department_id if department else None,
@@ -344,6 +344,7 @@ def save_bom_usage():
             bom_item_entity = BomItem(
                 bom_id=bom.bom_id,
                 material_variant_id=material_variant_id,
+                material_specification=bom_item.get("materialSpecification", None),
                 unit_usage=bom_item["unitUsage"],
                 total_usage=bom_item["approvalUsage"],
                 department_id=bom_item["useDepart"],
@@ -374,6 +375,7 @@ def save_bom_usage():
                     bom_item["sizeInfo"][i]["approvalAmount"],
                 )
             entity.total_usage = bom_item["approvalUsage"]
+            entity.material_specification = bom_item.get("materialSpecification", None),
             entity.unit_usage = bom_item["unitUsage"]
             entity.remark = bom_item["comment"] if bom_item["comment"] else ""
             entity.department_id = bom_item["useDepart"]
@@ -488,7 +490,6 @@ def edit_bom():
             .filter(
                 Material.material_name == item["materialName"],
                 MaterialVariant.material_model == item["materialModel"],
-                MaterialVariant.material_specification == item["materialSpecification"],
                 MaterialVariant.color == item["color"],
                 Supplier.supplier_name == item["supplierName"],
             )
@@ -501,6 +502,7 @@ def edit_bom():
             .first()
         )
         bom_item.material_variant_id = material_variant_id
+        bom_item.material_specification = item.get("materialSpecification", None),
         bom_item.unit_usage = item["unitUsage"]
         bom_item.total_usage = item["approvalUsage"]
         bom_item.pairs = item["pairs"]
@@ -626,6 +628,7 @@ def issue_boms():
                     .first()
                 )
                 material_variant_id = craft_sheet_item.material_variant_id
+                material_specification = craft_sheet_item.material_specification
                 remark = craft_sheet_item.remark
                 department_id = craft_sheet_item.department_id
                 material_type = craft_sheet_item.material_type
@@ -635,6 +638,7 @@ def issue_boms():
                 new_craft_sheet_item = CraftSheetItem(
                     craft_sheet_id=craft_sheet_id,
                     material_variant_id=material_variant_id,
+                    material_specification=material_specification,
                     remark=remark,
                     department_id=department_id,
                     material_type=material_type,
@@ -653,7 +657,6 @@ def issue_boms():
                     bom_item.MaterialType.material_type_name,
                     bom_item.Material.material_name,
                     bom_item.MaterialVariant.material_model,
-                    bom_item.MaterialVariant.material_specification,
                     bom_item.Supplier.supplier_name,
                     bom_item.MaterialVariant.color,
                 )
@@ -664,7 +667,7 @@ def issue_boms():
                         "材料类型": bom_item.MaterialType.material_type_name,
                         "材料名称": bom_item.Material.material_name,
                         "材料型号": bom_item.MaterialVariant.material_model,
-                        "材料规格": bom_item.MaterialVariant.material_specification,
+                        "材料规格": bom_item.BomItem.material_specification,
                         "颜色": bom_item.MaterialVariant.color,
                         "单位": bom_item.MaterialVariant.material_unit,
                         "厂家名称": bom_item.Supplier.supplier_name,

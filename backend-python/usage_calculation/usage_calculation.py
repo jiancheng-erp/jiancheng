@@ -253,7 +253,7 @@ def get_shoe_bom_items():
                 "materialType": material_type.material_type_name,
                 "materialName": material.material_name,
                 "materialModel": material_variant.material_model,
-                "materialSpecification": material_variant.material_specification,
+                "materialSpecification": bom_item.material_specification,
                 "color": material_variant.color,
                 "unit": material_variant.material_unit,
                 "unitUsage": (
@@ -381,7 +381,6 @@ def issue_bom_usage():
                     bom_item.MaterialType.material_type_name,
                     bom_item.Material.material_name,
                     bom_item.MaterialVariant.material_model,
-                    bom_item.MaterialVariant.material_specification,
                     bom_item.Supplier.supplier_name,
                     bom_item.MaterialVariant.color,
                 )
@@ -392,7 +391,7 @@ def issue_bom_usage():
                         "材料类型": bom_item.MaterialType.material_type_name,
                         "材料名称": bom_item.Material.material_name,
                         "材料型号": bom_item.MaterialVariant.material_model,
-                        "材料规格": bom_item.MaterialVariant.material_specification,
+                        "材料规格": bom_item.BomItem.material_specification,
                         "颜色": bom_item.MaterialVariant.color,
                         "单位": bom_item.MaterialVariant.material_unit,
                         "厂家名称": bom_item.Supplier.supplier_name,
