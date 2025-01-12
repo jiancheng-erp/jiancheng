@@ -1165,3 +1165,18 @@ def get_active_order_shoes():
         }
         res.append(obj)
     return res
+
+@order_bp.route("/order/gettechnicalconfirmstatus", methods=["GET"])
+def get_technical_confirm_status():
+    order_id = request.args.get("orderid")
+    order_shoe_status = (
+        db.session.query(Order, OrderShoe, OrderShoeStatus)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(Order.order_id == order_id)
+        .all()
+    )
+    for order, order_shoe, order_shoe_status in order_shoe_status:
+        if order_shoe_status.current_status == 9:
+            return jsonify({"status": "鞋型辅料材料规格尚未由技术部确认，请谨慎生成采购订单！"})
+    return jsonify({"status": "鞋型辅料材料规格已由技术部确认！"})

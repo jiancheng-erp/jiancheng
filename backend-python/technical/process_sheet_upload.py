@@ -347,7 +347,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "面料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -461,7 +461,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "里料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -575,7 +575,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "辅料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -621,6 +621,11 @@ def save_production_instruction():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "A"
@@ -685,7 +690,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "底材")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -793,7 +798,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "底材")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1009,7 +1014,7 @@ def save_production_instruction():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "复合")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1019,7 +1024,7 @@ def save_production_instruction():
                             material_unit=material_data.get("unit"),
                             material_creation_date=datetime.datetime.now(),
                             material_type_id=material_type_id,
-                            material_category=0,
+                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
                         )
                         db.session.add(material)
                         db.session.flush()
@@ -1457,7 +1462,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "面料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1572,7 +1577,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "里料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1687,7 +1692,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "辅料")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1733,6 +1738,11 @@ def edit_craft_sheet():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "A"
@@ -1798,7 +1808,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "底材")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1844,6 +1854,11 @@ def edit_craft_sheet():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "O"
@@ -1907,7 +1922,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "底材")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -1953,6 +1968,11 @@ def edit_craft_sheet():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "M"
@@ -2125,7 +2145,7 @@ def edit_craft_sheet():
                             supplier_id = supplier.supplier_id
                         material_type_id = (
                             db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "复合")
+                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
                             .first()
                             .material_type_id
                         )
@@ -2135,7 +2155,7 @@ def edit_craft_sheet():
                             material_unit=material_data.get("unit"),
                             material_creation_date=datetime.datetime.now(),
                             material_type_id=material_type_id,
-                            material_category=0,
+                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
                         )
                         db.session.add(material)
                         db.session.flush()
@@ -2171,6 +2191,11 @@ def edit_craft_sheet():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "H"
@@ -2310,6 +2335,30 @@ def issue_production_order():
             db.session.flush()
             second_bom_id = second_bom.bom_id
             for item in craft_sheet_items:
+                production_instruction_item = (
+                    db.session.query(ProductionInstructionItem)
+                    .filter(
+                        ProductionInstructionItem.production_instruction_item_id
+                        == item.production_instruction_item_id
+                    )
+                    .first()
+                )
+                if production_instruction_item:
+                    production_instruction_item.material_specification = item.material_specification
+                    production_instruction_item.craft_name = item.craft_name
+                    db.session.flush()
+                first_bom_item = (
+                    db.session.query(BomItem)
+                    .filter(
+                        BomItem.production_instruction_item_id
+                        == item.production_instruction_item_id,
+                        BomItem.bom_item_add_type == "0",
+                    ).first()
+                )
+                if first_bom_item:
+                    first_bom_item.material_specification = item.material_specification
+                    first_bom_item.craft_name = item.craft_name
+                    db.session.flush()
                 material_storage = (
                     db.session.query(MaterialStorage).filter(
                         MaterialStorage.order_shoe_id == order_shoe_id,

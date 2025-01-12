@@ -26,6 +26,9 @@
                         <el-descriptions-item label="订单预计截止日期" align="center">{{
                             orderData.deadlineTime
                         }}</el-descriptions-item>
+                        <el-descriptions-item label="调版及技术部确认状态" align="center">{{
+                            technicalConfirmStatus
+                        }}</el-descriptions-item>
                     </el-descriptions>
                 </el-col>
             </el-row>
@@ -683,7 +686,8 @@ export default {
             currentShoeSizeType: '',
             getShoeSizesName,
             shoeSizeColumns: [],
-            orderInfoVisible: true
+            orderInfoVisible: true,
+            technicalConfirmStatus: '未确认',
         }
     },
     async mounted() {
@@ -694,6 +698,7 @@ export default {
         this.$setAxiosToken()
         this.getOrderInfo()
         this.getAllShoeListInfo()
+        this.getTechnicalConfirmStatus()
     },
     computed: {
         processedBomTestData() {
@@ -722,6 +727,12 @@ export default {
         }
     },
     methods: {
+        async getTechnicalConfirmStatus() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/order/gettechnicalconfirmstatus?orderid=${this.orderId}`
+            )
+            this.technicalConfirmStatus = response.data.status
+        },
         translateProductionInstructionType(row) {
             const typeMap = {
                 S: '面料',
