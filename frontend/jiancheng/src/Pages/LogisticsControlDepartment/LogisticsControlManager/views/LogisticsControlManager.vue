@@ -19,6 +19,9 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>一次采购订单创建</span>
                         </el-menu-item>
+                        <el-menu-item index="3" @click="handleMenuClick(3)">
+                            <span>批量采购订单生成及下发</span>
+                        </el-menu-item>
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>耗材/固定资产订单生成</span>
                         </el-menu-item>
@@ -63,6 +66,7 @@ import FixedAssets from '../components/FixedAssetsConsumablesView.vue'
 import MaterialManagement from '../components/MaterialManagementView.vue'
 import WarehouseManagement from '../components/WarehouseManagementView.vue'
 import SupplierManagement from '../components/SupplierManagementView.vue'
+import MultiPurchaseIssue from '../components/MultiPurchaseIssue.vue'
 import OrderSearch from '../components/OrderSearch.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
@@ -81,7 +85,8 @@ export default {
         TestPage,
         OrderSearch,
         PersonalInfo,
-        LogisticsBatchTypeManagement
+        LogisticsBatchTypeManagement,
+        MultiPurchaseIssue
 
     },
     data() {
@@ -110,7 +115,7 @@ export default {
                     this.currentComponent = 'FirstPurchase'
                     break
                 case 3:
-                    this.currentComponent = 'SecondPurchase'
+                    this.currentComponent = 'MultiPurchaseIssue'
                     break
                 case 4:
                     this.currentComponent = 'FixedAssets'

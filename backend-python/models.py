@@ -657,6 +657,7 @@ class PurchaseDivideOrder(db.Model):
     purchase_order_environmental_request = db.Column(db.String(100), nullable=True)
     shipment_address = db.Column(db.String(100), nullable=True)
     shipment_deadline = db.Column(db.String(100), nullable=True)
+    total_purchase_order_id = db.Column(db.BigInteger, nullable=True)
 
     def __repr__(self):
         return f"<PurchaseDivideOrder(purchase_divide_order_id={self.purchase_divide_order_id})>"
@@ -1186,3 +1187,13 @@ class ProductionLine(db.Model):
 
     def __repr__(self):
         return f"<ProductionLine(production_line_id={self.production_line_id})>"
+
+class TotalPurchaseOrder(db.Model):
+    __tablename__ = "total_purchase_order"
+    total_purchase_order_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    supplier_id = db.Column(db.Integer, nullable=False)
+    create_date = db.Column(db.Date, nullable=False)
+    total_purchase_order_status = db.Column(db.String(1), nullable=False)
+
+    def __repr__(self):
+        return f"<TotalPurchaseOrder(total_purchase_order_id={self.total_purchase_order_id})>"
