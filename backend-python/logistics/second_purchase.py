@@ -400,6 +400,18 @@ def save_purchase():
         .first()
         .total_bom_id
     )
+    order_shoe_id = (
+        db.session.query(TotalBom)
+        .filter(TotalBom.total_bom_rid == bom_rid)
+        .first()
+        .order_shoe_id
+    )
+    order_id = (
+        db.session.query(OrderShoe)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
+        .first()
+        .order_id
+    )
     purchase_order = PurchaseOrder(
         purchase_order_rid=purchase_order_rid,
         bom_id=total_bom_id,

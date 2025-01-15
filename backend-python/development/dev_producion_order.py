@@ -1805,6 +1805,7 @@ def issue_production_order():
                         total_usage=0,
                         material_second_type=item.material_second_type,
                         production_instruction_item_id=item.production_instruction_item_id,
+                        craft_name=item.pre_craft_name,
                     )
                     db.session.add(first_bom_item)
                     craft_sheet_item = CraftSheetItem(
