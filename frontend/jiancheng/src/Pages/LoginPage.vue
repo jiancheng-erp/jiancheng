@@ -68,7 +68,7 @@ const handleSubmit = () => {
 
             // Convert IV to Base64 to send with the request
             const ivBase64 = CryptoJS.enc.Base64.stringify(iv)
-
+            console.log(ivBase64)
             const loginData = {
                 username: loginForm.username,
                 password: encryptedPassword, // Encrypted password
@@ -106,7 +106,11 @@ const handleSubmit = () => {
                         window.location.href = 'headofwarehouse'
                     } else if (response.data.role === 9) {
                         window.location.href = 'logistics'
-                    } else if (response.data.role === 11) {
+                    } 
+                    else if (response.data.role === 10) {
+                        window.location.href = 'financialManager'
+                    }
+                    else if (response.data.role === 11) {
                         window.location.href = 'fabriccutting'
                     } else if (response.data.role === 12) {
                         window.location.href = 'sewingmachine'

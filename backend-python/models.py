@@ -1202,3 +1202,24 @@ class TotalPurchaseOrder(db.Model):
 
     def __repr__(self):
         return f"<TotalPurchaseOrder(total_purchase_order_id={self.total_purchase_order_id})>"
+
+class FirstGradeAccounts(db.Model):
+    __tablename__ = "accounting_fg_accounts"
+    account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_name = db.Column(db.String(20), nullable=False)
+    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+
+
+class SecondGradeAccounts(db.Model):
+    __tablename__ = "accounting_sg_accounts"
+    account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_name = db.Column(db.String(20), nullable=False)
+    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    account_belongs_fg = db.Column(db.Integer, nullable=False)
+
+class ThirdGradeAccounts(db.Model):
+    __tablename__ = "accounting_tg_accounts"
+    account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    account_name = db.Column(db.String(20), nullable=False)
+    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    account_belongs_sg = db.Column(db.Integer, nullable=False)

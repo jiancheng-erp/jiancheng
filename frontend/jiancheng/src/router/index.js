@@ -225,7 +225,7 @@ const router = createRouter({
       component: FinancialManager,
       meta:{
         requiresAuth: true,
-        role: 2
+        role: 10
       }
     },
     ...LogisticsRoutes,
