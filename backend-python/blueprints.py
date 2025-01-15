@@ -41,7 +41,7 @@ from technical.process_sheet_review import process_sheet_review
 from production.production_lines import production_lines_bp
 from production.production_report import production_report_bp
 from logistics.multiissue_purchase_order import multiissue_purchase_order_bp
-
+from accounting.accounts_management import accounts_management_bp
 def register_blueprints():
     app.register_blueprint(price_report_bp)
     app.register_blueprint(order_bp)
@@ -85,3 +85,4 @@ def register_blueprints():
     app.register_blueprint(production_lines_bp)
     app.register_blueprint(production_report_bp)
     app.register_blueprint(multiissue_purchase_order_bp)
+    app.register_blueprint(accounts_management_bp)

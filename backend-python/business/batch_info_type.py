@@ -63,7 +63,7 @@ def add_batch_type_business():
 @batch_type_bp.route("/batchtype/deletebatchtypebusiness", methods=["DELETE"])
 def delete_batch_type_business():
     batch_type_id = request.args.get("batchTypeId")
-    entity_exists = db.session.query(BatchInfoType).filter_by(batch_info_type_id = batch_type_id, batch_info_type_usage = 0)
+    entity_exists = db.session.query(BatchInfoType).filter_by(batch_info_type_id = batch_type_id, batch_info_type_usage = 0).first()
     if entity_exists:
         db.session.execute(db.delete(BatchInfoType).filter_by(batch_info_type_id = batch_type_id))
         db.session.commit()
@@ -108,7 +108,7 @@ def add_batch_type_logistics():
 @batch_type_bp.route("/batchtype/deletebatchtypelogistics", methods=["DELETE"])
 def delete_batch_type_logistics():
     batch_type_id = request.args.get("batchTypeId")
-    entity_exists = db.session.query(BatchInfoType).filter_by(batch_info_type_id = batch_type_id, batch_info_type_usage = 1)
+    entity_exists = db.session.query(BatchInfoType).filter_by(batch_info_type_id = batch_type_id, batch_info_type_usage = 1).first()
     if entity_exists:
         db.session.execute(db.delete(BatchInfoType).filter_by(batch_info_type_id = batch_type_id))
         db.session.commit()
