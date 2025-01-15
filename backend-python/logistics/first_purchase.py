@@ -384,13 +384,27 @@ def save_purchase():
         .first()
         .total_bom_id
     )
+    order_shoe_id = (
+        db.session.query(TotalBom)
+        .filter(TotalBom.total_bom_rid == bom_rid)
+        .first()
+        .order_shoe_id
+    )
+    order_id = (
+        db.session.query(OrderShoe)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
+        .first()
+        .order_id
+    )
     purchase_order = PurchaseOrder(
         purchase_order_rid=purchase_order_rid,
         bom_id=total_bom_id,
         purchase_order_issue_date=datetime.datetime.now().strftime("%Y%m%d"),
         purchase_order_type="F",
         purchase_order_status="1",
-    )
+        order_id=order_id,
+        order_shoe_id=order_shoe_id,
+    ) 
     db.session.add(purchase_order)
     purchase_order_id = (
         db.session.query(PurchaseOrder)
@@ -442,11 +456,13 @@ def save_purchase():
                     purchase_divide_order_id=purchase_divide_order_id,
                     bom_item_id=item["bomItemId"],
                     purchase_amount=material_quantity,
+                    approval_amount=item["approvalUsage"],
                 )
                 db.session.add(purchase_order_item)
         elif items[0]["materialCategory"] == 1:
             for item in items:
                 material_quantity = 0
+                approval_quantity = 0
                 purchase_order_item = PurchaseOrderItem(
                     purchase_divide_order_id=purchase_divide_order_id,
                     bom_item_id=item["bomItemId"],
@@ -454,6 +470,7 @@ def save_purchase():
                 for i in range(len(item["sizeInfo"])):
                     name = i + 34
                     material_quantity += item["sizeInfo"][i]["purchaseAmount"]
+                    approval_quantity += item["sizeInfo"][i]["approvalAmount"]
                     setattr(
                         purchase_order_item,
                         f"size_{name}_purchase_amount",

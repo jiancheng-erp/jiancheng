@@ -585,6 +585,7 @@ class PurchaseOrderItem(db.Model):
         nullable=False,
     )
     purchase_amount = db.Column(db.Numeric(10, 5), nullable=False)
+    approval_amount = db.Column(db.Numeric(10, 5), nullable=True)
     size_34_purchase_amount = db.Column(db.Integer, nullable=True)
     size_35_purchase_amount = db.Column(db.Integer, nullable=True)
     size_36_purchase_amount = db.Column(db.Integer, nullable=True)
