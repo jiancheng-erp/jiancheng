@@ -43,6 +43,14 @@
         <el-col :span="24" :offset="0">
             <el-tabs v-model="currentTab" type="card" tab-position="top">
                 <el-tab-pane label="总采购订单" name="1" height="500">
+                    <el-radio-group
+                        v-model="statusFilter"
+                        @change="changeFinishedOrderFilterStatus"
+                    >
+                        <el-radio-button label="2" value="2">已下发总采购订单</el-radio-button>
+                        <el-radio-button label="1" value="1">未下发总采购订单</el-radio-button>
+                    </el-radio-group>
+
                     <el-table :data="paginatedFinishedPurchaseOrderData" border stripe height="450">
                         <el-table-column type="expand">
                             <template #default="scope">
@@ -88,7 +96,16 @@
                         <el-table-column prop="supplierName" label="供应厂商"></el-table-column>
                         <el-table-column label="操作">
                             <template #default="scope">
-                                <el-button type="primary" @click="openTotalPreviewDialog(scope.row)"
+                                <el-button
+                                    v-if="scope.row.totalPurchaseOrderStatus === '1'"
+                                    type="primary"
+                                    @click="openTotalPreviewDialog(scope.row, true)"
+                                    >查看详情并下发</el-button
+                                >
+                                <el-button
+                                    v-else
+                                    type="success"
+                                    @click="openTotalPreviewDialog(scope.row), false"
                                     >查看详情</el-button
                                 >
                             </template>
@@ -334,6 +351,7 @@
                         ><span
                             >订单备注：
                             <el-input
+                                :disabled="!modifiedMode"
                                 v-model="item.remark"
                                 placeholder=""
                                 type="textarea"
@@ -345,6 +363,7 @@
                         <span
                             >环境要求：
                             <el-input
+                                :disabled="!modifiedMode"
                                 v-model="item.environmentalRequest"
                                 placeholder=""
                                 type="textarea"
@@ -359,6 +378,7 @@
                         <span
                             >发货地址：
                             <el-input
+                                :disabled="!modifiedMode"
                                 v-model="item.shipmentAddress"
                                 placeholder=""
                                 type="textarea"
@@ -371,6 +391,7 @@
                         <span
                             >交货周期：
                             <el-input
+                                :disabled="!modifiedMode"
                                 v-model="item.shipmentDeadline"
                                 placeholder=""
                                 type="textarea"
@@ -428,8 +449,53 @@
                                 ></el-table-column>
                                 <el-table-column prop="color" label="颜色" />
                                 <el-table-column prop="unit" label="单位" />
-                                <el-table-column prop="approvalAmount" label="核定用量"></el-table-column>
+                                <el-table-column
+                                    prop="approvalAmount"
+                                    label="核定用量"
+                                ></el-table-column>
                                 <el-table-column prop="purchaseAmount" label="数量" />
+                                <el-table-column prop="adjustPurchaseAmount" label="采购订单调整数量" width="150">
+                                    <template #default="scope">
+                                        <el-input-number :min="0" v-model="scope.row.adjustPurchaseAmount" :step="0.0001" size="small"></el-input-number>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="isInboundSperate" label="入库单位是否不同">
+                                    <template #default="scope">
+                                        <el-switch
+                                            v-model="scope.row.isInboundSperate"
+                                            :active-value="true"
+                                            :inactive-value="false"
+                                        >
+                                        </el-switch>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialInboundName" label="入库材料名称">
+                                    <template #default="scope">
+                                            <el-select
+                                                v-model="scope.row.materialInboundName"
+                                                filterable
+                                                @change="
+                                                    handleMaterialNameSelect(scope.row, $event)
+                                                "
+                                                :disabled="!scope.row.isInboundSperate"
+                                            >
+                                            <el-option
+                                                    v-for="item in filterByNames(
+                                                        materialNameOptions,
+                                                        scope.row.materialName
+                                                    )"
+                                                    :key="item.value"
+                                                    :value="item.value"
+                                                    :label="item.label"
+                                                >
+                                                </el-option>
+                                            </el-select>
+                                        </template>
+                                </el-table-column>
+                                <el-table-column
+                                    prop="materialInboundUnit"
+                                    label="入库单位"
+                                ></el-table-column>
                                 <el-table-column prop="remark" label="开发部备注" />
                             </el-table>
                         </div>
@@ -441,8 +507,12 @@
         <template #footer>
             <span>
                 <el-button @click="purchaseOrderCreateVis = false">取消</el-button>
-                <el-button type="primary" @click="saveTotalPurchaseOrder">保存</el-button>
-                <el-button type="success" @click="submitTotalPurchaseOrder">提交</el-button>
+                <el-button type="primary" v-if="modifiedMode" @click="saveTotalPurchaseOrder"
+                    >保存</el-button
+                >
+                <el-button type="success" v-if="modifiedMode" @click="submitTotalPurchaseOrder"
+                    >提交</el-button
+                >
             </span>
         </template>
     </el-dialog>
@@ -478,15 +548,22 @@ export default {
             issueSelectedRows: [],
             purchaseOrderCreateVis: false,
             activeTab: '',
-            tabPlaneData: []
+            tabPlaneData: [],
+            statusFilter: '1',
+            modifiedMode: false,
+            materialNameOptions:[]
         }
     },
     computed: {
         paginatedFinishedPurchaseOrderData() {
+            // Filter based on totalPurchaseOrderStatus
+            const filteredData = this.finishedPurchaseOrderData.filter(
+                (order) => order.totalPurchaseOrderStatus === this.statusFilter
+            )
+            // Paginate the filtered data
             const start = (this.finishedCurrentPage - 1) * this.pageSize
             const end = start + this.pageSize
-            console.log(this.finishedCurrentPage)
-            return this.finishedPurchaseOrderData.slice(start, end)
+            return filteredData.slice(start, end)
         },
         // Paginated data for unfinished orders
         paginatedUnfinishedPurchaseOrderData() {
@@ -499,8 +576,17 @@ export default {
     mounted() {
         this.getAllTotalPurchaseOrder()
         this.getAllPurchaseDivideOrder()
+        this.getAllMaterialName()
     },
     methods: {
+        async getAllMaterialName() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {
+                params: {
+                    department:'1'
+                }
+            })
+            this.materialNameOptions = response.data
+        },
         handleIssueSelectionChange(selectedRows) {
             if (selectedRows.length > 0) {
                 // Get the supplier name of the first selected row
@@ -579,6 +665,9 @@ export default {
                 )
             )
         },
+        filterByNames(options, name) {
+            return options.filter((option) => option.label.includes(name))
+        },
         handleSupplierChange() {
             this.issuePageUnfinishedPurchaseOrderData = this.unfinishedPurchaseOrderData.filter(
                 (order) => order.supplierName.includes(this.SupplierInput)
@@ -600,7 +689,8 @@ export default {
                 this.$message.error('下发失败')
             }
         },
-        async openTotalPreviewDialog(row) {
+        async openTotalPreviewDialog(row, mode) {
+            this.modifiedMode = mode
             this.purchaseOrderCreateVis = true
             const res = await axios.get(
                 `${this.$apiBaseUrl}/multiissue/getsingletotalpurchaseorder`,
@@ -612,16 +702,11 @@ export default {
             )
             this.tabPlaneData = res.data
             this.activeTab = this.tabPlaneData[0].totalPurchaseOrderId
-
-
         },
         async saveTotalPurchaseOrder() {
-            const res = await axios.post(
-                `${this.$apiBaseUrl}/multiissue/savetotalpurchaseorder`,
-                {
-                    totalPurchaseOrders: this.tabPlaneData
-                }
-            )
+            const res = await axios.post(`${this.$apiBaseUrl}/multiissue/savetotalpurchaseorder`, {
+                totalPurchaseOrders: this.tabPlaneData
+            })
             if (res.status === 200) {
                 this.$message.success('保存成功')
                 this.getAllTotalPurchaseOrder()
@@ -646,7 +731,17 @@ export default {
             } else {
                 this.$message.error('提交失败')
             }
-        }
+        },
+        changeFinishedOrderFilterStatus() {
+            // Reset the current page to 1 when the filter changes
+            this.finishedCurrentPage = 1
+        },
+        async handleMaterialNameSelect(row, selectedItem) {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
+            )
+            row.materialInboundUnit = response.data.unit
+        },
     }
 }
 </script>

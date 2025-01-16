@@ -260,7 +260,7 @@
                                 prop="approvalUsage"
                                 label="核定用量"
                             ></el-table-column>
-                            <el-table-column prop="purchaseAmount" label="采购数量">
+                            <el-table-column prop="purchaseAmount" label="采购数量" width="150">
                                 <template #default="scope">
                                     <el-input-number
                                         v-if="scope.row.materialCategory == 0"
@@ -348,6 +348,12 @@
                                 <el-table-column prop="approvalUsage" label="核定用量">
                                 </el-table-column>
                                 <el-table-column prop="remark" label="备注" />
+                                <el-table-column prop="isInboundSperate" label="入库单位是否不同"></el-table-column>
+                            <el-table-column prop="materialInboundName" label="入库材料名称">
+
+                            </el-table-column>
+                            <el-table-column prop="materialInboundUnit" label="入库单位"></el-table-column>
+                            <el-table-column prop="remark" label="开发部备注"></el-table-column>
                             </el-table>
                         </el-col>
                     </el-row>
