@@ -16,6 +16,9 @@
                         <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>二次（总仓）采购订单创建</span>
                         </el-menu-item>
+                        <el-menu-item index="11" @click="handleMenuClick(11)">
+                            <span>批量采购订单生成及下发</span>
+                        </el-menu-item>
                         <el-menu-item index="1" @click="handleMenuClick(1)">
                             <span>材料待入库</span>
                         </el-menu-item>
@@ -70,6 +73,7 @@ import FixedAssetsConsumablesView from '@/Pages/LogisticsControlDepartment/Logis
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
 import SecondPurchaseListView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SecondPurchaseListView.vue'
 import InOutboundRecords from '../components/InOutboundRecords.vue'
+import MultiPurchaseIssue from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MultiPurchaseIssue.vue'
 
 export default {
     components: {
@@ -84,7 +88,8 @@ export default {
         FixedAssetsConsumablesView,
         LogisticsBatchTypeManagement,
         SecondPurchaseListView,
-        InOutboundRecords
+        InOutboundRecords,
+        MultiPurchaseIssue
     },
     data() {
         return {
@@ -107,6 +112,9 @@ export default {
             switch(index) {
                 case 10:
                     this.currentComponent = 'SecondPurchaseListView'
+                    break
+                case 11:
+                    this.currentComponent = 'MultiPurchaseIssue'
                     break
                 case 1:
                     this.currentComponent = 'InboundView'

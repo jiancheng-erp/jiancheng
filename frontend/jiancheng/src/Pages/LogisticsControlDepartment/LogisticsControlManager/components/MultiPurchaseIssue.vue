@@ -756,7 +756,7 @@ export default {
         },
         async handleMaterialNameSelect(row, selectedItem) {
             const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
+                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialInboundName}`
             )
             row.materialInboundUnit = response.data.unit
         }

@@ -418,6 +418,8 @@ def save_purchase():
         purchase_order_issue_date=datetime.datetime.now().strftime("%Y%m%d"),
         purchase_order_type="S",
         purchase_order_status="1",
+        order_id=order_id,
+        order_shoe_id=order_shoe_id,
     )
     db.session.add(purchase_order)
     purchase_order_id = (
@@ -470,11 +472,13 @@ def save_purchase():
                     purchase_divide_order_id=purchase_divide_order_id,
                     bom_item_id=item["bomItemId"],
                     purchase_amount=material_quantity,
+                    approval_amount=item["approvalUsage"],
                 )
                 db.session.add(purchase_order_item)
         elif items[0]["materialCategory"] == 1:
             for item in items:
                 material_quantity = 0
+                approval_quantity = 0
                 purchase_order_item = PurchaseOrderItem(
                     purchase_divide_order_id=purchase_divide_order_id,
                     bom_item_id=item["bomItemId"],
@@ -482,6 +486,7 @@ def save_purchase():
                 for i in range(len(item["sizeInfo"])):
                     name = i + 34
                     material_quantity += item["sizeInfo"][i]["purchaseAmount"]
+                    approval_quantity += item["sizeInfo"][i]["approvalAmount"]
                     setattr(
                         purchase_order_item,
                         f"size_{name}_purchase_amount",
@@ -578,14 +583,15 @@ def get_purchase_divide_orders():
 @second_purchase_bp.route("/secondpurchase/editpurchaseitems", methods=["POST"])
 def edit_purchase_items():
     purchase_items = request.json.get("purchaseItems")
-    print(purchase_items)
     for item in purchase_items:
         purchase_order_item = (
             db.session.query(PurchaseOrderItem)
             .filter(PurchaseOrderItem.bom_item_id == item["bomItemId"])
             .first()
         )
+        print(item['approvalUsage'])
         purchase_order_item.purchase_amount = item["purchaseAmount"]
+        purchase_order_item.approval_amount = item["approvalUsage"]
         for i in range(len(item["sizeInfo"])):
             setattr(
                 purchase_order_item,

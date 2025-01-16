@@ -28,7 +28,7 @@ def get_task():
         query = query.filter(OrderShoeStatus.current_status == int(shoe_status))
     else:
         # If "all", we need to check for statuses 6 or 13
-        query = query.filter(OrderShoeStatus.current_status.in_([6, 13]))
+        query = query.filter(OrderShoeStatus.current_status.in_([6, 7]))
 
     response = query.distinct(Order.order_id).all()
 
@@ -41,7 +41,7 @@ def get_task():
         if order_id not in unique_orders:
             if row.OrderShoeStatus.current_status == 6:
                 task_name = "一次采购订单创建"
-            elif row.OrderShoeStatus.current_status == 13:
+            elif row.OrderShoeStatus.current_status == 7:
                 task_name = "二次采购订单创建"
             else:
                 task_name = ""  # Default or any other logic

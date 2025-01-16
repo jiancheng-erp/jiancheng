@@ -2465,7 +2465,11 @@ export default {
             this.assetFilterTable = this.assetTable
         },
         async getAllMaterialName() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {
+                params: {
+                    department: '0'
+                }
+            })
             this.materialNameOptions = response.data
         },
         async getOrderInfo() {
