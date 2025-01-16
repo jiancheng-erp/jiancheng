@@ -239,6 +239,7 @@ class MaterialStorage(db.Model):
     composite_unit_cost = db.Column(db.DECIMAL(10, 3), default=0.00)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     actual_inbound_unit = db.Column(db.String(5), nullable=True)
+    actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
 
     def __repr__(self):
         return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"

@@ -454,9 +454,20 @@
                                     label="核定用量"
                                 ></el-table-column>
                                 <el-table-column prop="purchaseAmount" label="数量" />
-                                <el-table-column prop="adjustPurchaseAmount" label="采购订单调整数量" width="150">
+                                <el-table-column
+                                    prop="adjustPurchaseAmount"
+                                    label="采购订单调整数量"
+                                    width="150"
+                                >
                                     <template #default="scope">
-                                        <el-input-number :min="0" v-model="scope.row.adjustPurchaseAmount" :step="0.0001" size="small"></el-input-number>
+                                        <el-input-number
+                                            :min="0"
+                                            v-model="scope.row.adjustPurchaseAmount"
+                                            :step="0.0001"
+                                            size="small"
+                                            :disabled="!modifiedMode"
+                                        >
+                                        </el-input-number>
                                     </template>
                                 </el-table-column>
                                 <el-table-column prop="isInboundSperate" label="入库单位是否不同">
@@ -465,32 +476,31 @@
                                             v-model="scope.row.isInboundSperate"
                                             :active-value="true"
                                             :inactive-value="false"
+                                            :disabled="!modifiedMode"
                                         >
                                         </el-switch>
                                     </template>
                                 </el-table-column>
                                 <el-table-column prop="materialInboundName" label="入库材料名称">
                                     <template #default="scope">
-                                            <el-select
-                                                v-model="scope.row.materialInboundName"
-                                                filterable
-                                                @change="
-                                                    handleMaterialNameSelect(scope.row, $event)
-                                                "
-                                                :disabled="!scope.row.isInboundSperate"
-                                            >
+                                        <el-select
+                                            v-model="scope.row.materialInboundName"
+                                            filterable
+                                            @change="handleMaterialNameSelect(scope.row, $event)"
+                                            :disabled="!scope.row.isInboundSperate"
+                                        >
                                             <el-option
-                                                    v-for="item in filterByNames(
-                                                        materialNameOptions,
-                                                        scope.row.materialName
-                                                    )"
-                                                    :key="item.value"
-                                                    :value="item.value"
-                                                    :label="item.label"
-                                                >
-                                                </el-option>
-                                            </el-select>
-                                        </template>
+                                                v-for="item in filterByNames(
+                                                    materialNameOptions,
+                                                    scope.row.materialName
+                                                )"
+                                                :key="item.value"
+                                                :value="item.value"
+                                                :label="item.label"
+                                            >
+                                            </el-option>
+                                        </el-select>
+                                    </template>
                                 </el-table-column>
                                 <el-table-column
                                     prop="materialInboundUnit"
@@ -551,7 +561,7 @@ export default {
             tabPlaneData: [],
             statusFilter: '1',
             modifiedMode: false,
-            materialNameOptions:[]
+            materialNameOptions: []
         }
     },
     computed: {
@@ -582,7 +592,7 @@ export default {
         async getAllMaterialName() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {
                 params: {
-                    department:'1'
+                    department: '1'
                 }
             })
             this.materialNameOptions = response.data
@@ -705,7 +715,15 @@ export default {
         },
         async saveTotalPurchaseOrder() {
             const res = await axios.post(`${this.$apiBaseUrl}/multiissue/savetotalpurchaseorder`, {
-                totalPurchaseOrders: this.tabPlaneData
+                totalPurchaseOrders: this.tabPlaneData.map((order) => ({
+                    ...order,
+                    assetsItems: order.assetsItems.map((material) => ({
+                        ...material,
+                        materialInboundName: material.materialInboundName || null,
+                        materialInboundUnit: material.materialInboundUnit || null,
+                        adjustPurchaseAmount: material.adjustPurchaseAmount || 0
+                    }))
+                }))
             })
             if (res.status === 200) {
                 this.$message.success('保存成功')
@@ -741,7 +759,7 @@ export default {
                 `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
             )
             row.materialInboundUnit = response.data.unit
-        },
+        }
     }
 }
 </script>

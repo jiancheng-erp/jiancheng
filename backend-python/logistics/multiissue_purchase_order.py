@@ -4,6 +4,7 @@ from app_config import app, db
 from models import *
 from constants import SHOESIZERANGE
 from api_utility import randomIdGenerater
+from decimal import Decimal
 
 multiissue_purchase_order_bp = Blueprint("multiissue_purchase_order", __name__)
 
@@ -383,6 +384,7 @@ def get_single_total_purchase_order():
         current_material = material_map[material_key]
         current_material["purchaseAmount"] += purchase_order_item.purchase_amount
         current_material["approvalAmount"] += purchase_order_item.approval_amount
+        current_material["adjustPurchaseAmount"] += purchase_order_item.purchase_amount
         for size in SHOESIZERANGE:
             current_material[f"size{size}Amount"] += (
                 getattr(purchase_order_item, f"size_{size}_purchase_amount", 0)
@@ -400,23 +402,65 @@ def get_single_total_purchase_order():
     "/multiissue/savetotalpurchaseorder", methods=["POST"]
 )
 def save_total_purchase_order():
-    """Save a total purchase order."""
+    """Save a total purchase order with material details."""
     data = request.json.get("totalPurchaseOrders")
-    print(data)
-    total_purchase_order_id = data[0]["totalPurchaseOrderId"]
-    total_purchase_order = (
-        db.session.query(TotalPurchaseOrder)
-        .filter(TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id)
-        .first()
-    )
-    total_purchase_order.total_purchase_order_remark = data[0]["remark"]
-    total_purchase_order.total_purchase_order_environmental_request = data[0][
-        "environmentalRequest"
-    ]
-    total_purchase_order.shipment_address = data[0]["shipmentAddress"]
-    total_purchase_order.shipment_deadline = data[0]["shipmentDeadline"]
+
+    for order_data in data:
+        # Update total purchase order details
+        total_purchase_order_id = order_data["totalPurchaseOrderId"]
+        total_purchase_order = (
+            db.session.query(TotalPurchaseOrder)
+            .filter(TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id)
+            .first()
+        )
+        if total_purchase_order:
+            total_purchase_order.total_purchase_order_remark = order_data["remark"]
+            total_purchase_order.total_purchase_order_environmental_request = order_data[
+                "environmentalRequest"
+            ]
+            total_purchase_order.shipment_address = order_data["shipmentAddress"]
+            total_purchase_order.shipment_deadline = order_data["shipmentDeadline"]
+
+        # Process materials and distribute additional amounts
+        for material in order_data["assetsItems"]:
+            print(material["adjustPurchaseAmount"])
+            print(material["approvalAmount"])
+            additional_amount = (
+                float(material["adjustPurchaseAmount"]) -float(material["approvalAmount"])
+            )
+            print(additional_amount)
+            # Distribute additional amount and save inbound material details in purchase items
+            purchase_items = (
+                db.session.query(PurchaseOrderItem, BomItem, PurchaseDivideOrder, TotalPurchaseOrder)
+                .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+                .join(
+                    PurchaseDivideOrder,
+                    PurchaseOrderItem.purchase_divide_order_id
+                    == PurchaseDivideOrder.purchase_divide_order_id,
+                )
+                .join(
+                    TotalPurchaseOrder,
+                    PurchaseDivideOrder.total_purchase_order_id
+                    == TotalPurchaseOrder.total_purchase_order_id,
+                )
+                .filter(TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id,
+                        BomItem.material_id == material["materialId"],
+                        BomItem.material_model == material["materialModel"],
+                        BomItem.material_specification == material["materialSpecification"],
+                        BomItem.bom_item_color == material["color"]
+                    )
+                .all()
+            )
+            if purchase_items:
+                distributed_amount = additional_amount / len(purchase_items)
+                for item, bom_item, purchase_divide_order, total_purchase_order in purchase_items:
+                    item.purchase_amount = float(item.purchase_amount) + distributed_amount
+                    item.inbound_material_name = material.get("materialInboundName")
+                    item.inbound_material_unit = material.get("materialInboundUnit")
+
     db.session.commit()
-    return jsonify({"message": "Total purchase order saved successfully."})
+    return jsonify({"message": "Total purchase order and materials saved successfully."})
+
 
 
 @multiissue_purchase_order_bp.route(
@@ -500,6 +544,8 @@ def submit_total_purchase_order():
         material_color = bom_item.bom_item_color
         material_quantity = purchase_order_item.purchase_amount
         total_bom_id = bom.total_bom_id
+        actual_inbound_material_id = purchase_order_item.inbound_material_id
+        actual_inbound_unit = purchase_order_item.inbound_unit
 
         # Create a unique key for the material
         material_key = (
@@ -576,6 +622,8 @@ def submit_total_purchase_order():
                     total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                     craft_name=new_craft_name_string,
                     production_instruction_item_id=bom_item.production_instruction_item_id,
+                    actual_inbound_material_id=actual_inbound_material_id if actual_inbound_material_id else None,
+                    actual_inbound_unit=actual_inbound_unit if actual_inbound_unit else None,
                 )
                 material_storage_map[material_key] = material_storage
             elif purchase_divide_order.purchase_divide_order_type == "S":
