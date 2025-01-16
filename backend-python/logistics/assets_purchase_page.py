@@ -106,7 +106,8 @@ def get_material_type_and_name():
 @assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
 def get_all_material_name():
     # Query for all material names and their types
-    material_name_list = db.session.query(Material).all()
+    material_department = request.args.get("department")
+    material_name_list = db.session.query(Material).filter(Material.material_usage_department == material_department).all()
     
     # Use a dictionary to store unique material names
     unique_materials = {}

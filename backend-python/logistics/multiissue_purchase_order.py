@@ -61,6 +61,7 @@ def get_all_total_purchase_order():
             order_map[tpo.total_purchase_order_id] = {
                 "totalPurchaseOrderId": tpo.total_purchase_order_id,
                 "totalPurchaseOrderRid": tpo.total_purchase_order_rid,
+                "totalPurchaseOrderStatus": tpo.total_purchase_order_status,
                 "supplierId": supplier.supplier_id,
                 "supplierName": supplier.supplier_name,
                 "purchaseDivideOrders": [],
@@ -371,6 +372,8 @@ def get_single_total_purchase_order():
                 "unit": material.material_unit,
                 "purchaseAmount": 0,
                 "approvalAmount": 0,
+                "adjustPurchaseAmount": 0,
+                "isInboundSperate": False,
                 "remark": bom_item.remark,
                 "sizeType": bom_item.size_type,
                 **{f"size{size}Amount": 0 for size in SHOESIZERANGE},
