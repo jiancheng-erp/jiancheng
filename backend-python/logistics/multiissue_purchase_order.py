@@ -365,6 +365,7 @@ def get_single_total_purchase_order():
         if material_key not in material_map:
             material_map[material_key] = {
                 "materialId": bom_item.material_id,
+                "materialTypeId": material_type.material_type_id,
                 "materialType": material_type.material_type_name,
                 "materialName": material.material_name,
                 "materialModel": bom_item.material_model,
@@ -374,15 +375,26 @@ def get_single_total_purchase_order():
                 "purchaseAmount": 0,
                 "approvalAmount": 0,
                 "adjustPurchaseAmount": 0,
-                "isInboundSperate": False,
+                "isInboundSperate": True if purchase_order_item.inbound_material_id else False,
                 "remark": bom_item.remark,
                 "sizeType": bom_item.size_type,
+                "materialInboundId": purchase_order_item.inbound_material_id,
+                "materialInboundUnit": purchase_order_item.inbound_unit,
+                "materialInboundName": (
+                    db.session.query(Material)
+                    .filter(Material.material_id == purchase_order_item.inbound_material_id)
+                    .first()
+                    .material_name
+                    if purchase_order_item.inbound_material_id
+                    else None
+                ),
                 **{f"size{size}Amount": 0 for size in SHOESIZERANGE},
             }
 
         # Update the purchase amount and size-specific amounts
         current_material = material_map[material_key]
         current_material["purchaseAmount"] += purchase_order_item.purchase_amount
+        print(purchase_order_item)
         current_material["approvalAmount"] += purchase_order_item.approval_amount
         current_material["adjustPurchaseAmount"] += purchase_order_item.purchase_amount
         for size in SHOESIZERANGE:
@@ -455,8 +467,36 @@ def save_total_purchase_order():
                 distributed_amount = additional_amount / len(purchase_items)
                 for item, bom_item, purchase_divide_order, total_purchase_order in purchase_items:
                     item.purchase_amount = float(item.purchase_amount) + distributed_amount
-                    item.inbound_material_name = material.get("materialInboundName")
-                    item.inbound_material_unit = material.get("materialInboundUnit")
+                    if material["isInboundSperate"]:
+                        if material["materialInboundId"]:
+                            item.inbound_material_id = material["materialInboundId"]
+                            item.inbound_unit = material["materialInboundUnit"]
+                        else:
+                            exist_material = (
+                                db.session.query(Material)
+                                .filter(Material.material_name == material["materialInboundName"],
+                                        Material.material_supplier == total_purchase_order.supplier_id)
+                                .first()
+                            )
+                            if exist_material:
+                                item.inbound_material_id = exist_material.material_id
+                                item.inbound_unit = material["materialInboundUnit"]
+                            else:
+                                new_logistic_material = Material(
+                                    material_name=material["materialInboundName"],
+                                    material_type_id=material["materialTypeId"],
+                                    material_supplier=total_purchase_order.supplier_id,
+                                    material_unit=material["materialInboundUnit"],
+                                    material_category=0,
+                                    material_usage_department='1'
+                                )
+                                db.session.add(new_logistic_material)
+                                db.session.flush()
+                                item.inbound_material_id = new_logistic_material.material_id
+                                item.inbound_unit = material["materialInboundUnit"]
+                    else:
+                        item.inbound_material_id = None
+                        item.inbound_unit = None
 
     db.session.commit()
     return jsonify({"message": "Total purchase order and materials saved successfully."})
