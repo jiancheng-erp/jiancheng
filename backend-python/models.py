@@ -601,6 +601,8 @@ class PurchaseOrderItem(db.Model):
     size_44_purchase_amount = db.Column(db.Integer, nullable=True)
     size_45_purchase_amount = db.Column(db.Integer, nullable=True)
     size_46_purchase_amount = db.Column(db.Integer, nullable=True)
+    inbound_material_id = db.Column(db.BigInteger, nullable=True)
+    inbound_unit = db.Column(db.String(5), nullable=True)
 
     def __repr__(self):
         return (
