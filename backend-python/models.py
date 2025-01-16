@@ -161,6 +161,7 @@ class Material(db.Model):
     material_supplier = db.Column(db.Integer, nullable=False)
     material_creation_date = db.Column(db.Date, nullable=True)
     material_category = db.Column(db.SmallInteger, nullable=False, default=0)
+    material_usage_department = db.Column(db.String(1), nullable=True)
 
     __table_args__ = (
         db.UniqueConstraint("material_supplier", "material_name", name="unq_material"),
@@ -237,6 +238,7 @@ class MaterialStorage(db.Model):
     craft_name = db.Column(db.String(200), nullable=True)
     composite_unit_cost = db.Column(db.DECIMAL(10, 3), default=0.00)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    actual_inbound_unit = db.Column(db.String(5), nullable=True)
 
     def __repr__(self):
         return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"
