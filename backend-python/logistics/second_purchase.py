@@ -493,6 +493,7 @@ def save_purchase():
                         item["sizeInfo"][i]["purchaseAmount"],
                     )
                 setattr(purchase_order_item, "purchase_amount", material_quantity)
+                setattr(purchase_order_item, "approval_amount", approval_quantity)
                 db.session.add(purchase_order_item)
     db.session.commit()
     return jsonify({"status": "success"})

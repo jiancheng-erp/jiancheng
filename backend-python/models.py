@@ -842,11 +842,11 @@ class SizeMaterialStorage(db.Model):
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     unit_price = db.Column(db.Numeric(10, 3), nullable=True, default=0.00)
-    purchase_divide_order_id = db.Column(db.BigInteger)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
     craft_name = db.Column(db.String(200), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    total_purchase_order_id = db.Column(db.BigInteger)
 
     def __repr__(self):
         return f"<SizeMaterialStorage {self.size_material_specification}>"
