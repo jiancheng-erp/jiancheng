@@ -24,9 +24,10 @@ def get_order_batch_type_helper(order_id):
     for i in range(34, 47):
         locale = getattr(shoe_size_locale, f"size_{i}_name")
         type_name = getattr(shoe_size_locale, f"batch_info_type_name")
+        id = getattr(shoe_size_locale, f"batch_info_type_id")
         if not locale:
             break
-        obj = {"prop": f"size{i}Amount", "label": locale, "type": type_name, "usage": getattr(shoe_size_locale, "batch_info_type_usage")}
+        obj = {"id": id, "prop": f"size{i}Amount", "label": locale, "type": type_name, "usage": getattr(shoe_size_locale, "batch_info_type_usage")}
         result.append(obj)
     return result
 

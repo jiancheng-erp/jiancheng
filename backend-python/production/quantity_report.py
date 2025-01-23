@@ -166,9 +166,9 @@ def create_quantity_report():
     )
     db.session.add(report)
     db.session.flush()
-    response = (
+    order_shoe_type_response = (
         db.session.query(
-            OrderShoeType.order_shoe_type_id, ProductionLine.production_line_id
+            OrderShoeType.order_shoe_type_id
         )
         .join(
             OrderShoe,
@@ -176,19 +176,29 @@ def create_quantity_report():
         )
         .filter(
             OrderShoeType.order_shoe_id == data["orderShoeId"],
+        )
+        .all()
+    )
+    production_line_response = (
+        db.session.query(
+            ProductionLine.production_line_id
+        )
+        .filter(
             ProductionLine.production_team == data["team"],
         )
         .all()
     )
     result = []
-    for row in response:
-        order_shoe_type_id, production_line_id = row
-        item = QuantityReportItem(
-            quantity_report_id=report.report_id,
-            order_shoe_type_id=order_shoe_type_id,
-            production_line_id=production_line_id,
-        )
-        result.append(item)
+    for row in order_shoe_type_response:
+        order_shoe_type_id = row[0]
+        for row2 in production_line_response:
+            production_line_id = row2[0]
+            item = QuantityReportItem(
+                quantity_report_id=report.report_id,
+                order_shoe_type_id=order_shoe_type_id,
+                production_line_id=production_line_id,
+            )
+            result.append(item)
     db.session.add_all(result)
     db.session.commit()
     return {"message": "success"}
@@ -316,6 +326,7 @@ def get_quantity_report_detail():
                     "colorName": color.color_name,
                     "totalAmount": production_amount.total_production_amount,
                     "producedAmount": produced_amount,
+                    "remainingAmount": production_amount.total_production_amount - produced_amount,
                     "productionLinesAmount": [
                         {
                             "reportAmount": report_item.report_amount,
@@ -334,5 +345,5 @@ def get_quantity_report_detail():
                 )
     for _, value in meta_data_mapping.items():
         result.append(value)
-    print(result)
+    # print(result)
     return result

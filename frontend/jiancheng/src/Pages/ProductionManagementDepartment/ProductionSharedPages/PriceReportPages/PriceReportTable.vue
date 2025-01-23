@@ -1,6 +1,13 @@
 <template>
     <el-table :data="tableData" border stripe>
         <el-table-column prop="rowId" label="序号" />
+        <el-table-column v-if="props.team === '成型'" prop="productionSection" label="工段">
+            <template v-if="!readOnly" #default="scope">
+                <el-select v-model="scope.row.productionSection" placeholder="请选择" clearable>
+                    <el-option v-for="item in ['前段', '中段', '后段']" :value="item" :label="item"></el-option>
+                </el-select>
+            </template>
+        </el-table-column>
         <el-table-column prop="procedure" label="工序">
             <template v-if="!readOnly" #default="scope">
                 <el-autocomplete v-model="scope.row.procedure" :fetch-suggestions="querySearch" placeholder=""
@@ -8,7 +15,7 @@
                 </el-autocomplete>
             </template>
         </el-table-column>
-        <el-table-column prop="price" label="工价">
+        <el-table-column v-if="props.team !== '成型'" prop="price" label="工价">
             <template v-if="!readOnly" #default="scope">
                 <el-input-number v-model="scope.row.price" clearable :min="0" :precision="2" :step="0.01"></el-input-number>
             </template>
@@ -28,9 +35,8 @@
 </template>
 <script setup>
 import { defineModel } from 'vue';
-const props = defineProps(['procedureInfo', 'readOnly'])
+const props = defineProps(['procedureInfo', 'readOnly', 'team'])
 const tableData = defineModel('tableData')
-
 const addRow = () => {
     const newRowId = tableData.value.length + 1;
     const newItem = {

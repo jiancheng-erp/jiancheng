@@ -1,9 +1,22 @@
 <template>
     <el-row :gutter="20">
+        <el-col :span="6">
+            <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
+                end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable>
+            </el-date-picker>
+        </el-col>
+        <el-col :span="6" :offset="1">
+            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+        </el-col>
+
+    </el-row>
+    <el-row :gutter="20">
         <el-col :span="24">
             <el-table :data="tableData" border>
-                <el-table-column prop="purchaseDivideOrderRId" label="采购单号"></el-table-column>
-                <el-table-column prop="inboundRId" label="单号"></el-table-column>
+                <el-table-column prop="totalPurchaseOrderRId" label="采购单号"></el-table-column>
+                <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
@@ -24,66 +37,6 @@
     </el-row>
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="80%">
-        <!-- <div :id="`inboundRecipt`" ref="inboundReceipt" style="padding:10px;background-color:#fff;">
-            <el-card>
-                <h2 style="text-align: center; margin-bottom: 10px">{{ `健诚鞋业入库单${currentRow.inboundRId}` }}</h2>
-                <el-descriptions :column="4" border>
-                    <el-descriptions-item label="采购订单号">{{ currentRow.purchaseDivideOrderRId }}</el-descriptions-item>
-                    <el-descriptions-item label="供应商">{{ recordData.items[0].supplierName }}</el-descriptions-item>
-                    <el-descriptions-item label="入库时间">{{ currentRow.timestamp }}</el-descriptions-item>
-                    <el-descriptions-item label="入库方式">{{
-                        determineInboundName(currentRow.inboundType) }}</el-descriptions-item>
-                </el-descriptions>
-                <el-table v-if="currentRow.purchaseDivideOrderType === 'S'" :data="recordData.items" border>
-                    <el-table-column prop="materialName" label="材料名称"></el-table-column>
-                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-                    <el-table-column prop="colorName" label="颜色"></el-table-column>
-                    <el-table-column prop="materialUnit" label="单位"></el-table-column>
-                    <el-table-column prop="orderRId" label="订单号"></el-table-column>
-                    <el-table-column :label="`分码数量`" header-align="center">
-                        <el-table-column v-for="column in recordData.shoeSizeColumns" :key="column.prop"
-                            :prop="column.prop" :label="column.label" width="55">
-                        </el-table-column>
-                    </el-table-column>
-                    <el-table-column prop="unitPrice" label="单价">
-                    </el-table-column>
-                    <el-table-column label="总价" width="100">
-                        <template #default="scope">
-                            {{ scope.row.inboundQuantity * scope.row.unitPrice }}
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="remark" label="备注">
-                    </el-table-column>
-                </el-table>
-                <el-table v-else :data="recordData.items" border>
-                    <el-table-column prop="materialName" label="材料名称"></el-table-column>
-                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-                    <el-table-column prop="colorName" label="颜色"></el-table-column>
-                    <el-table-column prop="materialUnit" label="单位"></el-table-column>
-                    <el-table-column prop="orderRId" label="订单号"></el-table-column>
-                    <el-table-column prop="inboundQuantity" label="入库数量">
-                    </el-table-column>
-                    <el-table-column v-if="currentRow.inboundType != 2" prop="unitPrice" label="单价">
-                    </el-table-column>
-                    <el-table-column v-if="currentRow.inboundType == 2" prop="compositeUnitCost" label="复合单价">
-                    </el-table-column>
-                    <el-table-column label="总价" width="100">
-                        <template #default="scope">
-                            {{ calculateTotalPrice(scope.row) }}
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="remark" label="备注">
-                    </el-table-column>
-                </el-table>
-                <template #footer>
-                    <el-descriptions :column="4" border>
-                        <el-descriptions-item label="总价">{{ recordData.items.reduce((acc, cur) => acc + Number(cur.inboundQuantity) * Number(cur.unitPrice), 0).toFixed(2) }}</el-descriptions-item>
-                    </el-descriptions>
-                </template>
-            </el-card>
-        </div> -->
         <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
             <h2 style="text-align: center;">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px;">
@@ -94,10 +47,13 @@
             <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
                 style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                 <tr>
-                    <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ currentRow.purchaseDivideOrderRId }}</td>
+                    <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ currentRow.totalPurchaseOrderRId }}
+                    </td>
                     <td style="padding:5px; width: 150px;" align="left">供应商:{{ recordData.items[0].supplierName }}</td>
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">入库方式:{{ determineInboundName(currentRow.inboundType) }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">入库方式:{{
+                        determineInboundName(currentRow.inboundType)
+                    }}</td>
                 </tr>
             </table>
             <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
@@ -110,7 +66,7 @@
                     <th width="80">颜色</th>
                     <th width="55">单位</th>
                     <th>订单号</th>
-                    <th v-if="currentRow.purchaseDivideOrderType === 'S'" width="55"
+                    <th v-if="currentRow.materialCategory === 1" width="55"
                         v-for="(column, index) in recordData.shoeSizeColumns" :key="index">{{ column.label }}</th>
                     <th v-else width="100">数量</th>
                     <th v-if="currentRow.inboundType != 2" width="100">单价</th>
@@ -124,10 +80,10 @@
                     <td>{{ item.materialModel }}</td>
                     <td>{{ item.materialSpecification }}</td>
                     <td>{{ item.colorName }}</td>
-                    <td>{{ item.materialUnit }}</td>
+                    <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ currentRow.orderRId }}</td>
-                    <td v-if="currentRow.purchaseDivideOrderType === 'S'"
-                        v-for="(column, index) in recordData.shoeSizeColumns" :key="index">{{ item[column.prop] }}
+                    <td v-if="currentRow.materialCategory === 'S'" v-for="(column, index) in recordData.shoeSizeColumns"
+                        :key="index">{{ item[column.prop] }}
                     </td>
                     <td v-else>{{ item.inboundQuantity }}</td>
                     <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
@@ -139,9 +95,9 @@
             <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
                 <div style="display: flex;">
                     <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                            calculateInboundTotal() }}</span></span>
+                        calculateInboundTotal() }}</span></span>
                     <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                            calculateTotalPriceSum() }}</span></span>
+                        calculateTotalPriceSum() }}</span></span>
                 </div>
             </div>
         </div>
@@ -188,6 +144,8 @@ export default {
             currentRow: {},
             recordData: {},
             dialogVisible: false,
+            dateRange: [null, null],
+            inboundRIdSearch: null
         }
     },
     mounted() {
@@ -232,10 +190,16 @@ export default {
             htmlToPdf.getPdf(title, domName);
         },
         async getInboundRecordsTable() {
+            if (this.dateRange === null) {
+                this.dateRange = [null, null]
+            }
             try {
                 let params = {
                     page: this.currentPage,
-                    pageSize: this.pageSize
+                    pageSize: this.pageSize,
+                    startDate: this.dateRange[0],
+                    endDate: this.dateRange[1],
+                    "inboundRId": this.inboundRIdSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialinboundrecords`, { params })
                 this.tableData = response.data.result
@@ -250,20 +214,20 @@ export default {
             this.getInboundRecordsTable()
         },
         handlePageChange(val) {
-            this.page = val
+            this.currentPage = val
             this.getInboundRecordsTable()
         },
         async handleView(row) {
             this.currentRow = row
             console.log(row)
             try {
-                let params = { "inboundBatchId": row.inboundBatchId, "purchaseDivideOrderType": row.purchaseDivideOrderType }
+                let params = { "inboundBatchId": row.inboundBatchId, "materialCategory": row.materialCategory }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
                 this.recordData["items"] = response.data
 
                 console.log(this.recordData["items"])
                 // if the purchase divide order type is S, then the inbound record is for shoe size
-                if (row.purchaseDivideOrderType == 'S') {
+                if (row.materialCategory == 1) {
                     params = { "sizeMaterialStorageId": this.recordData["items"][0].materialStorageId, "orderId": row.orderId, "purchaseDivideOrderId": row.purchaseDivideOrderId }
                     response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
                     this.recordData["sizeMaterialInboundTable"] = response.data

@@ -33,7 +33,7 @@ const components = {
     ProcedureManagement,
     OrderProgress
 }
-const currentTab = ref('OrderProgress')
+const currentTab = ref('LaborPriceReport')
 const optionFn = (option) => {
     currentTab.value = option
 }
