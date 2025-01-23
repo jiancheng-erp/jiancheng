@@ -142,6 +142,25 @@ def outsource_status_converter(status_val):
         status = "外包结束"
     return status
 
+def outsource_status_strtoint(status_str):
+    if status_str == "未提交":
+        status = 0
+    elif status_str == "已提交":
+        status = 1
+    elif status_str == "已审批":
+        status = 2
+    elif status_str == "被驳回":
+        status = 3
+    elif status_str == "材料出库":
+        status = 4
+    elif status_str == "外包生产中":
+        status = 5
+    elif status_str == "成品入库":
+        status = 6
+    else:
+        status = 7
+    return status
+
 
 def to_snake(request_attr_name):
     return ''.join(['_'+c.lower() if c.isupper() else c for c in request_attr_name]).lstrip('_')

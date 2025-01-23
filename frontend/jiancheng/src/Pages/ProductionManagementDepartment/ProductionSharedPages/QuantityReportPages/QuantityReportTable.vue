@@ -15,9 +15,10 @@
             </template>
         </el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
-        <el-table-column prop="toDateAmount" label="上报数量" />
+        <el-table-column prop="toDateAmount" label="当日数量" />
         <el-table-column prop="producedAmount" label="已审批数量" />
         <el-table-column prop="totalAmount" label="目标数量" />
+        <el-table-column prop="remainingAmount" label="剩余数量(目标数量-已审批数量)" />
     </el-table>
 </template>
 

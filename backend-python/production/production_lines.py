@@ -32,6 +32,12 @@ def get_all_production_lines():
 def add_new_production_line():
     team = request.json.get("team")
     name = request.json.get("name")
+    line = db.session.query(ProductionLine).filter(
+        ProductionLine.production_line_name == name,
+        ProductionLine.production_team == team,
+    ).first()
+    if line:
+        return jsonify({"message": "该生产线已存在"}), 400
     production_line = ProductionLine(production_line_name=name, production_team=team)
     db.session.add(production_line)
     db.session.commit()

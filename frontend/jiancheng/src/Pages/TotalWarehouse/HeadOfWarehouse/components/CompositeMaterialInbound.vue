@@ -1,26 +1,22 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="6" :offset="0">
+        <el-col :span="8" :offset="0">
             <el-button-group>
                 <el-button type="primary" size="default" @click="openSearchDialog">搜索条件设置</el-button>
+                <el-button v-if="isMultipleSelection" @click="openInboundDialog">
+                    入库
+                </el-button>
+                <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
+                    完成入库
+                </el-button>
+                <el-button @click="toggleSelectionMode">
+                    {{ isMultipleSelection ? "退出" : "选择材料" }}
+                </el-button>
             </el-button-group>
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
-            @confirm="handleSearch" />
-    </el-row>
-    <el-row :gutter="20">
-        <el-col :span="24">
-            <el-button v-if="isMultipleSelection" @click="openInboundDialog">
-                入库
-            </el-button>
-            <!-- <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
-                完成入库
-            </el-button> -->
-            <el-button @click="toggleSelectionMode">
-                {{ isMultipleSelection ? "退出" : "选择材料" }}
-            </el-button>
-        </el-col>
+            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions"
+            :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
@@ -181,6 +177,20 @@ export default {
     components: {
         MaterialSearchDialog
     },
+    props: {
+        materialTypeOptions: {
+            type: Array,
+            required: true,
+        },
+        materialSupplierOptions: {
+            type: Array,
+            required: true
+        },
+        materialNameOptions: {
+            type: Array,
+            required: true
+        },
+    },
     data() {
         return {
             searchForm: {
@@ -189,13 +199,13 @@ export default {
                 materialTypeSearch: '',
                 materialNameSearch: '',
                 materialSpecificationSearch: '',
+                materialModelSearch: '',
+                materialColorSearch: '',
                 materialSupplierSearch: '',
-                purchaseDivideOrderRIdSearch: '',
+                totalPurchaseOrderRIdSearch: "",
             },
             isMultiInboundDialogVisible: false,
             isInboundDialogVisible: false,
-            materialTypeOptions: [],
-            materialSupplierOptions: [],
             isMaterialDialogVisible: false,
             pageSize: 10,
             currentPage: 1,
@@ -239,8 +249,6 @@ export default {
         }
     },
     mounted() {
-        this.getAllMaterialTypes()
-        this.getAllSuppliers()
         this.getMaterialTableData()
     },
     methods: {
@@ -313,25 +321,20 @@ export default {
         toggleSelectionMode() {
             this.isMultipleSelection = !this.isMultipleSelection;
         },
-        async getAllMaterialTypes() {
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialtypes`)
-            this.materialTypeOptions = response.data
-        },
-        async getAllSuppliers() {
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallsuppliernames`)
-            this.materialSupplierOptions = response.data
-        },
         async getMaterialTableData(sortColumn, sortOrder) {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
                 "opType": 3,
+                "materialType": this.searchForm.materialTypeSearch,
                 "materialName": this.searchForm.materialNameSearch,
                 "materialSpec": this.searchForm.materialSpecificationSearch,
+                "materialModel": this.searchForm.materialModelSearch,
+                "materialColor": this.searchForm.materialColorSearch,
                 "supplier": this.searchForm.materialSupplierSearch,
                 "orderRId": this.searchForm.orderNumberSearch,
                 "shoeRId": this.searchForm.shoeNumberSearch,
-                "purchaseDivideOrderRId": this.searchForm.purchaseDivideOrderRIdSearch,
+                "totalPurchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
                 "sortColumn": sortColumn,
                 "sortOrder": sortOrder
             }
@@ -396,6 +399,13 @@ export default {
             this.isInboundDialogVisible = true
             this.currentRow = row
             console.log(this.inboundForm)
+        },
+        openFinishOutboundDialog() {
+            if (this.selectedRows.length == 0) {
+                ElMessage.error("未选择材料")
+                return
+            }
+            this.isFinishInboundDialogOpen = true
         },
         async finishInbound() {
             ElMessageBox.alert('该操作完成对选择鞋型材料入库，是否继续？', '警告', {

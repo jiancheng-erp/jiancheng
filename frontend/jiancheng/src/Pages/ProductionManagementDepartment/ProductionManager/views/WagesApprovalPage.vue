@@ -33,7 +33,7 @@
                 <el-col :span="24" :offset="0">
                     鞋型工价表
                     <el-table :data="priceReports" border stripe>
-                        <el-table-column prop="team" label="工段类型"></el-table-column>
+                        <el-table-column prop="team" label="车间"></el-table-column>
                         <el-table-column prop="productionStartDate" label="生产开始日期"></el-table-column>
                         <el-table-column prop="productionEndDate" label="生产结束日期"></el-table-column>
                         <el-table-column prop="reportStatus" label="状态"></el-table-column>
@@ -57,8 +57,9 @@
     <el-dialog title="工价审核界面" v-model="isWagesApprovalVis" width="80%">
         <el-table :data="reportDetail" border stripe max-height="500">
             <el-table-column prop="rowId" label="序号"></el-table-column>
+            <el-table-column v-if="currentRow.team === '成型'" prop="productionSection" label="工段"></el-table-column>
             <el-table-column prop="procedure" label="工序名称"></el-table-column>
-            <el-table-column prop="price" label="工价"></el-table-column>
+            <el-table-column v-if="currentRow.team !== '成型'" prop="price" label="工价"></el-table-column>
             <el-table-column prop="note" label="备注"></el-table-column>
         </el-table>
         <template #footer>

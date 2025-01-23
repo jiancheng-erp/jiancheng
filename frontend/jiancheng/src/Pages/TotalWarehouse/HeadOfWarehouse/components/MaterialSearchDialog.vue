@@ -5,9 +5,15 @@
             <el-option v-for="item in materialTypeOptions" :value="item" />
         </el-select>
         请选择材料名称：
-        <el-input v-model="searchForm.materialNameSearch" placeholder="" clearable />
+        <el-select v-model="searchForm.materialNameSearch" value-key="" placeholder="" clearable filterable>
+            <el-option v-for="item in materialNameOptions" :value="item.value" :label="item.label" />
+        </el-select>
+        请选择材料型号：
+        <el-input v-model="searchForm.materialModelSearch" placeholder="" />
         请选择材料规格：
         <el-input v-model="searchForm.materialSpecificationSearch" placeholder="" />
+        请选择材料颜色：
+        <el-input v-model="searchForm.materialColorSearch" placeholder="" />
         请选择材料供应商：
         <el-select v-model="searchForm.materialSupplierSearch" value-key="" placeholder="" clearable filterable>
             <el-option v-for="item in materialSupplierOptions" :value="item" />
@@ -37,6 +43,10 @@ export default {
             required: true,
         },
         materialSupplierOptions: {
+            type: Array,
+            required: true
+        },
+        materialNameOptions: {
             type: Array,
             required: true
         },

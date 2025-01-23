@@ -9,7 +9,6 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.mysql import insert
-from constants import OUTSOURCE_STATUS_MAPPING
 
 production_status_nodes_bp = Blueprint("production_status_nodes_bp", __name__)
 

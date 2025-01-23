@@ -23,13 +23,13 @@
                     <el-input v-else v-model="scope.row.productionLineName"></el-input>
                 </template>
             </el-table-column>
-            <el-table-column label="操作">
+            <!-- <el-table-column label="操作">
                 <template #default="scope">
                     <el-button-group>
                         <el-button type="danger" @click="deleteProductionLine(scope.row)">删除</el-button>
                     </el-button-group>
                 </template>
-            </el-table-column>
+            </el-table-column> -->
         </el-table>
     </el-row>
     <el-dialog v-model="isNewDialogOpen" title="新组别" width="50%">
@@ -76,7 +76,7 @@ export default {
                 ElMessage.success("添加成功")
             }
             catch (error) {
-                ElMessage.error(error)
+                ElMessage.error(error.response.data.message)
             }
             this.newProductionLineForm = {
                 name: null,

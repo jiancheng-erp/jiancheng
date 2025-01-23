@@ -13,6 +13,14 @@
             <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable
                 @keypress.enter="getOutsourceOverview()" @clear="getOutsourceOverview"/>
         </el-col>
+        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+            外包状态筛选：
+            <el-select v-model="outsourceStatusSearch" placeholder="请选择外包状态" clearable
+                @change="getOutsourceOverview()">
+                <el-option v-for="item in outsourceStatusOptions" :key="item" :label="item"
+                    :value="item" />
+            </el-select>
+        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
@@ -20,7 +28,9 @@
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户型号"></el-table-column>
-                <el-table-column prop="outsourceInfo" label="外包工段"></el-table-column>
+                <el-table-column prop="outsourceFactory" label="外包厂家"></el-table-column>
+                <el-table-column prop="outsourceType" label="外包工段"></el-table-column>
+                <el-table-column prop="outsourceStatus" label="状态"></el-table-column>
                 <el-table-column label="外包信息">
                     <template #default="scope">
                         <el-button type="primary" size="small"
@@ -50,7 +60,18 @@ export default {
             orderTableData: [],
             currentPage: 1,
             pageSize: 10,
-            totalRows: 0
+            totalRows: 0,
+            outsourceStatusOptions: [
+                "未提交",
+                "已提交",
+                "已审批",
+                "被驳回",
+                "材料出库",
+                "外包生产中",
+                "成品入库",
+                "外包结束",
+            ],
+            outsourceStatusSearch: '',
         }
     },
     mounted() {
@@ -70,26 +91,11 @@ export default {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
                 "orderRId": this.orderRIdSearch,
-                "shoeRId": this.shoeRIdSearch
+                "shoeRId": this.shoeRIdSearch,
+                "outsourceStatus": this.outsourceStatusSearch,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getorderoutsourceoverview`, {params})
             this.orderTableData = response.data.result
-            this.orderTableData.forEach(row => {
-                let teamArr = []
-                if (row.isCuttingOutsourced) {
-                    teamArr.push("裁断")
-                }
-                if (row.isSewingOutsourced) {
-                    teamArr.push("针车")
-                }
-                if (row.isMoldingOutsourced) {
-                    teamArr.push("成型")
-                }
-                if (teamArr.length == 0) {
-                    teamArr = ["无外包"]
-                }
-                row["outsourceInfo"] = teamArr
-            })
             console.log(this.orderTableData)
             this.totalRows = response.data.totalLength
         },

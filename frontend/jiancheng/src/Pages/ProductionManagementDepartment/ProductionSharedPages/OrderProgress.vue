@@ -38,7 +38,7 @@
                 <el-table-column prop="customerBrand" label="客户商标" width="80"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="orderStartDate" label="订单开始" width="110" sortable></el-table-column>
-                <el-table-column prop="orderEndDate" label="订单结束" width="110" sortable></el-table-column>
+                <el-table-column prop="orderEndDate" label="出货日期" width="110" sortable></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
                 <el-table-column prop="status" label="状态"></el-table-column>
@@ -200,7 +200,7 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col>
-                        <el-table :data="tab.productionAmountTable" border stripe :max-height="500">
+                        <el-table v-loading="isLoading" :data="tab.productionAmountTable" border stripe :max-height="500">
                             <el-table-column prop="colorName" label="颜色"></el-table-column>
                             <el-table-column prop="totalAmount" label="颜色总数"></el-table-column>
                             <!-- <el-table-column prop="" label="已设置外包数量"></el-table-column> -->
@@ -220,7 +220,7 @@
         <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="24" :offset="0">
                 订单数量
-                <el-table :data="shoeBatchInfo" :span-method="spanMethod" border stripe :max-height="500">
+                <el-table v-loading="isLoading" :data="shoeBatchInfo" :span-method="spanMethod" border stripe :max-height="500">
                     <el-table-column prop="colorName" label="颜色"></el-table-column>
                     <el-table-column prop="totalAmount" label="颜色总数"></el-table-column>
                     <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
@@ -244,11 +244,8 @@
             <span>
                 <el-button @click="isScheduleDialogOpen = false">取消</el-button>
                 <el-button v-if="role == 6" type="primary" @click="modifyProductionSchedule">保存排期</el-button>
+                <el-button @click="startProduction">下发排期</el-button>
                 <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
-                    type="success" @click="startProduction">
-                    下发排期
-                </el-button>
-                <!-- <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
                     type="success" @click="startProduction" :disabled="currentRow.processSheetUploadStatus != 4">
                     <el-tooltip v-if="currentRow.processSheetUploadStatus != 4" effect="dark" content="工艺单未下发"
                         placement="bottom">
@@ -257,7 +254,7 @@
                     <span v-if="currentRow.processSheetUploadStatus == 4">
                         下发排期
                     </span>
-                </el-button> -->
+                </el-button>
             </span>
         </template>
     </el-dialog>
@@ -421,8 +418,9 @@ export default {
             isScheduleDialogOpen: false,
             shoeSizeColumns: [],
             activeTab: "cutting",
+            tabs: [],
             // index 0: 裁断，1：预备，2：针车，3：成型
-            tabs: [
+            tabsTemplate: [
                 {
                     name: 'cutting',
                     label: '裁断排产',
@@ -510,7 +508,8 @@ export default {
                 ],
             },
             isSelectedRowsEmpty: false,
-            priceReportDict: {}
+            priceReportDict: {},
+            isLoading: true
         }
     },
     async mounted() {
@@ -601,19 +600,16 @@ export default {
             window.open(url, '_blank')
         },
         async openScheduleDialog(row) {
+            this.isLoading = true
             this.currentRow = row
             this.isScheduleDialogOpen = true
             this.shoeSizeColumns = await this.getShoeSizesName(row.orderId)
-            this.tabs.forEach(row => {
-                row.lineValue = []
-                row.dateValue = []
-                row.isOutsourced = 0
-                row.productionAmountTable = []
-            })
+            this.tabs = JSON.parse(JSON.stringify(this.tabsTemplate))
             this.getOrderShoeScheduleInfo()
             await this.getOrderShoeBatchInfo()
             await this.getOutsourceAmount()
             await this.getOrderShoeProductionAmount()
+            this.isLoading = false
         },
         async getOrderShoeScheduleInfo() {
             let params = { "orderShoeId": this.currentRow.orderShoeId }
