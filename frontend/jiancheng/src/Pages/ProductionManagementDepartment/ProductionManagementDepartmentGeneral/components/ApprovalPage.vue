@@ -17,7 +17,7 @@
             审批状态筛选：
             <el-select v-model="approvalStatusSearch" placeholder="请输入鞋型号" clearable @change="getOrderTableData()"
                 @clear="getOrderTableData()">
-                <el-option v-for="item in ['全部', '未审批', '已审批']" :value="item" :label="item">
+                <el-option v-for="item in ['全部', '未审批']" :value="item" :label="item">
 
                 </el-option>
             </el-select>

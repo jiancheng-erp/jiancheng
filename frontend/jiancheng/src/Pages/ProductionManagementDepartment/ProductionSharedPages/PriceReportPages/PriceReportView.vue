@@ -5,7 +5,7 @@
         </el-header>
         <el-main>
             <el-row :gutter="20" style="text-align: center;">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{ `${props.teams}工价填报`
+                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{ `${props.teams}工序填报`
                     }}</el-col>
             </el-row>
             <el-row :gutter="20">
@@ -28,20 +28,22 @@
                     <el-tabs v-model="currentTab" tab-position="top">
                         <el-tab-pane v-for="item in panes" :key="item" :label="item" :name="item">
                             <PriceReportTable v-model:tableData="priceReportInfo[item]['tableData']"
-                                :procedureInfo="procedureInfo" :readOnly="readOnly" />
+                                :procedureInfo="procedureInfo" :readOnly="readOnly" :team="currentTab" />
                         </el-tab-pane>
                     </el-tabs>
                 </el-col>
             </el-row>
             <el-row :gutter="20">
-                <el-button-group>
+                <el-col>
+                    <el-button-group>
                     <el-button type="info" @click="saveAsTemplate">保存为模板</el-button>
                     <el-button v-if="!readOnly" type="info" @click="loadTemplate">加载模板</el-button>
                     <!-- <el-button type="primary" @click="">下载为Excel</el-button> -->
                 </el-button-group>
+                </el-col>
             </el-row>
             <el-row :gutter="20">
-                <el-col :offset="21">
+                <el-col :offset="20">
                     <el-button-group>
                         <el-button v-if="!readOnly" type="primary" @click="handleSaveData">保存</el-button>
                         <el-button v-if="!readOnly" type="success" @click="handleSubmit">提交</el-button>

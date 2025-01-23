@@ -99,7 +99,6 @@ def get_outsource_summary():
             OutsourceInfo.outsource_status.in_([1, 2, 4, 5, 6, 7]),
         )
     )
-    print(response)
     result = []
     for row in response:
         outsource_info, factory = row
@@ -110,5 +109,4 @@ def get_outsource_summary():
             "outsourceAmount": outsource_info.outsource_amount
         }
         result.append(obj)
-    print(result)
     return result

@@ -842,7 +842,7 @@ class SizeMaterialStorage(db.Model):
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     unit_price = db.Column(db.Numeric(10, 3), nullable=True, default=0.00)
-    purchase_divide_order_id = db.Column(db.BigInteger)
+    total_purchase_order_id = db.Column(db.BigInteger)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
     craft_name = db.Column(db.String(200), nullable=True)
@@ -868,6 +868,7 @@ class UnitPriceReportDetail(db.Model):
         primary_key=True,
         nullable=False,
     )
+    production_section = db.Column(db.String(20))
     procedure_name = db.Column(db.String(50), nullable=False)
     price = db.Column(db.DECIMAL(10, 3), nullable=False)
     note = db.Column(db.String(100), nullable=True)
@@ -904,13 +905,14 @@ class UnitPriceReportTemplate(db.Model):
         db.Integer, primary_key=True, nullable=False, autoincrement=True
     )
     shoe_id = db.Column(db.Integer, nullable=False)
-    team = db.Column(db.SmallInteger, nullable=False)
+    team = db.Column(db.String(10), nullable=False)
 
 
 class ReportTemplateDetail(db.Model):
     __tablename__ = "report_template_detail"
     report_template_id = db.Column(db.Integer, primary_key=True, nullable=False)
     row_id = db.Column(db.Integer, primary_key=True, nullable=False)
+    production_section = db.Column(db.String(20))
     procedure_name = db.Column(db.String(50), nullable=True)
     price = db.Column(db.Float, nullable=True)
     note = db.Column(db.String(100), nullable=True)

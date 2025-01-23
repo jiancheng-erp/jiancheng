@@ -6,6 +6,7 @@ from api_utility import (
     format_date,
     format_line_group,
     outsource_status_converter,
+    outsource_status_strtoint,
     to_camel,
 )
 from app_config import db
@@ -15,7 +16,6 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.mysql import insert
-from constants import OUTSOURCE_STATUS_MAPPING
 
 outsource_bp = Blueprint("outsource_bp", __name__)
 
@@ -28,42 +28,49 @@ def get_order_outsource_overview():
     page_size = request.args.get("pageSize", type=int)
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
+    outsource_status = request.args.get("outsourceStatus")
     query = (
         db.session.query(
             Order,
             OrderShoe,
             Shoe,
             Customer,
-            OrderShoeProductionInfo.is_cutting_outsourced,
-            OrderShoeProductionInfo.is_sewing_outsourced,
-            OrderShoeProductionInfo.is_molding_outsourced,
+            OutsourceInfo,
+            OutsourceFactory,
         )
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
-        .join(
-            OrderShoeProductionInfo,
-            OrderShoeProductionInfo.order_shoe_id == OrderShoe.order_shoe_id,
-        )
+        .join(OutsourceInfo, OutsourceInfo.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OutsourceFactory, OutsourceFactory.factory_id == OutsourceInfo.factory_id)
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
     )
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if outsource_status and outsource_status != "":
+        query = query.filter(
+            OutsourceInfo.outsource_status == outsource_status_strtoint(outsource_status)
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
+    attr_names = OutsourceInfo.__table__.columns.keys()
+    OUTSOURCE_TYPE_MAPPING = {
+        "0": "裁断",
+        "1": "针车",
+        "2": "成型",
+    }
     for row in response:
         (
             order,
             order_shoe,
             shoe,
             customer,
-            is_cutting_outsourced,
-            is_sewing_outsourced,
-            is_molding_outsourced,
+            outsource_info,
+            factory,
         ) = row
         obj = {
             "orderId": order.order_id,
@@ -73,10 +80,20 @@ def get_order_outsource_overview():
             "shoeRId": shoe.shoe_rid,
             "customerProductName": order_shoe.customer_product_name,
             "orderEndDate": format_date(order.end_date),
-            "isCuttingOutsourced": is_cutting_outsourced,
-            "isSewingOutsourced": is_sewing_outsourced,
-            "isMoldingOutsourced": is_molding_outsourced,
+            "outsourceFactory": factory.factory_name,
         }
+        for db_attr in attr_names:
+            if db_attr == "outsource_type":
+                outsource_type = outsource_info.outsource_type.split(",")
+                obj[to_camel(db_attr)] = [
+                    OUTSOURCE_TYPE_MAPPING[team_int] for team_int in outsource_type
+                ]
+            elif db_attr == "outsource_status":
+                obj[to_camel(db_attr)] = outsource_status_converter(
+                    outsource_info.outsource_status
+                )
+            else:
+                obj[to_camel(db_attr)] = getattr(outsource_info, db_attr)
         result.append(obj)
     return {"result": result, "totalLength": count_result}
 
@@ -90,7 +107,10 @@ def get_order_shoe_outsource_info():
         (
             db.session.query(OutsourceInfo, OutsourceFactory)
             .join(OrderShoe, OrderShoe.order_shoe_id == OutsourceInfo.order_shoe_id)
-            .join(OutsourceFactory, OutsourceFactory.factory_id == OutsourceInfo.factory_id)
+            .join(
+                OutsourceFactory,
+                OutsourceFactory.factory_id == OutsourceInfo.factory_id,
+            )
         )
         .filter(OrderShoe.order_shoe_id == order_shoe_id)
         .all()
@@ -98,15 +118,18 @@ def get_order_shoe_outsource_info():
     result = []
     for row in response:
         outsource_info, factory = row
-        temp = ''
-        if outsource_info.outsource_type == '0,1':
-            temp = '裁断+针车'
-        elif outsource_info.outsource_type == '1':
-            temp = '针车'
+        temp = ""
+        if outsource_info.outsource_type == "0,1":
+            temp = "裁断+针车"
+        elif outsource_info.outsource_type == "1":
+            temp = "针车"
         obj = {
             "outsourceInfoId": outsource_info.outsource_info_id,
             "outsourceType": temp,
-            "outsourceFactory": {"id": outsource_info.factory_id, "value": factory.factory_name},
+            "outsourceFactory": {
+                "id": outsource_info.factory_id,
+                "value": factory.factory_name,
+            },
             "outsourceAmount": outsource_info.outsource_amount,
             "outsourceStartDate": format_date(outsource_info.outsource_start_date),
             "outsourceEndDate": format_date(outsource_info.outsource_end_date),
@@ -146,9 +169,9 @@ def get_outsource_batch_info():
             OrderShoeType.order_shoe_id == order_shoe_id,
         )
     )
-    if outsource_info_id and outsource_info_id != '':
+    if outsource_info_id and outsource_info_id != "":
         query = query.filter(OutsourceBatchInfo.outsource_info_id == outsource_info_id)
-    
+
     entities = query.all()
     # Dictionary to accumulate total amounts by color
     color_totals = {}
@@ -232,7 +255,7 @@ def store_outsource_for_order_shoe():
     production_obj = OrderShoeProductionInfo.query.filter_by(
         order_shoe_id=outsource_input["orderShoeId"]
     ).first()
-    for line in outsource_input["type"]:
+    for line in outsource_input["type"].split("+"):
         if line == "裁断":
             production_obj.is_cutting_outsourced = True
         elif line == "针车":
@@ -523,10 +546,14 @@ def approve_outsource():
     outsource_info_id = request.get_json()["outsourceInfoId"]
     entity = db.session.query(OutsourceInfo).get(outsource_info_id)
     entity.outsource_status = 2
-    production_info = db.session.query(OrderShoeProductionInfo).filter_by(order_shoe_id=entity.order_shoe_id).first()
-    if entity.outsource_type == '0,1':
+    production_info = (
+        db.session.query(OrderShoeProductionInfo)
+        .filter_by(order_shoe_id=entity.order_shoe_id)
+        .first()
+    )
+    if entity.outsource_type == "0,1":
         production_info.is_cutting_outsourced = True
-    elif entity.outsource_type == '1':
+    elif entity.outsource_type == "1":
         production_info.is_sewing_outsourced = True
     db.session.commit()
     return {"message": "success"}
@@ -558,7 +585,7 @@ def get_outsource_cost_detail():
     for row in response:
         obj = {}
         for db_attr in attr_names:
-            if db_attr == 'item_cost':
+            if db_attr == "item_cost":
                 obj[to_camel(db_attr)] = float(getattr(row, db_attr))
             else:
                 obj[to_camel(db_attr)] = getattr(row, db_attr)

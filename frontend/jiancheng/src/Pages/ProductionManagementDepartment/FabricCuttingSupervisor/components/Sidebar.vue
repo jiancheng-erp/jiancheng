@@ -7,18 +7,15 @@
             {{ userName }}
         </div>
         <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-            <el-menu default-active="2" class="el-menu-vertical-demo">
+            <el-menu default-active="3" class="el-menu-vertical-demo">
                 <!-- <el-menu-item index="1" @click="handleMenuOption('Dashboard')">
                     <span>任务看板</span>
                 </el-menu-item> -->
+                <el-menu-item index="3" @click="handleMenuOption('LaborPriceReport')">
+                    <span>工序填报</span>
+                </el-menu-item>
                 <el-menu-item index="2" @click="handleMenuOption('OrderProgress')">
                     <span>生产动态明细</span>
-                </el-menu-item>
-                <el-menu-item index="3" @click="handleMenuOption('LaborPriceReport')">
-                    <span>工价填报</span>
-                </el-menu-item>
-                <el-menu-item index="4" @click="handleMenuOption('AmountProduced')">
-                    <span>数量填写</span>
                 </el-menu-item>
                 <el-menu-item index="5" @click="handleMenuOption('ProcedureManagement')">
                     <span>工序管理</span>

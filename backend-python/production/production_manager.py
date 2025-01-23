@@ -9,7 +9,6 @@ from flask import Blueprint, current_app, jsonify, request, send_file, Response
 from models import *
 from sqlalchemy import func, or_, cast, Integer, and_, select, asc, desc, case
 from sqlalchemy.dialects.mysql import insert
-from constants import OUTSOURCE_STATUS_MAPPING
 from general_document.batch_info import generate_excel_file
 from business.batch_info_type import get_order_batch_type_helper
 import os
@@ -355,8 +354,8 @@ def get_all_order_production_progress():
         )
     if start_date_search and end_date_search:
         try:
-            datetime.strptime(start_date_search, "%Y-%m-%d")
-            datetime.strptime(end_date_search, "%Y-%m-%d")
+            start_date_search = datetime.strptime(start_date_search, "%Y-%m-%d")
+            end_date_search = datetime.strptime(end_date_search, "%Y-%m-%d")
         except ValueError:
             return jsonify({"message": "invalid date range"}), 400
         query = query.filter(
@@ -912,8 +911,6 @@ def get_all_quantity_reports_overview():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if approval_status == "未审批":
         query = query.filter(submitted_report_table.c.unapproved_reports_count > 0)
-    elif approval_status == "已审批":
-        query = query.filter(submitted_report_table.c.unapproved_reports_count == 0)
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []

@@ -166,6 +166,7 @@ def store_price_report_detail():
         obj = {
             "report_id": report_id,
             "row_id": row["rowId"],
+            "production_section": row["productionSection"],
             "procedure_name": row["procedure"],
             "price": row["price"],
             "note": row["note"],
@@ -175,6 +176,7 @@ def store_price_report_detail():
         on_duplicate_key_stmt = insert_stmt.on_duplicate_key_update(
             report_id=insert_stmt.inserted.report_id,
             row_id=insert_stmt.inserted.row_id,
+            production_section=insert_stmt.inserted.production_section,
             procedure_name=insert_stmt.inserted.procedure_name,
             price=insert_stmt.inserted.price,
             note=insert_stmt.inserted.note,
@@ -251,6 +253,7 @@ def get_price_report_detail():
         result.append(
             {
                 "rowId": report_detail.row_id,
+                "productionSection": report_detail.production_section,
                 "procedure": report_detail.procedure_name,
                 "price": report_detail.price,
                 "note": report_detail.note,
@@ -295,6 +298,7 @@ def get_price_report_detail_by_order_shoe_id():
         detail.append(
             {
                 "rowId": report_detail.row_id,
+                "productionSection": report_detail.production_section,
                 "procedure": report_detail.procedure_name,
                 "price": float(report_detail.price),
                 "note": report_detail.note,
@@ -388,6 +392,7 @@ def save_template():
         entity = ReportTemplateDetail(
             report_template_id=template.template_id,
             row_id=row["rowId"],
+            production_section=row["productionSection"],
             procedure_name=row["procedure"],
             price=row["price"],
         )
@@ -416,12 +421,12 @@ def load_template():
     for row in response:
         obj = {
             "rowId": row.row_id,
+            "productionSection": row.production_section,
             "procedure": row.procedure_name,
             "price": row.price,
             "note": row.note,
         }
         result.append(obj)
-    print(result)
     return result
 
 

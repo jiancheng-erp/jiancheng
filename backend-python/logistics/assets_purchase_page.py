@@ -123,7 +123,6 @@ def get_all_material_name():
     result = list(unique_materials.values())
     
     # Print and return the result
-    print(result)
     return jsonify(result)
 
 @assets_purchase_page_bp.route("/logistics/newpurchaseordersave", methods=["POST"])
