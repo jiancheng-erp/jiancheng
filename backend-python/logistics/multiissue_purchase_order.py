@@ -5,6 +5,13 @@ from models import *
 from constants import SHOESIZERANGE
 from api_utility import randomIdGenerater
 from decimal import Decimal
+import os
+from general_document.purchase_divide_order import generate_excel_file
+from general_document.size_purchase_divide_order import generate_size_excel_file
+from constants import SHOESIZERANGE
+from event_processor import EventProcessor
+from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
+
 
 multiissue_purchase_order_bp = Blueprint("multiissue_purchase_order", __name__)
 
@@ -586,6 +593,13 @@ def submit_total_purchase_order():
         total_bom_id = bom.total_bom_id
         actual_inbound_material_id = purchase_order_item.inbound_material_id
         actual_inbound_unit = purchase_order_item.inbound_unit
+        batch_info_type_name = (
+            db.session.query(BatchInfoType, Order)
+            .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+            .filter(Order.order_id == purchase_order.order_id)
+            .first()
+            .BatchInfoType.batch_info_type_name
+        )
 
         # Create a unique key for the material
         material_key = (
@@ -698,6 +712,139 @@ def submit_total_purchase_order():
     # Add all material storage objects to the session
     db.session.add_all(material_storage_map.values())
     db.session.flush()
+    total_purchase_order_data = {
+        "供应商": None,
+        "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+        "备注": None,
+        "环保要求": None,
+        "发货地址": None,
+        "交货期限": None,
+        "订单信息": None,
+        "seriesData": [],
+    }
+    is_size_based = False  # Flag to determine if it's a size-based order
+    total_purchase_orders = (
+        db.session.query(
+            TotalPurchaseOrder,
+            PurchaseDivideOrder,
+            PurchaseOrderItem,
+            PurchaseOrder,
+            BomItem,
+            Material,
+            Supplier,
+        )
+        .join(
+            PurchaseDivideOrder,
+            TotalPurchaseOrder.total_purchase_order_id
+            == PurchaseDivideOrder.total_purchase_order_id,
+        )
+        .join(
+            PurchaseOrder,
+            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+        )
+        .join(
+            PurchaseOrderItem,
+            PurchaseDivideOrder.purchase_divide_order_id
+            == PurchaseOrderItem.purchase_divide_order_id,
+        )
+        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id)
+        .all()
+    )
+
+    for (
+        total_purchase_order,
+        purchase_divide_order,
+        purchase_order_item,
+        purchase_order,
+        bom_item,
+        material,
+        supplier,
+    ) in total_purchase_orders:
+        if total_purchase_order_data["供应商"] is None:
+            total_purchase_order_data["供应商"] = supplier.supplier_name
+            total_purchase_order_data["备注"] = total_purchase_order.total_purchase_order_remark
+            total_purchase_order_data["环保要求"] = total_purchase_order.total_purchase_order_environmental_request
+            total_purchase_order_data["发货地址"] = total_purchase_order.shipment_address
+            total_purchase_order_data["交货期限"] = total_purchase_order.shipment_deadline
+            total_purchase_order_data["订单信息"] = f"{total_purchase_order.total_purchase_order_rid}"
+
+        if purchase_divide_order.purchase_divide_order_type == "S":
+            is_size_based = True
+            batch_info_type = (
+                db.session.query(BatchInfoType, Order)
+                .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+                .filter(Order.order_id == purchase_order.order_id)
+                .first()
+            )
+            shoe_size_list = [
+                {
+                    i: getattr(batch_info_type.BatchInfoType, f"size_{i}_name")
+                }
+                for i in SHOESIZERANGE
+                if getattr(batch_info_type.BatchInfoType, f"size_{i}_name")
+            ]
+
+            obj = {
+                "物品名称": (
+                    f"{material.material_name} "
+                    f"{bom_item.material_model or ''} "
+                    f"{bom_item.material_specification or ''} "
+                    f"{bom_item.bom_item_color or ''}"
+                ).strip(),
+                "备注": bom_item.remark,
+            }
+            for size_dic in shoe_size_list:
+                for size, size_name in size_dic.items():
+                    obj[size_name] = getattr(
+                        purchase_order_item, f"size_{size}_purchase_amount", 0
+                    )
+            total_purchase_order_data["seriesData"].append(obj)
+        else:
+            # Normal total purchase order data
+            total_purchase_order_data["seriesData"].append(
+                {
+                    "物品名称": (
+                        f"{material.material_name} "
+                        f"{bom_item.material_model or ''} "
+                        f"{bom_item.material_specification or ''} "
+                        f"{bom_item.bom_item_color or ''}"
+                    ).strip(),
+                    "数量": purchase_order_item.purchase_amount,
+                    "单位": material.material_unit,
+                    "备注": bom_item.remark,
+                    "用途说明": "",
+                }
+            )
+
+    # Consolidate quantities for normal orders
+    if not is_size_based:
+        consolidated_series_data = {}
+        for item in total_purchase_order_data["seriesData"]:
+            key = (item["物品名称"], item["单位"])
+            if key not in consolidated_series_data:
+                consolidated_series_data[key] = {
+                    "物品名称": item["物品名称"],
+                    "数量": item["数量"],
+                    "单位": item["单位"],
+                    "备注": item["备注"],
+                    "用途说明": item["用途说明"],
+                }
+            else:
+                consolidated_series_data[key]["数量"] += item["数量"]
+        total_purchase_order_data["seriesData"] = list(consolidated_series_data.values())
+    
+    template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
+    size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
+    output_path = os.path.join(FILE_STORAGE_PATH, '批量采购订单' , f"{total_purchase_order_data['订单信息']}.xlsx")
+
+    # Choose the correct generation function
+    if is_size_based:
+        generate_size_excel_file(size_template_path, output_path, total_purchase_order_data)
+    else:
+        generate_excel_file(template_path, output_path, total_purchase_order_data)
     db.session.commit()
 
     return jsonify({"message": "Total purchase order submitted successfully."})

@@ -73,8 +73,7 @@ def get_order_shoe_list():
             bom,
             total_bom,
             purchase_order,
-        ) = entity
-        print(bom.bom_rid, purchase_order.purchase_order_rid)
+        ) = entity  
         status_string = ""
         statuses = (
             db.session.query(OrderShoeStatus, OrderShoeStatusReference)
@@ -114,7 +113,7 @@ def get_order_shoe_list():
                 "currentStatus": current_status,
                 "totalBomId": total_bom.total_bom_rid if total_bom else "未填写",
                 "purchaseOrderId": (
-                    purchase_order.purchase_order_rid if purchase_order.purchase_order_type == 'S' else "未填写"
+                    purchase_order.purchase_order_rid if (purchase_order and purchase_order.purchase_order_type == 'S') else "未填写"
                 ),
                 "status": status_string,
                 "customerId": order_shoe.customer_product_name,
@@ -123,7 +122,7 @@ def get_order_shoe_list():
                 "typeInfos": [],  # Initialize list for type info (colors, etc.)
                 "colorSet": set(),  # Initialize set to track colors and prevent duplicate entries
             }
-        if purchase_order.purchase_order_type == 'S':
+        if (purchase_order and  purchase_order.purchase_order_type == 'S'):
             result_dict[shoe.shoe_rid]["purchaseOrderId"] = purchase_order.purchase_order_rid
             result_dict[shoe.shoe_rid]["currentStatus"] = current_status
         # Check if this color already exists in typeInfos
@@ -493,6 +492,7 @@ def save_purchase():
                         item["sizeInfo"][i]["purchaseAmount"],
                     )
                 setattr(purchase_order_item, "purchase_amount", material_quantity)
+                setattr(purchase_order_item, "approval_amount", approval_quantity)
                 db.session.add(purchase_order_item)
     db.session.commit()
     return jsonify({"status": "success"})
