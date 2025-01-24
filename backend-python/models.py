@@ -847,7 +847,6 @@ class SizeMaterialStorage(db.Model):
     material_storage_status = db.Column(db.SmallInteger, default=0)
     craft_name = db.Column(db.String(200), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
-    total_purchase_order_id = db.Column(db.BigInteger)
 
     def __repr__(self):
         return f"<SizeMaterialStorage {self.size_material_specification}>"
