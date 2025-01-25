@@ -79,7 +79,10 @@ def edit_production_schedule():
 
     entity = (
         db.session.query(OrderShoeStatus)
-        .filter(OrderShoeStatus.current_status == 17)
+        .filter(
+            OrderShoeStatus.current_status == 17,
+            OrderShoeStatus.order_shoe_id == data["orderShoeId"],
+        )
         .first()
     )
     if entity:
@@ -145,14 +148,19 @@ def save_multiple_schedules():
 
 def _create_report_item(report_id, team, shoe_id):
     # load unit price report template
-    template = db.session.query(ReportTemplateDetail).join(
-        UnitPriceReportTemplate,
-        ReportTemplateDetail.report_template_id
-        == UnitPriceReportTemplate.template_id,
-    ).filter(
-        UnitPriceReportTemplate.shoe_id == shoe_id,
-        UnitPriceReportTemplate.team == team,
-    ).all()
+    template = (
+        db.session.query(ReportTemplateDetail)
+        .join(
+            UnitPriceReportTemplate,
+            ReportTemplateDetail.report_template_id
+            == UnitPriceReportTemplate.template_id,
+        )
+        .filter(
+            UnitPriceReportTemplate.shoe_id == shoe_id,
+            UnitPriceReportTemplate.team == team,
+        )
+        .all()
+    )
     if template:
         report_item_list = []
         for row in template:
@@ -175,7 +183,7 @@ def _create_report_item(report_id, team, shoe_id):
 def start_production():
     data = request.get_json()
     order_shoe_id = data["orderShoeId"]
-    order_shoe_type_ids = (
+    query = (
         db.session.query(
             func.sum(OrderShoeBatchInfo.total_amount), OrderShoeType.order_shoe_type_id
         )
@@ -185,23 +193,32 @@ def start_production():
         )
         .filter(OrderShoeType.order_shoe_id == order_shoe_id)
         .group_by(OrderShoeType.order_shoe_type_id)
-        .all()
     )
+    for shoe_size in SHOESIZERANGE:
+        column = OrderShoeBatchInfo.__table__.columns.get(f"size_{shoe_size}_amount")
+        query = query.add_columns(
+            func.sum(column).label(f"size_{shoe_size}_amount")
+        )
+    order_shoe_type_ids = query.all()
     arr = []
     for row in order_shoe_type_ids:
-        color_total_amount, id = row
+        color_total_amount, id, *size_amount = row
         semi_entity = SemifinishedShoeStorage(
             order_shoe_type_id=id,
             semifinished_status=0,
             semifinished_object=1,
             semifinished_estimated_amount=color_total_amount,
         )
+        for i, amount in enumerate(size_amount):
+            setattr(semi_entity, f"size_{SHOESIZERANGE[i]}_estimated_amount", amount)
         arr.append(semi_entity)
         finished_entity = FinishedShoeStorage(
             order_shoe_type_id=id,
             finished_status=0,
             finished_estimated_amount=color_total_amount,
         )
+        for i, amount in enumerate(size_amount):
+            setattr(finished_entity, f"size_{SHOESIZERANGE[i]}_estimated_amount", amount)
         arr.append(finished_entity)
     db.session.add_all(arr)
 
@@ -240,10 +257,8 @@ def start_production():
             report1 = UnitPriceReport(
                 order_shoe_id=order_shoe_id, team="裁断", status=0
             )
-            
             db.session.add(report1)
             db.session.flush()
-            print(report1.report_id)
             _create_report_item(report1.report_id, "裁断", shoe_id)
 
         elif team == 1 and amount != 0:

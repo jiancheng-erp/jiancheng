@@ -6,7 +6,7 @@
                 <el-button v-if="isMultipleSelection" @click="openMultipleInboundDialog">
                     入库
                 </el-button>
-                <el-button v-if="isMultipleSelection" @click="openFinishOutboundDialog">
+                <el-button v-if="isMultipleSelection" @click="openFinishInboundDialog">
                     完成入库
                 </el-button>
                 <el-button @click="toggleSelectionMode">
@@ -352,7 +352,7 @@ export default {
             this.inboundForm.groupedSelectedRows = groupedData;
             console.log(this.inboundForm.groupedSelectedRows)
         },
-        openFinishOutboundDialog() {
+        openFinishInboundDialog() {
             if (this.selectedRows.length == 0) {
                 ElMessage.error("未选择材料")
                 return

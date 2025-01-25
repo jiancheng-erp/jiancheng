@@ -241,7 +241,6 @@
                 </div>
                 <template #footer>
                     <span>
-                        <span>{{ userRole }}</span>
                         <el-button @click="isFinalBOM = false">取消</el-button>
                         <el-button v-if="isEditor()" type="primary" @click="issueBOMs(selectedShoe)"
                             >下发选定工艺单（生产指令单）</el-button
@@ -1994,7 +1993,8 @@ export default {
             this.supplierNameOptions = response.data
         },
         async getAllMaterialName() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
+            const params = {department: 0}
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {params})
             this.materialNameOptions = response.data
         },
         async pasteClipboardImage(target) {

@@ -106,7 +106,7 @@ def get_material_type_and_name():
 @assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
 def get_all_material_name():
     # Query for all material names and their types
-    material_department = request.args.get("department")
+    material_department = request.args.get("department", 0)
     material_name_list = db.session.query(Material).filter(Material.material_usage_department == material_department).all()
     
     # Use a dictionary to store unique material names
@@ -130,7 +130,6 @@ def new_purchase_order_save():
     try:
         sub_purchase_order_id = request.json.get("purchaseOrderRId")
         material_list = request.json.get("data")
-        print(material_list)
         purchase_order_type = request.json.get("purchaseOrderType")
         shoe_batch_type = request.json.get("batchInfoType")
         order_id = request.json.get("orderId")
@@ -139,7 +138,6 @@ def new_purchase_order_save():
         purchase_order_issue_date = datetime.datetime.now().strftime("%Y%m%d")
         purchase_order_status = "0"
         material_list_sorted = sorted(material_list, key=itemgetter("supplierName"))
-        print(shoe_batch_type)
 
         # Group the list by 'supplierName'
         grouped_materials = {}
@@ -147,7 +145,6 @@ def new_purchase_order_save():
             material_list_sorted, key=itemgetter("supplierName")
         ):
             grouped_materials[supplier_name] = list(items)
-        print(grouped_materials)
 
         purchase_order = PurchaseOrder(
             purchase_order_rid=purchase_order_rid,
