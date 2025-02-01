@@ -45,6 +45,9 @@
             <el-menu-item index="7" @click="handleMenuClick(7)">
               <span>外包厂家</span>
             </el-menu-item>
+            <el-menu-item index="10" @click="handleMenuClick(10)">
+              <span>个人信息</span>
+            </el-menu-item>
             <el-menu-item index="8" @click="logout()">
               <span>退出系统</span>
             </el-menu-item>
@@ -69,6 +72,7 @@ import ProductionSchedulingDialogue from '../components/ProductionSchedulingDial
 import ApprovalPage from '../components/ApprovalPage.vue'
 import ProductionManagement from '../components/ProductionManagement.vue'
 import OrderProgress from '../components/OrderProgress.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import axios from 'axios'
@@ -90,6 +94,7 @@ export default {
     OrderProgress,
     OutsourceFactoryInfo,
     ProductionReport,
+    PersonalInfo
   },
   data() {
     return {
@@ -124,6 +129,9 @@ export default {
           break
         case 7:
           this.currentComponent = 'OutsourceFactoryInfo'
+          break
+        case 10:
+          this.currentComponent = 'PersonalInfo'
           break
         case 9:
           this.currentComponent = 'ProductionReport'

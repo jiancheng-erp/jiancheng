@@ -21,6 +21,7 @@
         <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
         <el-table-column label="操作" width="200">
             <template #default="scope">
+                <el-button type="primary" size="small" @click="viewStock(scope.row)">查看库存</el-button>
                 <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
             </template>
         </el-table-column>
@@ -61,12 +62,28 @@
             <el-table-column prop="subsequentStock" label="出库后库存"></el-table-column>
             <el-table-column label="出库至">
                 <template #default="scope">
-                    <spav v-if="scope.row.productionType == 0">{{ scope.row.picker }}</spav>
-                    <spav v-else>{{ scope.row.destination }}</spav>
+                    <span v-if="scope.row.productionType == 0">{{ scope.row.picker }}</span>
+                    <span v-else>{{ scope.row.destination }}</span>
                 </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注"></el-table-column>
         </el-table>
+    </el-dialog>
+
+    <el-dialog :title="`订单${currentRow.orderRId}/鞋型${currentRow.shoeRId}库存`" v-model="isOpenQuantityDialogVisible" width="60%">
+        <el-form>
+            <el-form-item>
+                <el-table :data="filteredData" border stripe>
+                    <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
+                    <el-table-column prop="currentQuantity" label="库存"></el-table-column>
+                </el-table>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <el-button type="primary" @click="isOpenQuantityDialogVisible = false">
+                确认
+            </el-button>
+        </template>
     </el-dialog>
 </template>
 <script>
@@ -84,13 +101,32 @@ export default {
             mapping: {
                 0: "自产",
                 1: "外包"
-            }
+            },
+            isOpenQuantityDialogVisible: false,
+            shoeStockTable: [],
+            currentRow: {}
         }
+    },
+    computed: {
+        filteredData() {
+            return this.shoeStockTable.filter((row) => {
+                return (
+                    row.predictQuantity > 0
+                );
+            });
+        },
     },
     mounted() {
         this.getTableData()
     },
     methods: {
+        async viewStock(row) {
+            let params = { "orderId": row.orderId, "storageId": row.storageId }
+            let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoesizecolumns`, { params })
+            this.shoeStockTable = response.data
+            this.currentRow = row
+            this.isOpenQuantityDialogVisible = true
+        },
         handleSizeChange(val) {
             this.pageSize = val
             this.getTableData()

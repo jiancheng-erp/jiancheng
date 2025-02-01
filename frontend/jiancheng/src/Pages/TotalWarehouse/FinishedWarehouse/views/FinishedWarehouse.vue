@@ -16,11 +16,17 @@
                         <el-menu-item index="1" @click="handleMenuClick(1)">
                             <span>成品出/入库</span>
                         </el-menu-item>
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
+                            <span>入\出库单</span>
+                        </el-menu-item>
+                        <el-menu-item index="3" @click="handleMenuClick(3)">
+                            <span>库存</span>
+                        </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>生产动态明细</span>
                         </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>出/入库历史</span>
+                        <el-menu-item index="6" @click="handleMenuClick(6)">
+                            <span>个人信息</span>
                         </el-menu-item>
                         <el-menu-item index="4" @click="logout">
                             <span>退出系统</span>
@@ -44,12 +50,16 @@ import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
+import InOutboundRecords from '../components/InOutboundRecords.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
 export default {
     components: {
         AllHeader,
         FinishedInboundOutbound,
         FinishedInOutHistory,
-        OrderProgress
+        OrderProgress,
+        InOutboundRecords,
+        PersonalInfo
     },
     data() {
         return {
@@ -78,6 +88,12 @@ export default {
                     break
                 case 3:
                     this.currentComponent = 'FinishedInOutHistory'
+                    break
+                case 5:
+                    this.currentComponent = 'InOutboundRecords'
+                    break
+                case 6:
+                    this.currentComponent = 'PersonalInfo'
                     break
             }
         }

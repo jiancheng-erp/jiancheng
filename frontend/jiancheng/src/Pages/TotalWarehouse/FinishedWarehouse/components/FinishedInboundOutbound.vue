@@ -1,41 +1,45 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">成品出/入库</el-col>
-    </el-row>
-    <el-row :gutter="20">
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            订单号筛选：
             <el-input v-model="orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="getTableData()"
                 @clear="getTableData" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
-            鞋型号筛选：
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
             <el-input v-model="shoeNumberSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getTableData()"
                 @clear="getTableData" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="customerNameSearch" placeholder="请输入客户号" clearable @keypress.enter="getTableData()"
+                @clear="getTableData" />
+        </el-col>
+    </el-row>
+    <el-row :gutter="20">
+        <el-col :span="8" :offset="0">
+            <el-button-group>
+                <el-button v-if="isMultipleSelection" @click="openOperationDialog(0)">
+                    入库
+                </el-button>
+                <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)">
+                    出库
+                </el-button>
+                <el-button @click="toggleSelectionMode">
+                    {{ isMultipleSelection ? "退出" : "选择鞋包" }}
+                </el-button>
+            </el-button-group>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="tableData" border stripe height="400">
+            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange">
+                <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                <el-table-column prop="customerName" label="客户号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户型号"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
-                <el-table-column prop="inboundAmount" label="鞋型应入库数量"></el-table-column>
-                <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
-                <el-table-column prop="statusName" label="状态"></el-table-column>
-                <el-table-column label="操作" width="300">
-                    <template #default="scope">
-                        <el-button-group>
-                            <el-button type="primary" size="small" @click="openInboundDialog(scope.row)">入库</el-button>
-                            <el-button type="success" size="small" @click="openOutboundDialog(scope.row)">出库</el-button>
-                            <el-button v-if="scope.row.statusName === '未完成入库'" type="warning" size="small"
-                                @click="finishInbound(scope.row)">完成入库</el-button>
-                            <el-button v-if="scope.row.statusName === '已完成入库'" type="warning" size="small"
-                                @click="finishOutbound(scope.row)">完成出库</el-button>
-                        </el-button-group>
-                    </template>
-                </el-table-column>
+                <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
+                <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
+                <el-table-column prop="currentAmount" label="成品库存"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
@@ -46,78 +50,74 @@
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
-    <el-dialog title="成品入库" v-model="inboundDialogVisible" width="35%">
-        <el-row :gutter="20">
-            <el-col :span="24" :offset="0">
-                <el-form :model="inboundForm" label-position="right" :rules="rules" ref="inboundForm"
-                    label-width="100px">
-                    <el-form-item prop="inboundDate" label="入库时间">
-                        <el-date-picker v-model="inboundForm.inboundDate" type="datetime" placeholder="选择日期时间"
-                            style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
+    <el-dialog :title="operationLabels.dialogTitle[currentOperation]" v-model="isMultiInboundDialogVisible" width="70%">
+        <el-tabs v-model="activeTab">
+            <el-tab-pane v-for="(group, index) in operationForm.groupedSelectedRows" :key="group.orderShoeId"
+                :label="`订单鞋型 ${group.items[0].orderRId} - ${group.items[0].shoeRId}`" :name="group.orderShoeId">
+                <el-form :model="group" :rules="rules" :ref="'operationForm' + index" :key="index">
+                    <el-form-item prop="timestamp" :label="operationLabels.timestamp[currentOperation]" required>
+                        <el-date-picker v-model="group.timestamp" type="datetime" placeholder="选择日期时间"
+                            style="width: 50%" value-format="YYYY-MM-DD HH:mm:ss" :default-value="new Date()"
+                            @change="syncTimestamp(group)">
+                        </el-date-picker>
                     </el-form-item>
-                    <el-form-item prop="actualInboundAmount" label="入库数量">
-                        <el-input-number v-model="inboundForm.actualInboundAmount" :min="0"></el-input-number>
+                    <el-form-item prop="items" label="鞋包" required>
+                        <el-table :data="group.items" style="width: 100%" border stripe>
+                            <el-table-column prop="colorName" label="颜色" />
+                            <el-table-column prop="operationQuantity" label="总数量" />
+                            <el-table-column :label="operationLabels.operationAmount[currentOperation]">
+                                <template #default="scope">
+                                    <el-button type="primary" @click="openQuantityDialog(scope.row)">打开</el-button>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="remark" label="备注">
+                                <template #default="scope">
+                                    <el-input v-model="scope.row.remark" :maxlength="40" show-word-limit size="small">
+                                    </el-input>
+                                </template>
+                            </el-table-column>
+                        </el-table>
                     </el-form-item>
-                    <el-form-item prop="inboundType" label="入库类型">
-                        <el-radio-group v-model="inboundForm.inboundType">
-                            <el-radio :value="0">自产</el-radio>
-                            <el-radio :value="1">外包</el-radio>
-                        </el-radio-group>
+                    <el-form-item v-if="currentOperation == 1" prop="picker" label="领料工组">
+                        <el-select v-model="group.picker" placeholder="请选择领料工组" style="width: 50%">
+                            <el-option v-for="item in pickerOptions" :key="item.productionLineName" :label="item.productionLineName"
+                                :value="item.productionLineName" />
+                        </el-select>
                     </el-form-item>
-                    <el-table v-if="inboundForm.inboundType == 1" :data="inboundForm.outsourceInfo" style="width: 100%">
-                        <el-table-column width="55">
-                            <template #default="scope">
-                                <el-radio v-model="inboundForm.selectedOutsource" :value="scope.row.outsourceInfoId" />
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="outsourceFactory.value" label="工厂名称" />
-                        <el-table-column prop="outsourceAmount" label="外包数量" />
-                        <el-table-column prop="outsourceType" label="外包类型" />
-                        <el-table-column label="操作">
-                            <template #default="scope">
-                                <el-button :disabled="inboundForm.selectedOutsource !== scope.row.outsourceInfoId"
-                                    type="warning" size="small" @click="finishOutsourceInbound(scope.row)">
-                                    完成外包入库
-                                </el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
                 </el-form>
-            </el-col>
-        </el-row>
+            </el-tab-pane>
+        </el-tabs>
         <template #footer>
             <span>
-                <el-button @click="inboundDialogVisible = false">返回</el-button>
-                <el-button type="primary" @click="submitInboundForm">入库</el-button>
+                <el-button @click="isMultiInboundDialogVisible = false">返回</el-button>
+                <el-button type="primary" @click="submitOperationForm">{{ currentOperation == 0 ? "入库" : "出库" }}</el-button>
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="成品出库" v-model="outboundDialogVisible" width="30%">
-        <el-row :gutter="20">
-            <el-col :span="24" :offset="0">
-                <el-form label-position="right" label-width="100px">
-                    <el-form-item label="出库时间">
-                        <el-date-picker v-model="outboundForm.outboundDate" type="datetime" placeholder="选择日期时间"
-                            style="width: 100%" value-format="YYYY-MM-DD HH:mm:ss" />
-                    </el-form-item>
-                    <el-form-item label="" prop="">
-                        <el-text>成品最迟发货日期：{{ currentRow.endDate }}</el-text>
-                    </el-form-item>
 
-                    <el-form-item label="发货地址">
-                        <el-input v-model="outboundForm.address" placeholder="请输入发货地址"></el-input>
-                    </el-form-item>
-                    <el-form-item label="出货选项">
-                        <el-checkbox v-model="outboundForm.isOutboundAll" label="出货该订单所有鞋型" size="large" />
-                    </el-form-item>
-                </el-form>
-            </el-col>
-        </el-row>
+    <el-dialog title="数量输入框" v-model="isOpenQuantityDialogVisible" width="60%">
+        <el-form>
+            <el-form-item>
+                <el-table :data="filteredData" border stripe>
+                    <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
+                    <el-table-column prop="predictQuantity" label="应入库数量"></el-table-column>
+                    <el-table-column prop="actualQuantity" label="实入库数量"></el-table-column>
+                    <el-table-column prop="currentQuantity" label="库存"></el-table-column>
+                    <el-table-column :label="operationLabels.operationAmount[currentOperation]">
+                        <template #default="scope">
+                            <el-input-number v-if="currentOperation == 0" v-model="scope.row.operationQuantity" size="small" :min="0"
+                                @change="updateTotalShoes"></el-input-number>
+                            <el-input-number v-if="currentOperation == 1" v-model="scope.row.operationQuantity" size="small" :min="0"
+                                :max="scope.row.currentQuantity" @change="updateTotalShoes"></el-input-number>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-form-item>
+        </el-form>
         <template #footer>
-            <span>
-                <el-button @click="outboundDialogVisible = false">返回</el-button>
-                <el-button type="primary" @click="submitOutboundForm">出库</el-button>
-            </span>
+            <el-button type="primary" @click="isOpenQuantityDialogVisible = false">
+                确认
+            </el-button>
         </template>
     </el-dialog>
 </template>
@@ -127,153 +127,254 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 export default {
     data() {
         return {
-            inboundForm: {
-                inboundDate: '',
-                actualInboundAmount: 0,
-                outsourceInfo: [],
+            formItemTemplate: {
+                inboundDate: null,
+                inboundAmount: 0,
+                operationPurpose: 0,
                 selectedOutsource: null,
-                inboundType: 0
+                outsourceInfo: [],
+                picker: null,
+            },
+            operationForm: {
+                groupedSelectedRows: [],
             },
             currentPage: 1,
             pageSize: 10,
-            outboundForm: {
-                outboundDate: '',
-                outboundType: '1',
-                section: '',
-                receiver: '',
-                deadlineDate: '',
-                address: '',
-                isOutboundAll: false
-            },
-            inboundDialogVisible: false,
-            outboundDialogVisible: false,
+            semiInboundDialogVisible: false,
+            semiOutboundDialogVisible: false,
             tableData: [],
             totalRows: 0,
-            currentRow: {},
             orderNumberSearch: '',
             shoeNumberSearch: '',
+            customerNameSearch: '',
+            currentRow: {},
             rules: {
-                inboundDate: [
+                timestamp: [
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ],
-                actualInboundAmount: [
+                items: [
                     {
                         required: true,
                         validator: (rule, value, callback) => {
-                            if (value === 0 || !value) {
-                                callback(new Error('入库数量不能为0'));
+                            let flag = true;
+                            for (let row of value) {
+                                if (row.operationQuantity == 0) {
+                                    flag = false;
+                                    break;
+                                }
+                            }
+                            if (!flag) {
+                                callback(new Error("入库数量不能零"));
                             } else {
                                 callback();
                             }
                         },
-                        trigger: 'change'
-                    }
+                        trigger: "change",
+                    },
                 ],
-                inboundType: [
+                operationPurpose: [
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ],
             },
+            isMultipleSelection: false,
+            selectedRows: [],
+            isMultiInboundDialogVisible: false,
+            activeTab: null,
+            currentQuantityRow: null,
+            isOpenQuantityDialogVisible: false,
+            // 0: inbound, 1: outbound
+            currentOperation: 0,
+            operationLabels: {
+                "dialogTitle": ["成品入库", "成品出库"],
+                "timestamp": ["入库日期", "出库日期"],
+                "operationAmount": ["入库数量", "出库数量"],
+            },
+            pickerOptions: []
         }
     },
+    computed: {
+        filteredData() {
+            return this.currentQuantityRow.shoesInboundTable.filter((row) => {
+                return (
+                    row.predictQuantity > 0
+                );
+            });
+        },
+    },
     mounted() {
+        this.getMoldingLines()
         this.getTableData()
     },
     methods: {
+        async getMoldingLines() {
+            let response = await axios.get(`${this.$apiBaseUrl}/production/getmoldinglines`)
+            this.pickerOptions = response.data
+        },
+        syncTimestamp(source_group) {
+            return this.operationForm.groupedSelectedRows.map(group => {
+                group.timestamp = source_group.timestamp
+            })
+        },
+        updateTotalShoes() {
+            this.currentQuantityRow.shoesInboundTable.forEach((element, index) => {
+                this.currentQuantityRow[`amount${index}`] = element.operationQuantity
+            })
+            this.currentQuantityRow.operationQuantity = this.filteredData.reduce((acc, row) => {
+                return acc + row.operationQuantity;
+            }, 0);
+        },
+        openQuantityDialog(row) {
+            this.currentQuantityRow = row
+            this.isOpenQuantityDialogVisible = true
+        },
+        toggleSelectionMode() {
+            this.isMultipleSelection = !this.isMultipleSelection;
+        },
+        handleSelectionChange(selection) {
+            this.selectedRows = selection;
+        },
+        openOperationDialog(operation) {
+            if (this.selectedRows.length == 0) {
+                ElMessage.error("未选择材料")
+                return
+            }
+            this.currentOperation = operation
+            this.groupSelectedRows();
+            this.isMultiInboundDialogVisible = true
+        },
+        async groupSelectedRows() {
+            let groupedData = []
+            for (let item of this.selectedRows) {
+                let newItem = {}
+                let recordItemObj = JSON.parse(JSON.stringify(this.formItemTemplate))
+                newItem = { ...item, operationQuantity: 0, remark: "", shoesInboundTable: [] };
+                let shoeSizeColumns = []
+                let params = { "orderId": item.orderId, "storageId": item.storageId, "storageType": 1 }
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoesizecolumns`, { params })
+                newItem["shoesInboundTable"] = response.data
+                newItem["shoesInboundTable"].forEach(row => {
+                    row.operationQuantity = 0
+                })
+                newItem.shoesInboundTable.forEach((element, index) => {
+                    newItem[`amount${index}`] = element.operationQuantity
+                })
+                // insert shoe size columns into current row
+                newItem.shoesInboundTable.forEach((element, index) => {
+                    // for display
+                    if (element.predictQuantity > 0) {
+                        shoeSizeColumns.push({
+                            "prop": `amount${index}`,
+                            "label": element.shoeSizeName
+                        })
+                    }
+                })
+                const group = groupedData.find(g => g.orderShoeId === item.orderShoeId);
+                if (group) {
+                    group.items.push(newItem);
+                } else {
+                    groupedData.push({
+                        orderShoeId: item.orderShoeId,
+                        shoeSizeColumns: shoeSizeColumns,
+                        items: [newItem],
+                        ...recordItemObj
+                    });
+                }
+            }
+            this.operationForm.groupedSelectedRows = groupedData;
+            this.activeTab = groupedData[0].orderShoeId
+            console.log(this.operationForm.groupedSelectedRows)
+        },
         async getTableData() {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
                 "orderRId": this.orderNumberSearch,
                 "shoeRId": this.shoeNumberSearch,
-                "opType": 1
+                "customerName": this.customerNameSearch,
+                "showAll": 1,
+                "status": this.statusSearch
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getfinishedinoutoverview`, { params })
             this.tableData = response.data.result
             this.totalRows = response.data.total
         },
-        async submitInboundForm() {
-            this.$refs.inboundForm.validate(async (valid) => {
-                if (valid) {
-                    let data = {
-                        "orderId": this.currentRow.orderId,
-                        "orderShoeId": this.currentRow.orderShoeId,
-                        "storageId": this.currentRow.storageId,
-                        "inboundDate": this.inboundForm.inboundDate,
-                        "amount": this.inboundForm.actualInboundAmount
+        async submitOperationForm() {
+            let isValid = true;
+            const validationPromises = this.operationForm.groupedSelectedRows.map((group, index) => {
+                return new Promise((resolve) => {
+                    this.$refs[`operationForm${index}`][0].validate((valid) => {
+                        if (!valid) {
+                            isValid = false;
+                        }
+                        resolve();
+                    });
+                });
+            });
+            Promise.all(validationPromises).then(async () => {
+                if (isValid) {
+                    let data = []
+                    for (let row of this.operationForm.groupedSelectedRows) {
+                        let obj = {
+                            "orderId": row.orderId,
+                            "orderShoeId": row.orderShoeId,
+                            "outsourceInfoId": row.selectedOutsource,
+                            "timestamp": row.timestamp,
+                            "operationPurpose": row.operationPurpose,
+                            "picker": row.picker,
+                            "items": []
+                        }
+                        for (let item of row.items) {
+                            let amountList = []
+                            for (let i = 0; i < item.shoesInboundTable.length; i++) {
+                                amountList.push(item[`amount${i}`])
+                            }
+                            let detail = {
+                                "storageId": item.storageId,
+                                "operationQuantity": item.operationQuantity,
+                                "remark": item.remark,
+                                "amountList": amountList
+                            }
+                            obj.items.push(detail)
+                        }
+                        data.push(obj)
                     }
-                    await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundfinished`, data)
                     try {
-                        ElMessage.success("入库成功")
+                        console.log(data)
+                        if (this.currentOperation == 0) {
+                            await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundfinished`, data)
+                            ElMessage.success("入库成功")
+                        } else {
+                            await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundfinished`, data)
+                            ElMessage.success("出库成功")
+                        }
                     }
                     catch (error) {
                         console.log(error)
-                        ElMessage.error("入库失败")
+                        ElMessage.error("操作异常")
                     }
-                    this.inboundDialogVisible = false
+                    // this.semiInboundDialogVisible = false
                     this.getTableData()
-                }
-                else {
+                } else {
                     console.log("Form has validation errors.");
                 }
-            })
-
-        },
-        async submitOutboundForm() {
-            let data = {
-                "orderId": this.currentRow.orderId,
-                "orderShoeId": this.currentRow.orderShoeId,
-                "storageId": this.currentRow.storageId,
-                "outboundDate": this.outboundForm.outboundDate,
-                "outboundAddress": this.outboundForm.address,
-                "isOutboundAll": this.outboundForm.isOutboundAll
-            }
-            const response = await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundfinished`, data)
-            if (response.status == 200) {
-                ElMessage.success("出库成功")
-            }
-            else {
-                ElMessage.error("出库失败")
-            }
-            this.outboundDialogVisible = false
-            this.getTableData()
+            });
         },
         handleSizeChange(val) {
             this.pageSize = val
             this.getTableData()
         },
         handlePageChange(val) {
-            this.page = val
+            this.currentPage = val
             this.getTableData()
         },
-        async getOutsourceInfoForInbound() {
-            let params = { "orderShoeId": this.currentRow.orderShoeId }
-            let response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getordershoeoutsourceinfo`, { params })
-            this.inboundForm.outsourceInfo = []
-            response.data.forEach(element => {
-                let length = element.outsourceType.length
-                if (element.outsourceStatus == 5 || element.outsourceStatus == 6) {
-                    if (element.outsourceType[length - 1] === '成型') {
-                        this.inboundForm.outsourceInfo.push(element)
-                    }
-                }
-            });
-            if (this.inboundForm.outsourceInfo.length > 0) {
-                this.inboundForm.selectedOutsource = this.inboundForm.outsourceInfo[0].outsourceInfoId
-            }
-        },
-        async openInboundDialog(row) {
-            this.currentRow = row
-            await this.getOutsourceInfoForInbound()
-            this.inboundDialogVisible = true
-        },
-        async finishInbound(row) {
-            ElMessageBox.alert('该操作完成对此鞋型成品入库，是否继续？', '警告', {
+        finishInbound(row) {
+            ElMessageBox.alert('提前完成半成品入库，是否继续？', '警告', {
                 confirmButtonText: '确认',
                 showCancelButton: true,
                 cancelButtonText: '取消'
             }).then(async () => {
                 const data = { "storageId": row.storageId }
-                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/completeinboundfinished`, data)
+                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/finishinboundsemifinished`, data)
                 try {
                     ElMessage.success("操作成功")
                 }
@@ -284,26 +385,14 @@ export default {
                 this.getTableData()
             })
         },
-        async finishOutsourceInbound(row) {
-            try {
-                let data = { "outsourceInfoId": row.outsourceInfoId }
-                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/finishoutsourceinbound`, data)
-                ElMessage.success("外包入库成功")
-                await this.getOutsourceInfoForInbound()
-            }
-            catch (error) {
-                console.log(error)
-                ElMessage.error("外包入库失败")
-            }
-        },
-        async finishOutbound(row) {
-            ElMessageBox.alert('该操作完成对此鞋型成品出库，是否继续？', '警告', {
+        finishOutbound(row) {
+            ElMessageBox.alert('提前完成半成品出库，是否继续？', '警告', {
                 confirmButtonText: '确认',
                 showCancelButton: true,
                 cancelButtonText: '取消'
             }).then(async () => {
                 const data = { "storageId": row.storageId }
-                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/completeoutboundfinished`, data)
+                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/finishoutboundsemifinished`, data)
                 try {
                     ElMessage.success("操作成功")
                 }
@@ -313,10 +402,6 @@ export default {
                 }
                 this.getTableData()
             })
-        },
-        openOutboundDialog(row) {
-            this.outboundDialogVisible = true
-            this.currentRow = row
         }
     }
 }

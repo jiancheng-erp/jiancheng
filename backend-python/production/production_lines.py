@@ -69,3 +69,20 @@ def delete_production_line():
     entity.is_deleted = True
     db.session.commit()
     return jsonify({"message": "success"})
+
+
+@production_lines_bp.route("/production/getmoldinglines", methods=["GET"])
+def get_molding_lines():
+    entity = (
+        db.session.query(ProductionLine)
+        .filter(ProductionLine.production_team == "成型")
+        .all()
+    )
+    result = []
+    for row in entity:
+        obj = {
+            "productionLineId": row.production_line_id,
+            "productionLineName": row.production_line_name,
+        }
+        result.append(obj)
+    return result

@@ -979,7 +979,6 @@ def outbound_material():
 
 @material_storage_bp.route("/warehouse/getmaterialinboundrecords", methods=["GET"])
 def get_material_inbound_records():
-    bound_record_rid = request.args.get("recordRId")
     start_date_search = request.args.get("startDate")
     end_date_search = request.args.get("endDate")
     page = int(request.args.get("page", 1))
@@ -1069,9 +1068,6 @@ def get_material_inbound_records():
         .distinct(InboundRecord.inbound_batch_id)
     )
 
-    if bound_record_rid:
-        query1 = query1.filter(InboundRecord.inbound_rid == bound_record_rid)
-        query2 = query1.filter(InboundRecord.inbound_rid == bound_record_rid)
     if start_date_search:
         query1 = query1.filter(InboundRecord.inbound_datetime >= start_date_search)
         query2 = query2.filter(InboundRecord.inbound_datetime >= start_date_search)
@@ -1222,7 +1218,6 @@ def get_inbound_record_by_batch_id():
 
 @material_storage_bp.route("/warehouse/getmaterialoutboundrecords", methods=["GET"])
 def get_material_outbound_records():
-    bound_record_rid = request.args.get("recordRId")
     start_date_search = request.args.get("startDate")
     end_date_search = request.args.get("endDate")
     page = int(request.args.get("page", 1))
@@ -1275,8 +1270,6 @@ def get_material_outbound_records():
         .distinct(OutboundRecord.outbound_batch_id)
     )
 
-    if bound_record_rid:
-        query = query.filter(OutboundRecord.outbound_rid == bound_record_rid)
     if start_date_search and end_date_search:
         try:
             start_date_search = datetime.strptime(start_date_search, "%Y-%m-%d")
@@ -1421,7 +1414,6 @@ def get_outbound_record_by_batch_id():
         )
         if outbound_rid and outbound_rid.find("T") != -1:
             batch_info_type_id = outbound_rid[outbound_rid.find("T")+1:]
-            print(batch_info_type_id)
             size_name_response = db.session.query(BatchInfoType).filter(BatchInfoType.batch_info_type_id == batch_info_type_id).first()
             for i in range(len(SHOESIZERANGE)):
                 shoe_size = SHOESIZERANGE[i]
@@ -1436,12 +1428,12 @@ def get_outbound_record_by_batch_id():
         result["material"] = add_response_to_result(response)
     else:
         result["sizeMaterial"] = add_response_to_result(response)
-        resulted_filted_columns = []
+        resulted_filtered_columns = []
         for i in range(len(shoe_size_columns)):
-            resulted_filted_columns.append(
+            resulted_filtered_columns.append(
                 {"label": shoe_size_columns[i], "prop": f"amount{i}"}
             )
-        result["shoeSizeColumns"] = resulted_filted_columns
+        result["shoeSizeColumns"] = resulted_filtered_columns
     print(result)
     return result
 

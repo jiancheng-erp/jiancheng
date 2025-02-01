@@ -28,6 +28,9 @@
             <el-menu-item index="6" @click="handleMenuClick(6)">
               <span>工价审批</span>
             </el-menu-item>
+            <el-menu-item index="8" @click="handleMenuClick(8)">
+              <span>个人信息</span>
+            </el-menu-item>
             <el-menu-item index="7" @click="logout">
               <span>退出系统</span>
             </el-menu-item>
@@ -50,6 +53,7 @@ import LogisticInfo from '../components/LogisticInfo.vue'
 import OutSourceApproval from '../components/OutSourceApproval.vue'
 import WagesApproval from '../components/WagesApproval.vue'
 import OrderProgress from '../components/OrderProgress.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 export default {
@@ -61,7 +65,8 @@ export default {
     LogisticInfo,
     OutSourceApproval,
     WagesApproval,
-    OrderProgress
+    OrderProgress,
+    PersonalInfo
   },
   data() {
     return {
@@ -96,6 +101,10 @@ export default {
           break
         case 6:
           this.currentComponent = 'WagesApproval'
+          break
+        case 8:
+          this.currentComponent = 'PersonalInfo'
+          break
       }
     }
   }
