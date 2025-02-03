@@ -23,6 +23,7 @@ import History from '../components/History.vue'
 import Dashboard from '../components/Dashboard.vue'
 import ProcedureManagement from '../components/ProcedureManagement.vue'
 import OrderProgress from '../../ProductionSharedPages/OrderProgress.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
 import axios from 'axios'
 import { getCurrentInstance, ref } from 'vue'
 const components = {
@@ -32,7 +33,8 @@ const components = {
     AmountProduced,
     History,
     ProcedureManagement,
-    OrderProgress
+    OrderProgress,
+    PersonalInfo
 }
 const currentTab = ref('LaborPriceReport')
 const optionFn = (option) => {

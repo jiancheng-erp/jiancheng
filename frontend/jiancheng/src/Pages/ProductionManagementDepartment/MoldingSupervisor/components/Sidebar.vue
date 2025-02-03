@@ -23,6 +23,9 @@
                 <el-menu-item index="6" @click="handleMenuOption('BatchInfo')">
                     <span>装箱配码</span>
                 </el-menu-item>
+                <el-menu-item index="8" @click="handleMenuOption('PersonalInfo')">
+                    <span>个人信息</span>
+                </el-menu-item>
                 <el-menu-item index="7" @click="logout">
                     <span>退出系统</span>
                 </el-menu-item>

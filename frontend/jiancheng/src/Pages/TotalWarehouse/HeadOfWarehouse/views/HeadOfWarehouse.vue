@@ -43,6 +43,9 @@
                         <el-menu-item index="7" @click="handleMenuClick(7)">
                             <span>码段管理</span>
                         </el-menu-item>
+                        <el-menu-item index="12" @click="handleMenuClick(12)">
+                            <span>个人信息</span>
+                        </el-menu-item>
                         <el-menu-item index="8" @click="logout">
                             <span>退出系统</span>
                         </el-menu-item>
@@ -74,6 +77,7 @@ import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeMan
 import SecondPurchaseListView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SecondPurchaseListView.vue'
 import InOutboundRecords from '../components/InOutboundRecords.vue'
 import MultiPurchaseIssue from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MultiPurchaseIssue.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
 
 export default {
     components: {
@@ -89,7 +93,8 @@ export default {
         LogisticsBatchTypeManagement,
         SecondPurchaseListView,
         InOutboundRecords,
-        MultiPurchaseIssue
+        MultiPurchaseIssue,
+        PersonalInfo
     },
     data() {
         return {
@@ -139,6 +144,9 @@ export default {
                     break
                 case 9:
                     this.currentComponent = 'InOutboundRecords'
+                    break
+                case 12:
+                    this.currentComponent = 'PersonalInfo'
                     break
             }
         }

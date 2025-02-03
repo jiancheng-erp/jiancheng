@@ -11,14 +11,17 @@
                 <!-- <el-menu-item index="1" @click="handleMenuOption('Dashboard')">
                     <span>任务看板</span>
                 </el-menu-item> -->
-                <el-menu-item index="2" @click="handleMenuOption('OrderProgress')">
-                    <span>生产动态明细</span>
-                </el-menu-item>
                 <el-menu-item index="3" @click="handleMenuOption('LaborPriceReport')">
                     <span>工序填报</span>
                 </el-menu-item>
+                <el-menu-item index="2" @click="handleMenuOption('OrderProgress')">
+                    <span>生产动态明细</span>
+                </el-menu-item>
                 <el-menu-item index="5" @click="handleMenuOption('ProcedureManagement')">
                     <span>工序管理</span>
+                </el-menu-item>
+                <el-menu-item index="6" @click="handleMenuOption('PersonalInfo')">
+                    <span>个人信息</span>
                 </el-menu-item>
                 <el-menu-item index="8" @click="logout">
                     <span>退出系统</span>

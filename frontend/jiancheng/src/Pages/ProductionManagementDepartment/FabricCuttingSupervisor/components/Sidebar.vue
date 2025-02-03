@@ -20,6 +20,9 @@
                 <el-menu-item index="5" @click="handleMenuOption('ProcedureManagement')">
                     <span>工序管理</span>
                 </el-menu-item>
+                <el-menu-item index="7" @click="handleMenuOption('PersonalInfo')">
+                    <span>个人信息</span>
+                </el-menu-item>
                 <el-menu-item index="6" @click="logout">
                     <span>退出系统</span>
                 </el-menu-item>

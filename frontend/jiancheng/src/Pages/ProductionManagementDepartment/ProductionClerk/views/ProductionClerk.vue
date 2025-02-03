@@ -25,6 +25,9 @@
               <el-menu-item index="3" @click="handleMenuClick(3)">
                 <span>组号名字管理</span>
               </el-menu-item>
+              <el-menu-item index="4" @click="handleMenuClick(4)">
+                <span>个人信息</span>
+              </el-menu-item>
               <el-menu-item index="8" @click="logout()">
                 <span>退出系统</span>
               </el-menu-item>
@@ -43,6 +46,7 @@
   import OrderProgress from '../../ProductionSharedPages/OrderProgress.vue'
   import QuantityReportOverview from '../components/QuantityReportOverview.vue'
   import ProductionLinesManagement from '../components/ProductionLinesManagement.vue'
+  import PersonalInfo from '@/components/PersonalInfo.vue'
   import { UserFilled } from '@element-plus/icons-vue'
   import { ref } from 'vue'
   import axios from 'axios'
@@ -53,7 +57,8 @@
       AllHeader,
       QuantityReportOverview,
       OrderProgress,
-      ProductionLinesManagement
+      ProductionLinesManagement,
+      PersonalInfo
     },
     data() {
       return {
@@ -82,6 +87,9 @@
             break
           case 3:
             this.currentComponent = 'ProductionLinesManagement'
+            break
+          case 4:
+            this.currentComponent = 'PersonalInfo'
             break
         }
       },
