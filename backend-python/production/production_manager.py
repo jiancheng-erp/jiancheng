@@ -272,6 +272,7 @@ def get_all_order_production_progress():
             ),
         )
         .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderShoeStatus.current_status >= 17)
         .group_by(OrderShoe.order_shoe_id)
     )
     if status_node and status_node != "":

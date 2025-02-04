@@ -1,18 +1,10 @@
 <template>
     <el-row :gutter="10" style="margin-top: 20px">
         <el-col :span="2" :offset="0">
-            <el-button size="default" type="primary" @click="importOrder" style="margin-bottom: 20px;"
-                >订单导出</el-button
-            >
+            <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">订单导出</el-button>
         </el-col>
     </el-row>
-    <el-table
-        :data="currentTableData"
-        border
-        stripe
-        height="600"
-        @selection-change="handleSelection"
-    >
+    <el-table :data="currentTableData" border stripe height="600" @selection-change="handleSelection">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRid" label="订单号" />
         <el-table-column prop="orderCid" label="客户订单号" />
@@ -23,15 +15,9 @@
         <el-table-column prop="orderStatus" label="订单状态" />
     </el-table>
     <el-row :gutter="20" style="justify-content: end; width: 100%">
-        <el-pagination
-            @size-change="chageCurrentPageSize"
-            @current-change="changeCurrentPage"
-            :current-page="currentPage"
-            :page-sizes="[10, 20, 30, 40]"
-            :page-size="currentPageSize"
-            layout="total, sizes, prev, pager, next, jumper"
-            :total="currentTotalRows"
-        />
+        <el-pagination @size-change="chageCurrentPageSize" @current-change="changeCurrentPage"
+            :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="currentPageSize"
+            layout="total, sizes, prev, pager, next, jumper" :total="currentTotalRows" />
     </el-row>
 </template>
 
@@ -40,7 +26,7 @@ import { ref, onMounted, getCurrentInstance } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
+const apiBaseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 let currentTableData = ref([])
 let tableData = ref([])
 let currentPage = ref(1)
@@ -57,12 +43,12 @@ onMounted(() => {
 async function getAllOrders() {
     let response
     if (role == 21) {
-        response = await axios.get(`${$api_baseUrl}/order/getbusinessdisplayorderbyuser`, {
+        response = await axios.get(`${apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
             currentStaffId: staffId
         })
-    } 
+    }
     if (role == 4) {
-        response = await axios.get(`${$api_baseUrl}/order/getallorders`)
+        response = await axios.get(`${apiBaseUrl}/order/getallorders`)
     }
     tableData.value = response.data
     currentTableData.value = response.data
@@ -92,25 +78,23 @@ function dataCut() {
     )
 }
 
-function importOrder(){
-  if (selectData.value.length === 0) {
-    ElMessage.warning('请选择要导出的订单')
-  } else {
-    ElMessageBox.alert('请确认选择订单为同一个客户订单', '', {
-        confirmButtonText: '确认',
-        cancelButtonText: '取消',
-        callback: async (action) => {
-            if (action === 'confirm') {
-                const response = await axios.post(`${$api_baseUrl}/orderexport/exportoder`, {
-                    orderExportIds: selectData.value[0].orderRid
-                })
-                if(response.status === 200) {
-                    ElMessage.success('订单导出成功')
-                    getAllOrders()
+function exportOrder() {
+    if (selectData.value.length === 0) {
+        ElMessage.warning('请选择要导出的订单')
+    } else {
+        ElMessageBox.alert('请确认选择订单为同一个客户订单', '', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            callback: async (action) => {
+                if (action === 'confirm') {
+                    // get order db id from selectData
+                    const exportOrderIds = selectData.value.map(order => order.orderDbId)
+                    window.open(
+                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}`
+                    )
                 }
             }
-        }
-    })
-  }
+        })
+    }
 }
 </script>

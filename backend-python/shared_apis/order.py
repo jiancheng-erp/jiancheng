@@ -1,7 +1,7 @@
 import constants
 import time
 from app_config import db
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from sqlalchemy import func
 from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
@@ -11,7 +11,10 @@ from sqlalchemy import or_, text
 from sqlalchemy import or_, text
 from datetime import datetime
 
-from constants import IN_PRODUCTION_ORDER_NUMBER
+from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE
+from general_document.order_export import (
+    generate_excel_file,
+)
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import (
     Order,
@@ -35,24 +38,24 @@ from models import (
 )
 
 order_bp = Blueprint("order_bp", __name__)
-#订单初始状态
+# 订单初始状态
 ORDER_CREATION_STATUS = 6
-#订单开发部状态
+# 订单开发部状态
 ORDER_IN_PROD_STATUS = 9
-#包装信息状态
+# 包装信息状态
 PACKAGING_SPECS_UPLOADED = "2"
-#业务部经理角色码
+# 业务部经理角色码
 BUSINESS_MANAGER_ROLE = 4
-#业务部职员角色码
+# 业务部职员角色码
 BUSINESS_CLERK_ROLE = 21
 
-#鞋型初始状态（投产指令单创建）
+# 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
-#开发一部经理角色码
+# 开发一部经理角色码
 FIRST_DEV_DEPARTMENT_MANAGER = 7
-#开发二部经理角色码
+# 开发二部经理角色码
 SECOND_DEV_DEPARTMENT_MANAGER = 22
-#开发三部经理角色码
+# 开发三部经理角色码
 THIRD_DEV_DEPARTMENT_MANAGER = 23
 # TODO 开发部门经理映射（之后要修改为int值，与departmentid绑定）
 DEV_DEPARTMENT_MANAGER_MAPPING = {7: "开发一部", 22: "开发二部", 23: "开发三部"}
@@ -103,8 +106,15 @@ def get_dev_orders():
             OrderShoeStatus.current_status_value,
         )
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
-        .join(order_shoe_by_department_table, order_shoe_by_department_table.c.order_id == Order.order_id)
-        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == order_shoe_by_department_table.c.order_shoe_id)
+        .join(
+            order_shoe_by_department_table,
+            order_shoe_by_department_table.c.order_id == Order.order_id,
+        )
+        .join(
+            OrderShoeStatus,
+            OrderShoeStatus.order_shoe_id
+            == order_shoe_by_department_table.c.order_shoe_id,
+        )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
@@ -112,7 +122,7 @@ def get_dev_orders():
         .order_by(Order.start_date.desc())
         .all()
     )
-    
+
     pending_orders, in_progress_orders = [], []
     for entity in entities:
         order, customer, count, status_value = entity
@@ -1101,7 +1111,10 @@ def get_order_page_info():
         # Subquery to find OrderShoe IDs with any status > status_value
         matching_shoes_subquery = (
             db.session.query(OrderShoe.order_shoe_id)
-            .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+            .join(
+                OrderShoeStatus,
+                OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id,
+            )
             .filter(OrderShoeStatus.current_status > status_value)
             .distinct()
             .subquery()
@@ -1161,10 +1174,11 @@ def get_active_order_shoes():
             "orderRId": order.order_rid,
             "orderStatus": order_status.order_current_status,
             "orderShoeId": order_shoe.order_shoe_id,
-            "shoeRId": shoe.shoe_rid
+            "shoeRId": shoe.shoe_rid,
         }
         res.append(obj)
     return res
+
 
 @order_bp.route("/order/gettechnicalconfirmstatus", methods=["GET"])
 def get_technical_confirm_status():
@@ -1178,5 +1192,109 @@ def get_technical_confirm_status():
     )
     for order, order_shoe, order_shoe_status in order_shoe_status:
         if order_shoe_status.current_status == 9:
-            return jsonify({"status": "鞋型辅料材料规格尚未由技术部确认，请谨慎生成采购订单！"})
+            return jsonify(
+                {"status": "鞋型辅料材料规格尚未由技术部确认，请谨慎生成采购订单！"}
+            )
     return jsonify({"status": "鞋型辅料材料规格已由技术部确认！"})
+
+
+@order_bp.route("/order/exportorder", methods=["GET"])
+def export_order():
+    order_ids = request.args.get("orderIds").split(",")
+    response = (
+        db.session.query(
+            Order,
+            OrderShoe,
+            Shoe,
+            OrderShoeType,
+            ShoeType,
+            OrderShoeBatchInfo,
+            PackagingInfo,
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .join(
+            PackagingInfo,
+            PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
+        )
+        .filter(Order.order_id.in_(order_ids))
+        .all()
+    )
+    order_shoe_mapping = {}
+    for row in response:
+        (
+            order,
+            order_shoe,
+            shoe,
+            order_shoe_type,
+            shoe_type,
+            order_shoe_batch_info,
+            packaging_info,
+        ) = row
+        if order_shoe.order_shoe_id not in order_shoe_mapping:
+            order_shoe_mapping[order_shoe.order_shoe_id] = {
+                "orderRId": order.order_rid,
+                "customerProductName": order_shoe.customer_product_name,
+                "shoeRId": shoe.shoe_rid,
+                "shoes": [],
+            }
+            shoe_meta_data = {
+                "colorName": order_shoe_type.customer_color_name,
+                "imgUrl": shoe_type.shoe_image_url,
+                "unitPrice": order_shoe_type.unit_price,
+                "packagingInfo": [],
+            }
+            obj = {
+                "packagingInfoName": packaging_info.packaging_info_name,
+                "packagingInfoLocale": packaging_info.packaging_info_locale,
+                "totalQuantityRatio": packaging_info.total_quantity_ratio,
+                "count": order_shoe_batch_info.packaging_info_quantity,
+            }
+            for i in range(len(SHOESIZERANGE)):
+                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
+                    packaging_info, f"size_{i+34}_ratio"
+                )
+            shoe_meta_data["packagingInfo"].append(obj)
+            order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
+        else:
+            shoe_meta_data = {
+                "colorName": order_shoe_type.customer_color_name,
+                "imgUrl": shoe_type.shoe_image_url,
+                "unitPrice": order_shoe_type.unit_price,
+                "packagingInfo": [],
+            }
+            obj = {
+                "packagingInfoName": packaging_info.packaging_info_name,
+                "packagingInfoLocale": packaging_info.packaging_info_locale,
+                "totalQuantityRatio": packaging_info.total_quantity_ratio,
+                "count": order_shoe_batch_info.packaging_info_quantity,
+            }
+            for i in range(len(SHOESIZERANGE)):
+                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
+                    packaging_info, f"size_{i+34}_ratio"
+                )
+            shoe_meta_data["packagingInfo"].append(obj)
+            order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
+
+    # find shoe size name
+    shoe_size_names = (
+        db.session.query(BatchInfoType)
+        .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+        .filter(Order.order_id == order_ids[0])
+        .first()
+    )
+    meta_data = {"sizeNames": []}
+    # add size_name of batch info type
+    for i in range(len(SHOESIZERANGE)):
+        meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))
+    template_path = os.path.join("./general_document", "订单模板.xlsx")
+    new_file_path = os.path.join("./general_document", "订单.xlsx")
+    new_name = f"订单.xlsx"
+    generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+    return send_file(new_file_path, as_attachment=True, download_name=new_name)
