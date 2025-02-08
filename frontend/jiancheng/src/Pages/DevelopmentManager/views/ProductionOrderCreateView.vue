@@ -2410,7 +2410,7 @@ export default {
                 designer: '',
                 defaultBOMStatus: ''
             },
-            syncMaterialButtonText: '同步该材料表格至所有颜色',
+            syncMaterialButtonText: '复制此材料信息至所有颜色',
             defaultUnitOptions: [
                 { value: '米', label: '米' },
                 { value: '个', label: '个' },
@@ -2631,127 +2631,54 @@ export default {
             const activeMaterialData = this.materialWholeData.find(
                 (item) => item.color === this.activeTab
             )
-
+            let newEntry = {
+                materialType: '',
+                materialDetailType: '',
+                materialName: '',
+                materialModel: '',
+                materialSpecification: '',
+                color: '',
+                unit: '',
+                supplierName: '',
+                comment: '',
+                isPurchase: false,
+                manualSymbol: 1
+            }
             switch (typeSymbol) {
                 case 0:
                     this.defaultManuallyAddedMaterial.materialType = '面料'
                     activeMaterialData.surfaceMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 1:
                     this.defaultManuallyAddedMaterial.materialType = '里料'
                     activeMaterialData.insideMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 2:
                     this.defaultManuallyAddedMaterial.materialType = '辅料'
                     activeMaterialData.accessoryMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 3:
                     this.defaultManuallyAddedMaterial.materialType = '底材'
                     activeMaterialData.outsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 4:
                     this.defaultManuallyAddedMaterial.materialType = '底材'
                     activeMaterialData.midsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 6:
                     this.defaultManuallyAddedMaterial.materialType = '烫底'
                     activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        craftName: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 7:
                     this.defaultManuallyAddedMaterial.materialType = '里料'
                     activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                        manualSymbol: 1
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 default:
                     break

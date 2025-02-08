@@ -1,82 +1,141 @@
 <template>
-    <el-table :data="tableData" border stripe>
-        <el-table-column prop="rowId" label="序号" />
-        <el-table-column v-if="props.team === '成型'" prop="productionSection" label="工段">
-            <template v-if="!readOnly" #default="scope">
-                <el-select v-model="scope.row.productionSection" placeholder="请选择" clearable>
-                    <el-option v-for="item in ['前段', '中段', '后段']" :value="item" :label="item"></el-option>
-                </el-select>
-            </template>
-        </el-table-column>
-        <el-table-column prop="procedure" label="工序">
-            <template v-if="!readOnly" #default="scope">
-                <el-autocomplete v-model="scope.row.procedure" :fetch-suggestions="querySearch" placeholder=""
-                    @select="(args) => onProductSelect(args, scope.row)" clearable>
-                </el-autocomplete>
-            </template>
-        </el-table-column>
-        <el-table-column v-if="props.team !== '成型'" prop="price" label="工价">
-            <template v-if="!readOnly" #default="scope">
-                <el-input-number v-model="scope.row.price" clearable :min="0" :precision="2" :step="0.01"></el-input-number>
-            </template>
-        </el-table-column>
-        <el-table-column prop="note" label="备注">
-            <template v-if="!readOnly" #default="scope">
-                <el-input v-model="scope.row.note" placeholder="" clearable></el-input>
-            </template>
-        </el-table-column>
-        <el-table-column v-if="!readOnly" label="操作">
-            <template #default="scope">
-                <el-button type="danger" @click="deleteRow(scope.$index)">删除</el-button>
-            </template>
-        </el-table-column>
-    </el-table>
-    <el-button v-if="!readOnly" type="primary" size="default" @click="addRow()">添加新一行</el-button>
+    <div>
+        <vxe-button v-if="editable" status="primary" @click="pushEvent">新增一行</vxe-button>
+        <vxe-button v-if="editable" status="danger" @click="removeSelectEvent">批量删除</vxe-button>
+        <vxe-grid ref="gridRef" v-bind="gridOptions">
+            <!-- <template #action="{ row }">
+                <vxe-button status="danger" @click="removeRow(row)">删除</vxe-button>
+            </template> -->
+        </vxe-grid>
+    </div>
 </template>
+
 <script setup>
-import { defineModel } from 'vue';
-const props = defineProps(['procedureInfo', 'readOnly', 'team'])
-const tableData = defineModel('tableData')
-const addRow = () => {
-    const newRowId = tableData.value.length + 1;
-    const newItem = {
-        "rowId": newRowId,
-        "procedure": "",
-        "price": "",
-        "note": ""
+import { VxeUI } from 'vxe-table'
+import { defineProps, onMounted, nextTick, ref, reactive, watch, defineExpose, defineEmits, computed } from 'vue';
+import XEUtils from 'xe-utils';
+
+const props = defineProps(['procedureInfo', 'readOnly', 'team', 'tableData']);
+const emit = defineEmits(["update-items"]);
+const gridRef = ref();
+
+const editable = computed(() => {
+    console.log(props.readOnly);
+    return !props.readOnly;
+});
+
+const procedureEditRender = reactive({
+    name: 'ElAutocomplete',
+    props: {
+        fetchSuggestions(queryString, cb) {
+            const results = props.procedureInfo
+                .filter(proc => proc.procedureName.toLowerCase().startsWith(queryString.toLowerCase()))
+                .map(proc => ({ value: proc.procedureName, price: proc.price }));
+            cb(results);
+        },
+        onSelect(info, row) {
+            console.log(info, row);
+            row.procedure = info.value;
+            row.price = info.price;
+        }
     }
-    tableData.value.push(newItem)
-}
+});
 
-const deleteRow = (index) => {
-    tableData.value.splice(index, 1);
-    tableData.value.forEach((row, index) => {
-        row.rowId = index + 1
+const sectionEditRender = reactive({
+    name: 'VxeSelect',
+    options: [
+        { label: '前段', value: '前段' },
+        { label: '中段', value: '中段' },
+        { label: '后段', value: '后段' }
+    ]
+});
+
+// Ensure grid updates when tableData changes
+const gridOptions = reactive({
+    border: true,
+    showOverflow: true,
+    height: 400,
+    editConfig: {
+        trigger: 'click',
+        mode: 'cell',
+        enabled: editable
+    },
+    columns: [
+        editable ? { type: 'checkbox', width: 70 } : null,
+        { type: 'seq', width: 55 },
+        props.team === '成型' ? {
+            field: 'productionSection',
+            title: '工段',
+            editRender: editable ? sectionEditRender : null
+        } : null,
+        {
+            field: 'procedure',
+            title: '工序',
+            editRender: editable ? procedureEditRender : null
+        },
+        props.team !== '成型' ? {
+            field: 'price',
+            title: '工价',
+            editRender: editable ? { name: 'VxeNumberInput', props: { type: 'amount', min: 0 } } : null
+        } : null,
+        {
+            field: 'note',
+            title: '备注',
+            editRender: editable ? { name: 'VxeInput', props: { clearable: true } } : null
+        },
+    ].filter(Boolean),
+    data: props.tableData
+});
+
+// Expose the array for parent access
+defineExpose({ gridOptions });
+
+const pushEvent = async () => {
+    const newRow = { rowId: 0, procedure: '', price: '0.00', note: '' };
+    gridOptions.data.push(newRow)
+    nextTick(() => {
+        const $grid = gridRef.value
+        if ($grid) {
+            $grid.setEditRow(newRow)
+        }
     })
+    emit("update-items", gridOptions.data);
 }
 
-const querySearch = (queryString, cb) => {
-    const matchObj = queryString
-        ? props.procedureInfo.filter(procedure =>
-            procedure.procedureName.toLowerCase().indexOf(queryString.toLowerCase()) === 0
-        )
-        : []
-    // call callback function to return suggestions
-    let result = []
-    matchObj.forEach(row => {
-        result.push({ value: row.procedureName, price: row.price })
-    })
-    cb(result)
+// Watch for updates in tableData
+watch(
+    () => props.tableData,
+    (newData) => {
+        gridOptions.data = newData;
+    },
+    { deep: true } // Detects changes inside arrays/objects
+);
+
+const removeSelectEvent = async () => {
+    const $grid = gridRef.value
+    if ($grid) {
+        const selectRecords = $grid.getCheckboxRecords()
+        if (selectRecords.length > 0) {
+            gridOptions.data = gridOptions.data.filter(item => !selectRecords.some(row => row._X_ROW_KEY === item._X_ROW_KEY))
+            VxeUI.modal.message({
+                content: '已删除选中',
+                status: 'success'
+            })
+            emit("update-items", gridOptions.data);
+        } else {
+            VxeUI.modal.message({
+                content: '未选择数据',
+                status: 'info'
+            })
+        }
+    }
 }
 
-const onProductSelect = (info, row) => {
-    row.procedureName = info.value
-    row.price = info.price
+const injectData = (data) => {
+    gridOptions.data = data;
 }
-// const handleClickEnter = (event) => {
-//     if (event.key === 'Enter') {
-//         addRow()
-//     }
-// }
 
+const getTableData = () => {
+    return gridOptions.data;
+}
 </script>
