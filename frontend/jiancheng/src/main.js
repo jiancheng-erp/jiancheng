@@ -10,6 +10,12 @@ import router from './router'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import axios from 'axios'
 import print from 'vue3-print-nb'
+import VxeUI from 'vxe-pc-ui'
+import 'vxe-pc-ui/lib/style.css'
+import VxeUITable from 'vxe-table'
+import 'vxe-table/lib/style.css'
+import VxeUIPluginRenderElement from '@vxe-ui/plugin-render-element'
+import '@vxe-ui/plugin-render-element/dist/style.css'
 
 const app = createApp(App)
 fetch('/frontend_config.json')
@@ -41,6 +47,9 @@ fetch('/frontend_config.json')
         app.use(router)
         app.use(ElementPlus, { locale: zhCn })
         app.use(print)
+        VxeUI.use(VxeUIPluginRenderElement)
+        app.use(VxeUI)
+        app.use(VxeUITable)
         app.mount('#app')
     })
 

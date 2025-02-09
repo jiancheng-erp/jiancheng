@@ -24,6 +24,17 @@
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column label="展开" type="expand">
                     <template #default="prop">
+                        <el-descriptions :column="4" border>
+                            <el-descriptions-item label="裁断开始">{{ prop.row.cuttingStartDate }}</el-descriptions-item>
+                            <el-descriptions-item label="裁断结束">{{ prop.row.cuttingEndDate }}</el-descriptions-item>
+                            <el-descriptions-item label="预备开始">{{ prop.row.preSewingStartDate }}</el-descriptions-item>
+                            <el-descriptions-item label="预备结束">{{ prop.row.preSewingEndDate }}</el-descriptions-item>
+                            <el-descriptions-item label="针车开始">{{ prop.row.sewingStartDate }}</el-descriptions-item>
+                            <el-descriptions-item label="针车结束">{{ prop.row.sewingEndDate }}</el-descriptions-item>
+                            <el-descriptions-item label="成型开始">{{ prop.row.moldingStartDate }}</el-descriptions-item>
+                            <el-descriptions-item label="成型结束">{{ prop.row.moldingEndDate }}</el-descriptions-item>
+                        </el-descriptions>
+
                         <el-table :data="prop.row.orderShoeTypeInfo">
                             <el-table-column prop="colorName" label="颜色"></el-table-column>
                             <el-table-column prop="colorAmount" label="颜色数量"></el-table-column>

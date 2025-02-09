@@ -27,8 +27,10 @@
                 <el-col :span="24">
                     <el-tabs v-model="currentTab" tab-position="top">
                         <el-tab-pane v-for="item in panes" :key="item" :label="item" :name="item">
-                            <PriceReportTable v-model:tableData="priceReportInfo[item]['tableData']"
-                                :procedureInfo="procedureInfo" :readOnly="readOnly" :team="currentTab" />
+                            <PriceReportTable ref="childComp"
+                                :tableData="priceReportInfo[item]['tableData']" :procedureInfo="procedureInfo"
+                                :readOnly="readOnly" :team="currentTab"
+                                @update-items="handleUpdateItems" />
                         </el-tab-pane>
                     </el-tabs>
                 </el-col>
@@ -36,10 +38,10 @@
             <el-row :gutter="20">
                 <el-col>
                     <el-button-group>
-                    <el-button type="info" @click="saveAsTemplate">保存为模板</el-button>
-                    <el-button v-if="!readOnly" type="info" @click="loadTemplate">加载模板</el-button>
-                    <!-- <el-button type="primary" @click="">下载为Excel</el-button> -->
-                </el-button-group>
+                        <el-button type="info" @click="saveAsTemplate">保存为模板</el-button>
+                        <el-button v-if="!readOnly" type="info" @click="loadTemplate">加载模板</el-button>
+                        <!-- <el-button type="primary" @click="">下载为Excel</el-button> -->
+                    </el-button-group>
                 </el-col>
             </el-row>
             <el-row :gutter="20">
@@ -57,12 +59,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref, getCurrentInstance } from 'vue';
+import { onMounted, ref, reactive, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 import PriceReportTable from './PriceReportTable.vue';
 import AllHeader from '@/components/AllHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-const priceReportInfo = ref({})
+const priceReportInfo = reactive({})
 const procedureInfo = ref({})
 const proxy = getCurrentInstance()
 const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
@@ -74,47 +76,41 @@ const teamsArr = ref([])
 const statusName = ref('')
 const rejectionReason = ref('')
 const currentTab = ref('')
+const childComp = ref(null)
 
 onMounted(async () => {
     setReportPanes()
+    await getPriceReportDetail()
     getOrderInfo()
     getAllProcedures()
-    await getPriceReportDetail()
 })
+
+const handleUpdateItems = (items) => {
+    priceReportInfo[currentTab.value]['tableData'] = items
+};
 
 const setReportPanes = () => {
     teamsArr.value = props.teams.split(",")
     teamsArr.value.forEach(team => {
         panes.value.push(team)
-        priceReportInfo.value[team] = {"tableData": [], reportId: null}
+        priceReportInfo[team] = { "tableData": [], reportId: null }
     })
     currentTab.value = panes.value[0]
 }
 
 const generateProductionForm = async () => {
     window.open(
-        `${apiBaseUrl}/production/downloadproductionform?orderShoeId=${orderInfo.value.orderShoeId}&reportId=${priceReportInfo.value[currentTab.value].reportId}`
+        `${apiBaseUrl}/production/downloadproductionform?orderShoeId=${orderInfo.value.orderShoeId}&reportId=${priceReportInfo[currentTab.value].reportId}`
     )
-}
-
-const setReadOnly = () => {
-    if (statusName.value === '已审批' || statusName.value === '已提交') {
-        readOnly.value = true
-    }
-    else {
-        readOnly.value = false
-    }
 }
 
 const getOrderInfo = async () => {
     let params = { "orderId": props.orderId, "orderShoeId": props.orderShoeId }
     let response = await axios.get(`${apiBaseUrl}/production/productionmanager/getorderinfo`, { params })
     orderInfo.value = response.data
-    console.log(orderInfo.value)
     params = { "orderShoeId": props.orderShoeId }
     response = await axios.get(`${apiBaseUrl}/production/getproductioninfo`, { params })
     orderInfo.value = { ...orderInfo.value, ...response.data }
-    console.log(orderInfo.value)
 }
 
 const getAllProcedures = async () => {
@@ -130,19 +126,22 @@ const getPriceReportDetail = async () => {
             "team": team
         }
         const response = await axios.get(`${apiBaseUrl}/production/getpricereportdetailbyordershoeid`, { params })
-        console.log(response.data)
-        priceReportInfo.value[team]["tableData"] = response.data.detail
-        priceReportInfo.value[team]["reportId"] = response.data.metaData.reportId
+        priceReportInfo[team]["tableData"] = response.data.detail
+        priceReportInfo[team]["reportId"] = response.data.metaData.reportId
         statusName.value = response.data.metaData.statusName
         rejectionReason.value = response.data.metaData.rejectionReason
     }
-    console.log(priceReportInfo.value)
-    setReadOnly()
+    if (statusName.value === '已审批' || statusName.value === '已提交') {
+        readOnly.value = true
+    }
+    else {
+        readOnly.value = false
+    }
 }
 
 const handleSaveData = async () => {
     try {
-        for (const [key, info] of Object.entries(priceReportInfo.value)) {
+        for (const [key, info] of Object.entries(priceReportInfo)) {
             await axios.post(`${apiBaseUrl}/production/storepricereportdetail`,
                 { reportId: info.reportId, newData: info.tableData })
         }
@@ -153,6 +152,7 @@ const handleSaveData = async () => {
         ElMessage.error("保存失败")
     }
 }
+
 const handleSubmit = async () => {
     ElMessageBox.confirm('确认提交工序吗?', '提示', {
         confirmButtonText: '确定',
@@ -162,7 +162,7 @@ const handleSubmit = async () => {
         try {
             await handleSaveData()
             let idArr = []
-            for (const [key, info] of Object.entries(priceReportInfo.value)) {
+            for (const [key, info] of Object.entries(priceReportInfo)) {
                 idArr.push(info.reportId)
             }
             await axios.post(`${apiBaseUrl}/production/submitpricereport`,
@@ -188,9 +188,9 @@ const saveAsTemplate = async () => {
     }).then(async () => {
         try {
             await axios.post(`${apiBaseUrl}/production/storepricereportdetail`,
-                { reportId: priceReportInfo.value[currentTab.value].reportId, newData: priceReportInfo.value[currentTab.value].tableData })
+                { reportId: priceReportInfo[currentTab.value].reportId, newData: priceReportInfo[currentTab.value].tableData })
             await axios.put(`${apiBaseUrl}/production/savetemplate`,
-                { "reportId": priceReportInfo.value[currentTab.value].reportId, "shoeId": orderInfo.value.shoeId, "team": currentTab.value, "reportRows": priceReportInfo.value[currentTab.value].tableData })
+                { "reportId": priceReportInfo[currentTab.value].reportId, "shoeId": orderInfo.value.shoeId, "team": currentTab.value, "reportRows": priceReportInfo[currentTab.value].tableData })
             ElMessage.success("保存成功")
         }
         catch (error) {
@@ -212,7 +212,8 @@ const loadTemplate = async () => {
         try {
             let params = { "shoeId": orderInfo.value.shoeId, "team": currentTab.value }
             let response = await axios.get(`${apiBaseUrl}/production/loadtemplate`, { params })
-            priceReportInfo.value[currentTab.value].tableData = response.data
+            priceReportInfo[currentTab.value].tableData = response.data
+
             ElMessage.success("加载成功")
         }
         catch (error) {

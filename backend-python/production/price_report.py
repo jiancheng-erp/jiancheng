@@ -162,16 +162,17 @@ def store_price_report_detail():
     report_id = data["reportId"]
     new_data = data["newData"]
     row_id_arr = []
+    new_row_id = 1
     for row in new_data:
         obj = {
             "report_id": report_id,
-            "row_id": row["rowId"],
-            "production_section": row["productionSection"],
+            "row_id": new_row_id,
+            "production_section": row.get("productionSection", None),
             "procedure_name": row["procedure"],
             "price": row["price"],
             "note": row["note"],
         }
-        row_id_arr.append(row["rowId"])
+        row_id_arr.append(new_row_id)
         insert_stmt = insert(UnitPriceReportDetail).values(**obj)
         on_duplicate_key_stmt = insert_stmt.on_duplicate_key_update(
             report_id=insert_stmt.inserted.report_id,
@@ -182,6 +183,7 @@ def store_price_report_detail():
             note=insert_stmt.inserted.note,
         )
         db.session.execute(on_duplicate_key_stmt)
+        new_row_id += 1
 
     UnitPriceReportDetail.query.filter(
         UnitPriceReportDetail.report_id == report_id,
@@ -388,14 +390,16 @@ def save_template():
         db.session.flush()
     arr = []
     # insert new rows
+    new_row_id = 1
     for row in report_rows:
         entity = ReportTemplateDetail(
             report_template_id=template.template_id,
-            row_id=row["rowId"],
-            production_section=row["productionSection"],
+            row_id=new_row_id,
+            production_section=row.get("productionSection", None),
             procedure_name=row["procedure"],
             price=row["price"],
         )
+        new_row_id += 1
         arr.append(entity)
     db.session.add_all(arr)
     db.session.commit()

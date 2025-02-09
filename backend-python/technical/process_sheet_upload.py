@@ -42,8 +42,6 @@ def get_order_list():
         .all()
     )
 
-    print(entities)
-
     # Initialize the result list
     result_dict = {}
 
@@ -143,7 +141,6 @@ def get_order_list():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -292,7 +289,6 @@ def save_production_instruction():
         db.session.delete(item)
     for data in upload_data:
         shoe_color = data.get("color")
-        print(shoe_color)
         shoe_type_id = (
             db.session.query(Shoe, ShoeType, Color)
             .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
@@ -1407,7 +1403,6 @@ def edit_craft_sheet():
         db.session.delete(item)
     for data in upload_data:
         shoe_color = data.get("color")
-        print(shoe_color)
         shoe_type_id = (
             db.session.query(Shoe, ShoeType, Color)
             .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
@@ -2302,7 +2297,6 @@ def issue_production_order():
         )
         order_id = order_shoe.Order.order_id
         order_shoe_id = order_shoe.OrderShoe.order_shoe_id
-        print(order_shoe.OrderShoe.process_sheet_upload_status)
         if order_shoe.OrderShoe.process_sheet_upload_status != "1":
             return jsonify({"error": "Production order not uploaded yet"}), 500
         order_shoe.OrderShoe.process_sheet_upload_status = "2"
@@ -2612,7 +2606,6 @@ def download_craft_sheet():
     # Get parameters from request
     order_id = request.args.get("orderid")
     order_shoe_rid = request.args.get("ordershoeid")
-    print(order_id, order_shoe_rid)
 
     # Query the database for the order and shoe details
     order_shoe = (
@@ -2651,7 +2644,6 @@ def download_craft_sheet():
 def download_production_instruction():
     order_shoe_rid = request.args.get("ordershoerid")
     order_id = request.args.get("orderid")
-    print(order_shoe_rid, order_id)
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)

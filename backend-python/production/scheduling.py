@@ -104,30 +104,18 @@ def save_multiple_schedules():
     )
     for entity in response:
         # 裁断
-        entity.cutting_line_group = ",".join(
-            map(str, data["scheduleForm"]["cuttingLineNumbers"])
-        )
         entity.cutting_start_date = data["scheduleForm"]["cuttingDateRange"][0]
         entity.cutting_end_date = data["scheduleForm"]["cuttingDateRange"][1]
 
         # 针车预备
-        entity.pre_sewing_line_group = ",".join(
-            map(str, data["scheduleForm"]["preSewingLineNumbers"])
-        )
         entity.pre_sewing_start_date = data["scheduleForm"]["preSewingDateRange"][0]
         entity.pre_sewing_end_date = data["scheduleForm"]["preSewingDateRange"][1]
 
         # 针车
-        entity.sewing_line_group = ",".join(
-            map(str, data["scheduleForm"]["sewingLineNumbers"])
-        )
         entity.sewing_start_date = data["scheduleForm"]["sewingDateRange"][0]
         entity.sewing_end_date = data["scheduleForm"]["sewingDateRange"][1]
 
         # 成型
-        entity.molding_line_group = ",".join(
-            map(str, data["scheduleForm"]["moldingLineNumbers"])
-        )
         entity.molding_start_date = data["scheduleForm"]["moldingDateRange"][0]
         entity.molding_end_date = data["scheduleForm"]["moldingDateRange"][1]
 
