@@ -19,11 +19,8 @@
                 <el-button v-if="isMultipleSelection" @click="openOperationDialog(0)">
                     入库
                 </el-button>
-                <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)">
-                    出库
-                </el-button>
                 <el-button @click="toggleSelectionMode">
-                    {{ isMultipleSelection ? "退出" : "选择鞋包" }}
+                    {{ isMultipleSelection ? "退出" : "选择鞋包入库" }}
                 </el-button>
             </el-button-group>
         </el-col>
@@ -34,8 +31,8 @@
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
-                <el-table-column prop="customerName" label="客户号"></el-table-column>
-                <el-table-column prop="customerProductName" label="客户型号"></el-table-column>
+                <el-table-column prop="customerName" label="客户名称"></el-table-column>
+                <el-table-column prop="customerProductName" label="客户鞋型号"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
                 <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
@@ -78,19 +75,13 @@
                             </el-table-column>
                         </el-table>
                     </el-form-item>
-                    <el-form-item v-if="currentOperation == 1" prop="picker" label="领料工组">
-                        <el-select v-model="group.picker" placeholder="请选择领料工组" style="width: 50%">
-                            <el-option v-for="item in pickerOptions" :key="item.productionLineName" :label="item.productionLineName"
-                                :value="item.productionLineName" />
-                        </el-select>
-                    </el-form-item>
                 </el-form>
             </el-tab-pane>
         </el-tabs>
         <template #footer>
             <span>
                 <el-button @click="isMultiInboundDialogVisible = false">返回</el-button>
-                <el-button type="primary" @click="submitOperationForm">{{ currentOperation == 0 ? "入库" : "出库" }}</el-button>
+                <el-button type="primary" @click="submitOperationForm">入库</el-button>
             </span>
         </template>
     </el-dialog>
@@ -105,10 +96,8 @@
                     <el-table-column prop="currentQuantity" label="库存"></el-table-column>
                     <el-table-column :label="operationLabels.operationAmount[currentOperation]">
                         <template #default="scope">
-                            <el-input-number v-if="currentOperation == 0" v-model="scope.row.operationQuantity" size="small" :min="0"
+                            <el-input-number v-model="scope.row.operationQuantity" size="small" :min="0"
                                 @change="updateTotalShoes"></el-input-number>
-                            <el-input-number v-if="currentOperation == 1" v-model="scope.row.operationQuantity" size="small" :min="0"
-                                :max="scope.row.currentQuantity" @change="updateTotalShoes"></el-input-number>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -185,9 +174,9 @@ export default {
             // 0: inbound, 1: outbound
             currentOperation: 0,
             operationLabels: {
-                "dialogTitle": ["成品入库", "成品出库"],
-                "timestamp": ["入库日期", "出库日期"],
-                "operationAmount": ["入库数量", "出库数量"],
+                "dialogTitle": ["成品入库"],
+                "timestamp": ["入库日期"],
+                "operationAmount": ["入库数量"],
             },
             pickerOptions: []
         }
@@ -273,6 +262,7 @@ export default {
                     group.items.push(newItem);
                 } else {
                     groupedData.push({
+                        orderId: item.orderId,
                         orderShoeId: item.orderShoeId,
                         shoeSizeColumns: shoeSizeColumns,
                         items: [newItem],
@@ -340,13 +330,8 @@ export default {
                     }
                     try {
                         console.log(data)
-                        if (this.currentOperation == 0) {
-                            await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundfinished`, data)
-                            ElMessage.success("入库成功")
-                        } else {
-                            await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundfinished`, data)
-                            ElMessage.success("出库成功")
-                        }
+                        await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/inboundfinished`, data)
+                        ElMessage.success("入库成功")
                     }
                     catch (error) {
                         console.log(error)
@@ -374,7 +359,7 @@ export default {
                 cancelButtonText: '取消'
             }).then(async () => {
                 const data = { "storageId": row.storageId }
-                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/finishinboundsemifinished`, data)
+                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/completeinboundfinished`, data)
                 try {
                     ElMessage.success("操作成功")
                 }
@@ -385,24 +370,6 @@ export default {
                 this.getTableData()
             })
         },
-        finishOutbound(row) {
-            ElMessageBox.alert('提前完成半成品出库，是否继续？', '警告', {
-                confirmButtonText: '确认',
-                showCancelButton: true,
-                cancelButtonText: '取消'
-            }).then(async () => {
-                const data = { "storageId": row.storageId }
-                await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/finishoutboundsemifinished`, data)
-                try {
-                    ElMessage.success("操作成功")
-                }
-                catch (error) {
-                    console.log(error)
-                    ElMessage.error("操作异常")
-                }
-                this.getTableData()
-            })
-        }
     }
 }
 </script>

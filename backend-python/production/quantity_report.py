@@ -112,6 +112,9 @@ def get_quantity_report_tasks():
                 production_amount_table,
                 production_amount_table.c.order_shoe_id == OrderShoe.order_shoe_id,
             )
+            .filter(
+                OrderShoeStatus.current_status >= 23,
+            )
         )
         queries.append(query)
     union_query = queries[0]
@@ -126,7 +129,6 @@ def get_quantity_report_tasks():
         union_query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     )
     result = []
-    print(response)
     for row in response:
         (
             order,

@@ -397,7 +397,6 @@ def get_all_order_production_progress():
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     res = []
-    order_shoe_data = {}
     for row in response:
         (
             order,
@@ -927,7 +926,7 @@ def get_all_quantity_reports_overview():
             unapproved_reports_count,
         ) = row
         if not unapproved_reports_count:
-            unapproved_reports_count = '无'
+            unapproved_reports_count = "无"
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
