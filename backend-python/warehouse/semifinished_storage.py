@@ -93,54 +93,6 @@ def get_semifinished_in_out_overview():
     return {"result": result, "total": count_result}
 
 
-def handle_order_shoe_status(order_id, order_shoe_id, storage):
-    # get order shoe type amount and current produced amount
-    query = (
-        db.session.query(
-            SemifinishedShoeStorage.semifinished_estimated_amount,
-            SemifinishedShoeStorage.semifinished_amount,
-        )
-        .join(
-            OrderShoeType,
-            OrderShoeType.order_shoe_type_id
-            == SemifinishedShoeStorage.order_shoe_type_id,
-        )
-        .filter(OrderShoeType.order_shoe_id == order_shoe_id)
-    )
-    # if the object is 0, progress cutting
-    if storage.semifinished_object == 0:
-        query = query.filter(SemifinishedShoeStorage.semifinished_object == 0)
-        next_operation_ids = [84, 85, 86, 87]
-    # progress sewing
-    else:
-        query = query.filter(SemifinishedShoeStorage.semifinished_object == 1)
-        next_operation_ids = [102, 103, 104, 105]
-
-    response = query.all()
-    flag = True
-    for row in response:
-        order_shoe_type_amount, produced_amount = row
-        if produced_amount < order_shoe_type_amount:
-            flag = False
-    if flag:
-        try:
-            event_arr = []
-            processor: EventProcessor = current_app.config["event_processor"]
-            for operation_id in next_operation_ids:
-                event = Event(
-                    staff_id=20,
-                    handle_time=datetime.now(),
-                    operation_id=operation_id,
-                    event_order_id=order_id,
-                    event_order_shoe_id=order_shoe_id,
-                )
-                processor.processEvent(event)
-                event_arr.append(event)
-        except Exception:
-            return jsonify({"message": "event processor error"}), 500
-        db.session.add_all(event_arr)
-
-
 @semifinished_storage_bp.route("/warehouse/getshoesizecolumns", methods=["GET"])
 def get_shoe_size_columns():
     order_id = request.args.get("orderId")
@@ -190,12 +142,11 @@ def inbound_semifinished():
             timestamp.replace("-", "").replace(" ", "").replace(":", "")
         )
         items = row["items"]
-        counter = 0
         for item in items:
             storage_id = item["storageId"]
             remark = item["remark"]
             amount_list = item["amountList"]
-            rid = "SIR" + formatted_timestamp + f"{counter:02}"
+            rid = "SIR" + formatted_timestamp + "C" + str(next_group_id)
             storage = SemifinishedShoeStorage.query.get(storage_id)
             if not storage:
                 return jsonify({"message": "failed"}), 400
@@ -239,7 +190,6 @@ def inbound_semifinished():
 
             db.session.add(record)
             record.shoe_inbound_rid = rid
-            counter += 1
         next_group_id += 1
     db.session.commit()
     return jsonify({"message": "success"})
@@ -334,12 +284,11 @@ def outbound_semifinished():
             timestamp.replace("-", "").replace(" ", "").replace(":", "")
         )
         items = row["items"]
-        counter = 0
         for item in items:
             storage_id = item["storageId"]
             remark = item["remark"]
             amount_list = item["amountList"]
-            rid = "SOR" + formatted_timestamp + f"{counter:02}"
+            rid = "SOR" + formatted_timestamp + "C" + str(next_group_id)
             storage = SemifinishedShoeStorage.query.get(storage_id)
             if not storage:
                 return jsonify({"message": "failed"}), 400
@@ -370,7 +319,6 @@ def outbound_semifinished():
 
             db.session.add(record)
             record.shoe_outbound_rid = rid
-            counter += 1
         next_group_id += 1
     db.session.commit()
     return jsonify({"message": "success"})

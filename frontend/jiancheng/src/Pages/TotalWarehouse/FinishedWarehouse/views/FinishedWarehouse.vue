@@ -14,7 +14,10 @@
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
                     <el-menu default-active="1" class="el-menu-vertical-demo">
                         <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>成品出/入库</span>
+                            <span>成品入库</span>
+                        </el-menu-item>
+                        <el-menu-item index="7" @click="handleMenuClick(7)">
+                            <span>成品出库</span>
                         </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>入\出库单</span>
@@ -44,7 +47,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import FinishedInboundOutbound from '../components/FinishedInboundOutbound.vue'
+import InboundProduct from '../components/InboundProduct.vue'
 import FinishedInOutHistory from '../components/FinishedInOutHistory.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
@@ -52,19 +55,21 @@ import { logout } from '@/Pages/utils/logOut'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
 import InOutboundRecords from '../components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import OutboundProduct from '../components/OutboundProduct.vue'
 export default {
     components: {
         AllHeader,
-        FinishedInboundOutbound,
+        InboundProduct,
         FinishedInOutHistory,
         OrderProgress,
         InOutboundRecords,
-        PersonalInfo
+        PersonalInfo,
+        OutboundProduct
     },
     data() {
         return {
             UserFilled,
-            currentComponent:'FinishedInboundOutbound',
+            currentComponent:'InboundProduct',
             userName: '',
             logout
         }
@@ -81,7 +86,7 @@ export default {
         handleMenuClick(index){
             switch(index) {
                 case 1:
-                    this.currentComponent = 'FinishedInboundOutbound'
+                    this.currentComponent = 'InboundProduct'
                     break
                 case 2:
                     this.currentComponent = 'OrderProgress'
@@ -94,6 +99,9 @@ export default {
                     break
                 case 6:
                     this.currentComponent = 'PersonalInfo'
+                    break
+                case 7:
+                    this.currentComponent = 'OutboundProduct'
                     break
             }
         }
