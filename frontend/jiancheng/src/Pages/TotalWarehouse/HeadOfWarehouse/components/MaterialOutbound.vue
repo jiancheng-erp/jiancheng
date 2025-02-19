@@ -49,12 +49,17 @@
                 </el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <!-- <el-table-column prop="materialUnit" label="材料单位"></el-table-column> -->
-                <el-table-column label="材料应入库数量">
+                <!-- <el-table-column label="鞋型所需数量">
                     <template #default="scope">
                         {{ Number(scope.row.estimatedInboundAmount).toFixed(2) + scope.row.materialUnit }}
                     </template>
+                </el-table-column> -->
+                <el-table-column label="采购数量">
+                    <template #default="scope">
+                        {{ Number(scope.row.actualPurchaseAmount).toFixed(2) + scope.row.actualInboundUnit }}
+                    </template>
                 </el-table-column>
-                <el-table-column label="材料实入库数量">
+                <el-table-column label="实入库数量">
                     <template #default="scope">
                         {{ Number(scope.row.actualInboundAmount).toFixed(2) + scope.row.actualInboundUnit }}
                     </template>

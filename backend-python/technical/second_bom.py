@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from sqlalchemy.dialects.mysql import insert
 import datetime
 from app_config import app, db
@@ -796,51 +796,23 @@ def issue_boms():
             image_path,
             image_save_path,
         )
-        processor = EventProcessor()
-        event = Event(
-            staff_id=1,
-            handle_time=datetime.datetime.now(),
-            operation_id=60,
-            event_order_id=order_id,
-            event_order_shoe_id=order_shoe_id,
-        )
-        result = processor.processEvent(event)
-        if not result:
-            return jsonify({"message": "failed"}), 400
-        db.session.add(event)
-        event = Event(
-            staff_id=1,
-            handle_time=datetime.datetime.now(),
-            operation_id=61,
-            event_order_id=order_id,
-            event_order_shoe_id=order_shoe_id,
-        )
-        result = processor.processEvent(event)
-        if not result:
-            return jsonify({"message": "failed"}), 400
-        db.session.add(event)
-        event = Event(
-            staff_id=1,
-            handle_time=datetime.datetime.now(),
-            operation_id=62,
-            event_order_id=order_id,
-            event_order_shoe_id=order_shoe_id,
-        )
-        result = processor.processEvent(event)
-        if not result:
-            return jsonify({"message": "failed"}), 400
-        db.session.add(event)
-        event = Event(
-            staff_id=1,
-            handle_time=datetime.datetime.now(),
-            operation_id=63,
-            event_order_id=order_id,
-            event_order_shoe_id=order_shoe_id,
-        )
-        result = processor.processEvent(event)
-        if not result:
-            return jsonify({"message": "failed"}), 400
-        db.session.add(event)
+        processor: EventProcessor = current_app.config["event_processor"]
+        event_list = []
+        try:
+            operation_ids = [60, 61, 62, 63]
+            for operation_id in operation_ids:
+                event = Event(
+                    staff_id=1,
+                    handle_time=datetime.datetime.now(),
+                    operation_id=operation_id,
+                    event_order_id=order_id,
+                    event_order_shoe_id=order_shoe_id,
+                )
+                processor.processEvent(event)
+                event_list.append(event)
+        except Exception as e:
+                return jsonify({"message": "failed"}), 400
+        db.session.add_all(event_list)
     db.session.commit()
     return jsonify({"status": "success"})
 

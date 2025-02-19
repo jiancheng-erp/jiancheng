@@ -220,6 +220,10 @@ class MaterialStorage(db.Model):
         db.DECIMAL(10, 5),
         default=0,
     )
+    actual_purchase_amount = db.Column(
+        db.DECIMAL(10, 5),
+        default=0,
+    )
     actual_inbound_amount = db.Column(
         db.DECIMAL(10, 5),
         default=0,
@@ -587,8 +591,8 @@ class PurchaseOrderItem(db.Model):
         db.BigInteger,
         nullable=False,
     )
-    purchase_amount = db.Column(db.Numeric(10, 5), nullable=False)
-    approval_amount = db.Column(db.Numeric(10, 5), nullable=True)
+    purchase_amount = db.Column(db.Numeric(10, 5), default=0)
+    approval_amount = db.Column(db.Numeric(10, 5), default=0)
     size_34_purchase_amount = db.Column(db.Integer, nullable=True)
     size_35_purchase_amount = db.Column(db.Integer, nullable=True)
     size_36_purchase_amount = db.Column(db.Integer, nullable=True)
@@ -604,6 +608,7 @@ class PurchaseOrderItem(db.Model):
     size_46_purchase_amount = db.Column(db.Integer, nullable=True)
     inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_unit = db.Column(db.String(5), nullable=True)
+    adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
 
     def __repr__(self):
         return (

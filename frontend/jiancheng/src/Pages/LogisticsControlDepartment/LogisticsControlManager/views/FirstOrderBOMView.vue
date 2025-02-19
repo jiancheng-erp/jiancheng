@@ -5,14 +5,12 @@
         </el-header>
         <el-main height="">
             <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
-                    >一次采购订单创建</el-col
-                >
+                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">一次采购订单创建</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
                     <span style="font-weight: bold; font-size: larger">订单信息：</span>
-                    <Arrow :status="orderData.status" :key="updateArrowKey"></Arrow>
+                    <Arrow :status="orderData.status"></Arrow>
                     <el-descriptions title="" :column="2" border>
                         <el-descriptions-item label="订单编号" align="center">{{
                             orderData.orderId
@@ -32,14 +30,8 @@
             <el-row :gutter="20" style="margin-top: 10px">
                 <el-col :span="4" :offset="0">
                     <div style="display: flex; align-items: center; white-space: nowrap">
-                        工厂型号搜索：<el-input
-                            v-model="inheritIdSearch"
-                            placeholder=""
-                            size="default"
-                            :suffix-icon="Search"
-                            clearable
-                            @input="tableWholeFilter"
-                        ></el-input>
+                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="Search"
+                            clearable @input="tableWholeFilter"></el-input>
                     </div>
                 </el-col>
             </el-row>
@@ -53,132 +45,59 @@
                                     <el-table-column prop="color" label="颜色"></el-table-column>
                                     <el-table-column label="鞋图">
                                         <template #default="scope">
-                                            <el-image
-                                                style="width: 150px; height: 100px"
-                                                :src="scope.row.image"
-                                                fit="contain"
-                                            />
+                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image"
+                                                fit="contain" />
                                         </template>
                                     </el-table-column>
-                                    <el-table-column
-                                        prop="firstBomStatus"
-                                        label="一次BOM表"
-                                    ></el-table-column>
-                                    <el-table-column
-                                        prop="firstPurchaseOrderStatus"
-                                        label="一次采购订单"
-                                    ></el-table-column>
-                                    <el-table-column
-                                        prop="secondBomStatus"
-                                        label="二次BOM表"
-                                    ></el-table-column>
-                                    <el-table-column
-                                        prop="secondPurchaseOrderStatus"
-                                        label="二次采购订单"
-                                    ></el-table-column>
+                                    <el-table-column prop="firstBomStatus" label="一次BOM表"></el-table-column>
+                                    <el-table-column prop="firstPurchaseOrderStatus" label="一次采购订单"></el-table-column>
+                                    <el-table-column prop="secondBomStatus" label="二次BOM表"></el-table-column>
+                                    <el-table-column prop="secondPurchaseOrderStatus" label="二次采购订单"></el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button
-                                                type="primary"
-                                                @click="openFirstBOMPreviewDialog(scope.row)"
-                                                >查看采购BOM表
+                                            <el-button type="primary"
+                                                @click="openFirstBOMPreviewDialog(scope.row)">查看采购BOM表
                                             </el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
                             </template>
                         </el-table-column>
-                        <el-table-column
-                            prop="inheritId"
-                            label="工厂型号"
-                            align="center"
-                            width="100"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="customerId"
-                            label="客户型号"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="designer"
-                            label="设计员"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="editter"
-                            label="调版员"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="totalBomId"
-                            label="总BOM编号"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="purchaseOrderId"
-                            label="采购订单编号"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="currentStatus"
-                            label="当前采购订单状态"
-                            align="center"
-                        ></el-table-column>
-                        <el-table-column
-                            prop="status"
-                            label="状态"
-                            align="center"
-                        ></el-table-column>
+                        <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
+                        <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
+                        <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
+                        <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
+                        <el-table-column prop="totalBomId" label="总BOM编号" align="center"></el-table-column>
+                        <el-table-column prop="purchaseOrderId" label="采购订单编号" align="center"></el-table-column>
+                        <el-table-column prop="currentStatus" label="当前采购订单状态" align="center"></el-table-column>
+                        <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center" width="500">
                             <template #default="scope">
                                 <div v-if="scope.row.currentStatus === '已保存'">
-                                    <el-button type="primary" @click="openEditDialog(scope.row)"
-                                        >编辑</el-button
-                                    >
-                                    <el-button type="success" @click="openPreviewDialog(scope.row)"
-                                        >预览</el-button
-                                    >
-                                    <el-button type="warning" @click="openSubmitDialog(scope.row)"
-                                        >提交</el-button
-                                    >
+                                    <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                                    <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                    <el-button type="warning" @click="openSubmitDialog(scope.row)">提交</el-button>
                                 </div>
                                 <div v-else-if="scope.row.currentStatus === '已提交'">
-                                    <el-button type="primary" @click="openPreviewDialog(scope.row)"
-                                        >预览</el-button
-                                    >
-                                    <el-button
-                                        type="success"
-                                        @click="downloadPurchaseOrderZip(scope.row)"
-                                        >下载采购订单压缩包</el-button
-                                    >
-                                    <el-button
-                                        type="success"
-                                        @click="downloadMaterialStasticExcel(scope.row)"
-                                        >下载材料统计单</el-button
-                                    >
+                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                    <el-button type="success"
+                                        @click="downloadPurchaseOrderZip(scope.row)">下载采购订单压缩包</el-button>
+                                    <el-button type="success"
+                                        @click="downloadMaterialStasticExcel(scope.row)">下载材料统计单</el-button>
                                 </div>
-                                <div
-                                    v-else-if="
-                                        scope.row.currentStatus === '未填写' &&
-                                        scope.row.status.includes('一次采购订单创建')
-                                    "
-                                >
-                                    <el-button type="primary" @click="handleGenerate(scope.row)"
-                                        >填写</el-button
-                                    >
+                                <div v-else-if="
+                                    scope.row.currentStatus === '未填写' &&
+                                    scope.row.status.includes('一次采购订单创建')
+                                ">
+                                    <el-button type="primary" @click="handleGenerate(scope.row)">填写</el-button>
                                 </div>
                             </template>
                         </el-table-column>
-                    </el-table></el-col
-                >
+                    </el-table></el-col>
             </el-row>
-            <el-dialog
-                :title="`一次采购订单创建 ${newPurchaseOrderId}`"
-                v-model="createVis"
-                width="100%"
-                @close="handleGenerateClose"
-            >
-                <el-descriptions title="订单信息" :column="2">
+            <el-dialog :title="`一次采购订单创建 ${newPurchaseOrderId}`" v-model="createVis" width="100%"
+                @close="handleGenerateClose">
+                <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
                     }}</el-descriptions-item>
@@ -192,11 +111,7 @@
                         orderData.deadlineTime
                     }}</el-descriptions-item>
                     <el-descriptions-item label="投产指令单" align="center">
-                        <el-button
-                            type="primary"
-                            size="default"
-                            @click="downloadProductionOrderList"
-                        >
+                        <el-button type="primary" size="default" @click="downloadProductionOrderList">
                             查看投产指令单
                         </el-button>
                     </el-descriptions-item>
@@ -206,105 +121,113 @@
                     </el-descriptions-item> -->
                 </el-descriptions>
 
-                <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row gutter="20">
-                        <el-col :span="24">
-                            <el-button type="text" @click="toggleOrderInfo">
-                                {{ orderInfoVisible ? '折叠' : '展开' }} 订单鞋型数量
-                            </el-button>
-                        </el-col>
-                    </el-row>
-                    <el-row style="margin-top: 10px">
-                        <el-col :span="24">
-                            <transition name="fade">
-                                <div v-if="orderInfoVisible">
-                                    <el-table
-                                        :data="orderProduceInfo"
-                                        border
-                                        style="width: 100%"
-                                        :span-method="batchInfoSpanMethod"
-                                    >
-                                        <el-table-column prop="colorName" label="颜色" />
-                                        <el-table-column prop="totalAmount" label="合计" />
-                                        <el-table-column
-                                            v-for="column in filteredColumns(orderProduceInfo)"
-                                            :key="column.prop"
-                                            :prop="column.prop"
-                                            :label="column.label"
-                                        ></el-table-column>
-                                    </el-table>
-                                </div>
-                            </transition>
-                        </el-col>
-                    </el-row>
-                    <el-row style="margin-top: 10px">
-                        采购信息
-                        <el-table :data="bomTestData" border>
-                            <el-table-column
-                                prop="materialProductionInstructionType"
-                                label="材料开发部标注类型"
-                                :formatter="translateProductionInstructionType"
-                            ></el-table-column>
-                            <el-table-column prop="materialType" label="材料类型"></el-table-column>
-                            <el-table-column prop="materialName" label="材料名称"></el-table-column>
-                            <el-table-column prop="materialModel" label="材料型号" />
-                            <el-table-column
-                                prop="materialSpecification"
-                                label="材料规格"
-                            ></el-table-column>
-                            <el-table-column prop="color" label="颜色"></el-table-column>
+                <el-row :gutter="20">
+                    <el-col :span="24">
+                        <el-button type="primary" link @click="toggleOrderInfo">
+                            {{ orderInfoVisible ? '折叠' : '展开' }} 订单鞋型数量
+                        </el-button>
+                    </el-col>
+                </el-row>
+                <el-row style="margin-top: 10px">
+                    <el-col :span="24">
+                        <transition name="fade">
+                            <div v-if="orderInfoVisible">
+                                <el-table :data="orderProduceInfo" border style="width: 100%"
+                                    :span-method="batchInfoSpanMethod">
+                                    <el-table-column prop="colorName" label="颜色" />
+                                    <el-table-column prop="totalAmount" label="合计" />
+                                    <el-table-column v-for="column in filteredColumns(orderProduceInfo)"
+                                        :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
+                                </el-table>
+                            </div>
+                        </transition>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="24">
+                        <el-button-group v-if="!isEditEnabled">
+                            <el-button type="primary" @click="changeEditMode">替换材料</el-button>
+                        </el-button-group>
+                        <el-button-group v-else>
+                            <el-button type="warning" @click="revertMaterialChanges">还原</el-button>
+                            <el-button @click="isEditEnabled = false">返回</el-button>
+                        </el-button-group>
+                    </el-col>
+                </el-row>
+                <el-row style="margin-top: 10px">
+                    <el-col :span="24">
+                        <el-table :data="bomTestData" border stripe width="100%">
+                            <el-table-column prop="materialProductionInstructionType" label="材料开发部标注类型"
+                                :formatter="translateProductionInstructionType"></el-table-column>
+                            <el-table-column prop="materialType" label="材料类型" />
+                            <el-table-column label="厂家名称">
+                                <template #default="scope">
+                                    <el-select v-if="isEditEnabled" v-model="scope.row.supplierName" placeholder="请选择"
+                                        clearable filterable>
+                                        <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
+                                            :label="item.supplierName" :value="item.supplierName" />
+                                    </el-select>
+                                    <span v-else>{{ scope.row.supplierName }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="材料名称">
+                                <template #default="scope">
+                                    <el-select v-if="isEditEnabled" v-model="scope.row.materialName" placeholder="请选择"
+                                        @change="handleMaterialNameSelect(scope.row)" clearable filterable>
+                                        <el-option v-for="item in materialNameOptions" :key="item.materialName"
+                                            :label="item.label" :value="item.value" />
+                                    </el-select>
+                                    <span v-else>{{ scope.row.materialName }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="材料型号">
+                                <template #default="scope">
+                                    <el-input v-if="isEditEnabled" v-model="scope.row.materialModel" placeholder="请输入"
+                                        clearable />
+                                    <span v-else>{{ scope.row.materialModel }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="材料规格">
+                                <template #default="scope">
+                                    <el-input v-if="isEditEnabled" v-model="scope.row.materialSpecification"
+                                        placeholder="请输入" clearable />
+                                    <span v-else>{{ scope.row.materialSpecification }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="颜色">
+                                <template #default="scope">
+                                    <el-input v-if="isEditEnabled" v-model="scope.row.color" placeholder="请输入"
+                                        clearable />
+                                    <span v-else>{{ scope.row.color }}</span>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="unit" label="单位"></el-table-column>
-                            <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量"></el-table-column>
-                            <el-table-column
-                                prop="approvalUsage"
-                                label="核定用量"
-                            ></el-table-column>
+                            <el-table-column prop="approvalUsage" label="核定用量"></el-table-column>
                             <el-table-column prop="purchaseAmount" label="采购数量" width="150">
                                 <template #default="scope">
-                                    <el-input-number
-                                        v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.purchaseAmount"
-                                        :min="0"
-                                        size="small"
-                                    />
-                                    <el-button
-                                        v-if="scope.row.materialCategory == 1"
-                                        type="primary"
-                                        size="default"
-                                        @click="openSizeDialog(scope.row, scope.$index)"
-                                        >尺码用量填写</el-button
-                                    >
+                                    <el-input-number v-if="scope.row.materialCategory == 0"
+                                        v-model="scope.row.purchaseAmount" :min="0" size="small" />
+                                    <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default"
+                                        @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="remark" label="开发部备注"></el-table-column>
                         </el-table>
-                    </el-row>
-                </div>
+                    </el-col>
+
+                </el-row>
                 <template #footer>
                     <span>
                         <el-button @click="handleGenerateClose">取消</el-button>
-                        <el-button
-                            v-if="createEditSymbol == 0"
-                            type="primary"
-                            @click="confirmPurchaseSave"
-                            >保存</el-button
-                        >
-                        <el-button
-                            v-else-if="createEditSymbol == 1"
-                            type="primary"
-                            @click="confirmPurchaseEdit"
-                            >编辑保存</el-button
-                        >
+                        <el-button v-if="createEditSymbol == 0" type="primary"
+                            @click="confirmPurchaseSave">保存</el-button>
+                        <el-button v-else-if="createEditSymbol == 1" type="primary"
+                            @click="confirmPurchaseEdit">编辑保存</el-button>
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog
-                :title="`预览BOM表 ${previewFirstBomId}`"
-                v-model="isPreviewFirstDialogVisible"
-                width="90%"
-                :key="updateKey"
-            >
+            <el-dialog :title="`预览BOM表 ${previewFirstBomId}`" v-model="isPreviewFirstDialogVisible" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
@@ -336,132 +259,83 @@
                                 <el-table-column prop="supplierName" label="厂家名称" />
                                 <el-table-column prop="unitUsage" label="单位用量">
                                     <template #default="scope">
-                                        <el-button
-                                            v-if="scope.row.materialCategory == 1"
-                                            type="primary"
-                                            size="default"
-                                            @click="openSizeDialog(scope.row, scope.$index)"
-                                            >尺码用量查看</el-button
-                                        >
+                                        <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default"
+                                            @click="openSizeDialog(scope.row, scope.$index)">尺码用量查看</el-button>
                                     </template>
                                 </el-table-column>
                                 <el-table-column prop="approvalUsage" label="核定用量">
                                 </el-table-column>
                                 <el-table-column prop="remark" label="备注" />
                                 <el-table-column prop="isInboundSperate" label="入库单位是否不同"></el-table-column>
-                            <el-table-column prop="materialInboundName" label="入库材料名称">
+                                <el-table-column prop="materialInboundName" label="入库材料名称">
 
-                            </el-table-column>
-                            <el-table-column prop="materialInboundUnit" label="入库单位"></el-table-column>
-                            <el-table-column prop="remark" label="开发部备注"></el-table-column>
+                                </el-table-column>
+                                <el-table-column prop="materialInboundUnit" label="入库单位"></el-table-column>
+                                <el-table-column prop="remark" label="开发部备注"></el-table-column>
                             </el-table>
                         </el-col>
                     </el-row>
                 </div>
                 <template #footer>
                     <span>
-                        <el-button type="primary" @click="isPreviewFirstDialogVisible = false"
-                            >确认</el-button
-                        >
+                        <el-button type="primary" @click="isPreviewFirstDialogVisible = false">确认</el-button>
                     </span>
                 </template>
             </el-dialog>
 
-            <el-dialog
-                :title="`一次采购订单 ${previewBomId} 预览`"
-                v-model="isPreviewDialogVisible"
-                width="90%"
-                :close-on-click-modal="false"
-            >
+            <el-dialog :title="`一次采购订单 ${previewBomId} 预览`" v-model="isPreviewDialogVisible" width="90%"
+                :close-on-click-modal="false">
                 <div style="height: 500px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row
-                        v-for="purchaseDivideOrder in purchaseTestData"
-                        :key="purchaseDivideOrder"
-                        :gutter="20"
-                        style="margin-bottom: 20px"
-                    >
+                    <el-row v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
+                        style="margin-bottom: 20px">
                         <el-col :span="23">
                             <h3>分采购订单编号 {{ purchaseDivideOrder.purchaseDivideOrderId }}</h3>
                             <h3>工厂名称: {{ purchaseDivideOrder.supplierName }}</h3>
                             <el-row :gutter="20">
-                                <el-col :span="12" :offset="0"
-                                    ><span
-                                        >订单备注：
+                                <el-col :span="12" :offset="0"><span>订单备注：
                                         {{ purchaseDivideOrder.remark }}
-                                    </span></el-col
-                                >
+                                    </span></el-col>
                                 <el-col :span="12" :offset="0">
-                                    <span
-                                        >环境要求：
+                                    <span>环境要求：
                                         {{ purchaseDivideOrder.evironmentalRequest }}
                                     </span>
                                 </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="12" :offset="0"
-                                    ><span
-                                        >发货地址: {{ purchaseDivideOrder.shipmentAddress }}
-                                    </span></el-col
-                                >
+                                <el-col :span="12" :offset="0"><span>发货地址: {{ purchaseDivideOrder.shipmentAddress }}
+                                    </span></el-col>
                                 <el-col :span="12" :offset="0">
-                                    <span
-                                        >交货周期: {{ purchaseDivideOrder.shipmentDeadline }}
+                                    <span>交货周期: {{ purchaseDivideOrder.shipmentDeadline }}
                                     </span>
                                 </el-col>
                             </el-row>
-                            <div
-                                v-if="
-                                    factoryFieldJudge(purchaseDivideOrder.purchaseDivideOrderType)
-                                "
-                            >
-                                <el-table
-                                    :data="purchaseDivideOrder.assetsItems"
-                                    border
-                                    style="width: 100%"
-                                >
+                            <div v-if="
+                                factoryFieldJudge(purchaseDivideOrder.purchaseDivideOrderType)
+                            ">
+                                <el-table :data="purchaseDivideOrder.assetsItems" border style="width: 100%">
                                     <el-table-column type="index" label="编号" />
-                                    <el-table-column
-                                        prop="materialType"
-                                        label="材料类型"
-                                    ></el-table-column>
+                                    <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                     <el-table-column prop="materialName" label="材料名称" />
                                     <el-table-column prop="materialModel" label="材料型号" />
-                                    <el-table-column
-                                        prop="materialSpecification"
-                                        label="材料规格"
-                                    ></el-table-column>
+                                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                     <el-table-column prop="unit" label="单位" />
 
                                     <el-table-column prop="purchaseAmount" label="采购数量" />
                                     <el-table-column :label="`分码数量 (${currentShoeSizeType})`">
-                                        <el-table-column
-                                            v-for="column in filteredColumns(
-                                                purchaseDivideOrder.assetsItems
-                                            )"
-                                            :key="column.prop"
-                                            :prop="column.prop"
-                                            :label="column.label"
-                                        ></el-table-column>
+                                        <el-table-column v-for="column in filteredColumns(
+                                            purchaseDivideOrder.assetsItems
+                                        )" :key="column.prop" :prop="column.prop"
+                                            :label="column.label"></el-table-column>
                                     </el-table-column>
                                 </el-table>
                             </div>
                             <div v-else>
-                                <el-table
-                                    :data="purchaseDivideOrder.assetsItems"
-                                    border
-                                    style="width: 100%"
-                                >
+                                <el-table :data="purchaseDivideOrder.assetsItems" border style="width: 100%">
                                     <el-table-column type="index" label="编号" />
-                                    <el-table-column
-                                        prop="materialType"
-                                        label="材料类型"
-                                    ></el-table-column>
+                                    <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                     <el-table-column prop="materialName" label="材料名称" />
                                     <el-table-column prop="materialModel" label="材料型号" />
-                                    <el-table-column
-                                        prop="materialSpecification"
-                                        label="材料规格"
-                                    ></el-table-column>
+                                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                     <el-table-column prop="color" label="颜色" />
                                     <el-table-column prop="unit" label="单位" />
                                     <el-table-column prop="purchaseAmount" label="采购数量" />
@@ -473,9 +347,7 @@
                 </div>
                 <template #footer>
                     <span>
-                        <el-button type="primary" @click="isPreviewDialogVisible = false"
-                            >确认</el-button
-                        >
+                        <el-button type="primary" @click="isPreviewDialogVisible = false">确认</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -483,12 +355,7 @@
             <!-- Main content -->
         </el-main>
     </el-container>
-    <el-dialog
-        title="尺码数量填写"
-        v-model="isSizeDialogVisible"
-        width="60%"
-        :close-on-click-modal="false"
-    >
+    <el-dialog title="尺码数量填写" v-model="isSizeDialogVisible" width="60%" :close-on-click-modal="false">
         <span>{{ `尺码名称: ${currentShoeSizeType}` }}</span>
         <el-table :data="sizeData" border stripe>
             <el-table-column prop="size" label="尺码"></el-table-column>
@@ -506,118 +373,62 @@
             </span>
         </template>
     </el-dialog>
-    <el-dialog
-        title="采购订单创建页面"
-        v-model="purchaseOrderCreateVis"
-        width="80%"
-        :close-on-click-modal="false"
-    >
+    <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
         <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
         <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane
-                v-for="item in tabPlaneData"
-                :key="item.purchaseDivideOrderId"
-                :label="item.purchaseDivideOrderId + '    ' + item.supplierName"
-                :name="item.purchaseDivideOrderId"
-                style="min-height: 500px"
-            >
+            <el-tab-pane v-for="item in tabPlaneData" :key="item.purchaseDivideOrderId"
+                :label="item.purchaseDivideOrderId + '    ' + item.supplierName" :name="item.purchaseDivideOrderId"
+                style="min-height: 500px">
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"
-                        ><span
-                            >订单备注：
-                            <el-input
-                                v-model="item.remark"
-                                placeholder=""
-                                type="textarea"
-                                resize="none"
-                                clearable
-                            ></el-input> </span
-                    ></el-col>
+                    <el-col :span="12" :offset="0"><span>订单备注：
+                            <el-input v-model="item.remark" placeholder="" type="textarea" resize="none"
+                                clearable></el-input> </span></el-col>
                     <el-col :span="12" :offset="0">
-                        <span
-                            >环境要求：
-                            <el-input
-                                v-model="item.evironmentalRequest"
-                                placeholder=""
-                                type="textarea"
-                                resize="none"
-                                clearable
-                            ></el-input>
+                        <span>环境要求：
+                            <el-input v-model="item.evironmentalRequest" placeholder="" type="textarea" resize="none"
+                                clearable></el-input>
                         </span>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0">
-                        <span
-                            >发货地址：
-                            <el-input
-                                v-model="item.shipmentAddress"
-                                placeholder=""
-                                type="textarea"
-                                resize="none"
-                                clearable
-                            ></el-input>
+                        <span>发货地址：
+                            <el-input v-model="item.shipmentAddress" placeholder="" type="textarea" resize="none"
+                                clearable></el-input>
                         </span>
                     </el-col>
                     <el-col :span="12" :offset="0">
-                        <span
-                            >交货周期：
-                            <el-input
-                                v-model="item.shipmentDeadline"
-                                placeholder=""
-                                type="textarea"
-                                resize="none"
-                                clearable
-                            ></el-input>
+                        <span>交货周期：
+                            <el-input v-model="item.shipmentDeadline" placeholder="" type="textarea" resize="none"
+                                clearable></el-input>
                         </span>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20" style="margin-top: 20px">
                     <el-col :span="24" :offset="0">
                         <div v-if="factoryFieldJudge(item.purchaseDivideOrderType)">
-                            <el-table
-                                :data="item.assetsItems"
-                                border
-                                style="width: 100%"
-                                height="500"
-                            >
+                            <el-table :data="item.assetsItems" border style="width: 100%" height="500">
                                 <el-table-column type="index" label="编号" />
-                                <el-table-column
-                                    prop="materialType"
-                                    label="材料类型"
-                                ></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                 <el-table-column prop="materialName" label="材料名称" />
                                 <el-table-column prop="materialModel" label="材料型号" />
-                                <el-table-column
-                                    prop="materialSpecification"
-                                    label="材料规格"
-                                ></el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                 <el-table-column prop="unit" label="单位" />
 
                                 <el-table-column prop="amount" label="采购数量" />
                                 <el-table-column :label="`分码数量(${currentShoeSizeType})`">
-                                    <el-table-column
-                                        v-for="column in filteredColumns(item.assetsItems)"
-                                        :key="column.prop"
-                                        :prop="column.prop"
-                                        :label="column.label"
-                                    ></el-table-column>
+                                    <el-table-column v-for="column in filteredColumns(item.assetsItems)"
+                                        :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
                                 </el-table-column>
                             </el-table>
                         </div>
                         <div v-else>
                             <el-table :data="item.assetsItems" border stripe height="500">
                                 <el-table-column type="index"></el-table-column>
-                                <el-table-column
-                                    prop="materialType"
-                                    label="材料类型"
-                                ></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                 <el-table-column prop="materialName" label="材料名称" />
                                 <el-table-column prop="materialModel" label="材料型号" />
-                                <el-table-column
-                                    prop="materialSpecification"
-                                    label="材料规格"
-                                ></el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                 <el-table-column prop="color" label="颜色" />
                                 <el-table-column prop="unit" label="单位" />
                                 <el-table-column prop="purchaseAmount" label="数量" />
@@ -640,11 +451,14 @@
 </template>
 
 <script>
+import { Search } from '@element-plus/icons-vue'
 import AllHeader from '@/components/AllHeader.vue'
 import Arrow from '@/components/OrderArrowView.vue'
 import axios from 'axios'
 import { getShoeSizesName } from '@/Pages/utils/getShoeSizesName'
 import { shoeBatchInfoTableSpanMethod } from '@/Pages/ProductionManagementDepartment/utils'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { markRaw } from 'vue'
 export default {
     props: ['orderId'],
     components: {
@@ -672,16 +486,8 @@ export default {
             firstBomPreviewData: [],
             previewFirstBomId: '',
             isPreviewFirstDialogVisible: false,
-            originalBomTestData: [],
-            factoryOptions: [
-                { materialName: '黑色超软镜面PU', factoryName: '一一鞋材' },
-                { materialName: '黑色超软镜面PU', factoryName: '深源皮革' },
-                { materialName: '黑色超软镜面PU', factoryName: '嘉泰皮革' }
-                // Add more options here
-            ],
+            supplierNameOptions: [],
             currentBOMId: '',
-            departmentOptions: [],
-            colorOptions: [],
             purchaseTestData: [],
             isPreviewDialogVisible: false,
             selectedFile: null,
@@ -689,14 +495,20 @@ export default {
             currentShoeSizeType: '',
             getShoeSizesName,
             shoeSizeColumns: [],
-            orderInfoVisible: true
+            orderInfoVisible: true,
+            isEditEnabled: false,
+            materialTypeOptions: [],
+            materialNameOptions: [],
+            currentOrderShoeRow: {},
+            previewBomId: '',
+            Search: markRaw(Search),
         }
     },
     async mounted() {
         this.shoeSizeColumns = await this.getShoeSizesName(this.$props.orderId)
         this.currentShoeSizeType = this.shoeSizeColumns[0].type
-        this.getAllColorOptions()
-        this.getAllDepartmentOptions()
+        this.getAllMaterialNames()
+        this.querySupplierNames()
         this.$setAxiosToken()
         this.getOrderInfo()
         this.getAllShoeListInfo()
@@ -728,6 +540,54 @@ export default {
         }
     },
     methods: {
+        async revertMaterialChanges() {
+            ElMessageBox.confirm('确定要还原所有材料更改吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                let params = []
+                for (let i = 0; i < this.bomTestData.length; i++) {
+                    params.push(this.bomTestData[i].bomItemId)
+                }
+                try {
+                    await axios.patch(`${this.$apiBaseUrl}/purchaseorder/reverttooriginalbomitem`, params)
+                    await this.getBOMDetails(this.currentOrderShoeRow)
+                    ElMessage.success('还原成功')
+                }
+                catch (error) {
+                    console.log(error)
+                    ElMessage.error('还原失败')
+                }
+
+            })
+        },
+        handleSupplierNameSelect(row) {
+            row.supplierId = this.supplierNameOptions.find(
+                (option) => option.supplierName === row.supplierName
+            ).supplierId
+        },
+        handleMaterialNameSelect(row) {
+            const selectedMaterial = this.materialNameOptions.find(
+                (option) => option.value === row.materialName
+            )
+            row.materialId = selectedMaterial.materialId
+            row.materialTypeId = selectedMaterial.type
+            row.materialType = selectedMaterial.materialTypeName
+            row.unit = selectedMaterial.unit
+        },
+        async getAllMaterialNames() {
+            const params = { department: 0 }
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
+            this.materialNameOptions = response.data
+        },
+        changeEditMode() {
+            this.isEditEnabled = !this.isEditEnabled
+        },
+        async querySupplierNames() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allsuppliers`)
+            this.supplierNameOptions = response.data
+        },
         translateProductionInstructionType(row) {
             const typeMap = {
                 S: '面料',
@@ -737,7 +597,6 @@ export default {
                 O: '大底',
                 H: '烫底'
             }
-            console.log(typeMap[row.materialProductionInstructionType])
             return typeMap[row.materialProductionInstructionType] || row.materialProductionInstructionType
         },
         toggleOrderInfo() {
@@ -752,14 +611,6 @@ export default {
                         row[column.prop] !== 0
                 )
             )
-        },
-        async getAllDepartmentOptions() {
-            const response = await this.$axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
-            this.departmentOptions = response.data
-        },
-        async getAllColorOptions() {
-            const response = await this.$axios.get(`${this.$apiBaseUrl}/general/allcolors`)
-            this.colorOptions = response.data
         },
         async getNewPurchaseOrderId() {
             const response = await axios.get(
@@ -783,8 +634,6 @@ export default {
                 `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`
             )
             this.orderData = response.data
-            console.log(this.orderData)
-            this.updateArrowKey += 1
         },
         async getAllShoeListInfo() {
             const response = await axios.get(
@@ -815,9 +664,11 @@ export default {
                     }
                 }
             )
-            console.log(response.data)
             this.bomPreviewData = response.data
             this.bomTestData = response.data
+            for (const item of this.bomTestData) {
+                item.purchaseAmount = Number(item.purchaseAmount)
+            }
         },
         tableWholeFilter() {
             if (!this.inheritIdSearch) {
@@ -838,6 +689,9 @@ export default {
         },
         openSizeDialog(row, index) {
             this.sizeData = row.sizeInfo
+            for (const sizeRow of this.sizeData) {
+                sizeRow.purchaseAmount = parseFloat(sizeRow.approvalAmount) || 0
+            }
             this.isSizeDialogVisible = true
             this.currentSizeIndex = index
         },
@@ -851,6 +705,7 @@ export default {
             this.isSizeDialogVisible = false
         },
         async handleGenerate(row) {
+            this.currentOrderShoeRow = row
             await this.getNewPurchaseOrderId()
             await this.getOrderShoeBatchInfo(row.orderShoeId)
             await this.getBOMDetails(row)
@@ -874,12 +729,6 @@ export default {
         },
         handleGenerateClose() {
             this.createVis = false
-        },
-        getFilteredFactoryOptions(materialName) {
-            const filteredOptions = this.factoryOptions.filter(
-                (option) => option.materialName === materialName
-            )
-            return [{ factoryName: '询价' }, ...filteredOptions]
         },
         async openPreviewDialog(row) {
             this.previewBomId = row.purchaseOrderId
@@ -910,6 +759,7 @@ export default {
                 text: '等待中，请稍后...',
                 background: 'rgba(0, 0, 0, 0.7)'
             })
+            this.currentOrderShoeRow = row
             this.currentBOMId = row.totalBomId
             await this.getOrderShoeBatchInfo(row.orderShoeId)
             await this.getBOMDetails(row)
@@ -975,7 +825,7 @@ export default {
                 type: 'success',
                 message: '保存成功'
             })
-            this.createVis = false
+            // this.createVis = false
             this.getAllShoeListInfo()
         },
         async submitBOMUsage(row) {

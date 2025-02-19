@@ -18,8 +18,6 @@
                 <el-table-column prop="totalPurchaseOrderRId" label="采购单号"></el-table-column>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
-                <el-table-column prop="orderRId" label="订单号"></el-table-column>
-                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
                         <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
@@ -66,6 +64,7 @@
                     <th width="80">颜色</th>
                     <th width="55">单位</th>
                     <th>订单号</th>
+                    <th>工厂型号</th>
                     <th v-if="currentRow.materialCategory === 1" width="55"
                         v-for="(column, index) in recordData.shoeSizeColumns" :key="index">{{ column.label }}</th>
                     <th v-else width="100">数量</th>
@@ -81,7 +80,8 @@
                     <td>{{ item.materialSpecification }}</td>
                     <td>{{ item.colorName }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
-                    <td>{{ currentRow.orderRId }}</td>
+                    <td>{{ item.orderRId }}</td>
+                    <td>{{ item.shoeRId }}</td>
                     <td v-if="currentRow.materialCategory === 'S'" v-for="(column, index) in recordData.shoeSizeColumns"
                         :key="index">{{ item[column.prop] }}
                     </td>

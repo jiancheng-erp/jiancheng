@@ -48,12 +48,17 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
-                <el-table-column label="材料应入库数量">
+                <!-- <el-table-column label="鞋型所需数量">
                     <template #default="scope">
                         {{ Number(scope.row.estimatedInboundAmount).toFixed(2) + scope.row.materialUnit }}
                     </template>
+                </el-table-column> -->
+                <el-table-column label="采购数量">
+                    <template #default="scope">
+                        {{ Number(scope.row.actualPurchaseAmount).toFixed(2) + scope.row.actualInboundUnit }}
+                    </template>
                 </el-table-column>
-                <el-table-column label="材料实入库数量">
+                <el-table-column label="实入库数量">
                     <template #default="scope">
                         {{ Number(scope.row.actualInboundAmount).toFixed(2) + scope.row.actualInboundUnit }}
                     </template>
@@ -97,9 +102,9 @@
                             <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                             <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                             <el-table-column prop="colorName" label="颜色" width="80"></el-table-column>
-                            <el-table-column prop="materialUnit" label="单位" width="80"></el-table-column>
+                            <el-table-column prop="actualInboundUnit" label="单位" width="80"></el-table-column>
                             <el-table-column prop="orderRId" label="订单号"></el-table-column>
-                            <el-table-column prop="estimatedInboundAmount" label="预计入库数量"></el-table-column>
+                            <el-table-column prop="actualPurchaseAmount" label="采购数量"></el-table-column>
                             <el-table-column label="入库数量" width="150">
                                 <template #default="scope">
                                     <el-input-number v-if="scope.row.materialCategory == 0"

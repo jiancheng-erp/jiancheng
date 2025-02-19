@@ -172,6 +172,7 @@ def get_all_material_info():
             MaterialStorage.material_model,
             MaterialStorage.material_storage_status,
             MaterialStorage.actual_inbound_unit,
+            MaterialStorage.actual_purchase_amount,
             Material.material_id,
             Material.material_name,
             Material.material_unit,
@@ -185,7 +186,7 @@ def get_all_material_info():
             MaterialStorage.craft_name,
             MaterialStorage.composite_unit_cost,
         )
-        .join(Material, Material.material_id == MaterialStorage.material_id)
+        .join(Material, Material.material_id == MaterialStorage.actual_inbound_material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
         .outerjoin(
@@ -228,6 +229,9 @@ def get_all_material_info():
             SizeMaterialStorage.size_material_model.label("size_material"),
             SizeMaterialStorage.material_storage_status,
             literal("双").label("actual_inbound_unit"),
+            SizeMaterialStorage.total_estimated_inbound_amount.label(
+                "actual_purchase_amount"
+            ),
             Material.material_id,
             Material.material_name,
             Material.material_unit,
@@ -362,6 +366,7 @@ def get_all_material_info():
             material_model,
             material_storage_status,
             actual_inbound_unit,
+            actual_purchase_amount,
             material_id,
             material_name,
             material_unit,
@@ -393,6 +398,7 @@ def get_all_material_info():
             "materialUnit": material_unit,
             "materialCategory": material_category,
             "estimatedInboundAmount": estimated_inbound_amount,
+            "actualPurchaseAmount": actual_purchase_amount,
             "actualInboundAmount": actual_inbound_amount,
             "actualInboundUnit": actual_inbound_unit,
             "currentAmount": current_amount,
@@ -994,9 +1000,6 @@ def get_material_inbound_records():
             TotalPurchaseOrder.total_purchase_order_id,
             TotalPurchaseOrder.total_purchase_order_rid,
             Material.material_category,
-            Order.order_id,
-            Order.order_rid,
-            Shoe.shoe_rid,
         )
         .join(
             MaterialStorage,
@@ -1004,24 +1007,12 @@ def get_material_inbound_records():
         )
         .join(
             Material,
-            MaterialStorage.material_id == Material.material_id,
+            MaterialStorage.actual_inbound_material_id == Material.material_id,
         )
         .outerjoin(
             TotalPurchaseOrder,
             MaterialStorage.total_purchase_order_id
             == TotalPurchaseOrder.total_purchase_order_id,
-        )
-        .outerjoin(
-            OrderShoe,
-            MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
-        )
-        .outerjoin(
-            Order,
-            OrderShoe.order_id == Order.order_id,
-        )
-        .outerjoin(
-            Shoe,
-            OrderShoe.shoe_id == Shoe.shoe_id,
         )
         .distinct(InboundRecord.inbound_batch_id)
     )
@@ -1035,9 +1026,6 @@ def get_material_inbound_records():
             TotalPurchaseOrder.total_purchase_order_id,
             TotalPurchaseOrder.total_purchase_order_rid,
             Material.material_category,
-            Order.order_id,
-            Order.order_rid,
-            Shoe.shoe_rid,
         )
         .join(
             SizeMaterialStorage,
@@ -1052,18 +1040,6 @@ def get_material_inbound_records():
             TotalPurchaseOrder,
             SizeMaterialStorage.total_purchase_order_id
             == TotalPurchaseOrder.total_purchase_order_id,
-        )
-        .outerjoin(
-            OrderShoe,
-            SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
-        )
-        .outerjoin(
-            Order,
-            OrderShoe.order_id == Order.order_id,
-        )
-        .outerjoin(
-            Shoe,
-            OrderShoe.shoe_id == Shoe.shoe_id,
         )
         .distinct(InboundRecord.inbound_batch_id)
     )
@@ -1092,9 +1068,6 @@ def get_material_inbound_records():
             total_purchase_order_id,
             total_purchase_order_rid,
             material_category,
-            order_id,
-            order_rid,
-            shoe_rid,
         ) = row
         obj = {
             "timestamp": format_datetime(inbound_datetime),
@@ -1104,9 +1077,6 @@ def get_material_inbound_records():
             "totalPurchaseOrderId": total_purchase_order_id,
             "totalPurchaseOrderRId": total_purchase_order_rid,
             "materialCategory": material_category,
-            "orderId": order_id,
-            "orderRId": order_rid,
-            "shoeRId": shoe_rid,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -1130,14 +1100,19 @@ def get_inbound_record_by_batch_id():
                 MaterialStorage.composite_unit_cost.label("composite_unit_cost"),
                 MaterialStorage.actual_inbound_unit.label("actual_inbound_unit"),
                 Supplier,
+                Order.order_rid,
+                Shoe.shoe_rid,
             )
             .join(
                 MaterialStorage,
                 InboundRecord.material_storage_id
                 == MaterialStorage.material_storage_id,
             )
-            .join(Material, Material.material_id == MaterialStorage.material_id)
+            .join(Material, Material.material_id == MaterialStorage.actual_inbound_material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(Order, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .filter(InboundRecord.inbound_batch_id == inbound_batch_id)
             .all()
         )
@@ -1158,6 +1133,8 @@ def get_inbound_record_by_batch_id():
                 literal(0).label("composite_unit_cost"),
                 literal("双").label("actual_inbound_unit"),
                 Supplier,
+                Order.order_rid,
+                Shoe.shoe_rid,
             )
             .join(
                 SizeMaterialStorage,
@@ -1168,6 +1145,8 @@ def get_inbound_record_by_batch_id():
             )
             .join(Material, Material.material_id == SizeMaterialStorage.material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .join(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(Order, OrderShoe.order_id == Order.order_id)
             .filter(InboundRecord.inbound_batch_id == inbound_batch_id)
             .all()
         )
@@ -1187,6 +1166,8 @@ def get_inbound_record_by_batch_id():
             composite_unit_cost,
             actual_inbound_unit,
             supplier,
+            order_rid,
+            shoe_rid,
         ) = row
         obj = {
             "timestamp": record.inbound_datetime,
@@ -1207,11 +1188,13 @@ def get_inbound_record_by_batch_id():
             "materialStorageId": material_storage_id,
             "supplierName": supplier.supplier_name,
             "actualInboundUnit": actual_inbound_unit,
+            "orderRId": order_rid,
+            "shoeRId": shoe_rid,
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
             column_name = f"size_{shoe_size}_inbound_amount"
-            obj[f"amount{i}"] = getattr(record, column_name)
+            obj[f"amount{i}"] = getattr(record, column_name, None)
         result.append(obj)
     return result
 
