@@ -326,7 +326,6 @@
                         size="default"
                         :suffix-icon="'el-icon-search'"
                         clearable
-                        @input="filterByShoeRidWithSelection"
                     >
                     </el-input>
                 </el-col>
@@ -344,11 +343,7 @@
                         <el-table
                             :data="props.row.shoeTypeData"
                             border
-                            :row-key="
-                                (row) => {
-                                    return `${row.shoeId}`
-                                }
-                            "
+                            row-key="shoeTypeId"
                             @selection-change="handleSelectionShoeType"
                             ref="shoeSelectionTable"
                         >
@@ -1045,6 +1040,8 @@ export default {
         handleSelectionShoeType(selection) {
             this.selectedShoeList = selection
             this.newOrderForm.orderShoeTypes = selection
+            console.log(this.selectedShoeList)
+            console.log(this.newOrderForm)
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
