@@ -103,27 +103,36 @@ def get_material_type_and_name():
         )
     return jsonify(result)
 
+
 @assets_purchase_page_bp.route("/logistics/getallmaterialname", methods=["GET"])
 def get_all_material_name():
     # Query for all material names and their types
     material_department = request.args.get("department", 0)
-    material_name_list = db.session.query(Material).filter(Material.material_usage_department == material_department).all()
-    
+    material_name_list = (
+        db.session.query(Material, MaterialType)
+        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+        .filter(Material.material_usage_department == material_department)
+        .all()
+    )
+
     # Use a dictionary to store unique material names
     unique_materials = {}
-    for material in material_name_list:
+    for row in material_name_list:
+        material, material_type = row
         if material.material_name not in unique_materials:
             unique_materials[material.material_name] = {
+                "materialId": material.material_id,
                 "value": material.material_name,
                 "label": material.material_name,
                 "type": material.material_type_id,
+                "unit": material.material_unit,
+                "materialTypeName": material_type.material_type_name,
             }
-    
     # Convert the dictionary values into a list
     result = list(unique_materials.values())
-    
     # Print and return the result
     return jsonify(result)
+
 
 @assets_purchase_page_bp.route("/logistics/newpurchaseordersave", methods=["POST"])
 def new_purchase_order_save():
@@ -182,11 +191,10 @@ def new_purchase_order_save():
                 purchase_divide_order_rid=purchase_divide_order_rid,
                 purchase_order_id=purchase_order_id,
                 purchase_divide_order_type=(
-                "N" if items[0]["materialCategory"] == 0 else "S"
-            ),
+                    "N" if items[0]["materialCategory"] == 0 else "S"
+                ),
                 shipment_address="温州市瓯海区梧田工业基地镇南路8号（健诚集团）",
                 shipment_deadline="请在7-10日内交货",
-
             )
             db.session.add(purchase_divide_order)
             db.session.flush()
@@ -245,7 +253,7 @@ def new_purchase_order_save():
                         craft_name=item["craftName"],
                     )
                     for i in SHOESIZERANGE:
-                        if i -34 < len(item["sizeInfo"]):
+                        if i - 34 < len(item["sizeInfo"]):
                             setattr(
                                 assets_item,
                                 f"size_{i}_purchase_amount",
@@ -312,7 +320,7 @@ def get_assets_purchase_order_items():
         .filter(PurchaseOrder.purchase_order_id == purchase_order_id)
         .all()
     )
-    purchase_divide_order_type = 'N'
+    purchase_divide_order_type = "N"
     # Group the results by purchase_divide_order_rid
     result = []
     for (
@@ -516,11 +524,17 @@ def get_purchase_divide_orders():
             "remark": assets_item.remark,
             "sizeType": assets_item.size_type,
         }
-        batch_info_type = db.session.query(BatchInfoType).filter(BatchInfoType.batch_info_type_name == assets_item.size_type).first()
+        batch_info_type = (
+            db.session.query(BatchInfoType)
+            .filter(BatchInfoType.batch_info_type_name == assets_item.size_type)
+            .first()
+        )
         if batch_info_type:
             for shoe_size in SHOESIZERANGE:
                 if getattr(batch_info_type, f"size_{shoe_size}_name") is not None:
-                    obj[getattr(batch_info_type, f"size_{shoe_size}_name")] = getattr(assets_item, f"size_{shoe_size}_purchase_amount")
+                    obj[getattr(batch_info_type, f"size_{shoe_size}_name")] = getattr(
+                        assets_item, f"size_{shoe_size}_purchase_amount"
+                    )
             print(obj)
         grouped_results[divide_order_rid]["assetsItems"].append(obj)
 
@@ -566,9 +580,12 @@ def submit_purchase_order():
         }
     )
     db.session.flush()
-    purchase_order_rid = db.session.query(PurchaseOrder).filter(
-        PurchaseOrder.purchase_order_id == purchase_order_id
-    ).first().purchase_order_rid
+    purchase_order_rid = (
+        db.session.query(PurchaseOrder)
+        .filter(PurchaseOrder.purchase_order_id == purchase_order_id)
+        .first()
+        .purchase_order_rid
+    )
     query = (
         db.session.query(
             PurchaseDivideOrder,
@@ -620,7 +637,9 @@ def submit_purchase_order():
         elif purchase_divide_order.purchase_divide_order_type == "S":
             quantity_list = [0 for _ in SHOESIZERANGE]
             for i, shoe_size in enumerate(SHOESIZERANGE):
-                quantity_list[i] = getattr(assets_item, f"size_{shoe_size}_purchase_amount", 0) or 0
+                quantity_list[i] = (
+                    getattr(assets_item, f"size_{shoe_size}_purchase_amount", 0) or 0
+                )
             print(quantity_list)
             material_total_quantity = sum(quantity_list)
             size_material_storage = SizeMaterialStorage(
@@ -637,7 +656,11 @@ def submit_purchase_order():
                 size_storage_type=assets_item.size_type,
             )
             for i, shoe_size in enumerate(SHOESIZERANGE):
-                setattr(size_material_storage, f"size_{shoe_size}_estimated_inbound_amount", quantity_list[i])
+                setattr(
+                    size_material_storage,
+                    f"size_{shoe_size}_estimated_inbound_amount",
+                    quantity_list[i],
+                )
             db.session.add(size_material_storage)
     purchase_divide_orders = (
         db.session.query(
@@ -651,7 +674,11 @@ def submit_purchase_order():
             PurchaseOrder,
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
-        .join(AssetsPurchaseOrderItem, AssetsPurchaseOrderItem.purchase_divide_order_id == PurchaseDivideOrder.purchase_divide_order_id)
+        .join(
+            AssetsPurchaseOrderItem,
+            AssetsPurchaseOrderItem.purchase_divide_order_id
+            == PurchaseDivideOrder.purchase_divide_order_id,
+        )
         .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
@@ -661,7 +688,6 @@ def submit_purchase_order():
     # Dictionary to keep track of processed PurchaseDivideOrders
     purchase_divide_order_dict = {}
     size_purchase_divide_order_dict = {}
-    
 
     # Iterate through the query results and group items by PurchaseDivideOrder
     for (
@@ -676,7 +702,9 @@ def submit_purchase_order():
         if not os.path.exists(
             os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_rid)
         ):
-            os.makedirs(os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_rid)) 
+            os.makedirs(
+                os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_rid)
+            )
         if purchase_divide_order.purchase_divide_order_type == "N":
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
@@ -696,7 +724,11 @@ def submit_purchase_order():
                     "物品名称": (
                         material.material_name
                         + " "
-                        + (assets_item.material_model if assets_item.material_model else "")
+                        + (
+                            assets_item.material_model
+                            if assets_item.material_model
+                            else ""
+                        )
                         + " "
                         + (
                             assets_item.material_specification
@@ -713,11 +745,17 @@ def submit_purchase_order():
                 }
             )
         elif purchase_divide_order.purchase_divide_order_type == "S":
-            batch_info_type = db.session.query(BatchInfoType).filter(BatchInfoType.batch_info_type_name == assets_item.size_type).first()
+            batch_info_type = (
+                db.session.query(BatchInfoType)
+                .filter(BatchInfoType.batch_info_type_name == assets_item.size_type)
+                .first()
+            )
             shoe_size_list = []
             for i in SHOESIZERANGE:
                 if getattr(batch_info_type, f"size_{i}_name") is not None:
-                    shoe_size_list.append({i:getattr(batch_info_type, f"size_{i}_name")})
+                    shoe_size_list.append(
+                        {i: getattr(batch_info_type, f"size_{i}_name")}
+                    )
 
             if purchase_order_id not in size_purchase_divide_order_dict:
                 size_purchase_divide_order_dict[purchase_order_id] = {
@@ -750,7 +788,9 @@ def submit_purchase_order():
             }
             for size_dic in shoe_size_list:
                 for size, size_name in size_dic.items():
-                    obj[size_name] = getattr(assets_item, f"size_{size}_purchase_amount")
+                    obj[size_name] = getattr(
+                        assets_item, f"size_{size}_purchase_amount"
+                    )
             size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
     generated_files = []
     # Convert the dictionary to a list
@@ -769,7 +809,9 @@ def submit_purchase_order():
         if not os.path.exists(
             os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_id)
         ):
-            os.makedirs(os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_id)) 
+            os.makedirs(
+                os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_id)
+            )
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             "单独采购订单",
@@ -1033,6 +1075,7 @@ def get_all_material_types():
         db.session.rollback()
         print(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @assets_purchase_page_bp.route("/logistics/downloadassetzip", methods=["GET"])
 def download_asset_zip():

@@ -228,6 +228,7 @@ def order_price_update():
 		new_event = Event(staff_id = staff_id, handle_time = cur_time, operation_id = NEW_ORDER_STEP_OP, event_order_id = order_id)
 		processor: EventProcessor = current_app.config["event_processor"]
 		processor.processEvent(new_event)
+		db.session.add(new_event)
 	db.session.commit()
 
 	# find all orderShoeTypes belong to this order

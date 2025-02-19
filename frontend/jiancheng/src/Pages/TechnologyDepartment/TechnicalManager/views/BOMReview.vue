@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -74,7 +74,8 @@
                                 <el-table-column prop="status" label="状态" align="center"></el-table-column>
                                 <el-table-column label="操作" align="center">
                                     <template #default="scope">
-                                        <span v-if="scope.row.status === '未上传' || scope.row.status === '已上传' || scope.row.status === '等待用量填写'">
+                                        <span
+                                            v-if="scope.row.status === '未上传' || scope.row.status === '已上传' || scope.row.status === '等待用量填写'">
                                             材料用量尚未提交
                                         </span>
                                         <div v-else-if="scope.row.status === '完成用量填写'">
@@ -104,13 +105,10 @@
                                         @click="downloadProductionInstructionImage(scope.row)"
                                         >下载备注图片</el-button
                                     > -->
-                                    <el-button
-                                        type="success"
-                                        @click="downloadCraftSheet(scope.row)"
-                                        >下载工艺单EXCEL</el-button
-                                    >
+                                            <el-button type="success"
+                                                @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
                                         </div>
-                                        
+
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -125,16 +123,16 @@
                         <el-descriptions title="订单信息" :column="2" border>
                             <el-descriptions-item label="订单编号" align="center">{{
                                 orderData.orderId
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="订单创建时间" align="center">{{
                                 orderData.createTime
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="客户名称" align="center">{{
                                 orderData.customerName
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="订单预计截止日期" align="center">{{
                                 orderData.deadlineTime
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         </el-descriptions>
                         <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                             <el-row :gutter="20" style="margin-bottom: 20px">
@@ -161,159 +159,158 @@
                         <template #footer>
                             <span>
                                 <el-button @click="isFinalBOM = false">取消</el-button>
-                                <el-button type="primary"
-                                    @click="confirmBOMIssue(selectedShoe)">下发选定生产BOM</el-button>
+                                <el-button type="primary" @click="confirmBOMIssue(selectedShoe)">下发选定生产BOM</el-button>
                             </span>
                         </template>
                     </el-dialog>
-                    <el-dialog :title="`工艺单预览 ${newcraftSheetId}`" v-model="isPreviewDialogVisible" width="90%">
-                        <div style="height: 650px; overflow-y: scroll">
-                            <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
-                                    <el-descriptions title="鞋型基本信息" border direction="vertical" column="4"
-                                        style="margin-top: 20px">
-                                        <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
-                                            <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="型号" align="center">{{
-                                            currentShoeId
-                                            }}</el-descriptions-item>
-                                        <el-descriptions-item label="客户号" align="center">{{
-                                            orderShoeData.customerProductName
-                                            }}</el-descriptions-item>
-                                        <el-descriptions-item label="色号" align="center">{{
-                                            orderShoeData.color
-                                            }}</el-descriptions-item>
-                                        <el-descriptions-item label="设计师" align="center">{{
-                                            orderShoeData.shoeDesigner
-                                            }}</el-descriptions-item>
-                                        <el-descriptions-item label="调版员" align="center">{{
-                                            orderShoeData.shoeAdjuster
-                                            }}</el-descriptions-item>
-                                        <el-descriptions-item label="商标" align="center">{{
-                                            orderShoeData.brandName
-                                            }}</el-descriptions-item>
-                                    </el-descriptions>
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
-                                    <el-descriptions title="工艺单公用信息" border :column="3" direction="vertical">
-                                        <el-descriptions-item label="备注图片" :rowspan="2" width="200">
-                                            <el-image :src="craftSheetDetail.picNoteImgPath" fit="fill"
-                                                :lazy="true"></el-image>
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="调版员" width="500">
-                                            {{ craftSheetDetail.adjuster }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="刀模">
-                                            {{ craftSheetDetail.cutDie }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="生产额外数量要求">
-                                            {{ craftSheetDetail.productionRemark }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="审核人">
-                                            {{ craftSheetDetail.reviewer }}
-                                        </el-descriptions-item>
-                                    </el-descriptions>
-                                    <el-descriptions title="工艺单特殊工艺信息" border :column="1">
-                                        <el-descriptions-item label="裁断特殊工艺">
-                                            {{ craftSheetDetail.cuttingSpecialCraft }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="针车特殊工艺">
-                                            {{ craftSheetDetail.sewingSpecialCraft }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="成型特殊工艺">
-                                            {{ craftSheetDetail.moldingSpecialCraft }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="后处理备注">
-                                            {{ craftSheetDetail.postProcessing }}
-                                        </el-descriptions-item>
-                                        <el-descriptions-item label="科盛油性胶">
-                                            {{ craftSheetDetail.oilyGlue }}
-                                        </el-descriptions-item>
-                                    </el-descriptions>
-                                </el-col>
-                            </el-row>
+                    <el-dialog :title="`工艺单预览 ${newcraftSheetId}`" v-model="isPreviewDialogVisible" width="100%"
+                        fullscreen>
+                        <el-row :gutter="20">
+                            <el-col :span="24" :offset="0">
+                                <el-descriptions title="鞋型基本信息" border direction="vertical" :column="4"
+                                    style="margin-top: 20px">
+                                    <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
+                                        <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="型号" align="center">{{
+                                        currentShoeId
+                                    }}</el-descriptions-item>
+                                    <el-descriptions-item label="客户号" align="center">{{
+                                        orderShoeData.customerProductName
+                                    }}</el-descriptions-item>
+                                    <el-descriptions-item label="色号" align="center">{{
+                                        orderShoeData.color
+                                    }}</el-descriptions-item>
+                                    <el-descriptions-item label="设计师" align="center">{{
+                                        orderShoeData.shoeDesigner
+                                    }}</el-descriptions-item>
+                                    <el-descriptions-item label="调版员" align="center">{{
+                                        orderShoeData.shoeAdjuster
+                                    }}</el-descriptions-item>
+                                    <el-descriptions-item label="商标" align="center">{{
+                                        orderShoeData.brandName
+                                    }}</el-descriptions-item>
+                                </el-descriptions>
+                            </el-col>
+                        </el-row>
+                        <el-row :gutter="20">
+                            <el-col :span="24" :offset="0">
+                                <el-descriptions title="工艺单公用信息" border :column="3" direction="vertical">
+                                    <el-descriptions-item label="备注图片" :rowspan="2" width="200">
+                                        <el-image :src="craftSheetDetail.picNoteImgPath" fit="fill"
+                                            :lazy="true"></el-image>
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="调版员" width="500">
+                                        {{ craftSheetDetail.adjuster }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="刀模">
+                                        {{ craftSheetDetail.cutDie }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="生产额外数量要求">
+                                        {{ craftSheetDetail.productionRemark }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="审核人">
+                                        {{ craftSheetDetail.reviewer }}
+                                    </el-descriptions-item>
+                                </el-descriptions>
+                                <el-descriptions title="工艺单特殊工艺信息" border :column="1">
+                                    <el-descriptions-item label="裁断特殊工艺">
+                                        {{ craftSheetDetail.cuttingSpecialCraft }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="针车特殊工艺">
+                                        {{ craftSheetDetail.sewingSpecialCraft }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="成型特殊工艺">
+                                        {{ craftSheetDetail.moldingSpecialCraft }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="后处理备注">
+                                        {{ craftSheetDetail.postProcessing }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="科盛油性胶">
+                                        {{ craftSheetDetail.oilyGlue }}
+                                    </el-descriptions-item>
+                                </el-descriptions>
+                            </el-col>
+                        </el-row>
 
-                            <el-tabs v-model="activeTab">
-                                <!-- Generate tabs from backend-provided tabcolor array -->
-                                <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color"
-                                    style="overflow-y: scroll">
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 面料： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('surfaceMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 里料： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('insideMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 辅料： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('accessoryMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 大底： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('outsoleMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 中底： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
+                        <el-tabs v-model="activeTab">
+                            <!-- Generate tabs from backend-provided tabcolor array -->
+                            <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color"
+                                style="overflow-y: scroll">
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 面料： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('surfaceMaterialData')
+                                            " />
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 里料： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('insideMaterialData')
+                                            " />
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 辅料： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('accessoryMaterialData')
+                                            " />
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 大底： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('outsoleMaterialData')"
+                                            :isSizeMaterial="true" />
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 中底： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')"
+                                            :isSizeMaterial="true" />
+                                    </el-col>
+                                </el-row>
+                                <!-- <el-row :gutter="20">
                                         <el-col :span="2" :offset="0"> 楦头： </el-col>
                                     </el-row>
                                     <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
+                                        <el-col :span="24" :offset="0">
                                             <MaterialDataTable :tableData="getMaterialDataByType('lastMaterialData')
                                                 " />
                                         </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="2" :offset="0"> 烫底： </el-col>
-                                    </el-row>
-                                    <el-row :gutter="20">
-                                        <el-col :span="23" :offset="0">
-                                            <MaterialDataTable :tableData="getMaterialDataByType('hotsoleMaterialData')
-                                                " />
-                                        </el-col>
-                                    </el-row>
-                                </el-tab-pane>
-                            </el-tabs>
-                            <el-row :gutter="20">
-                                <el-col :span="23" :offset="0"> 刀模图： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
-                                    <el-image :src="craftSheetDetail.cutDieImgPath" style="width: 800px"></el-image>
-                                </el-col>
-                            </el-row>
-                        </div>
+                                    </el-row> -->
+                                <el-row :gutter="20">
+                                    <el-col :span="2" :offset="0"> 烫底： </el-col>
+                                </el-row>
+                                <el-row :gutter="20">
+                                    <el-col :span="24" :offset="0">
+                                        <MaterialDataTable :tableData="getMaterialDataByType('hotsoleMaterialData')
+                                            " />
+                                    </el-col>
+                                </el-row>
+                            </el-tab-pane>
+                        </el-tabs>
+                        <el-row :gutter="20">
+                            <el-col :span="24" :offset="0"> 刀模图： </el-col>
+                        </el-row>
+                        <el-row :gutter="20">
+                            <el-col :span="24" :offset="0">
+                                <el-image :src="craftSheetDetail.cutDieImgPath" style="width: 800px"></el-image>
+                            </el-col>
+                        </el-row>
+
 
                         <template #footer>
                             <span>

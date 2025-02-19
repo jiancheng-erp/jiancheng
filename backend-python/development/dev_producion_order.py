@@ -2305,6 +2305,7 @@ def get_material_detail():
     if material:
         return jsonify(
             {
+                "materialId": material.Material.material_id,
                 "unit": material.Material.material_unit,
                 "materialType": material.MaterialType.material_type_name,
             }
