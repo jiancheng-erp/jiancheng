@@ -16,6 +16,9 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>订单管理</span>
                         </el-menu-item>
+                        <el-menu-item index="10" @click="handleMenuClick(10)">
+                            <span>订单出库</span>
+                        </el-menu-item>
                         <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>客户/配码管理</span>
                         </el-menu-item>
@@ -38,7 +41,7 @@
                 </div>
             </el-aside>
             <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
+                <component :is="currentComponent" v-bind="currentProps"></component>
             </el-main>
         </el-container>
     </el-container>
@@ -54,6 +57,7 @@ import axios from 'axios'
 import ShoeTypeManagement from '@/components/ShoeTypeManagement.vue';
 import BatchInfoTypeManagement from '../components/BatchInfoTypeManagement.vue';
 import OrderExport from '../components/OrderExport.vue';
+import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue';
 export default {
     components: {
         AllHeader,
@@ -62,13 +66,15 @@ export default {
         ShoeTypeManagement,
         BatchInfoTypeManagement,
         PersonalInfo,
-        OrderExport
+        OrderExport,
+        OutboundProduct
     },
     data() {
         return {
             UserFilled,
             currentComponent: 'OrderManagement',
-            userName: ''
+            userName: '',
+            currentProps: {}
         }
     },
     mounted() {
@@ -105,6 +111,10 @@ export default {
                     break
                 case 9:
                     this.$router.push('/')
+                    break
+                case 10:
+                    this.currentComponent = 'OutboundProduct'
+                    this.currentProps = { editable: false }
                     break
             }
         },

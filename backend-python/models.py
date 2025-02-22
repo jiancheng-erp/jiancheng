@@ -161,7 +161,7 @@ class Material(db.Model):
     material_supplier = db.Column(db.Integer, nullable=False)
     material_creation_date = db.Column(db.Date, nullable=True)
     material_category = db.Column(db.SmallInteger, nullable=False, default=0)
-    material_usage_department = db.Column(db.String(1), nullable=True)
+    material_usage_department = db.Column(db.String(1), nullable=True, default=0)
 
     __table_args__ = (
         db.UniqueConstraint("material_supplier", "material_name", name="unq_material"),
@@ -212,7 +212,7 @@ class MaterialStorage(db.Model):
     material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True, nullable=False
     )
-    material_model = db.Column(db.String(50), default='', nullable=True)
+    material_model = db.Column(db.String(50), default="", nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     material_id = db.Column(db.BigInteger, nullable=False)
@@ -230,10 +230,10 @@ class MaterialStorage(db.Model):
     )
     current_amount = db.Column(db.DECIMAL(10, 5), default=0, nullable=False)
     unit_price = db.Column(db.DECIMAL(10, 3), nullable=False, default=0.00)
-    material_specification = db.Column(db.String(40), default='', nullable=True)
+    material_specification = db.Column(db.String(40), default="", nullable=True)
     material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
     material_outsource_outbound_date = db.Column(db.Date)
-    material_storage_color = db.Column(db.String(40), default='', nullable=True)
+    material_storage_color = db.Column(db.String(40), default="", nullable=True)
     total_purchase_order_id = db.Column(db.BigInteger, nullable=False)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
@@ -250,7 +250,7 @@ class MaterialStorage(db.Model):
 
     def __name__(self):
         return "MaterialStorage"
-    
+
     def to_dict(obj):
         """Convert SQLAlchemy object to dictionary."""
         return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
@@ -282,11 +282,13 @@ class Order(db.Model):
     customer_id = db.Column(
         db.Integer,
     )
-    salesman_id = db.Column(db.Integer,nullable=False)
+    salesman_id = db.Column(db.Integer, nullable=False)
     production_list_upload_status = db.Column(db.String(1), nullable=True)
     amount_list_upload_status = db.Column(db.String(1), nullable=True)
     batch_info_type_id = db.Column(db.Integer, nullable=False)
     supervisor_id = db.Column(db.Integer)
+    is_outbound_allowed = db.Column(db.SmallInteger, nullable=False, default=0)
+
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
 
@@ -749,6 +751,7 @@ class Shoe(db.Model):
     shoe_rid = db.Column(db.String(60), nullable=False)
     shoe_designer = db.Column(db.String(10), nullable=True)
     shoe_department_id = db.Column(db.String(10), nullable=True)
+
     def __repr__(self):
         return f"<Shoe(shoe_id={self.shoe_id})>"
 
@@ -758,7 +761,9 @@ class Shoe(db.Model):
 
 class ShoeInboundRecord(db.Model):
     __tablename__ = "shoe_inbound_record"
-    shoe_inbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_inbound_record_id = db.Column(
+        db.BigInteger, primary_key=True, autoincrement=True
+    )
     inbound_batch_id = db.Column(db.BigInteger)
     shoe_inbound_rid = db.Column(db.String(60), nullable=True)
     inbound_amount = db.Column(db.Integer, nullable=True)
@@ -766,7 +771,9 @@ class ShoeInboundRecord(db.Model):
     subsequent_stock = db.Column(db.Integer, nullable=True)
     subsequent_revenue = db.Column(db.DECIMAL(10, 3), nullable=True)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
-    inbound_type = db.Column(db.SmallInteger, nullable=False, default=0, comment="0: 自产\n1: 外包")
+    inbound_type = db.Column(
+        db.SmallInteger, nullable=False, default=0, comment="0: 自产\n1: 外包"
+    )
     semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     outsource_info_id = db.Column(db.Integer, nullable=True)
@@ -788,7 +795,9 @@ class ShoeInboundRecord(db.Model):
 
 class ShoeOutboundRecord(db.Model):
     __tablename__ = "shoe_outbound_record"
-    shoe_outbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_outbound_record_id = db.Column(
+        db.BigInteger, primary_key=True, autoincrement=True
+    )
     outbound_batch_id = db.Column(db.BigInteger)
     shoe_outbound_rid = db.Column(db.String(60), nullable=True)
     outbound_amount = db.Column(db.Integer, nullable=True)
@@ -858,8 +867,8 @@ class SizeMaterialStorage(db.Model):
     size_material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True
     )
-    size_material_specification = db.Column(db.String(40), default='', nullable=False)
-    size_material_model = db.Column(db.String(50), default='', nullable=True)
+    size_material_specification = db.Column(db.String(40), default="", nullable=False)
+    size_material_model = db.Column(db.String(50), default="", nullable=True)
     size_34_estimated_inbound_amount = db.Column(db.Integer, default=0)
     size_35_estimated_inbound_amount = db.Column(db.Integer, default=0)
     size_36_estimated_inbound_amount = db.Column(db.Integer, default=0)
@@ -911,7 +920,7 @@ class SizeMaterialStorage(db.Model):
     department_id = db.Column(
         db.Integer,
     )
-    size_material_color = db.Column(db.String(40), default='', nullable=True)
+    size_material_color = db.Column(db.String(40), default="", nullable=True)
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     unit_price = db.Column(db.Numeric(10, 3), nullable=True, default=0.00)
@@ -923,7 +932,7 @@ class SizeMaterialStorage(db.Model):
 
     def __repr__(self):
         return f"<SizeMaterialStorage {self.size_material_specification}>"
-    
+
     def to_dict(obj):
         """Convert SQLAlchemy object to dictionary."""
         return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
@@ -1255,6 +1264,7 @@ class ProductionInstructionItem(db.Model):
     def __repr__(self):
         return f"<ProductionInstructionItem(production_instruction_item_id={self.production_instruction_item_id})>"
 
+
 class CraftSheet(db.Model):
     __tablename__ = "craft_sheet"
     craft_sheet_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -1271,8 +1281,10 @@ class CraftSheet(db.Model):
     pic_note_img_path = db.Column(db.String(100), nullable=True)
     craft_sheet_status = db.Column(db.String(1), nullable=False)
     reviewer = db.Column(db.String(20), nullable=True)
+
     def __repr__(self):
         return f"<CraftSheet(craft_sheet_id={self.craft_sheet_id})>"
+
 
 class CraftSheetItem(db.Model):
     __tablename__ = "craft_sheet_item"
@@ -1294,9 +1306,11 @@ class CraftSheetItem(db.Model):
     total_usage = db.Column(db.DECIMAL(10, 5), nullable=True)
     after_usage_symbol = db.Column(db.String(1), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+
     def __repr__(self):
         return f"<CraftSheetItem(craft_sheet_item_id={self.craft_sheet_item_id})>"
-    
+
+
 class ProductionLine(db.Model):
     __tablename__ = "production_line"
 
@@ -1308,20 +1322,26 @@ class ProductionLine(db.Model):
     def __repr__(self):
         return f"<ProductionLine(production_line_id={self.production_line_id})>"
 
+
 class TotalPurchaseOrder(db.Model):
     __tablename__ = "total_purchase_order"
-    total_purchase_order_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    total_purchase_order_id = db.Column(
+        db.BigInteger, primary_key=True, autoincrement=True
+    )
     supplier_id = db.Column(db.Integer, nullable=False)
     create_date = db.Column(db.Date, nullable=False)
     total_purchase_order_status = db.Column(db.String(1), nullable=False)
     total_purchase_order_remark = db.Column(db.String(100), nullable=True)
-    total_purchase_order_environmental_request = db.Column(db.String(100), nullable=True)
+    total_purchase_order_environmental_request = db.Column(
+        db.String(100), nullable=True
+    )
     shipment_address = db.Column(db.String(100), nullable=True)
     shipment_deadline = db.Column(db.String(100), nullable=True)
     total_purchase_order_rid = db.Column(db.String(60), nullable=False)
 
     def __repr__(self):
         return f"<TotalPurchaseOrder(total_purchase_order_id={self.total_purchase_order_id})>"
+
 
 class FirstGradeAccounts(db.Model):
     __tablename__ = "accounting_fg_accounts"
@@ -1336,6 +1356,7 @@ class SecondGradeAccounts(db.Model):
     account_name = db.Column(db.String(20), nullable=False)
     account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
     account_belongs_fg = db.Column(db.Integer, nullable=False)
+
 
 class ThirdGradeAccounts(db.Model):
     __tablename__ = "accounting_tg_accounts"

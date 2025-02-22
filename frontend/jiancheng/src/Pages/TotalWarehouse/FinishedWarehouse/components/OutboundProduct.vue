@@ -5,22 +5,39 @@
                 @clear="getTableData" />
         </el-col>
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="orderCIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getTableData()"
+            <el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="getTableData()"
                 @clear="getTableData" />
         </el-col>
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="customerNameSearch" placeholder="请输入客户号" clearable @keypress.enter="getTableData()"
+            <el-input v-model="orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="getTableData()"
                 @clear="getTableData" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="getTableData()"
+                @clear="getTableData" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-select v-model="selectedStatus" placeholder="请选择审核状态" clearable @change="getTableData">
+                <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="8" :offset="0">
-            <el-button-group>
+            <el-button-group v-if="role == 20">
                 <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)">
                     批量出库
                 </el-button>
                 <el-button @click="toggleSelectionMode">
-                    {{ isMultipleSelection ? "退出" : "选择鞋包出库" }}
+                    {{ isMultipleSelection ? "退出" : "选择成品出库" }}
+                </el-button>
+            </el-button-group>
+            <el-button-group v-else>
+                <el-button v-if="isMultipleSelection" @click="approveOutbound">
+                    批准出库
+                </el-button>
+                <el-button @click="toggleSelectionMode">
+                    {{ isMultipleSelection ? "退出" : "选择订单" }}
                 </el-button>
             </el-button-group>
         </el-col>
@@ -44,13 +61,20 @@
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="customerName" label="客户名称"></el-table-column>
                 <el-table-column prop="orderCId" label="客户订单号"></el-table-column>
+                <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
                 <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
                 <el-table-column prop="currentStock" label="成品库存"></el-table-column>
                 <el-table-column prop="outboundedAmount" label="已出库数量"></el-table-column>
                 <el-table-column label="允许出库">
                     <template #default="{ row }">
-                        <el-tag v-if="row.isOutboundAllowed" type="success">可出货</el-tag>
-                        <el-tag v-else type="warning">不可出货</el-tag>
+                        <el-tag v-if="row.isOutboundAllowed == 0" type="warning">业务部审核</el-tag>
+                        <el-tag v-else-if="row.isOutboundAllowed == 1" type="warning">总经理审核</el-tag>
+                        <el-tag v-else-if="row.isOutboundAllowed == 2" type="success">已批准</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="详细库存">
+                    <template #default="{ row }">
+                        <el-button type="primary" size="small" @click="openShoeSizeDialog(row)">打开</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -134,6 +158,25 @@
             </el-button>
         </template>
     </el-dialog>
+
+    <el-dialog title="各鞋码生产进度" v-model="isOpenShoeSizeDialogVisible" width="80%">
+        <el-tabs v-model="activeStockTab">
+            <el-tab-pane v-for="(row, index) in currentRow.orderShoeTable" :key="row.orderShoeTypeId"
+                :label="`${row.shoeRId}-${row.colorName}`" :name="row.orderShoeTypeId">
+                <el-table :data="row.shoesOutboundTable" border stripe>
+                    <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
+                    <el-table-column prop="predictQuantity" label="订单数量"></el-table-column>
+                    <el-table-column prop="currentQuantity" label="库存"></el-table-column>
+                    <el-table-column prop="outboundedQuantity" label="已出库数量"></el-table-column>
+                </el-table>
+            </el-tab-pane>
+        </el-tabs>
+        <template #footer>
+            <el-button type="primary" @click="isOpenShoeSizeDialogVisible = false">
+                确认
+            </el-button>
+        </template>
+    </el-dialog>
 </template>
 <script>
 import axios from 'axios'
@@ -159,6 +202,7 @@ export default {
             orderNumberSearch: '',
             orderCIdSearch: '',
             customerNameSearch: '',
+            customerBrandSearch: '',
             currentRow: {},
             rules: {
                 timestamp: [
@@ -198,8 +242,16 @@ export default {
                 "timestamp": ["入库日期", "出库日期"],
                 "operationAmount": ["入库数量", "出库数量"],
             },
-            pickerOptions: [],
             clientTab: null,
+            role: localStorage.getItem('role'),
+            statusOptions: [
+                { value: 0, label: "业务部审核" },
+                { value: 1, label: "总经理审核" },
+                { value: 2, label: "已批准" },
+            ],
+            selectedStatus: null,
+            isOpenShoeSizeDialogVisible: false,
+            activeStockTab: null,
         }
     },
     computed: {
@@ -212,13 +264,30 @@ export default {
         },
     },
     mounted() {
-        this.getMoldingLines()
         this.getTableData()
     },
     methods: {
-        async getMoldingLines() {
-            let response = await axios.get(`${this.$apiBaseUrl}/production/getmoldinglines`)
-            this.pickerOptions = response.data
+        async approveOutbound() {
+            if (this.selectedRows.length == 0) {
+                ElMessage.error("未选择订单")
+                return
+            }
+            try {
+                let params = this.selectedRows.map((row) => row.orderId)
+                let response = null
+                if (this.role == 4 || this.role == 21) {
+                    response = await axios.patch(`${this.$apiBaseUrl}/order/approveoutboundbybusiness`, params)
+                }
+                else if (this.role == 2) {
+                    response = await axios.patch(`${this.$apiBaseUrl}/order/approveoutboundbygeneralmanager`, params)
+                }
+                ElMessage.success(response.data.message)
+                this.getTableData()
+            }
+            catch (error) {
+                console.log(error)
+                ElMessage.error("操作异常")
+            }
         },
         syncTimestamp(source_group) {
             return this.operationForm.groupedSelectedRows.map(group => {
@@ -237,6 +306,16 @@ export default {
             this.currentQuantityRow = row
             this.isOpenQuantityDialogVisible = true
         },
+        async openShoeSizeDialog(row) {
+            this.currentRow = row
+            let response = await this.getShoeSizeColumnsForOrder(row)
+            let targetedStorageStock = response.data
+            for (let i = 0; i < row.orderShoeTable.length; i++) {
+                row.orderShoeTable[i]["shoesOutboundTable"] = targetedStorageStock[row.orderShoeTable[i].storageId]
+            }
+            this.activeStockTab = row.orderShoeTable[0].orderShoeTypeId
+            this.isOpenShoeSizeDialogVisible = true
+        },
         toggleSelectionMode() {
             this.isMultipleSelection = !this.isMultipleSelection;
         },
@@ -249,7 +328,7 @@ export default {
                 return
             }
             for (let row of this.selectedRows) {
-                if (!row.isOutboundAllowed) {
+                if (row.isOutboundAllowed != 2) {
                     ElMessage.error("存在不可出货订单")
                     return
                 }
@@ -258,13 +337,17 @@ export default {
             this.groupSelectedRows();
             this.isOutboundDialogVisible = true
         },
+        async getShoeSizeColumnsForOrder(row) {
+            let params = { "orderId": row.orderId }
+            let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmultipleshoesizecolumns`, { params })
+            return response
+        },
         async groupSelectedRows() {
             let groupedData = []
             let selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
             for (let item of selectedRowsCopy) {
                 item["timeStamp"] = new Date()
-                let params = { "orderId": item.orderId, "storageType": 1 }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmultipleshoesizecolumns`, { params })
+                let response = await this.getShoeSizeColumnsForOrder(row)
                 let targetedStorageStock = response.data
                 for (let i = 0; i < item.orderShoeTable.length; i++) {
                     let shoeSizeColumns = []
@@ -303,7 +386,6 @@ export default {
             this.operationForm.groupedSelectedRows = groupedData;
             this.clientTab = groupedData[0].orderCId
             this.activeTab = groupedData[0]["orderTable"][0].orderId
-            console.log(this.operationForm.groupedSelectedRows)
         },
         async getTableData() {
             const params = {
@@ -312,6 +394,8 @@ export default {
                 "orderRId": this.orderNumberSearch,
                 "orderCId": this.orderCIdSearch,
                 "customerName": this.customerNameSearch,
+                "customerBrand": this.customerBrandSearch,
+                "approvalStatus": this.selectedStatus
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getproductoverview`, { params })
             this.tableData = response.data.result
@@ -335,6 +419,7 @@ export default {
                 for (let customer of this.operationForm.groupedSelectedRows) {
                     for (let row of customer.orderTable) {
                         let obj = {
+                            "orderId": row.orderId,
                             "timestamp": row.timestamp,
                             "items": []
                         }

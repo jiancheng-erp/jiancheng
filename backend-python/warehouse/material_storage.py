@@ -632,60 +632,6 @@ def notify_required_material_arrival():
     return jsonify({"message": "no"})
 
 
-@material_storage_bp.route(
-    "/warehouse/warehousemanager/inboundsizematerial", methods=["PATCH"]
-)
-def inbound_size_material():
-    data = request.get_json()
-    storage = SizeMaterialStorage.query.get(data["sizeMaterialStorageId"])
-    storage.total_actual_inbound_amount = 0
-    storage.total_current_amount = 0
-
-    if data["inboundType"] != 2:
-        storage.unit_price = data["unitPrice"]
-    if data["inboundType"] == 2:
-        storage.composite_unit_cost = data["compositeUnitCost"]
-
-    for i, shoe_size in enumerate(SHOESIZERANGE):
-        # actual inbound amount
-        column_name = f"size_{shoe_size}_actual_inbound_amount"
-        current_value = getattr(storage, column_name)
-        new_value = current_value + int(data[f"size{i}Amount"])
-        setattr(storage, column_name, new_value)
-        storage.total_actual_inbound_amount += new_value
-
-        # current_amount
-        column_name = f"size_{shoe_size}_current_amount"
-        current_value = getattr(storage, column_name)
-        new_value = current_value + int(data[f"size{i}Amount"])
-        setattr(storage, column_name, new_value)
-        storage.total_current_amount += new_value
-
-    flag = True
-    for shoe_size in SHOESIZERANGE:
-        if getattr(storage, f"size_{shoe_size}_estimated_inbound_amount") > getattr(
-            storage, f"size_{shoe_size}_actual_inbound_amount"
-        ):
-            flag = False
-    if flag:
-        storage.material_storage_status = 1
-
-    record = InboundRecord(
-        inbound_datetime=data["date"],
-        inbound_type=data["inboundType"],
-        size_material_storage_id=data["sizeMaterialStorageId"],
-    )
-    for shoe_size in SHOESIZERANGE:
-        column_name = f"size_{shoe_size}_inbound_amount"
-        setattr(record, column_name, int(data[f"size{i}Amount"]))
-    db.session.add(record)
-    db.session.flush()
-    rid = "IR" + datetime.now().strftime("%Y%m%d%H%M%S") + str(record.inbound_record_id)
-    record.inbound_rid = rid
-    db.session.commit()
-    return jsonify({"message": "success"})
-
-
 def _create_composite_materials(new_material_list):
     columns = ", ".join(new_material_list[0].keys())
     values_placeholder = ", ".join([f":{key}" for key in new_material_list[0].keys()])
@@ -729,7 +675,6 @@ def process_composite_materials(composite_material_list):
             "material": material,
         }
     storage_mapping = {}
-    print(composite_material_list)
     for row in composite_material_list:
         for composite in row["craftNameList"]:
             storage = storage_material_cache[row["materialStorageId"]]["storage"]

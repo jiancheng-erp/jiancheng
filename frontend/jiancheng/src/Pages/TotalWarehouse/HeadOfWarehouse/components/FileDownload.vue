@@ -1,12 +1,12 @@
 <template>
     <el-row :gutter="20">
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getMaterialTableData()"
-                @clear="getMaterialTableData()" />
+            <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getOrderShoeTableData()"
+                @clear="getOrderShoeTableData()" />
         </el-col>
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getMaterialTableData()"
-                @clear="getMaterialTableData()" />
+            <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getOrderShoeTableData()"
+                @clear="getOrderShoeTableData()" />
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -18,14 +18,21 @@
             <el-table-column label="文件">
                 <template #default="scope">
                     <el-button-group>
-                        <el-button type="text" size="small" @click="downloadSecondBOM(scope.row)">生产BOM
+                        <el-button type="primary" link size="small" @click="downloadSecondBOM(scope.row)">生产BOM
                         </el-button>
-                        <el-button type="text" size="small" @click="openCraftSheet(scope.row)">生产工艺单
+                        <el-button type="primary" link size="small" @click="openCraftSheet(scope.row)">生产工艺单
                         </el-button>
                     </el-button-group>
                 </template>
             </el-table-column>
         </el-table>
+    </el-row>
+    <el-row :gutter="20">
+        <el-col :span="12" :offset="14">
+            <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
+                :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper" :total="totalPages" />
+        </el-col>
     </el-row>
 </template>
 <script>
@@ -46,6 +53,14 @@ export default {
         this.getOrderShoeTableData()
     },
     methods: {
+        async handlePageChange(val) {
+            this.currentPage = val
+            await this.getOrderShoeTableData()
+        },
+        async handleSizeChange(val) {
+            this.pageSize = val
+            await this.getOrderShoeTableData()
+        },
         async getOrderShoeTableData() {
             let params = {
                 "page": this.currentPage,
@@ -55,8 +70,7 @@ export default {
             }
             const response = await axios.get(`${this.$apiBaseUrl}/production/getallordershoeinfo`, { params })
             this.orderShoeTableData = response.data.result
-            this.totalPages = response.data.length
-            console.log(this.orderShoeTableData)
+            this.totalPages = response.data.totalLength
         },
         // downloadFirstBOM(row) {
         //     window.open(
