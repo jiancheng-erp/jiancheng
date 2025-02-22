@@ -1613,19 +1613,19 @@ export default {
                             cancelButtonText: '取消',
                             type: 'warning'
                         }).then(async () => {
-                            const loadingInstance = this.$loading({
+                            try {
+                                const loadingInstance = this.$loading({
                                 lock: true,
                                 text: '等待中，请稍后...',
                                 background: 'rgba(0, 0, 0, 0.7)'
                             })
                             loadingInstance.close()
-                            const response = await axios.post(
+                            await axios.post(
                                 `${this.$apiBaseUrl}/ordercreate/createneworder`,
                                 {
                                     orderInfo: this.newOrderForm
                                 }
                             )
-                            if (response.status == 200) {
                                 ElMessage.success('创建订单成功')
                                 loadingInstance.close()
                                 this.orderCreationSecondInfoVis = false
@@ -1648,8 +1648,10 @@ export default {
                                     salesmanId: ''
                                 }
                                 this.getAllOrders()
-                            } else {
-                                ElMessage.error('创建订单失败，请稍后重试')
+                            }
+                            catch (error) {
+                                console.error('Upload error:', error)
+                                ElMessage.error(error.data.message)
                             }
                         })
                     }

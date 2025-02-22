@@ -15,6 +15,7 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_, and_, desc
 from api_utility import format_datetime
+from login.login import current_user_info
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 
@@ -95,6 +96,8 @@ def get_product_overview():
     order_rid = request.args.get("orderRId")
     order_cid = request.args.get("orderCId")
     customer_name = request.args.get("customerName")
+    customer_brand = request.args.get("customerBrand")
+    approval_status = request.args.get("approvalStatus")
     query = (
         db.session.query(
             Order,
@@ -127,6 +130,10 @@ def get_product_overview():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{order_cid}%"))
     if customer_name and customer_name != "":
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_brand and customer_brand != "":
+        query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+    if approval_status and approval_status != "":
+        query = query.filter(Order.is_outbound_allowed == approval_status)
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -137,13 +144,14 @@ def get_product_overview():
             "orderRId": order.order_rid,
             "orderCId": order.order_cid,
             "customerName": customer.customer_name,
+            "customerBrand": customer.customer_brand,
             "startDate": format_date(order.start_date),
             "endDate": format_date(order.end_date),
             "orderAmount": order_amount,
             "currentStock": current_stock,
             "outboundedAmount": outbounded_amount,
             "orderShoeTable": [],
-            "isOutboundAllowed": True,
+            "isOutboundAllowed": order.is_outbound_allowed,
         }
         result.append(obj)
 
@@ -300,14 +308,25 @@ def inbound_finished():
                     break
         if is_finished:
             processor: EventProcessor = current_app.config["event_processor"]
+            staff_id = current_user_info()[1]
             try:
                 for operation in [84, 85]:
                     event = Event(
-                        staff_id=21,
+                        staff_id=staff_id,
                         handle_time=datetime.now(),
                         operation_id=operation,
                         event_order_id=row["orderId"],
                         event_order_shoe_id=row["orderShoeId"],
+                    )
+                    processor.processEvent(event)
+
+                # update order status
+                for operation in [18, 19, 20, 21]:
+                    event = Event(
+                        staff_id=staff_id,
+                        handle_time=datetime.now(),
+                        operation_id=operation,
+                        event_order_id=row["orderId"],
                     )
                     processor.processEvent(event)
             except Exception as e:
@@ -329,6 +348,7 @@ def outbound_finished():
         + 1
     )
     for row in data:
+        order_id = row["orderId"]
         timestamp = row.get("timestamp", datetime.now())
         formatted_timestamp = (
             timestamp.replace("-", "").replace(" ", "").replace(":", "")
@@ -370,6 +390,20 @@ def outbound_finished():
             db.session.add(record)
             record.shoe_outbound_rid = rid
         next_group_id += 1
+        processor: EventProcessor = current_app.config["event_processor"]
+        staff_id = current_user_info()[1]
+        try:
+            for operation in [30]:
+                event = Event(
+                    staff_id=staff_id,
+                    handle_time=datetime.now(),
+                    operation_id=operation,
+                    event_order_id=order_id,
+                )
+                processor.processEvent(event)
+        except Exception as e:
+            print(e)
+            return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})
 

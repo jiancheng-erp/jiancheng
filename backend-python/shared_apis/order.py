@@ -1,41 +1,21 @@
 import constants
 import time
 from app_config import db
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, current_app
 from sqlalchemy import func
 from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
 import math
 import os
-from sqlalchemy import or_, text
-from sqlalchemy import or_, text
 from datetime import datetime
+from event_processor import EventProcessor
 
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE
 from general_document.order_export import (
     generate_excel_file,
 )
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
-from models import (
-    Order,
-    OrderShoe,
-    OrderShoeStatus,
-    OrderShoeType,
-    ShoeType,
-    OrderShoeStatusReference,
-    OrderShoeBatchInfo,
-    OrderStatus,
-    OrderStatusReference,
-    PurchaseOrder,
-    Customer,
-    Shoe,
-    Color,
-    Bom,
-    TotalBom,
-    PackagingInfo,
-    BatchInfoType,
-    Staff,
-)
+from models import *
 
 order_bp = Blueprint("order_bp", __name__)
 # 订单初始状态
@@ -1298,3 +1278,56 @@ def export_order():
     new_name = f"订单.xlsx"
     generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
     return send_file(new_file_path, as_attachment=True, download_name=new_name)
+
+
+@order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
+def approve_outbound_by_business():
+    order_ids = request.get_json()
+    staff_id = current_user_info()[1]
+    db.session.query(Order).filter(
+        Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
+    ).update({Order.is_outbound_allowed: 1}, synchronize_session=False)
+    db.session.query(Order).filter(
+        Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
+    ).update({Order.is_outbound_allowed: 1}, synchronize_session=False)
+    try:
+        processor: EventProcessor = current_app.config["event_processor"]
+        for order_id in order_ids:
+            for operation in [22, 23, 24, 25, 26, 27]:
+                event = Event(
+                    staff_id=staff_id,
+                    handle_time=datetime.now(),
+                    operation_id=operation,
+                    event_order_id=order_id,
+                )
+                processor.processEvent(event)
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "failed"}), 400
+    db.session.commit()
+    return jsonify({"message": "批准成功"}), 200
+
+
+@order_bp.route("/order/approveoutboundbygeneralmanager", methods=["PATCH"])
+def approve_outbound_by_general_manager():
+    order_ids = request.get_json()
+    staff_id = current_user_info()[1]
+    db.session.query(Order).filter(
+        Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
+    ).update({Order.is_outbound_allowed: 2}, synchronize_session=False)
+    try:
+        processor: EventProcessor = current_app.config["event_processor"]
+        for order_id in order_ids:
+            for operation in [28, 29]:
+                event = Event(
+                    staff_id=staff_id,
+                    handle_time=datetime.now(),
+                    operation_id=operation,
+                    event_order_id=order_id,
+                )
+                processor.processEvent(event)
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "failed"}), 400
+    db.session.commit()
+    return jsonify({"message": "批准成功"}), 200

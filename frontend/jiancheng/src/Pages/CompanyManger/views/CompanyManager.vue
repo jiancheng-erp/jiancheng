@@ -39,6 +39,9 @@
                         <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation')">
                             <span>生产订单确认</span>
                         </el-menu-item>
+                        <el-menu-item index="10" @click="handleMenuClick('OutboundProduct')">
+                            <span>订单出库</span>
+                        </el-menu-item>
                         <el-menu-item index="9" @click="logout">
                             <span>退出系统</span>
                         </el-menu-item>
@@ -62,6 +65,7 @@ import OrderStatusMonitor from '../components/OrderStatusMonitor/OrderStatusMoni
 import MaterialPricesAndCostTrends from '../components/MaterialPricesAndCostTrends/MaterialPricesAndCostTrends.vue'
 import FinancialStatusAndDepartmentalInput from '../components/FinancialStatusAndDepartmentalInput/FinancialStatusAndDepartmentalInput.vue'
 import OrderConfirmation from '../components/OrderConfirmation/OrderConfirmation.vue'
+import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { useRouter } from "vue-router";
 
@@ -70,7 +74,8 @@ const components = {
     OrderStatusMonitor,
     MaterialPricesAndCostTrends,
     FinancialStatusAndDepartmentalInput,
-    OrderConfirmation
+    OrderConfirmation,
+    OutboundProduct
 }
 let currentComponent = ref('CostCalcAndProfitAnalysis')
 let userName = ref('')
