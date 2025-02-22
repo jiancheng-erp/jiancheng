@@ -46,12 +46,17 @@
                             @click="openOrderDetail(scope.row.orderDbId)"
                             >审批生产订单</el-button
                         >
-                        <el-button
-                            v-show="scope.row.orderStatus != '生产订单总经理确认'"
+                        <el-button-group v-show="scope.row.orderStatus != '生产订单总经理确认'">
+                            <el-button
+                            type="primary"
+                            @click="openOrderDetail(scope.row.orderDbId)"
+                            >查看生产订单</el-button>
+                            <el-button
                             type="danger"
                             @click="deleteOrder(scope.row.orderRid)"
-                            >删除订单</el-button
-                        >
+                            >删除订单</el-button>
+                        </el-button-group>
+
                     </template>
                 </el-table-column>
             </el-table>
@@ -104,14 +109,15 @@ function sortByAscII(val1, val2) {
 }
 async function getAllOrders() {
     const response = await axios.get(`${$api_baseUrl}/order/getallorders`)
+    console.log(allData)
     allData.value = response.data.sort((a,b) => sortByAscII(a.orderRid, b.orderRid));
     // 此处需要增加订单状态筛选功能，保留状态为生产订单确认的数据
     const arr1 = []
     const arr2 = []
     for (let i = 0; i < response.data.length; i++) {
-        if (response.data[i].orderStatus === '生产订单总经理确认') {
+        if (response.data[i].orderStatusVal === 7) {
             arr1.push(response.data[i])
-        } else {
+        } else if (response.data[i].orderStatusVal > 7) {
             arr2.push(response.data[i])
         }
     }

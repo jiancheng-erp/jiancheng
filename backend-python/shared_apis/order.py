@@ -642,7 +642,7 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
-            .order_by(Order.start_date.desc())
+            .order_by(Order.order_rid.asc())
             .all()
         )
     elif current_user_role == BUSINESS_CLERK_ROLE:
@@ -656,7 +656,7 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
-            .order_by(Order.start_date.desc())
+            .order_by(Order.order_rid.asc())
             .all()
         )
     result = []
@@ -700,6 +700,7 @@ def get_display_orders_manager():
 # TODO delete
 @order_bp.route("/order/getallorders", methods=["GET"])
 def get_all_orders():
+    desc_symbol = request.args.get("descSymbol", None)
     entities = (
         db.session.query(Order, Customer, OrderStatus, OrderStatusReference)
         .join(Customer, Order.customer_id == Customer.customer_id)
@@ -708,9 +709,11 @@ def get_all_orders():
             OrderStatusReference,
             OrderStatus.order_current_status == OrderStatusReference.order_status_id,
         )
-        .order_by(Order.start_date.desc())
-        .all()
     )
+    if desc_symbol:
+        entities = entities.order_by(Order.order_rid.desc()).all()
+    else:
+        entities = entities.order_by(Order.order_rid.asc()).all()
     result = []
     for entity in entities:
         order, customer, order_status, order_status_reference = entity
