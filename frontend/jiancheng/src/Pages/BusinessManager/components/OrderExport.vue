@@ -3,6 +3,22 @@
         <el-col :span="2" :offset="0">
             <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">订单导出</el-button>
         </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="filters.orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="filterOrders()"
+                @clear="filterOrders" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="filters.customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="filterOrders()"
+                @clear="filterOrders" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="filters.orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="filterOrders()"
+                @clear="filterOrders" />
+        </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-input v-model="filters.customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="filterOrders()"
+                @clear="filterOrders" />
+        </el-col>
     </el-row>
     <el-table :data="currentTableData" border stripe height="600" @selection-change="handleSelection">
         <el-table-column type="selection" width="55" />
@@ -22,7 +38,7 @@
 </template>
 
 <script setup lang="js">
-import { ref, onMounted, getCurrentInstance } from 'vue'
+import { ref, onMounted, getCurrentInstance, reactive } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -36,9 +52,34 @@ let selectData = ref([])
 let staffId = localStorage.getItem('staffid')
 let role = localStorage.getItem('role')
 
+const filters = reactive({
+    orderNumberSearch: '',
+    customerNameSearch: '',
+    orderCIdSearch: '',
+    customerBrandSearch: ''
+})
+
 onMounted(() => {
     getAllOrders()
 })
+
+async function filterOrders() {
+    let filteredData = tableData.value
+    if (filters.orderNumberSearch) {
+        filteredData = filteredData.filter(order => order.orderRid.includes(filters.orderNumberSearch))
+    }
+    if (filters.customerNameSearch) {
+        filteredData = filteredData.filter(order => order.customerName.includes(filters.customerNameSearch))
+    }
+    if (filters.orderCIdSearch) {
+        filteredData = filteredData.filter(order => order.orderCid.includes(filters.orderCIdSearch))
+    }
+    if (filters.customerBrandSearch) {
+        filteredData = filteredData.filter(order => order.customerBrand.includes(filters.customerBrandSearch))
+    }
+    currentTableData.value = filteredData
+    currentTotalRows.value = filteredData.length
+}
 
 async function getAllOrders() {
     let response
@@ -53,6 +94,7 @@ async function getAllOrders() {
     tableData.value = response.data
     currentTableData.value = response.data
     currentTotalRows.value = response.data.length
+    dataCut()
 }
 
 function handleSelection(value) {
