@@ -572,8 +572,8 @@ export default {
         },
         updateValue(row) {
             console.log(row)
-            row.shoeTypeBatchData.totalPrice =
-                row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
+            let result = row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
+            row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2));
             this.orderShoeTypeIdToUnitPrice[row.orderShoeTypeId] = row.shoeTypeBatchData.unitPrice
         },
         updateCurrencyUnit(row) {

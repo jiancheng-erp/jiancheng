@@ -33,7 +33,7 @@
                     :data="orderShoeData"
                     border
                     stripe
-                    height="700"
+                    height="550"
                     :row-key="
                         (row) => {
                             return `${row.orderShoeId}`
@@ -180,8 +180,8 @@
                 </el-table>
 
                 <span>
-                    <el-button type="primary" @click="saveFormData">保存数据</el-button>
-                    <el-button type="primary" @click="showMessage">完成审批</el-button>
+                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7">保存数据</el-button>
+                    <el-button type="primary" @click="showMessage" v-if="orderData.orderStatus === 7">完成审批</el-button>
                 </span>
             </el-main>
         </el-container>
@@ -268,6 +268,7 @@ async function getOrderInfo() {
     const response = await axios.get(
         `${$api_baseUrl}/order/getbusinessorderinfo?orderid=${orderId}`
     )
+    console.log(orderData)
     orderData.value = response.data
     orderShoeData.value = response.data.orderShoeAllData
     batchInfoType = response.data.batchInfoType
@@ -285,12 +286,12 @@ function tableHeaderStyle({ row, rowIndex }) {
 }
 function imagerUrl(url) {
     if (url) {
-        return 'http://localhost:12667/' + url
+        return 'http://192.168.16.100:12667/' + url
     }
 }
 function updateValue(row) {
-    row.shoeTypeBatchData.totalPrice =
-        row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
+    let result = row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
+    row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2));
     orderShoeTypeIdToUnitPrice[row.orderShoeTypeId] = row.shoeTypeBatchData.unitPrice
 }
 function updateCurrencyValue(row) {

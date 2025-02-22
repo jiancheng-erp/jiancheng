@@ -625,32 +625,6 @@ class EventProcessor:
         orderStatus, statusVal = self.dbQueryOrderStatus(orderId)
         ### check operation valid
         if orderStatus == modifiedStatus and (modifiedValue - statusVal == 1):
-            ## if it is in production
-            if orderStatus == 9:
-                flag = (
-                    db.session.query(Order, OrderShoe, OrderShoeStatus)
-                    .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-                    .join(
-                        OrderShoeStatus,
-                        OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
-                    )
-                    .filter(Order.order_id == orderId)
-                    .filter(
-                        or_(
-                            OrderShoeStatus.current_status != 42,
-                            and_(
-                                OrderShoeStatus.current_status == 42,
-                                OrderShoeStatus.current_status_value != 2,
-                            ),
-                        )
-                    )
-                    .count()
-                    == 0
-                )
-                # do not push order status if order shoe is not finished
-                if not flag:
-                    logger.debug("Not all order shoes are finished.")
-                    return False
             if modifiedValue == 2:
                 ### set status to next
                 curStat = modifiedStatus

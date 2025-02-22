@@ -297,11 +297,15 @@
                 </el-row>
             </el-tab-pane>
             <el-tab-pane name="2" label="工艺单">
-                <el-button v-if="currentRow.processSheetUploadStatus != 4" type="warning" size="small"
+                <el-button v-if="currentRow.processSheetUploadStatus == 2" type="warning" size="small"
+                    @click="openCraftSheet()">
+                    已下发，用量未填写
+                </el-button>
+                <el-button v-else-if="currentRow.processSheetUploadStatus != 4" type="warning" size="small"
                     @click="openCraftSheet()">
                     未下发
                 </el-button>
-                <el-button v-if="currentRow.processSheetUploadStatus == 4" type="success" size="small"
+                <el-button v-else-if="currentRow.processSheetUploadStatus == 4" type="success" size="small"
                     @click="openCraftSheet()">
                     已下发
                 </el-button>

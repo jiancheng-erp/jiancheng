@@ -25,9 +25,10 @@
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(1)"
-                style="width: 300px"
+                style="width: 300px;"
             ></el-input>
         </el-col>
+
         <el-col :span="4" :offset="2"
             ><el-input
                 v-model="orderCidFilter"
@@ -108,6 +109,14 @@
                     />
                 </div>
             </div>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20">
+        <el-col :span="4">
+            <el-radio-group v-model="sortRadio" size="small" @change="switchSortLogic(sortRadio)">
+                <el-radio-button label="升序排列" value="asc" />
+                <el-radio-button label="降序排列" value="desc" />
+            </el-radio-group>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -325,6 +334,7 @@
                         placeholder="鞋型号搜索"
                         size="default"
                         :suffix-icon="'el-icon-search'"
+                        :input="filterByShoeRid()"
                         clearable
                     >
                     </el-input>
@@ -815,6 +825,7 @@ export default {
                 }
             ],
             radio: 'all',
+            sortRadio: 'asc',
             buttonText: '查看所有订单',
             buttonFlag: true
         }
@@ -1359,6 +1370,7 @@ export default {
             }
         },
         filterByShoeRidWithSelection() {
+            console.log(this.shoeRidFilter)
             const selectedShoeTypeIds = this.selectedShoeList.map((row) => row.shoeTypeId)
             if (!this.shoeRidFilter) {
                 this.shoeTableDisplayData = Array.from(
@@ -1680,6 +1692,48 @@ export default {
             }
             this.filterDisplayOrder()
         },
+        async switchSortLogic(value) {
+            console.log(value)
+            if (value === 'asc') {
+                if (!this.buttonFlag) {
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
+                        {
+                            currentStaffId: this.staffId
+                        }
+                    )
+                    this.unfilteredData = response.data
+                    this.displayData = this.unfilteredData
+                    this.totalItems = this.unfilteredData.length
+                }
+                else {
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
+                    this.unfilteredData = response.data
+                    this.displayData = this.unfilteredData
+                    this.totalItems = this.unfilteredData.length
+                }
+
+            }
+            else if (value === 'desc') {
+                if (!this.buttonFlag) {
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
+                        {
+                            currentStaffId: this.staffId
+                        }
+                    )
+                    this.unfilteredData = response.data
+                    console.log(this.unfilteredData)
+                    this.displayData = this.unfilteredData
+                    this.totalItems = this.unfilteredData.length
+                }
+                else {
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`,
+                    )
+                    this.unfilteredData = response.data
+                    this.displayData = this.unfilteredData
+                    this.totalItems = this.unfilteredData.length
+                }
+            }
+        },
         async displayContent() {
             if (this.buttonFlag) {
                 this.buttonText = '需我审批订单'
@@ -1688,6 +1742,7 @@ export default {
                 this.displayData = this.unfilteredData
                 this.totalItems = this.unfilteredData.length
                 this.radio = 'all'
+                this.sortRadio = 'asc'
             } else {
                 this.buttonText = '查看所有订单'
                 const response = await axios.get(
@@ -1697,9 +1752,11 @@ export default {
                     }
                 )
                 this.unfilteredData = response.data
+                console.log(this.unfilteredData)
                 this.displayData = this.unfilteredData
                 this.totalItems = this.unfilteredData.length
                 this.radio = 'all'
+                this.sortRadio = 'asc'
             }
             this.buttonFlag = !this.buttonFlag
         }
