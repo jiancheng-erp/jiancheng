@@ -35,6 +35,7 @@ import TechnicalManagerRoutes from '../Pages/TechnologyDepartment/TechnicalManag
 import BusinessManagerRoutes from '../Pages/BusinessManager/routers/business'
 import OrderConfirmDetailRoutes from '../Pages/CompanyManger/routers/OrderConfirmDetail'
 import ProductionClerkRoutes from '../Pages/ProductionManagementDepartment/ProductionClerk/routers/productionClerk'
+import HumanResourcesDepartmentRoutes from '@/Pages/HumanResourcesDepartment/routers/HumanResourcesDepartment'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -241,7 +242,8 @@ const router = createRouter({
     ...TechnicalManagerRoutes,
     ...BusinessManagerRoutes,
     ...OrderConfirmDetailRoutes,
-    ...ProductionClerkRoutes
+    ...ProductionClerkRoutes,
+    ...HumanResourcesDepartmentRoutes
   ]
 })
 import axios from 'axios'

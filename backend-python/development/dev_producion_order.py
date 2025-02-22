@@ -2030,6 +2030,54 @@ def get_auto_finished_supplier_name():
         return jsonify(supplier_list), 200
     else:
         return jsonify([]), 200
+    
+@dev_producion_order_bp.route("/devproductionorder/getautocompeletedata", methods=["GET"])
+def get_auto_complete_data():
+    data = request.args
+    material_name = data.get("materialName")
+    material_model = data.get("materialModel", None)
+    material_spec = data.get("materialSpecification", None)
+    search_type = int(data.get("searchType"))
+    material_supplier = data.get("materialSupplier", None)
+    if search_type == 0:
+        elements = (
+            db.session.query(ProductionInstructionItem.material_model)
+            .join(Material, ProductionInstructionItem.material_id == Material.material_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                Material.material_name == material_name,
+                ProductionInstructionItem.material_model.ilike(f"%{material_model}%"),
+                Supplier.supplier_name == material_supplier,
+            )
+            .distinct()
+            .all()
+        )
+        model_result = []
+        for element in elements:
+            model_result.append(element.material_model)
+        return jsonify(model_result), 200
+    elif search_type == 1:
+        elements = (
+            db.session.query(ProductionInstructionItem.material_specification)
+            .join(Material, ProductionInstructionItem.material_id == Material.material_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                Material.material_name == material_name,
+                ProductionInstructionItem.material_model == material_model,
+                ProductionInstructionItem.material_specification.ilike(f"%{material_spec}%"),
+                Supplier.supplier_name == material_supplier,
+            )
+            .distinct()
+            .all()
+        )
+        spec_result = []
+        for element in elements:
+            spec_result.append(element.material_specification)
+        return jsonify(spec_result), 200
+    else:
+        return jsonify([]), 200
+
+        
 
 
 @dev_producion_order_bp.route("/devproductionorder/getpastshoeinfo", methods=["GET"])
