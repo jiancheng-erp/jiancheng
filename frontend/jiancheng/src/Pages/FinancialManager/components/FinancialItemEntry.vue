@@ -8,30 +8,21 @@
             ]"
         >
             <el-select
-                v-model="ruleForm.itemValue"
+                v-model="itemValue"
                 placeholder="请选择项目类别"
                 size="large"
                 style="width: 300px"
                 clearable
                 filterable
+                @change="findNextItem(1)"
             >
                 <el-option
                     v-for="item in selectOption1"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
+                    :key="item.firstGradeAccountName"
+                    :label="item.firstGradeAccountName"
+                    :value="item.firstGradeAccountId"
                 />
             </el-select>
-            <span
-                style="margin-left: 20px; color: dodgerblue; cursor: pointer"
-                @click="ItemVisible = true"
-                >没有？点我添加</span
-            >
-            <span
-                style="margin-left: 20px; color: red; cursor: pointer"
-                @click="deleteItem"
-                >删除</span
-            >
         </el-form-item>
         <el-form-item
             label="一级科目"
@@ -41,28 +32,21 @@
             ]"
         >
             <el-select
-                v-model="ruleForm.projectItem1"
+                v-model="projectItem1"
                 placeholder="请选择一级科目"
                 size="large"
                 style="width: 300px"
                 clearable
                 filterable
+                @change="findNextItem(2)"
             >
                 <el-option
                     v-for="item in selectOption2"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
+                    :key="item.secondGradeAccountName"
+                    :label="item.secondGradeAccountName"
+                    :value="item.secondGradeAccountId"
                 />
             </el-select>
-            <span style="margin-left: 20px; color: dodgerblue; cursor: pointer" @click="addProject"
-                >没有？点我添加</span
-            >
-            <span
-                style="margin-left: 20px; color: red; cursor: pointer"
-                @click="deleteItem"
-                >删除</span
-            >
         </el-form-item>
         <el-form-item
             label="二级科目"
@@ -72,7 +56,7 @@
             ]"
         >
             <el-select
-                v-model="ruleForm.projectItem2"
+                v-model="projectItem2"
                 placeholder="请选择二级科目"
                 size="large"
                 style="width: 300px"
@@ -81,19 +65,11 @@
             >
                 <el-option
                     v-for="item in selectOption3"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value"
+                    :key="item.thirdGradeAccountName"
+                    :label="item.thirdGradeAccountName"
+                    :value="item.thirdGradeAccountId"
                 />
             </el-select>
-            <span style="margin-left: 20px; color: dodgerblue; cursor: pointer" @click="addProject"
-                >没有？点我添加</span
-            >
-            <span
-                style="margin-left: 20px; color: red; cursor: pointer"
-                @click="deleteItem"
-                >删除</span
-            >
         </el-form-item>
         <el-form-item label="所属月份">
             <el-date-picker
@@ -108,7 +84,7 @@
             <el-input style="width: 300px;height: 40px;" v-model="ruleForm.money"></el-input>
         </el-form-item>
         <el-form-item label="操作人">
-            <el-input style="width: 300px;height: 40px;" v-model="ruleForm.money" disabled></el-input>
+            <el-input style="width: 300px;height: 40px;" v-model="ruleForm.operName" disabled></el-input>
         </el-form-item>
         <el-form-item>
             <el-button type="primary" @click="addRuleForm" style="margin-left: 80px"
@@ -116,39 +92,6 @@
             >
         </el-form-item>
     </el-form>
-    <el-dialog title="添加项目类别" v-model="ItemVisible" width="50%">
-        <el-form label-width="100px" style="max-width: 460px">
-            <el-form-item label="项目类别名称">
-                <el-input :rows="2" v-model="ruleForm.itemValue" />
-            </el-form-item>
-            <el-form-item>
-                <el-button type="danger" @click="ItemVisible = false">取消</el-button>
-                <el-button type="primary" @click="addRuleForm">确定</el-button>
-            </el-form-item>
-        </el-form>
-    </el-dialog>
-    <el-dialog title="添加一级科目" v-model="projectVisible" width="50%">
-        <el-form label-width="100px" style="max-width: 460px">
-            <el-form-item label="一级科目名称">
-                <el-input :rows="2" v-model="ruleForm.projectItem1" />
-            </el-form-item>
-            <el-form-item>
-                <el-button type="danger" @click="projectVisible = false">取消</el-button>
-                <el-button type="primary" @click="addRuleForm">确定</el-button>
-            </el-form-item>
-        </el-form>
-    </el-dialog>
-    <el-dialog title="添加二级科目" v-model="projectVisible2" width="50%">
-        <el-form label-width="100px" style="max-width: 460px">
-            <el-form-item label="二级科目名称">
-                <el-input :rows="2" v-model="ruleForm.projectItem2" />
-            </el-form-item>
-            <el-form-item>
-                <el-button type="danger" @click="projectVisible2 = false">取消</el-button>
-                <el-button type="primary" @click="addRuleForm">确定</el-button>
-            </el-form-item>
-        </el-form>
-    </el-dialog>
 </template>
 
 <script lang="js" setup>
@@ -160,46 +103,51 @@ let selectOption1 = ref([])
 let selectOption2 = ref([])
 let selectOption3 = ref([])
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
-const itemUrl = `${$api_baseUrl}` + ''
-let ItemVisible = ref(false)
-let projectVisible = ref(false)
-let projectVisible2 = ref(false)
+let allAccounts = ref([])
 const ruleForm = ref({
     itemValue: '',
     projectItem1: '',
     projectItem2: '',
     dateValue: '',
     money: '',
-    operName:''
+    operName: window.localStorage.getItem('userName')
 })
+const itemValue = ref('');
+const projectItem1 = ref('');
+const projectItem2 = ref('');
 
 onMounted(() => {
     getItemType()
 })
 
 async function getItemType(url) {
-    // selectOption1.value = await axios.get(itemUrl, {})
-    // selectOption2.value = await axios.get(itemUrl, {})
+    const res = await axios.get($api_baseUrl + `/accountsmanagement/getallaccounts`)
+    allAccounts.value = res.data.firstGradeAccountsMapping
+    selectOption1.value = res.data.firstGradeAccountsMapping
 }
 function addRuleForm() {
-    projectVisible.value = false
-    ItemVisible.value = false
-    getItemType()
-}
-function addProject() {
-    if (ruleForm.value.itemValue == '') {
-        ElMessage.warning('请先选择项目类别')
-        return
-    } else {
-        projectVisible.value = true
-    }
-    if (ruleForm.value.projectItem1 == '') {
-        ElMessage.warning('请先选择一级科目')
-        return
-    } else {
-        projectVisible2.value = true
-    }
+    console.log(ruleForm.value)
 }
 
-function deleteItem(){}
+function findNextItem(val){
+    if (val == 1) {
+        selectOption2.value = []
+        selectOption3.value = []
+        projectItem1.value = ''
+        projectItem2.value = ''
+    } else {
+        selectOption3.value = []
+        projectItem2.value = ''
+    }
+    if (itemValue.value == '') {
+        return;
+    } else {
+        selectOption2.value = allAccounts.value[itemValue.value].associatedSecondGradeAccounts
+        if (projectItem1.value == '') {
+            return;
+        } else {
+            selectOption3.value = selectOption2.value.find((item) => item.secondGradeAccountId == projectItem1.value).associatedThirdGradeAccounts
+        }
+    }
+}
 </script>
