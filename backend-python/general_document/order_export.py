@@ -57,6 +57,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             for packaging_item in packaging_info:
                 total_quantity_ratio = packaging_item.get("totalQuantityRatio")
                 count = packaging_item.get("count")
+                packaging_info_name = packaging_item.get("packagingInfoName")
                 insert_row_with_format(ws, row, row + 1)
                 if image:
                     image.height = 120
@@ -68,6 +69,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                 column_name = get_next_column_name(column_name)
                 column_name = get_next_column_name(column_name)
                 ws[f"{column_name}{row}"] = color_name
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = packaging_info_name
                 column_name = get_next_column_name(column_name)
                 for i in SHOESIZERANGE:
                     ws[f"{column_name}{row}"] = packaging_item.get(f"size{i}Ratio")
@@ -100,7 +103,7 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     insert_series_data(wb, order_data, "A", 9)
 
     # insert shoe size name
-    column = "E"
+    column = "F"
     row = 8
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]

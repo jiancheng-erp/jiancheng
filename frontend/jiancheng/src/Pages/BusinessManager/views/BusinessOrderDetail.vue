@@ -139,19 +139,6 @@
                                                 :label="batchInfoType[col]"
                                                 width="90"
                                             ></el-table-column>
-                                            <!-- <el-table-column prop="size34ratio" label ="34"/>
-                                    <el-table-column prop="size35ratio" label ="35"/>
-                                    <el-table-column prop="size36ratio" label ="36"/>
-                                    <el-table-column prop="size37ratio" label ="37"/>
-                                    <el-table-column prop="size38ratio" label ="38"/>
-                                    <el-table-column prop="size39ratio" label ="39"/>
-                                    <el-table-column prop="size40ratio" label ="40"/>
-                                    <el-table-column prop="size41ratio" label ="41"/>
-                                    <el-table-column prop="size42ratio" label ="42"/>
-                                    <el-table-column prop="size43ratio" label ="43"/>
-                                    <el-table-column prop="size44ratio" label ="44"/>
-                                    <el-table-column prop="size45ratio" label ="45"/>
-                                    <el-table-column prop="size46ratio" label ="46"/> -->
                                             <el-table-column
                                                 prop="totalQuantityRatio"
                                                 label="对/件"
@@ -300,6 +287,8 @@
                     type="textarea"
                     :rows="2"
                     v-model="this.remarkForm.technicalRemark"
+                    :show-word-limit="true"
+                    :maxlength="100"
                 ></el-input>
             </el-form-item>
 
@@ -308,6 +297,8 @@
                     type="textarea"
                     :rows="2"
                     v-model="this.remarkForm.materialRemark"
+                    :show-word-limit="true"
+                    :maxlength="100"
                 ></el-input>
             </el-form-item>
         </el-form>
