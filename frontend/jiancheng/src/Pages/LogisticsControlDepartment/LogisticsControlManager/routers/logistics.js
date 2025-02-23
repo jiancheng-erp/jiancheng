@@ -2,6 +2,7 @@ import FirstLogisticsOrder from '../views/FirstOrderBOMView.vue'
 import SecondLogisticsOrder from '../views/SecondOrderBOMView.vue'
 import TestGraph from '../views/TestGraphView.vue'
 import CreateAssetPurchaseView from '../views/CreateAssetPurchaseView.vue'
+import PackagePurchaseView from '@/components/PackagePurchaseView.vue'
 export default [
   {
     path: '/logistics/firstpurchase/orderid=:orderId',
@@ -43,4 +44,15 @@ export default [
       role: 9
     }
   },
+  {
+    path: '/packagepurchase',
+    name: 'packagepurchase',
+    component: PackagePurchaseView,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: [3, 9]
+    }
+
+  }
 ]

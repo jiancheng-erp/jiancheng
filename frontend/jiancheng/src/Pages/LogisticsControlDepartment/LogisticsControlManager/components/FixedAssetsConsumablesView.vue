@@ -5,14 +5,21 @@
         >
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="12" :offset="0"
+        <el-col :span="4" :offset="0"
             ><el-button-group>
                 <el-button type="primary" size="default" @click="openCreatePage(null, 0)"
                     >新建耗材/固定资产采购订单</el-button
                 >
             </el-button-group>
         </el-col>
-        <el-col :span="4" :offset="8"
+        <el-col :span="4" :offset="0"
+            ><el-button-group>
+                <el-button type="primary" size="default" @click="openCreatePage(null, 0)"
+                    >新建包材采购订单</el-button
+                >
+            </el-button-group>
+        </el-col>
+        <el-col :span="4" :offset="12"
             ><el-button type="warning" size="large" @click="openUnsubmitDialog"
                 >待提交订单</el-button
             >
@@ -905,6 +912,9 @@ export default {
                 url = `${window.location.origin}/logistics/createassetpurchase/purchaseorderid=${row.purchaseOrderId}`
             }
             window.open(url, '_blank')
+        },
+        openPackagePage(row) {
+            const url = `${window.location.origin}/logistics/packagepurchase/`
         },
         manualAddMaterial() {
             const newItem = {

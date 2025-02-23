@@ -381,6 +381,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -417,7 +422,8 @@ def save_production_instruction():
                     material_second_type=material_second_type,
                     material_source=material_source,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("insideMaterialData")) > 0:
@@ -490,6 +496,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 material_source = (
                     material_data.get("materialSource")
                     if material_data.get("materialSource") and material_data.get("materialSource") != None
@@ -531,7 +542,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("accessoryMaterialData")) > 0:
@@ -609,6 +621,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -645,7 +662,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
 
@@ -719,6 +737,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 material_source = (
                     material_data.get("materialSource")
                     if material_data.get("materialSource") and material_data.get("materialSource") != None
@@ -754,7 +777,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("midsoleMaterialData")) > 0:
@@ -832,6 +856,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -862,7 +891,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("lastMaterialData")) > 0:
@@ -940,6 +970,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -970,7 +1005,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("hotsoleMaterialData")) > 0:
@@ -1048,6 +1084,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1078,7 +1119,8 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
                     craft_name=craft_name,
-                    after_usage_symbol = 0
+                    after_usage_symbol = 0,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(craft_sheet_item)
     order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
@@ -1191,6 +1233,7 @@ def get_origin_material_info():
             "materialDetailType": item.material_second_type,
             "materialSource": "P",
             "productionInstructionItemId": item.production_instruction_item_id,
+            "processingRemark": item.CraftSheetItem.processing_remark
         }
 
         if item.material_type == "S":
@@ -1316,6 +1359,7 @@ def get_craft_sheet_info():
             "materialDetailType": item.CraftSheetItem.material_second_type,
             "materialSource": item.CraftSheetItem.material_source,
             "productionInstructionItemId": item.CraftSheetItem.production_instruction_item_id,
+            "processingRemark": item.CraftSheetItem.processing_remark
         }
 
         if item.CraftSheetItem.material_type == "S":
@@ -1495,6 +1539,11 @@ def edit_craft_sheet():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1603,6 +1652,11 @@ def edit_craft_sheet():
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
+                    else None
+                )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
                     else None
                 )
                 material_source = (
@@ -1718,6 +1772,11 @@ def edit_craft_sheet():
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
+                    else None
+                )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
                     else None
                 )
                 material_source = (
@@ -1836,6 +1895,11 @@ def edit_craft_sheet():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 material_source = (
                     material_data.get("materialSource")
                     if material_data.get("materialSource") and material_data.get("materialSource") != None
@@ -1948,6 +2012,11 @@ def edit_craft_sheet():
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
+                    else None
+                )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
                     else None
                 )
                 material_source = (
@@ -2069,6 +2138,11 @@ def edit_craft_sheet():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -2176,6 +2250,11 @@ def edit_craft_sheet():
                 remark = (
                     material_data.get("comment")
                     if material_data.get("comment")
+                    else None
+                )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
                     else None
                 )
                 department_id = (

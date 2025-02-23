@@ -288,6 +288,7 @@ class Order(db.Model):
     batch_info_type_id = db.Column(db.Integer, nullable=False)
     supervisor_id = db.Column(db.Integer)
     is_outbound_allowed = db.Column(db.SmallInteger, nullable=False, default=0)
+    packaging_status = db.Column(db.String(1), nullable=False, default=0)
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
@@ -1260,6 +1261,7 @@ class ProductionInstructionItem(db.Model):
     order_shoe_type_id = db.Column(db.BigInteger, nullable=False)
     material_second_type = db.Column(db.String(10), nullable=False)
     pre_craft_name = db.Column(db.String(100), nullable=True)
+    processing_remark = db.Column(db.String(200), nullable=True)
 
     def __repr__(self):
         return f"<ProductionInstructionItem(production_instruction_item_id={self.production_instruction_item_id})>"
@@ -1306,6 +1308,7 @@ class CraftSheetItem(db.Model):
     total_usage = db.Column(db.DECIMAL(10, 5), nullable=True)
     after_usage_symbol = db.Column(db.String(1), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    processing_remark = db.Column(db.String(200), nullable=True)
 
     def __repr__(self):
         return f"<CraftSheetItem(craft_sheet_item_id={self.craft_sheet_item_id})>"

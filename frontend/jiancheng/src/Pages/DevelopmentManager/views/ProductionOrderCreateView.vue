@@ -265,6 +265,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
                                             <el-button type="danger" size="small"
@@ -352,6 +358,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
@@ -444,6 +456,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
                                             <el-button type="danger" size="small"
@@ -533,6 +551,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
                                             <el-button type="danger" size="small"
@@ -619,6 +643,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
@@ -716,6 +746,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
@@ -1082,6 +1118,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
@@ -1173,6 +1215,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
@@ -1260,6 +1308,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
@@ -1354,6 +1408,12 @@
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
@@ -1442,6 +1502,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
@@ -1540,6 +1606,12 @@
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
+                                                size="default"></el-input>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="processingRemark" label="加工备注">
+                                        <template #default="scope">
+                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default"></el-input>
                                         </template>
                                     </el-table-column>
