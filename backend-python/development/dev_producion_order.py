@@ -368,6 +368,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -397,6 +402,7 @@ def save_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
 
@@ -470,6 +476,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -494,6 +505,7 @@ def save_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("accessoryMaterialData")) > 0:
@@ -566,6 +578,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -590,6 +607,7 @@ def save_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("outsoleMaterialData")) > 0:
@@ -662,6 +680,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -686,6 +709,7 @@ def save_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("midsoleMaterialData")) > 0:
@@ -758,6 +782,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -782,6 +811,7 @@ def save_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("hotsoleMaterialData")) > 0:
@@ -854,6 +884,11 @@ def save_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -879,6 +914,7 @@ def save_production_instruction():
                     order_shoe_type_id=order_shoe_type_id,
                     pre_craft_name=material_data.get("craftName", None),
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
 
@@ -983,6 +1019,7 @@ def get_production_instruction():
             "useDepart": item.department_id,
             "isPurchase": item.is_pre_purchase,
             "materialDetailType": item.material_second_type,
+            "processingRemark": item.processing_remark,
         }
 
         if item.material_type == "S":
@@ -1161,6 +1198,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1190,6 +1232,7 @@ def edit_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_second_type,
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
 
@@ -1263,6 +1306,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1287,6 +1335,7 @@ def edit_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("accessoryMaterialData")) > 0:
@@ -1360,6 +1409,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1384,6 +1438,7 @@ def edit_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("outsoleMaterialData")) > 0:
@@ -1456,6 +1511,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1480,6 +1540,7 @@ def edit_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("midsoleMaterialData")) > 0:
@@ -1552,6 +1613,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1576,6 +1642,7 @@ def edit_production_instruction():
                     material_type=material_type,
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
         if len(data.get("hotsoleMaterialData")) > 0:
@@ -1648,6 +1715,11 @@ def edit_production_instruction():
                     if material_data.get("comment")
                     else None
                 )
+                processing_remark = (
+                    material_data.get("processingRemark")
+                    if material_data.get("processingRemark")
+                    else None
+                )
                 department_id = (
                     material_data.get("useDepart")
                     if material_data.get("useDepart")
@@ -1673,6 +1745,7 @@ def edit_production_instruction():
                     pre_craft_name=material_data.get("craftName", None),
                     order_shoe_type_id=order_shoe_type_id,
                     material_second_type=material_data.get("materialDetailType", None),
+                    processing_remark=processing_remark,
                 )
                 db.session.add(production_instruction_item)
     db.session.commit()

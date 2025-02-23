@@ -225,7 +225,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('surfaceMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('surfaceMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }">
@@ -293,8 +293,10 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable></vxe-input>
+                                            <vxe-input v-model="row.comment"></vxe-input>
                                         </template>
+                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
                                     </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">
@@ -320,7 +322,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('insideMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('insideMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
@@ -392,6 +394,8 @@
                                             <vxe-input v-model="row.comment" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
+                                    </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">
                                             <vxe-button status="danger" size="small"
@@ -415,7 +419,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('accessoryMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('accessoryMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
@@ -488,6 +492,8 @@
                                             <vxe-input v-model="row.comment" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
+                                    </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">
                                             <vxe-button status="danger" size="small"
@@ -511,7 +517,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('outsoleMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('outsoleMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
@@ -582,6 +588,8 @@
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.comment" clearable></vxe-input>
                                         </template>
+                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
                                     </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">
@@ -606,7 +614,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('midsoleMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('midsoleMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
@@ -678,6 +686,8 @@
                                             <vxe-input v-model="row.comment" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
+                                    </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">
                                             <vxe-button status="danger" size="small"
@@ -701,7 +711,7 @@
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('hotsoleMaterialData')" border show-overflow
+                                <vxe-table :data="getMaterialDataByType('hotsoleMaterialData')" border
                                     :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
@@ -772,6 +782,8 @@
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.comment" clearable></vxe-input>
                                         </template>
+                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注">
                                     </vxe-column>
                                     <vxe-column title="操作">
                                         <template #default="scope">

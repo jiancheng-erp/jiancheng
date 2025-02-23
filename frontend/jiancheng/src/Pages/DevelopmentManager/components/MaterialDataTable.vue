@@ -18,6 +18,8 @@
         </el-table-column>
         <el-table-column prop="comment" label="备注">
         </el-table-column>
+        <el-table-column prop="processingRemark" label="加工备注">
+        </el-table-column>
     </el-table>
 </template>
 <script>
