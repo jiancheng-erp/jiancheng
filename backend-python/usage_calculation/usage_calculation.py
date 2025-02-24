@@ -277,7 +277,6 @@ def save_bom_usage():
     bom_items = request.json.get("bomItems")
     bom = db.session.query(Bom).filter(Bom.bom_rid == bom_rid).first()
     bom.bom_status = "4"
-    print(bom_items)
     for bom_item in bom_items:
         entity = (
             db.session.query(BomItem)
@@ -290,6 +289,15 @@ def save_bom_usage():
             entity.total_usage = bom_item["approvalUsage"]
             entity.unit_usage = bom_item["unitUsage"]
             entity.remark = bom_item["remark"]
+    order_shoe_status = (
+        db.session.query(OrderShoeStatus)
+        .join(OrderShoe, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .filter(OrderShoeType.order_shoe_type_id == bom.order_shoe_type_id)
+        .filter(OrderShoeStatus.current_status == 4)
+        .first()
+    )
+    order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"status": "success"})
 

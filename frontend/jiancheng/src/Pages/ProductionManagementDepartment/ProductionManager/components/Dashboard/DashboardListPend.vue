@@ -6,7 +6,7 @@
         </el-col>        
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size="normal" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
     </el-row>
     

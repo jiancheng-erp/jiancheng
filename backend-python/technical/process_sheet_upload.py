@@ -249,21 +249,24 @@ def get_order_shoe_info():
 @process_sheet_upload_bp.route(
     "/craftsheet/savecraftsheet", methods=["POST"]
 )
-def save_production_instruction():
+def save_craft_sheet():
     order_id = request.json.get("orderId")
     order_shoe_rid = request.json.get("orderShoeId")
     craft_sheet_rid = request.json.get("craftSheetId")
     upload_data = request.json.get("uploadData")
     craft_sheet_detail = request.json.get("craftSheetDetail")
-    order_shoe = (
-        db.session.query(Order, OrderShoe, Shoe)
+    entities = (
+        db.session.query(Order, OrderShoe, Shoe, OrderShoeStatus)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
         .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
+        .filter(OrderShoeStatus.current_status == 9)
         .first()
-        .OrderShoe
     )
+    order_shoe = entities.OrderShoe
     order_shoe_id = order_shoe.order_shoe_id
+    order_shoe_status = entities.OrderShoeStatus
     craft_sheet = (
         db.session.query(CraftSheet)
         .filter(CraftSheet.craft_sheet_rid == craft_sheet_rid)
@@ -1125,6 +1128,7 @@ def save_production_instruction():
                 db.session.add(craft_sheet_item)
     order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
     order_shoe.process_sheet_upload_status = "1"
+    order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"message": "Production order uploaded successfully"})
 

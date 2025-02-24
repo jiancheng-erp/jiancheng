@@ -10,18 +10,29 @@
             <el-input
                 v-model="orderSearch"
                 placeholder=""
-                size="normal"
+                size=""
                 :suffix-icon="Search"
                 clearable
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="6" :offset="6" style="white-space: nowrap">
+        <el-col :span="6" :offset="2" style="white-space: nowrap">
             客人名称搜索：
             <el-input
                 v-model="customerSearch"
                 placeholder=""
-                size="normal"
+                size=""
+                :suffix-icon="Search"
+                clearable
+                @change="tableFilter"
+            ></el-input>
+        </el-col>
+        <el-col :span="6" :offset="2" style="white-space: nowrap">
+            工厂型号搜索：
+            <el-input
+                v-model="shoeRIdSearch"
+                placeholder=""
+                size=""
                 :suffix-icon="Search"
                 clearable
                 @change="tableFilter"
@@ -101,7 +112,7 @@
         </el-table>
     </el-row>
     <el-row :gutter="20">
-    <el-col :span="6" :offset="16">
+    <el-col>
         <el-pagination
             v-model:current-page="currentPage"
             :page-size="pageSize"
@@ -124,6 +135,7 @@ export default {
         return {
             Search,
             orderSearch: '',
+            shoeRIdSearch: '',
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
@@ -146,6 +158,7 @@ export default {
                         pageSize: this.pageSize,
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
+                        shoeRIdSearch: this.shoeRIdSearch,
                     },
                 })
                 this.orderFilterData = response.data // Update table data
@@ -153,6 +166,7 @@ export default {
                 params: {
                     orderSearch: this.orderSearch,
                     customerSearch: this.customerSearch,
+                    shoeRIdSearch: this.shoeRIdSearch,
                 },
                 })
                 this.totalData = response2.data.totalOrders // Total orders for pagination

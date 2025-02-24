@@ -93,7 +93,7 @@
         title="码段表格"
         v-model="addBatchTypeDialogVis"
         width="30%">
-        <el-form :model="batchInfoTypeForm" label-width="120px" :inline="false" size="normal">
+        <el-form :model="batchInfoTypeForm" label-width="120px" :inline="false" size="">
             <el-form-item label="码段名称">
                 <el-input v-model="batchInfoTypeForm.batchInfoTypeName"></el-input>
             </el-form-item>

@@ -7,7 +7,7 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="4" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
-        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" size="normal" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
     </el-row>
     
@@ -20,9 +20,6 @@
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
                 <el-table-column prop="customerName" label="客户"></el-table-column>                
             <el-table-column prop="orderShoeCount" label="鞋型数量"></el-table-column>
-                <!-- <el-table-column prop="prevTime" label="前序流程下发时间"></el-table-column>
-                <el-table-column prop="prevDepart" label="前序处理部门"></el-table-column>
-                <el-table-column prop="prevUser" label="前序处理人"></el-table-column> -->
             </el-table>
 
         </el-col>

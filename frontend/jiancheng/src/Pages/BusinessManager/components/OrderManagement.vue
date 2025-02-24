@@ -341,12 +341,12 @@
                 </el-col>
             </el-row>
             <el-table
-                title=""
                 :data="shoeTableDisplayData"
                 style="width: 100%"
                 stripe
                 border
                 height="500"
+                row-key="shoeId"
             >
                 <el-table-column type="expand">
                     <template #default="props">
@@ -354,7 +354,7 @@
                             :data="props.row.shoeTypeData"
                             border
                             row-key="shoeTypeId"
-                            @selection-change="handleSelectionShoeType"
+                            @selection-change="(selection) => handleSelectionShoeType(selection, props.row.shoeId)"
                             ref="shoeSelectionTable"
                         >
                             <el-table-column size="small" type="selection" align="center">
@@ -1029,6 +1029,7 @@ export default {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
+            console.log(this.newOrderForm)
             this.orderCreationInfoVis = false
             this.orderCreationSecondInfoVis = true
             this.newOrderForm.orderShoeTypes.forEach((item) => {
@@ -1039,15 +1040,24 @@ export default {
                 this.newOrderForm.customerShoeName[item.shoeRid] = ''
             })
             this.getCustomerBatchInfo(this.newOrderForm.customerId)
-            // console.log(this.newOrderForm)
+
         },
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] =
                 out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
-        handleSelectionShoeType(selection) {
-            this.selectedShoeList = selection
-            this.newOrderForm.orderShoeTypes = selection
+        handleSelectionShoeType(selection, shoeId) {
+            // check if the selected shoe type is already in the selectedShoeList
+            // if it is, remove it from the list
+            // if it is not, add it to the list
+            this.selectedShoeList = [
+                ...this.selectedShoeList.filter((item) => item.shoeId !== shoeId),
+                ...selection.map((item) => ({ ...item, shoeId }))
+            ];
+            this.newOrderForm.orderShoeTypes = [
+                ...this.newOrderForm.orderShoeTypes.filter((item) => item.shoeId !== shoeId),
+                ...selection.map((item) => ({ ...item, shoeId }))
+            ];
             console.log(this.selectedShoeList)
             console.log(this.newOrderForm)
         },

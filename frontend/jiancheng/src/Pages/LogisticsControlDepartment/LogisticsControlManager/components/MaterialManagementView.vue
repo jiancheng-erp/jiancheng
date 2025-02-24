@@ -482,7 +482,7 @@
         </template>
     </el-dialog>
     <el-dialog title="编辑材料" v-model="isModifyMaterialTypeDialogVisible" width="20%">
-        <el-form :model="editMaterialForm" size="normal">
+        <el-form :model="editMaterialForm" size="">
             <el-form-item label="旧材料名称">
                 <el-text>{{ editMaterialForm.materialOldName }}</el-text>
             </el-form-item>

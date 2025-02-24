@@ -59,7 +59,7 @@
       <el-input
         v-model="dialogOrderSearch"
         placeholder=""
-        size="normal"
+        size=""
         clearable
         @change=""
       ></el-input>
@@ -86,7 +86,7 @@
       <el-input
         v-model="dialogOrderSearch"
         placeholder=""
-        size="normal"
+        size=""
         clearable
         @change=""
       ></el-input>
@@ -245,7 +245,7 @@
               <el-date-picker
                 v-model="tab.dateValue"
                 type="daterange"
-                size="normal"
+                size=""
                 range-separator="-"
                 start-placeholder=""
                 end-placeholder=""
