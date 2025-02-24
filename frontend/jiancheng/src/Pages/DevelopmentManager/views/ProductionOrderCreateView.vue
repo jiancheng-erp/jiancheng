@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -111,16 +111,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -202,11 +202,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('surfaceMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -214,10 +214,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -230,18 +227,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName">
-                                                </el-option>
-                                            </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -298,11 +284,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('insideMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -310,10 +296,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -326,18 +309,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -393,11 +370,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('accessoryMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -405,10 +382,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -421,18 +395,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -488,11 +456,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('outsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -500,10 +468,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -516,18 +481,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -583,11 +542,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('midsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -595,10 +554,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -611,18 +567,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -680,11 +630,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -692,10 +642,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -708,18 +655,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -823,10 +764,10 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="工厂型号" align="center">{{
                         pastShoeDescription.shoeId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         pastShoeDescription.color
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
@@ -892,7 +833,7 @@
             <el-dialog :title="`投产指令单预览 ${newProductionInstructionId}`" v-model="isPreviewDialogVisible" width="90%">
                 <div style="height: 650px; overflow-y: scroll">
                     <el-row :gutter="20">
-                        <el-col :span="23" :offset="0">
+                        <el-col :span="24" :offset="0">
                             <el-descriptions title="鞋型基本信息" border direction="vertical" column="4"
                                 style="margin-top: 20px">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
@@ -900,27 +841,27 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="型号" align="center">{{
                                     currentShoeId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
                     <el-row :gutter="20">
-                        <el-col :span="23" :offset="0">
+                        <el-col :span="24" :offset="0">
                             <el-descriptions title="投产指令单公用信息" border :column="2">
                                 <el-descriptions-item label="本码">
                                     {{ productionInstructionDetail.originSize }}
@@ -947,12 +888,12 @@
                         </el-col>
                     </el-row>
                     <el-row :gutter="20">
-                    <el-col :span="24" :offset="0">
-                        <vxe-grid v-bind="sizeGridOptions">
+                        <el-col :span="24" :offset="0">
+                            <vxe-grid v-bind="sizeGridOptions">
 
-                        </vxe-grid>
-                    </el-col>
-                </el-row>
+                            </vxe-grid>
+                        </el-col>
+                    </el-row>
 
                     <el-tabs v-model="activeTab">
                         <!-- Generate tabs from backend-provided tabcolor array -->
@@ -962,7 +903,7 @@
                                 <el-col :span="2" :offset="0"> 面料： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('surfaceMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -970,7 +911,7 @@
                                 <el-col :span="2" :offset="0"> 里料： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('insideMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -978,7 +919,7 @@
                                 <el-col :span="2" :offset="0"> 辅料： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('accessoryMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -986,7 +927,7 @@
                                 <el-col :span="2" :offset="0"> 大底： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('outsoleMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -994,7 +935,7 @@
                                 <el-col :span="2" :offset="0"> 中底： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -1002,7 +943,7 @@
                                 <el-col :span="2" :offset="0"> 烫底： </el-col>
                             </el-row>
                             <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
+                                <el-col :span="24" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('hotsoleMaterialData')" />
                                 </el-col>
                             </el-row>
@@ -1017,7 +958,7 @@
                 </template>
             </el-dialog>
             <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible"
-                :close-on-click-modal="false" width="90%" full-screen style="overflow-y: scroll">
+                :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
                 <el-descriptions title="投产指令单公用信息" border :column="2">
                     <el-descriptions-item label="本码">
                         <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
@@ -1050,7 +991,7 @@
                         </vxe-grid>
                     </el-col>
                 </el-row>
-                
+
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
@@ -1069,11 +1010,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('surfaceMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -1081,10 +1022,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1097,18 +1035,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1167,11 +1099,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('insideMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -1179,10 +1111,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1195,18 +1124,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1263,11 +1186,11 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('accessoryMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
@@ -1275,10 +1198,7 @@
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1291,18 +1211,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1359,21 +1273,18 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('outsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1386,18 +1297,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1456,21 +1361,18 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('midsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1483,18 +1385,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1555,21 +1451,18 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="23" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border
                                     style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.materialName" filterable @change="
+                                            <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
                                                 <el-option v-for="item in filterByTypes(
@@ -1582,18 +1475,12 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <!-- <el-select v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName" filterable>
+                                            <!-- <el-select  v-model="scope.row.supplierName" filterable>
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-if="
-                                                scope !== undefined &&
-                                                scope.row.manualSymbol === 1
-                                            " v-model="scope.row.supplierName"
+                                            <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
                                                 placeholder="请输入厂家" />
                                         </template>
@@ -1652,7 +1539,7 @@
                 <template #footer>
                     <span>
                         <el-button @click="isEditDialogVisible = false">取消</el-button>
-                        <el-button type="primary" @click="editProductionInstrucion">确认</el-button>
+                        <el-button type="primary" @click="editProductionInstrucion">保存</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -1753,7 +1640,6 @@ export default {
                 supplierName: '',
                 comment: '',
                 isPurchase: false,
-                manualSymbol: 1
             },
             productionInstructionDetail: {
                 sizeRange: '',
@@ -1782,7 +1668,7 @@ export default {
                 border: true,
                 stripe: true,
                 height: 150,
-                coloumns:[],
+                coloumns: [],
                 data: []
             }
         }
@@ -1877,7 +1763,7 @@ export default {
                 .then(async () => {
                     try {
                         for (let i = 0; i < 7; i++) {
-                            this.syncMaterials(i, true)
+                            this.copyMaterial(i)
                         }
                         ElMessage.success('复制成功')
                     } catch (error) {
@@ -1889,7 +1775,7 @@ export default {
                     ElMessage.info('取消复制')
                 })
         },
-        syncMaterials(materialTypeNumber, isSyncAll = false) {
+        copyMaterial(materialTypeNumber, isSyncAll = false) {
             switch (materialTypeNumber) {
                 case 0:
                     let surfaceMaterialData = this.getMaterialDataByType('surfaceMaterialData')
@@ -1952,9 +1838,25 @@ export default {
                     })
                     break
             }
-            if (!isSyncAll) {
-                ElMessage.success('复制成功')
-            }
+        },
+        syncMaterials(materialTypeNumber, isSyncAll = false) {
+            ElMessageBox.alert('确认复制此材料信息至所有颜色吗', '警告', {
+                confirmButtonText: '确认',
+                showCancelButton: true,
+                cancelButtonText: '取消'
+            })
+                .then(async () => {
+                    try {
+                        this.copyMaterial(materialTypeNumber)
+                        ElMessage.success('复制成功')
+                    } catch (error) {
+                        console.log(error)
+                        ElMessage.error('复制异常')
+                    }
+                })
+                .catch(() => {
+                    ElMessage.info('取消复制')
+                })
         },
         async addPastMaterialToCurrent() {
             console.log(this.selectShoeTypeRow[0].shoeTypeId)
@@ -2005,7 +1907,6 @@ export default {
                 supplierName: '',
                 comment: '',
                 isPurchase: false,
-                manualSymbol: 1
             }
             switch (typeSymbol) {
                 case 0:
@@ -2165,7 +2066,9 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getsizetable?orderId=${this.orderId}`
             )
+
             this.sizeGridOptions = response.data
+            console.log(this.sizeGridOptions)
         },
         async openPreviewDialog(row) {
             this.newProductionInstructionId = ''
@@ -2271,10 +2174,10 @@ export default {
                     'hotsoleMaterialData'
                 ]) {
                     for (const item of materialData[materialType]) {
-                        if (!item.supplierName || !item.materialName) {
+                        if (!item.materialName) {
                             this.$message({
                                 type: 'error',
-                                message: '所有材料的供应商名称和材料名称不能为空'
+                                message: '所有材料名称不能为空'
                             })
                             return
                         }
@@ -2311,7 +2214,6 @@ export default {
                     type: 'success',
                     message: '保存成功'
                 })
-                this.isEditDialogVisible = false
                 this.getAllShoeListInfo()
             } catch (error) {
                 this.$message({
@@ -2334,10 +2236,10 @@ export default {
                     'hotsoleMaterialData'
                 ]) {
                     for (const item of materialData[materialType]) {
-                        if (!item.supplierName || !item.materialName) {
+                        if (!item.materialName) {
                             this.$message({
                                 type: 'error',
-                                message: '所有材料的供应商名称和材料名称不能为空'
+                                message: '所有材料名称不能为空!'
                             })
                             return
                         }
@@ -2643,6 +2545,7 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
             )
+            row.materialId = response.data.materialId
             row.unit = response.data.unit
             row.materialType = response.data.materialType
         },

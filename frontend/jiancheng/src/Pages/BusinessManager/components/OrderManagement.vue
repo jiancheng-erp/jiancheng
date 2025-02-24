@@ -156,7 +156,7 @@
         ></el-pagination>
     </el-row>
 
-    <el-dialog title="创建订单鞋型填写" v-model="orderCreationInfoVis" width="80%">
+    <el-dialog title="创建订单鞋型填写" v-model="orderCreationInfoVis" width="100%" fullscreen :close-on-click-modal="false">
         <el-form :model="newOrderForm" label-width="120px" :inline="false" size="default">
             <el-form-item
                 label="请输入订单号"
@@ -377,13 +377,12 @@
 
         <template #footer>
             <span>
-                <el-button @click="orderCreationInfoVis = false">取消</el-button>
-                <el-button type="primary" @click="orderCreationSecondStep">确认</el-button>
+                <el-button type="primary" @click="orderCreationSecondStep">下一步</el-button>
             </span>
         </template>
     </el-dialog>
 
-    <el-dialog title="创建订单详情填写" v-model="orderCreationSecondInfoVis" width="90%">
+    <el-dialog title="创建订单详情填写" v-model="orderCreationSecondInfoVis" width="100%" fullscreen :close-on-click-modal="false">
         <el-row :gutter="20">
             <el-col :span="24" :offset="0">
                 <el-descriptions title="" :column="2" border>
@@ -519,8 +518,6 @@
         <template #footer>
             <span>
                 <el-button @click="backPreviousStep"> 上一步 </el-button>
-
-                <el-button @click="orderCreationSecondInfoVis = false">取消</el-button>
                 <el-button @click="submitNewOrder"> 添加订单 </el-button>
             </span>
         </template>

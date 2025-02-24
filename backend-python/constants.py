@@ -38,3 +38,5 @@ ORDER_SHOE_STATUS_REFERENCE = {
     "成型结束": 41,
     "生产结束": 42,
 }
+
+DEFAULT_SUPPLIER = "询价"
