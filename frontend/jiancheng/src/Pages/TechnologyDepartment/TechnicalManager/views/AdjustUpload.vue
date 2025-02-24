@@ -1209,7 +1209,6 @@ export default {
                 comment: '',
                 isPurchase: false,
                 materialSource: 'C',
-                manualSymbol: 1
             },
             craftSheetDetail: {
                 adjuster: '',
@@ -1494,7 +1493,6 @@ export default {
                         materialSource: 'C',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 1:
@@ -1512,7 +1510,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 2:
@@ -1530,7 +1527,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 3:
@@ -1548,7 +1544,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 4:
@@ -1566,7 +1561,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 5:
@@ -1584,7 +1578,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 case 6:
@@ -1602,7 +1595,6 @@ export default {
                         supplierName: '',
                         comment: '',
                         isPurchase: false,
-                        manualSymbol: 1
                     }
                     break
                 default:
@@ -2150,6 +2142,7 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
             )
+            row.materialId = response.data.materialId
             row.unit = response.data.unit
             row.materialType = response.data.materialType
         },
