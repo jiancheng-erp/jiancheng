@@ -7,6 +7,7 @@ from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
+import json
 
 dev_producion_order_bp = Blueprint("dev_producion_order_bp", __name__)
 
@@ -254,6 +255,15 @@ def save_production_instruction():
     production_instruction_rid = request.json.get("productionInstructionId")
     upload_data = request.json.get("uploadData")
     production_instruction_details = request.json.get("productionInstructionDetail")
+    
+    size_table = request.json.get("sizeTable", None)
+    standard_size_dict = transform_grid_to_standard_size_dict(size_table)
+    json_table = json.dumps(standard_size_dict, ensure_ascii=False)
+    order = db.session.query(Order).filter(Order.order_rid == order_id).first()
+    if order:
+        order.order_size_table = json_table
+        db.session.flush()
+        
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -1064,6 +1074,15 @@ def edit_production_instruction():
     upload_data = request.json.get("uploadData")
     print(upload_data)
     production_instruction_details = request.json.get("productionInstructionDetail")
+    
+    size_table = request.json.get("sizeTable", None)
+    standard_size_dict = transform_grid_to_standard_size_dict(size_table)
+    json_table = json.dumps(standard_size_dict, ensure_ascii=False)
+    order = db.session.query(Order).filter(Order.order_rid == order_id).first()
+    if order:
+        order.order_size_table = json_table
+        db.session.flush()
+        
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -2384,6 +2403,47 @@ def get_format_past_material_data():
                 )
     return jsonify(result_list), 200
 
+@dev_producion_order_bp.route(("/devproductionorder/getsizetable"), methods=["GET"])
+def get_size_table():
+    order_id = request.args.get("orderId")
+    json_table = (
+        db.session.query(Order)
+        .filter(Order.order_id == order_id)
+        .first()
+        
+    ).order_size_table
+    if json_table == None:
+        customer_size = (
+            db.session.query(Order, BatchInfoType)
+            .join(BatchInfoType, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+            .filter(Order.order_id == order_id)
+            .first()
+        )
+        customer_size_list = []
+        if customer_size:
+            order, batch_info = customer_size
+            # Extract values from the BatchInfoType model
+            for col in BatchInfoType.__table__.columns:
+                size = getattr(batch_info, col.name)
+                if size != '':
+                    customer_size_list.append(getattr(batch_info, col.name))
+        customer_size_list = customer_size_list[3:]
+        standard_size_dict = {
+            "客人码": customer_size_list,
+            "大底": ['' for i in range(len(customer_size_list))],
+            "中底": ['' for i in range(len(customer_size_list))],
+            "楦头": ['' for i in range(len(customer_size_list))],
+        }
+        grid_options = transform_standard_size_dict_to_grid(standard_size_dict)
+        return jsonify(grid_options), 200
+    else:
+        table_dict = json.loads(json_table) if isinstance(json_table, str) else json_table
+        grid_options = transform_standard_size_dict_to_grid(table_dict)
+        return jsonify(grid_options), 200
+    
+    
+    
+
 
 @dev_producion_order_bp.route(
     "/devproductionorder/downloadproductioninstruction", methods=["GET"]
@@ -2433,3 +2493,78 @@ def get_material_detail():
         )
     else:
         return jsonify({}), 200
+
+
+
+
+def transform_standard_size_dict_to_grid(standard_size_dict):
+    # Determine the maximum length of the lists in the dictionary
+    max_len = max(len(lst) for lst in standard_size_dict.values()) if standard_size_dict else 0
+
+    # Build the columns array:
+    # The first column is for the row header (the dictionary key).
+    columns = [{"field": "col1", "width": 100}]
+    # The rest of the columns are for the list values.
+    for i in range(max_len):
+        columns.append({"field": f"col{i+2}", "minWidth": 160, "editRender": {"name": "input"}})
+    
+    # Build the data array:
+    # Each key in the dictionary becomes a row.
+    data = []
+    for key, lst in standard_size_dict.items():
+        row = {}
+        # First column contains the key (row header)
+        row["col1"] = key
+        # The following columns are the corresponding values from the list.
+        for i in range(max_len):
+            row[f"col{i+2}"] = lst[i] if i < len(lst) else ""
+        data.append(row)
+    
+    # Build the final gridOptions dictionary.
+    gridOptions = {
+        "editConfig":{
+          "trigger":"click",
+          "mode":"cell"  
+        },
+        "border": True,
+        "showOverflow": True,
+        "size": "small",
+        "showHeader": False,
+        "align": "center",
+        "columns": columns,
+        "data": data
+    }
+    
+    return gridOptions
+
+def transform_grid_to_standard_size_dict(grid_options):
+    """
+    Reverse the grid transformation by converting the grid options back to a dictionary.
+    Expected grid_options format:
+    {
+      "columns": [ { "field": "col1", ... }, { "field": "col2", ... }, ... ],
+      "data": [
+         { "col1": "客人码", "col2": "S", "col3": "M", ... },
+         { "col1": "大底", "col2": "", "col3": "", ... },
+         ...
+      ]
+    }
+    Returns a dict like:
+    {
+       "客人码": ["S", "M", ...],
+       "大底": ["", "", ...],
+       ...
+    }
+    """
+    standard_size_dict = {}
+    # Number of data columns is the total columns minus the header column
+    columns = grid_options.get("columns", [])
+    num_data_cols = len(columns) - 1
+
+    for row in grid_options.get("data", []):
+        key = row.get("col1")
+        # Build the list of values using the subsequent columns
+        values = [row.get(f"col{i+2}", "") for i in range(num_data_cols)]
+        standard_size_dict[key] = values
+
+    return standard_size_dict

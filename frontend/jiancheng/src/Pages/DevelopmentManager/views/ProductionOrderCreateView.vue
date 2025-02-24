@@ -177,6 +177,13 @@
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <vxe-grid v-bind="sizeGridOptions">
+
+                        </vxe-grid>
+                    </el-col>
+                </el-row>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
@@ -939,6 +946,13 @@
                             </el-descriptions>
                         </el-col>
                     </el-row>
+                    <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <vxe-grid v-bind="sizeGridOptions">
+
+                        </vxe-grid>
+                    </el-col>
+                </el-row>
 
                     <el-tabs v-model="activeTab">
                         <!-- Generate tabs from backend-provided tabcolor array -->
@@ -1029,6 +1043,14 @@
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <vxe-grid v-bind="sizeGridOptions">
+
+                        </vxe-grid>
+                    </el-col>
+                </el-row>
+                
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
@@ -1756,6 +1778,13 @@ export default {
             },
             materialNameOptions: [],
             supplierNameOptions: [],
+            sizeGridOptions: {
+                border: true,
+                stripe: true,
+                height: 150,
+                coloumns:[],
+                data: []
+            }
         }
     },
     async mounted() {
@@ -1765,6 +1794,7 @@ export default {
         this.getAllDepartmentOptions()
         this.getAllMaterialName()
         this.querySupplierNames()
+        this.getSizeTableData()
     },
     computed: {
         uploadHeaders() {
@@ -2131,6 +2161,12 @@ export default {
             this.materialWholeData = response.data.instructionData
             this.productionInstructionDetail = response.data.productionInstructionDetail
         },
+        async getSizeTableData() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getsizetable?orderId=${this.orderId}`
+            )
+            this.sizeGridOptions = response.data
+        },
         async openPreviewDialog(row) {
             this.newProductionInstructionId = ''
             this.materialWholeData = []
@@ -2258,7 +2294,8 @@ export default {
                         productionInstructionId: this.newProductionInstructionId,
                         orderShoeId: this.currentShoeId,
                         uploadData: this.materialWholeData,
-                        productionInstructionDetail: this.productionInstructionDetail
+                        productionInstructionDetail: this.productionInstructionDetail,
+                        sizeTable: this.sizeGridOptions
                     }
                 )
 
@@ -2320,7 +2357,8 @@ export default {
                         productionInstructionId: this.newProductionInstructionId,
                         orderShoeId: this.currentShoeId,
                         uploadData: this.materialWholeData,
-                        productionInstructionDetail: this.productionInstructionDetail
+                        productionInstructionDetail: this.productionInstructionDetail,
+                        sizeTable: this.sizeGridOptions
                     }
                 )
 
