@@ -289,6 +289,7 @@ class Order(db.Model):
     supervisor_id = db.Column(db.Integer)
     is_outbound_allowed = db.Column(db.SmallInteger, nullable=False, default=0)
     packaging_status = db.Column(db.String(1), nullable=False, default=0)
+    order_size_table = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
