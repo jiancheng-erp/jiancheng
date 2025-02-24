@@ -852,7 +852,7 @@
                 <div v-for="(craft, index) in inputCrafts" :key="index">
                     <el-row :gutter="20">
                         <el-col :span="12" :offset="0">
-                            <el-input v-model="inputCrafts[index]" placeholder="请输入工艺名称"
+                            <el-input type="textarea" resize="both" v-model="inputCrafts[index]" placeholder="请输入工艺名称"
                                 size="default"></el-input></el-col>
                         <el-col :span="12" :offset="0">
                             <el-button type="danger" size="mini" @click="removeCraft(index)">删除工艺</el-button></el-col>

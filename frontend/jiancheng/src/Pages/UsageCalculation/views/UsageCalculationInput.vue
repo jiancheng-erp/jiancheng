@@ -20,16 +20,16 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -38,8 +38,8 @@
             <el-row :gutter="20" style="margin-top: 10px">
                 <el-col :span="4" :offset="0">
                     <div style="display: flex; align-items: center; white-space: nowrap">
-                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="searchIcon"
-                            clearable @input="tableWholeFilter"></el-input>
+                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default"
+                            :suffix-icon="searchIcon" clearable @input="tableWholeFilter"></el-input>
                     </div>
                 </el-col>
             </el-row>
@@ -115,26 +115,27 @@
                 </el-col>
             </el-row>
 
-            <el-dialog :title="`一次BOM用量填写 ${newBomId}`" v-model="createVis" width="100%" @close="handleGenerateClose">
+            <el-dialog :title="`一次BOM用量填写 ${newBomId}`" v-model="createVis" width="100%" @close="handleGenerateClose"
+                fullscreen>
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="鞋型号" align="center">{{
                         currentBomShoeId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         currentColor
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="工艺单" align="center">
                         <el-button type="primary" size="default"
                             @click="downloadProductionOrderList">查看投产指令单</el-button>
@@ -148,7 +149,7 @@
                     <el-row>
                         <el-table :data="orderProduceInfo" border style="width: 100%" :span-method="arraySpanMethod">
                             <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
-                            :label="column.label"></el-table-column>
+                                :label="column.label"></el-table-column>
                             <el-table-column prop="total" label="合计" />
                         </el-table>
                     </el-row>
@@ -197,22 +198,22 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="鞋型号" align="center">{{
                         currentBomShoeId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         currentColor
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="工艺单" align="center">
                         <el-button type="primary" size="default"
                             @click="downloadProductionOrderList">查看投产指令单</el-button>
@@ -226,8 +227,8 @@
                         <el-col :span="24">
                             <el-table :data="orderProduceInfo" border style="width: 100%"
                                 :span-method="arraySpanMethod">
-                                <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
-                                    :label="column.label"></el-table-column>
+                                <el-table-column v-for="column in filteredColumns" :key="column.prop"
+                                    :prop="column.prop" :label="column.label"></el-table-column>
                                 <el-table-column prop="total" label="合计" />
                             </el-table>
                         </el-col>
@@ -267,22 +268,22 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="鞋型号" align="center">{{
                         currentBomShoeId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         currentColor
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="工艺单" align="center">
                         <el-button type="primary" size="default"
                             @click="downloadProductionOrderList">查看投产指令单</el-button>
@@ -295,8 +296,7 @@
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
                             <el-table :data="unIssueBOMData" border style="height: 400px"
-                                @selection-change="handleShoeSelectionChange"
-                                :default-expand-all="true">
+                                @selection-change="handleShoeSelectionChange" :default-expand-all="true">
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column type="expand">
                                     <template #default="parentScope">
@@ -322,8 +322,7 @@
                                                         ) &&
                                                         scope.row.firstBomStatus ===
                                                         '等待用量填写'
-                                                    " type="primary"
-                                                        @click="handleGenerate(scope.row)">填写</el-button>
+                                                    " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
                                                     <el-button v-else-if="
                                                         scope.row.firstBomStatus === '已下发' ||
                                                         scope.row.firstBomStatus === '已提交' ||
@@ -582,18 +581,6 @@ export default {
         handleGenerateClose() {
             this.createVis = false
         },
-        autoFilledSizeAmount() {
-            this.sizeData.forEach((row) => {
-                // Generate the key string based on row size
-                let rowSizeString = 'size' + row.size + 'Amount'
-
-                // Check if this key exists in the `orderProduceInfo[0]` object
-                if (this.orderProduceInfo[0].hasOwnProperty(rowSizeString)) {
-                    // Assign the corresponding total to `row.approvalAmount`
-                    row.approvalAmount = this.orderProduceInfo[0][rowSizeString]
-                }
-            })
-        },
         getFilteredFactoryOptions(materialName) {
             const filteredOptions = this.factoryOptions.filter(
                 (option) => option.materialName === materialName
@@ -609,29 +596,6 @@ export default {
             await this.getBOMDetails(row)
             await this.getOrderShoeBatchInfo(this.orderData.orderId, row.orderShoeRid, row.color)
             loadingInstance.close()
-            if (this.orderProduceInfo[0]) {
-                console.log(this.orderProduceInfo[0])
-                this.editBomData.forEach((item) => {
-                    if (item.materialCategory === 1) {
-                        let totalApprovalAmount = 0
-
-                        item.sizeInfo.forEach((sizeRow) => {
-                            let sizeKey = sizeRow.size
-                            let trueKey = this.shoeSizeColumns.find(
-                                (column) => column.label === sizeKey
-                            ).prop
-                            if (this.orderProduceInfo[0][trueKey] !== undefined) {
-                                sizeRow.approvalAmount = this.orderProduceInfo[0][trueKey]
-                                console.log(sizeRow.approvalAmount)
-                                totalApprovalAmount += this.orderProduceInfo[0][trueKey]
-                            }
-                        })
-                        console.log(totalApprovalAmount)
-                        // Update the approvalUsage with the total approval amount
-                        item.approvalUsage = totalApprovalAmount
-                    }
-                })
-            }
             this.newBomId = row.firstBomId
             this.createVis = true
             this.currentBomShoeId = row.orderShoeRid
@@ -641,29 +605,6 @@ export default {
         async openPreviewDialog(row) {
             await this.getOrderShoeBatchInfo(this.orderData.orderId, row.orderShoeRid, row.color)
             await this.getBOMDetails(row)
-            if (this.orderProduceInfo[0]) {
-                console.log(this.orderProduceInfo[0])
-                this.bomTestData.forEach((item) => {
-                    if (item.materialCategory === 1) {
-                        let totalApprovalAmount = 0
-
-                        item.sizeInfo.forEach((sizeRow) => {
-                            let sizeKey = sizeRow.size
-                            let trueKey = this.shoeSizeColumns.find(
-                                (column) => column.label === sizeKey
-                            ).prop
-                            if (this.orderProduceInfo[0][trueKey] !== undefined) {
-                                sizeRow.approvalAmount = this.orderProduceInfo[0][trueKey]
-                                console.log(sizeRow.approvalAmount)
-                                totalApprovalAmount += this.orderProduceInfo[0][trueKey]
-                            }
-                        })
-                        console.log(totalApprovalAmount)
-                        // Update the approvalUsage with the total approval amount
-                        item.approvalUsage = totalApprovalAmount
-                    }
-                })
-            }
             this.previewBomId = row.firstBomId
             this.createEditSymbol = 1
             this.updateKey += 1
@@ -685,7 +626,6 @@ export default {
             })
         },
         openSizeDialog(row, index) {
-            this.autoFilledSizeAmount()
             this.sizeData = row.sizeInfo
             console.log(this.sizeData)
             this.isSizeDialogVisible = true
@@ -759,7 +699,7 @@ export default {
         async saveUsageBOM() {
             // Validate that all existing rows have non-empty fields
             for (const row of this.bomTestData) {
-                if (!row.approvalUsage) {
+                if (row.approvalUsage === null || row.approvalUsage === undefined) {
                     this.$message({
                         type: 'warning',
                         message: '请填写所有字段'
