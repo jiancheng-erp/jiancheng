@@ -352,13 +352,16 @@ def save_production_instruction():
         db.session.flush()
 
     order_shoe = (
-        db.session.query(Order, OrderShoe, Shoe)
+        db.session.query(Order, OrderShoe, Shoe, OrderShoeStatus)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
         .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
+        .filter(OrderShoeStatus.current_status == 0)
         .first()
     )
     order_shoe_id = order_shoe.OrderShoe.order_shoe_id
+    order_shoe_status = order_shoe.OrderShoeStatus
     order_shoe.Shoe.shoe_designer = production_instruction_details.get("designer")
     db.session.flush()
     production_instruction = ProductionInstruction(
@@ -442,6 +445,7 @@ def save_production_instruction():
         .first()
     )
     order_shoe.production_order_upload_status = "1"
+    order_shoe_status.current_status_value = 1
     db.session.commit()
 
     return jsonify({"message": "Production order uploaded successfully"})
@@ -1495,7 +1499,6 @@ def get_size_table():
     json_table = (
         db.session.query(Order).filter(Order.order_id == order_id).first()
     ).order_size_table
-    print(json_table)
     if json_table == None:
         customer_size = (
             db.session.query(Order, BatchInfoType)

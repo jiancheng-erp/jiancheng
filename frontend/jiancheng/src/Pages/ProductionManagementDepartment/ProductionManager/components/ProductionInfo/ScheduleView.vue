@@ -56,7 +56,7 @@
       <el-input
         v-model="dialogOrderSearch"
         placeholder=""
-        size="normal"
+        size=""
         clearable
         @change=""
       ></el-input>
@@ -83,7 +83,7 @@
       <el-input
         v-model="dialogOrderSearch"
         placeholder=""
-        size="normal"
+        size=""
         clearable
         @change=""
       ></el-input>

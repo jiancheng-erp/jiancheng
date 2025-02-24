@@ -66,7 +66,7 @@
         v-model="addShoeDialogVis"
         width="50%"
         >
-        <el-form :model="orderForm" label-width="120px" :inline="false" size="normal">
+        <el-form :model="orderForm" label-width="120px" :inline="false" size="">
             <el-form-item label="鞋型编号">
                 <el-input v-model="orderForm.shoeRId"></el-input>
             </el-form-item>
@@ -95,7 +95,7 @@
         title="编辑鞋型"
         v-model="editShoeDialogVis"
         width="50%">
-        <el-form :model="orderForm" label-width="120px" :inline="false" size="normal">
+        <el-form :model="orderForm" label-width="120px" :inline="false" size="">
             <el-form-item label="鞋型编号">
                 <el-input v-model="orderForm.shoeRId"></el-input>
             </el-form-item>

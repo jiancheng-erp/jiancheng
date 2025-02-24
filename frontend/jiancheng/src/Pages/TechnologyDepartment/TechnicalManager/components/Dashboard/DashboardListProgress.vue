@@ -1,11 +1,11 @@
 <template>
     <el-row :gutter="0">
         <el-col :span="12" :offset="0">
-            <h1>全部已处理任务：</h1>
+            <h1>全部处理中任务：</h1>
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size="normal"
+        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size=""
                 :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
     </el-row>

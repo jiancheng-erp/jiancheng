@@ -14,7 +14,7 @@
                 </template>
                 <div>订单号：{{ getPendingItem(colIndex).orderRid }}</div>
                 <div>订单创建时间：{{ getPendingItem(colIndex).createTime }}</div>
-                <div>订单截止时间：{{ getPendingItem(colIndex).createTime }}</div>
+                <div>订单截止时间：{{ getPendingItem(colIndex).deadlineTime }}</div>
                 <div>客户：{{ getPendingItem(colIndex).customerName }}</div>
                 <div>鞋型数量：{{ getPendingItem(colIndex).orderShoeCount }}</div>
             </el-card>
@@ -42,7 +42,7 @@
                 </template>
                 <div>订单号：{{ getinProgressItem(colIndex).orderRid }}</div>
                 <div>订单创建时间：{{ getinProgressItem(colIndex).createTime }}</div>
-                <div>订单截止时间：{{ getPendingItem(colIndex).createTime }}</div>
+                <div>订单截止时间：{{ getPendingItem(colIndex).deadlineTime }}</div>
                 <div>客户：{{ getPendingItem(colIndex).customerName }}</div>
                 <div>鞋型数量：{{ getPendingItem(colIndex).orderShoeCount }}</div>
             </el-card>

@@ -241,7 +241,6 @@ def get_current_bom_item():
         .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == "1")
         .first()
     )
-    print(bom)
     bom_items = (
         db.session.query(BomItem, Material, MaterialType, Department, Supplier)
         .join(Material, BomItem.material_id == Material.material_id)
@@ -260,7 +259,6 @@ def get_current_bom_item():
         .scalar()
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
-    print(shoe_size_names)
     result = []
     for row in bom_items:
         bom_item, material, material_type, department, supplier = row
@@ -327,9 +325,7 @@ def save_bom_usage():
     bom = db.session.query(Bom).filter(Bom.bom_rid == bom_rid).first()
     bom.bom_status = "1"
     db.session.flush()
-    print(bom_items)
     for bom_item in bom_items:
-        print(bom_item)
         if not bom_item["bomItemId"]:
             material_id = (
                 db.session.query(Material, Supplier)
@@ -397,7 +393,15 @@ def save_bom_usage():
             entity.bom_item_add_type = 1
             entity.pairs = bom_item["pairs"] if bom_item["pairs"] else 0.00
             db.session.flush()
-
+    order_shoe_status = (
+        db.session.query(OrderShoeStatus)
+        .join(OrderShoe, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .filter(OrderShoeType.order_shoe_type_id == bom.order_shoe_type_id)
+        .filter(OrderShoeStatus.current_status == 11)
+        .first()
+    )
+    order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"status": "success"})
 

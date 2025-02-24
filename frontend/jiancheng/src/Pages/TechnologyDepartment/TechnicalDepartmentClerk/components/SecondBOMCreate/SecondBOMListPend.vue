@@ -7,7 +7,7 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="4" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
-        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" size="normal" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
     </el-row>
     

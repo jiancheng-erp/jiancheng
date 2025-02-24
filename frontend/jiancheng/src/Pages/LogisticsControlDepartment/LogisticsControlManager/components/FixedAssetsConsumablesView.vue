@@ -126,7 +126,7 @@
     </el-row>
     <!-- TODO -->
     <!-- <el-row :gutter="20">
-        <el-col :span="6" :offset="16">
+        <el-col>
             <el-pagination background :total="materialPurchaseFilterData.length" :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows"></el-pagination>
         </el-col>
@@ -471,7 +471,7 @@
                                 placeholder=""
                                 type="textarea"
                                 resize="none"
-                                size="normal"
+                                size=""
                                 clearable
                             ></el-input> </span
                     ></el-col>
@@ -483,7 +483,7 @@
                                 placeholder=""
                                 type="textarea"
                                 resize="none"
-                                size="normal"
+                                size=""
                                 clearable
                             ></el-input>
                         </span>
@@ -498,7 +498,7 @@
                                 placeholder=""
                                 type="textarea"
                                 resize="none"
-                                size="normal"
+                                size=""
                                 clearable
                             ></el-input>
                         </span>
@@ -511,7 +511,7 @@
                                 placeholder=""
                                 type="textarea"
                                 resize="none"
-                                size="normal"
+                                size=""
                                 clearable
                             ></el-input>
                         </span>

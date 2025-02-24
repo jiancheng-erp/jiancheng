@@ -10,7 +10,7 @@
             <el-input
                 v-model="orderSearch"
                 placeholder=""
-                size="normal"
+                size=""
                 :suffix-icon="Search"
                 clearable
                 @change="tableFilter"
@@ -21,7 +21,7 @@
             <el-input
                 v-model="customerSearch"
                 placeholder=""
-                size="normal"
+                size=""
                 :suffix-icon="Search"
                 clearable
                 @change="tableFilter"
@@ -30,9 +30,9 @@
         <el-col :span="6" :offset="2" style="white-space: nowrap">
             工厂型号搜索：
             <el-input
-                v-model="inheritSearch"
+                v-model="shoeRIdSearch"
                 placeholder=""
-                size="normal"
+                size=""
                 :suffix-icon="Search"
                 clearable
                 @change="tableFilter"
@@ -123,7 +123,7 @@
         </el-table>
     </el-row>
     <el-row :gutter="20">
-    <el-col :span="6" :offset="16">
+    <el-col :span="6">
         <el-pagination
             v-model:current-page="currentPage"
             :page-size="pageSize"
@@ -148,7 +148,7 @@ export default {
             orderStatus: 0,
             isExpand: false,
             orderSearch: '',
-            inheritSearch: '',
+            shoeRIdSearch: '',
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
@@ -171,7 +171,7 @@ export default {
                         pageSize: this.pageSize,
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
-                        inheritSearch: this.inheritSearch,
+                        shoeRIdSearch: this.shoeRIdSearch,
                         orderStatus: this.orderStatus,
                         statusValue: 0,
                     },
@@ -181,7 +181,7 @@ export default {
                 params: {
                     orderSearch: this.orderSearch,
                     customerSearch: this.customerSearch,
-                    inheritSearch: this.inheritSearch,
+                    shoeRIdSearch: this.shoeRIdSearch,
                     orderStatus: this.orderStatus,
                     statusValue: 0,
                 },

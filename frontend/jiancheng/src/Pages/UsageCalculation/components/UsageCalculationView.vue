@@ -37,14 +37,10 @@ onMounted(()=> {
     axios.get(`${apiBaseUrl}/order/getprodordershoebystatus`, { params }).then(response => {
         const fetchPending = response.data.pendingOrders
         const fetchInProgress = response.data.inProgressOrders
-        console.log("fetchPending is ")
-        console.log(response.data.pendingData)
         fetchPending.forEach(element => {
             element['taskName'] = "面料用量计算"
             pendingData.value.push(element)
         });
-        console.log(pendingData.value)
-        console.log(5)
         fetchInProgress.forEach(element => {
             element['taskName'] = "面料用量计算"
             inProgressData.value.push(element)

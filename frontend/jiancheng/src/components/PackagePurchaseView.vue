@@ -13,10 +13,10 @@
                     <el-text style="white-space: nowrap;">订单筛选：</el-text>
                 </el-col>
                 <el-col :span="4" :offset="0">
-                    <el-input v-model="orderSearch" placeholder="请输入订单号" size="normal" clearable @change=""></el-input>        
+                    <el-input v-model="orderSearch" placeholder="请输入订单号" size="" clearable @change=""></el-input>        
                 </el-col>
                 <el-col :span="4" :offset="0">
-                    <el-input v-model="customerSearch" placeholder="请输入客户名" size="normal" clearable @change=""></el-input>
+                    <el-input v-model="customerSearch" placeholder="请输入客户名" size="" clearable @change=""></el-input>
                 </el-col>
                 <el-col :span="4" :offset="0"></el-col>
             </el-row>

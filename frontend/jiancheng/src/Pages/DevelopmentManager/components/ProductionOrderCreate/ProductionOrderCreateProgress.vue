@@ -1,7 +1,7 @@
 <template>
     <el-row :gutter="0">
         <el-col :span="12" :offset="0">
-            <h1>全部已处理任务：</h1>
+            <h1>全部处理中任务：</h1>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">

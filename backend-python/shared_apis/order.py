@@ -912,7 +912,7 @@ def get_order_full_info():
     page = request.args.get("page", 1, type=int)
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
-    inherit_search = request.args.get("inheritSearch", "", type=str)
+    shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
     order_status = request.args.get("orderStatus", "", type=int)
     status_value = request.args.get("statusValue", "", type=int)
 
@@ -953,7 +953,7 @@ def get_order_full_info():
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
-            Shoe.shoe_rid.like(f"%{inherit_search}%"),
+            Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
         )
         .order_by(Order.order_id.desc())
     )
@@ -1072,7 +1072,7 @@ def get_order_full_info():
 def get_order_page_info():
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
-    inherit_search = request.args.get("inheritSearch", "", type=str)
+    shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
     order_status = request.args.get("orderStatus", "", type=int)
     status_value = request.args.get("statusValue", "", type=int)
 
@@ -1086,7 +1086,7 @@ def get_order_page_info():
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
-            Shoe.shoe_rid.like(f"%{inherit_search}%"),
+            Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
         )
     )
 

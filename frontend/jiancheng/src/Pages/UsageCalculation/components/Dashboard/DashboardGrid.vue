@@ -14,7 +14,7 @@
                 </template>
                 <div>订单号：{{ getPendingItem(colIndex).orderRid }}</div>
                 <div>订单创建时间：{{ getPendingItem(colIndex).createTime }}</div>
-                <div>订单截止时间：{{ getPendingItem(colIndex).createTime }}</div>
+                <div>订单截止时间：{{ getPendingItem(colIndex).deadlineTime }}</div>
                 <div>客户：{{ getPendingItem(colIndex).customerName }}</div>
                 <div>鞋型数量：{{ getPendingItem(colIndex).orderShoeCount }}</div>
             </el-card>
@@ -42,7 +42,7 @@
                 </template>
                 <div>订单号：{{ getinProgressItem(colIndex).orderRid }}</div>
                 <div>订单创建时间：{{ getinProgressItem(colIndex).createTime }}</div>
-                <div>订单截止时间：{{ getinProgressItem(colIndex).createTime }}</div>
+                <div>订单截止时间：{{ getinProgressItem(colIndex).deadlineTime }}</div>
                 <div>客户：{{ getinProgressItem(colIndex).customerName }}</div>
                 <div>鞋型数量：{{ getinProgressItem(colIndex).orderShoeCount }}</div>
             </el-card>
@@ -66,12 +66,10 @@ export default {
     methods: {
         getPendingItem(colIndex) {
             const index = colIndex - 1
-            console.log(this.pendingTaskData)
             return index <= this.pendingTaskData.length ? this.pendingTaskData[index] : null
         },
         getinProgressItem(colIndex) {
             const index = colIndex - 1
-            console.log(this.inProgressTaskData)
             return index < this.inProgressTaskData.length ? this.inProgressTaskData[index] : null
         },
         displayPending() {

@@ -1,8 +1,4 @@
 <template>
-    <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">任务看板</el-col>
-    </el-row>
-
     <el-row :gutter="0">
         <el-col :span="5" :offset="20">
             <el-button-group>
@@ -11,8 +7,6 @@
             </el-button-group>
 
         </el-col>
-
-
     </el-row>
     <component :is="components[currentDash]" :pendingTaskData="pendingData" :inProgressTaskData="inProgressData" @backGrid="changeToGrid"
     @changeToPend="changeToPend" @changeToProgress="changeToProgress">
