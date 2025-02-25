@@ -220,7 +220,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(0)">手动添加面料</el-button>
-                                <el-button type="success" @click="syncMaterials(0)">{{this.syncMaterialButtonText}}</el-button>
+                                <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -230,14 +231,8 @@
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }">
                                     <vxe-column type="seq" width="55" row-resize></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
-                                        :edit-render="{ autoFocus: 'input' }">
-                                        <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
-                                        </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -249,7 +244,7 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
@@ -276,19 +271,20 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -317,7 +313,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(1)">手动添加里料</el-button>
-                                <el-button type="success" @click="syncMaterials(1)">{{this.syncMaterialButtonText}}</el-button>
+                                <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -328,14 +325,8 @@
                                     :row-config="{ resizable: true, isHover: true }"
                                     :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
                                     <vxe-column type="seq" width="55"></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
-                                        :edit-render="{ autoFocus: 'input' }">
-                                        <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
-                                        </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -347,7 +338,7 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
@@ -374,19 +365,20 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -414,7 +406,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(2)">手动添加辅料</el-button>
-                                <el-button type="success" @click="syncMaterials(2)">{{this.syncMaterialButtonText}}</el-button>
+                                <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -426,14 +419,8 @@
                                     :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }"
                                     max-height="350">
                                     <vxe-column type="seq" width="55"></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
-                                        :edit-render="{ autoFocus: 'input' }">
-                                        <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
-                                        </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -445,7 +432,7 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
@@ -472,19 +459,20 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -512,7 +500,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(3)">手动添加大底</el-button>
-                                <el-button type="success" @click="syncMaterials(3)">{{this.syncMaterialButtonText}}</el-button>
+                                <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -523,14 +512,8 @@
                                     :row-config="{ resizable: true, isHover: true }"
                                     :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
                                     <vxe-column type="seq" width="55"></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
-                                        :edit-render="{ autoFocus: 'input' }">
-                                        <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
-                                        </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -542,7 +525,7 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
@@ -569,19 +552,20 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -609,7 +593,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(4)">手动添加中底</el-button>
-                                <el-button type="success" @click="syncMaterials(4)">{{this.syncMaterialButtonText}}</el-button>
+                                <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -620,14 +605,8 @@
                                     :row-config="{ resizable: true, isHover: true }"
                                     :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
                                     <vxe-column type="seq" width="55"></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
-                                        :edit-render="{ autoFocus: 'input' }">
-                                        <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
-                                        </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -639,7 +618,7 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
@@ -666,19 +645,20 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -701,12 +681,14 @@
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
-                            <el-col :span="22" :offset="0">
+                            <el-col :span="24" :offset="0">
                                 <span>烫底：</span>
-                                <el-button type="primary" size="default" @click="addMaterial(6)">添加烫底</el-button>
                                 <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(6)">手动添加烫底</el-button>
-                                <el-button type="success" @click="syncMaterials(6)">{{this.syncMaterialButtonText}}</el-button>
+                                    @click="addMaterialByManual(6)">添加成品烫底</el-button>
+                                <el-button type="primary" size="default"
+                                    @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                                <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -717,14 +699,14 @@
                                     :row-config="{ resizable: true, isHover: true }"
                                     :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
                                     <vxe-column type="seq" width="55"></vxe-column>
-                                    <vxe-column field="materialType" title="材料类型"></vxe-column>
-                                    <vxe-column field="materialDetailType" title="材料二级类型"
+                                    <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <!-- <vxe-column field="materialDetailType" title="材料二级类型"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.materialDetailType" clearable></vxe-input>
                                         </template>
-                                    </vxe-column>
-                                    <vxe-column field="supplierName" title="厂家名称" width="200" :edit-render="{}">
+                                    </vxe-column> -->
+                                    <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
                                         </template>
@@ -736,17 +718,28 @@
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column title="材料名称" field="materialName" width="200" :edit-render="{}">
+                                    <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
+                                            <el-select v-model="row.materialName" filterable @change="
+                                                handleMaterialNameSelect(row, $event)"
                                                 :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2, 16])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                                <div v-if="row.materialType === '里料'">
+                                                    <el-option v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2]
+                                                    )" :key="item.value" :value="item.value" :label="item.label">
+                                                    </el-option>
+                                                </div>
+                                                <div v-else-if="row.materialType === '烫底'">
+                                                    <el-option v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [16]
+                                                    )" :key="item.value" :value="item.value" :label="item.label">
+                                                    </el-option>
+                                                </div>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -763,19 +756,21 @@
                                             <vxe-input v-model="row.materialSpecification" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialCraftName" title="工艺名称">
+                                    <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"
+                                            :disabled="row.materialType === '烫底'">
                                                 编辑工艺
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" width="80"
+                                        :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
                                             <vxe-input v-model="row.color" clearable></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="unit" title="单位"></vxe-column>
+
                                     <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
@@ -855,7 +850,7 @@
                             <el-input type="textarea" resize="both" v-model="inputCrafts[index]" placeholder="请输入工艺名称"
                                 size="default"></el-input></el-col>
                         <el-col :span="12" :offset="0">
-                            <el-button type="danger" size="mini" @click="removeCraft(index)">删除工艺</el-button></el-col>
+                            <el-button type="danger" size="small" @click="removeCraft(index)">删除工艺</el-button></el-col>
                     </el-row>
                 </div>
                 <el-row :gutter="20">
@@ -982,14 +977,6 @@
                             <el-row :gutter="20">
                                 <el-col :span="23" :offset="0">
                                     <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 楦头： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="23" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('lastMaterialData')" />
                                 </el-col>
                             </el-row>
                             <el-row :gutter="20">
@@ -1476,126 +1463,59 @@ export default {
             const activeMaterialData = this.materialWholeData.find(
                 (item) => item.color === this.activeTab
             )
-
+            let newEntry = {
+                materialType: '',
+                materialDetailType: '',
+                materialName: '',
+                materialModel: '',
+                materialSpecification: '',
+                color: '',
+                unit: '',
+                supplierName: '',
+                materialSource: 'C',
+                comment: '',
+                isPurchase: false,
+            }
             switch (typeSymbol) {
                 case 0:
                     this.defaultManuallyAddedMaterial.materialType = '面料'
                     activeMaterialData.surfaceMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        materialSource: 'C',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 1:
                     this.defaultManuallyAddedMaterial.materialType = '里料'
                     activeMaterialData.insideMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 2:
                     this.defaultManuallyAddedMaterial.materialType = '辅料'
                     activeMaterialData.accessoryMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 3:
                     this.defaultManuallyAddedMaterial.materialType = '底材'
                     activeMaterialData.outsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 4:
                     this.defaultManuallyAddedMaterial.materialType = '底材'
                     activeMaterialData.midsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 5:
                     this.defaultManuallyAddedMaterial.materialType = '楦头'
                     activeMaterialData.lastMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 6:
                     this.defaultManuallyAddedMaterial.materialType = '烫底'
                     activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
-                    this.defaultManuallyAddedMaterial = {
-                        materialType: '',
-                        materialDetailType: '',
-                        materialName: '',
-                        materialModel: '',
-                        materialSpecification: '',
-                        materialSource: 'C',
-                        color: '',
-                        unit: '',
-                        supplierName: '',
-                        comment: '',
-                        isPurchase: false,
-                    }
+                    this.defaultManuallyAddedMaterial = newEntry
+                    break
+                case 7:
+                    this.defaultManuallyAddedMaterial.materialType = '里料'
+                    activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
+                    this.defaultManuallyAddedMaterial = newEntry
                     break
                 default:
                     break
