@@ -255,67 +255,63 @@ def _save_instruction_helper(
     input_material_category=0,
 ):
     for material_data in input_data:
-        material_id = (
+        supplier_name = material_data.get("supplierName", None)
+        material_name = material_data.get("materialName", None)
+        # if supplier_name not provided, default to DEFAULT_SUPPLIER
+        if not supplier_name:
+            supplier_name = DEFAULT_SUPPLIER
+
+        # query db to check if material exists
+        is_material_exist = (
             db.session.query(Material, Supplier)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
             .filter(
-                Material.material_name == material_data.get("materialName"),
-                Supplier.supplier_name == material_data.get("supplierName"),
+                Material.material_name == material_name,
+                Supplier.supplier_name == supplier_name,
             )
             .first()
-        ).Material.material_id
-        supplier_name = material_data.get("supplierName", None)
-        print(material_id)
-        print(supplier_name)
-        if not supplier_name:
-            supplier_name = DEFAULT_SUPPLIER
-        if not material_id:
-            is_material_exist = (
-                db.session.query(Material, Supplier)
-                .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-                .filter(
-                    Material.material_name == material_data.get("materialName"),
-                    Supplier.supplier_name == supplier_name,
-                )
+        )
+
+        # if no such material of supplier exists, create new material
+        if not is_material_exist:
+            is_supplier_exist = (
+                db.session.query(Supplier)
+                .filter(Supplier.supplier_name == supplier_name)
                 .first()
             )
-            if is_material_exist:
-                material_id = is_material_exist.Material.material_id
+            if is_supplier_exist:
+                supplier_id = is_supplier_exist.supplier_id
             else:
-                is_supplier_exist = (
-                    db.session.query(Supplier)
-                    .filter(Supplier.supplier_name == supplier_name)
-                    .first()
-                )
-                if is_supplier_exist:
-                    supplier_id = is_supplier_exist.supplier_id
-                else:
-                    supplier = Supplier(supplier_name=supplier_name)
-                    db.session.add(supplier)
-                    db.session.flush()
-                    supplier_id = supplier.supplier_id
-                material_type_id = (
-                    db.session.query(MaterialType)
-                    .filter(
-                        MaterialType.material_type_name
-                        == material_data.get("materialType")
-                    )
-                    .first()
-                    .material_type_id
-                )
-                if material_data.get("materialType") == "烫底":
-                    input_material_category = 1
-                material = Material(
-                    material_name=material_data.get("materialName"),
-                    material_supplier=supplier_id,
-                    material_unit=material_data.get("unit"),
-                    material_creation_date=datetime.datetime.now(),
-                    material_type_id=material_type_id,
-                    material_category=input_material_category,
-                )
-                db.session.add(material)
+                supplier = Supplier(supplier_name=supplier_name)
+                db.session.add(supplier)
                 db.session.flush()
-                material_id = material.material_id
+                supplier_id = supplier.supplier_id
+            material_type_id = (
+                db.session.query(MaterialType)
+                .filter(
+                    MaterialType.material_type_name
+                    == material_data.get("materialType")
+                )
+                .first()
+                .material_type_id
+            )
+            if material_data.get("materialType") == "烫底":
+                input_material_category = 1
+
+            material = Material(
+                material_name=material_name,
+                material_supplier=supplier_id,
+                material_unit=material_data.get("unit"),
+                material_creation_date=datetime.datetime.now(),
+                material_type_id=material_type_id,
+                material_category=input_material_category,
+            )
+            db.session.add(material)
+            db.session.flush()
+            material_id = material.material_id
+        else:
+            material_id = is_material_exist.Material.material_id
+
         material_model = material_data.get("materialModel", None)
         material_spec = material_data.get("materialSpecification", None)
         material_color = material_data.get("color", None)
