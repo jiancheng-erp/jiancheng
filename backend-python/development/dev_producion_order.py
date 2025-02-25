@@ -255,8 +255,18 @@ def _save_instruction_helper(
     input_material_category=0,
 ):
     for material_data in input_data:
-        material_id = material_data.get("materialId", None)
+        material_id = (
+            db.session.query(Material, Supplier)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                Material.material_name == material_data.get("materialName"),
+                Supplier.supplier_name == material_data.get("supplierName"),
+            )
+            .first()
+        ).Material.material_id
         supplier_name = material_data.get("supplierName", None)
+        print(material_id)
+        print(supplier_name)
         if not supplier_name:
             supplier_name = DEFAULT_SUPPLIER
         if not material_id:
