@@ -250,7 +250,7 @@
                         <el-col :span="24">
                             <el-table :data="firstBomPreviewData" border style="width: 100%">
                                 <el-table-column prop="materialType" label="材料类型" />
-                                <el-table-column prop="materialDetailType" label="材料二级类型" />
+                                <!-- <el-table-column prop="materialDetailType" label="材料二级类型" /> -->
                                 <el-table-column prop="materialName" label="材料名称" />
                                 <el-table-column prop="materialModel" label="材料型号" />
                                 <el-table-column prop="materialSpecification" label="材料规格" />
