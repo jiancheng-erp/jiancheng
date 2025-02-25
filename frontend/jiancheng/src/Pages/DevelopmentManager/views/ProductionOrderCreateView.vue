@@ -236,14 +236,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -251,7 +251,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -261,7 +261,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -323,14 +323,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -338,7 +338,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -348,7 +348,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -409,14 +409,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -424,7 +424,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -434,7 +434,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -495,14 +495,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -510,7 +510,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -520,7 +520,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -581,14 +581,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -596,7 +596,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -606,7 +606,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -669,17 +669,17 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="craftName" label="工艺名称">
+                                    <el-table-column prop="craftName" label="复合工艺">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.craftName"
                                                 size="default"></el-input>
@@ -690,7 +690,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -700,7 +700,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -771,14 +771,13 @@
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
-                    <el-table-column prop="materialDetailType" label="材料二级类型"></el-table-column>
                     <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
                     <el-table-column prop="materialName" label="材料名称"></el-table-column>
                     <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                     <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-                    <el-table-column prop="craftName" label="工艺名称"></el-table-column>
+                    <el-table-column prop="craftName" label="复合工艺"></el-table-column>
                     <el-table-column prop="color" label="颜色"></el-table-column>
-                    <el-table-column prop="unit" label="单位"></el-table-column>
+                    
                     <el-table-column prop="comment" label="备注"></el-table-column>
                 </el-table>
                 <template #footer>
@@ -1049,14 +1048,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1064,7 +1063,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
@@ -1075,7 +1074,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1138,14 +1137,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1153,7 +1152,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -1163,7 +1162,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1225,14 +1224,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1240,7 +1239,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -1250,7 +1249,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1312,14 +1311,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1327,7 +1326,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
@@ -1338,7 +1337,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1400,14 +1399,14 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1415,7 +1414,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
@@ -1426,7 +1425,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1442,11 +1441,10 @@
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
                             <el-col :span="6" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(6)">添加烫底</el-button>
                                 <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(6)">手动添加独立烫底</el-button>
+                                    @click="addMaterialByManual(6)">添加成品烫底</el-button>
                                 <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(7)">手动添加加工烫底</el-button>
+                                    @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
@@ -1465,11 +1463,20 @@
                                             <el-select v-model="scope.row.materialName" filterable @change="
                                                 handleMaterialNameSelect(scope.row, $event)
                                                 ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [2, 16]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                                <div v-if="scope.row.materialType === '里料'">
+                                                    <el-option v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [2]
+                                                    )" :key="item.value" :value="item.value" :label="item.label">
+                                                    </el-option>
+                                                </div>
+                                                <div v-else-if="scope.row.materialType === '烫底'">
+                                                    <el-option v-for="item in filterByTypes(
+                                                        materialNameOptions,
+                                                        [16]
+                                                    )" :key="item.value" :value="item.value" :label="item.label">
+                                                    </el-option>
+                                                </div>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1490,20 +1497,20 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="请输入内容" />
+                                                placeholder="" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder="请输入内容" />
+                                                type="textarea" autosize placeholder="" />
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="craftName" label="工艺名称">
+                                    <el-table-column prop="craftName" label="复合工艺">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.craftName"
-                                                size="default"></el-input>
+                                                size="default" :disabled="scope.row.materialType === '烫底'"></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
@@ -1511,7 +1518,7 @@
                                             <el-input v-model="scope.row.color" size="default"></el-input>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="unit" label="单位"></el-table-column>
+                                    
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.comment"
@@ -1521,7 +1528,7 @@
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default"></el-input>
+                                                size="default" placeholder="例：烫钻，电绣"></el-input>
                                         </template>
                                     </el-table-column>
 
