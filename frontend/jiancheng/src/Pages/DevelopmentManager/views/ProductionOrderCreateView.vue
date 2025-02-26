@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -111,16 +111,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -177,11 +177,26 @@
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
+                <el-row justify="center" align="middle">
+                    <h3>码数对照表</h3>
+                </el-row>
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <vxe-grid v-bind="sizeGridOptions">
 
                         </vxe-grid>
+                    </el-col>
+                </el-row>
+                <el-row>
+                    <el-col :span="24">
+                        <el-descriptions title="业务部备注" border>
+                            <el-descriptions-item label="工艺">
+                                {{ currentOrderShoeRow.businessTechnicalRemark }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="材料">
+                                {{ currentOrderShoeRow.businessMaterialRemark }}
+                            </el-descriptions-item>
+                        </el-descriptions>
                     </el-col>
                 </el-row>
                 <el-tabs v-model="activeTab">
@@ -202,7 +217,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -229,7 +244,8 @@
                                         <template #default="scope">
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -265,7 +281,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -288,7 +305,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -320,7 +337,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -356,7 +374,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -378,7 +397,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -410,7 +429,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -446,7 +466,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -468,7 +489,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -500,7 +521,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -536,7 +558,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -558,7 +581,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -590,7 +613,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -625,7 +649,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -648,7 +673,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -688,7 +713,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -731,7 +757,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
@@ -795,10 +822,10 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="工厂型号" align="center">{{
                         pastShoeDescription.shoeId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         pastShoeDescription.color
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
@@ -871,22 +898,22 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="型号" align="center">{{
                                     currentShoeId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -1014,6 +1041,9 @@
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
+                <el-row justify="center" align="middle">
+                    <h3>码数对照表</h3>
+                </el-row>
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <vxe-grid v-bind="sizeGridOptions">
@@ -1021,7 +1051,18 @@
                         </vxe-grid>
                     </el-col>
                 </el-row>
-
+                <el-row>
+                    <el-col :span="24">
+                        <el-descriptions title="业务部备注" border>
+                            <el-descriptions-item label="工艺">
+                                {{ currentOrderShoeRow.businessTechnicalRemark }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="材料">
+                                {{ currentOrderShoeRow.businessMaterialRemark }}
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
@@ -1040,7 +1081,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1072,7 +1113,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -1109,7 +1151,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1133,7 +1176,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1165,7 +1208,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -1201,7 +1245,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1224,7 +1269,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1256,7 +1301,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
@@ -1292,7 +1338,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1315,7 +1362,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1346,7 +1393,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
 
@@ -1384,7 +1432,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1407,7 +1456,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1438,7 +1487,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
 
@@ -1476,7 +1526,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1500,7 +1551,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1540,7 +1591,8 @@
                                             </el-select> -->
                                             <el-autocomplete v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" show-word-limit/>
+                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit />
                                         </template>
                                     </el-table-column>
 
@@ -1583,7 +1635,8 @@
                                         <template #default="scope">
                                             <el-input type="textarea" autosize v-model="scope.row.processingRemark"
                                                 size="default" placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH" show-word-limit></el-input>
+                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                                show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
@@ -1742,7 +1795,8 @@ export default {
                 COMMENT_LENGTH: constants.COMMENT_LENGTH,
                 PROCESSING_REMARK_LENGTH: constants.PROCESSING_REMARK_LENGTH,
                 SUPPLIER_NAME_LENGTH: constants.SUPPLIER_NAME_LENGTH
-            }
+            },
+            currentOrderShoeRow: {}
         }
     },
     async mounted() {
@@ -2160,6 +2214,7 @@ export default {
             console.log(this.unIssueBOMData)
         },
         async openUploadDialog(row) {
+            this.currentOrderShoeRow = row
             this.newProductionInstructionId = ''
             this.materialWholeData = []
             this.currentShoeId = row.inheritId
@@ -2181,6 +2236,7 @@ export default {
             this.isProductionOrderCreateDialogVisible = true
         },
         async openEditDialog(row) {
+            this.currentOrderShoeRow = row
             this.newProductionInstructionId = ''
             this.currentShoeId = row.inheritId
             await this.getInstructionData(row)
