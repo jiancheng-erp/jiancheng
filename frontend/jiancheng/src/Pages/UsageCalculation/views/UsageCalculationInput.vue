@@ -61,7 +61,7 @@
                                     <el-table-column prop="firstPurchaseOrderStatus" label="一次采购订单"></el-table-column>
                                     <el-table-column prop="secondBomStatus" label="二次BOM表"></el-table-column>
                                     <el-table-column prop="secondPurchaseOrderStatus" label="二次采购订单"></el-table-column>
-                                    <el-table-column label="操作" align="center">
+                                    <el-table-column label="操作" align="center" width="400">
                                         <template #default="scope">
                                             <el-button v-if="
                                                 parentScope.row.status.includes(
@@ -96,8 +96,11 @@
                                                     @click="openEditDialog(scope.row)">编辑</el-button>
                                                 <el-button type="success"
                                                     @click="openPreviewDialog(scope.row)">预览</el-button>
+                                                <el-button type="normal"
+                                                    @click="handleCopyToOtherColor(scope.row)">复制到其他颜色</el-button>
                                                 <el-button type="warning"
                                                     @click="submitBOMUsage(scope.row)">提交</el-button>
+
                                             </div>
                                         </template></el-table-column>
                                 </el-table>
@@ -316,13 +319,17 @@
                                                 label="二次采购订单"></el-table-column>
                                             <el-table-column label="操作" align="center">
                                                 <template #default="scope">
-                                                    <el-button v-if="
+                                                    <div v-if="
                                                         parentScope.row.status.includes(
                                                             '面料单位用量计算'
                                                         ) &&
                                                         scope.row.firstBomStatus ===
                                                         '等待用量填写'
-                                                    " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
+                                                    ">
+                                                        <el-button type="primary"
+                                                            @click="handleGenerate(scope.row)">填写</el-button>
+                                                    </div>
+
                                                     <el-button v-else-if="
                                                         scope.row.firstBomStatus === '已下发' ||
                                                         scope.row.firstBomStatus === '已提交' ||
@@ -856,6 +863,95 @@ export default {
         handleShoeSelectionChange(selection) {
             this.selectedShoe = selection
             console.log(this.selectedShoe)
+        },
+        handleCopyToOtherColor(row) {
+            console.log(row)
+            this.$confirm('确定复制到其他颜色吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+                .then(async () => {
+                    const response = await axios.get(
+                        `${this.$apiBaseUrl}/usagecalculation/copyusagetoallcheck`,
+                        {
+                            params: {
+                                orderShoeTypeId: row.orderShoeTypeId
+                            }
+                        }
+                    )
+                    const checkResult = response.data.checkResult
+                    const reason = response.data.reason
+                    if (checkResult == 0) {
+                        this.$confirm(reason, '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'success'
+                        })
+                            .then(async () => {
+                                const response = await axios.post(
+                                    `${this.$apiBaseUrl}/usagecalculation/copyusagetoall`,
+                                    {
+                                        orderShoeTypeId: row.orderShoeTypeId,
+                                    }
+                                )
+                                if (response.status !== 200) {
+                                    this.$message({
+                                        type: 'error',
+                                        message: '复制失败'
+                                    })
+                                    return
+                                }
+                                this.$message({
+                                    type: 'success',
+                                    message: '复制成功'
+                                })
+                                this.getAllShoeBomInfo()
+                            })
+                    }
+                    else if (checkResult == 1) {
+                        this.$confirm(reason, '提示', {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        })
+                            .then(async () => {
+                                const response = await axios.post(
+                                    `${this.$apiBaseUrl}/usagecalculation/copyusagetoall`,
+                                    {
+                                        orderShoeTypeId: row.orderShoeTypeId,
+                                    }
+                                )
+                                if (response.status !== 200) {
+                                    this.$message({
+                                        type: 'error',
+                                        message: '复制失败'
+                                    })
+                                    return
+                                }
+                                this.$message({
+                                    type: 'success',
+                                    message: '复制成功'
+                                })
+                                this.getAllShoeBomInfo()
+                            })
+                            .catch(() => {
+                                this.$message({
+                                    type: 'info',
+                                    message: '已取消复制'
+                                })
+                            })
+
+                    }
+
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消复制'
+                    })
+                })
+            
         },
         deleteCurrentRow(index, datafield) {
             this.$confirm('确定删除此行吗？', '提示', {

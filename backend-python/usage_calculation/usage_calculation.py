@@ -513,3 +513,201 @@ def issue_bom_usage():
         db.session.flush()
     db.session.commit()
     return jsonify({"status": "success"})
+
+
+@usage_calculation_bp.route(("/usagecalculation/copyusagetoallcheck"), methods=["GET"])
+def copy_usage_to_all_check():
+    order_shoe_type_id = request.args.get("orderShoeTypeId")
+    order_shoe_id = (
+        db.session.query(OrderShoe)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
+        .first()
+    ).order_shoe_id
+    bom = (
+        db.session.query(Bom)
+        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 0)
+        .first()
+    )
+    bom_items = (
+        db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
+    )
+    same_order_shoe_types = (
+        db.session.query(OrderShoeType)
+        .filter(OrderShoeType.order_shoe_id == order_shoe_id)
+        .all()
+    )
+    different_order_shoe_type_list = []
+    for same_order_shoe_type in same_order_shoe_types:
+        same_bom = (
+            db.session.query(Bom)
+            .filter(
+                Bom.order_shoe_type_id == same_order_shoe_type.order_shoe_type_id,
+                Bom.bom_type == 0,
+            )
+            .first()
+        )
+        same_bom_id = same_bom.bom_id
+        if same_bom_id == bom.bom_id:
+            continue
+        same_bom_items = (
+            db.session.query(BomItem).filter(BomItem.bom_id == same_bom_id).all()
+        )
+        if len(same_bom_items) != len(bom_items):
+            color_name = (
+                db.session.query(Color)
+                .join(ShoeType, ShoeType.color_id == Color.color_id)
+                .join(OrderShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+                .filter(OrderShoeType.order_shoe_type_id == same_order_shoe_type.order_shoe_type_id)
+                .first()
+                .color_name
+            )
+            different_order_shoe_type_list.append(
+                color_name
+            )
+            continue
+    if len(different_order_shoe_type_list) == 0:
+        result = {
+            "checkResult": 0,
+            "reason": "各颜色材料数量一致，复制后注意核对",
+        }
+        return jsonify(result)
+    else:
+        result = {
+            "checkResult": 1,
+            "reason": "颜色为" + "、".join(different_order_shoe_type_list) + "的材料数量不一致，请核对后再确认！",
+        }
+        return jsonify(result)
+        
+    return 200
+
+@usage_calculation_bp.route("/usagecalculation/copyusagetoall", methods=["POST"])
+def copy_usage_to_all():
+    order_shoe_type_id = request.json.get("orderShoeTypeId")
+    order_shoe_id = (
+        db.session.query(OrderShoe)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
+        .first()
+    ).order_shoe_id
+    bom = (
+        db.session.query(Bom)
+        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 0)
+        .first()
+    )
+    bom_items = (
+        db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
+    )
+    same_order_shoe_types = (
+        db.session.query(OrderShoeType)
+        .filter(OrderShoeType.order_shoe_id == order_shoe_id)
+        .all()
+    )
+    for same_order_shoe_type in same_order_shoe_types:
+        same_bom = (
+            db.session.query(Bom)
+            .filter(
+                Bom.order_shoe_type_id == same_order_shoe_type.order_shoe_type_id,
+                Bom.bom_type == 0,
+            )
+            .first()
+        )
+        same_bom_id = same_bom.bom_id
+        if same_bom_id == bom.bom_id:
+            continue
+        same_bom_items = (
+            db.session.query(BomItem).filter(BomItem.bom_id == same_bom_id).all()
+        )
+        for bom_item in bom_items:
+            for same_bom_item in same_bom_items:
+                material_name = (
+                    db.session.query(Material)
+                    .filter(Material.material_id == bom_item.material_id)
+                    .first()
+                    .material_name
+                )
+                same_material_name = (
+                    db.session.query(Material)
+                    .filter(Material.material_id == same_bom_item.material_id)
+                    .first()
+                    .material_name
+                )
+                supplier_name = (
+                    db.session.query(Supplier)
+                    .join(Material, Material.material_supplier == Supplier.supplier_id)
+                    .filter(Material.material_id == bom_item.material_id)
+                    .first()
+                    .supplier_name
+                )
+                same_supplier_name = (
+                    db.session.query(Supplier)
+                    .join(Material, Material.material_supplier == Supplier.supplier_id)
+                    .filter(Material.material_id == same_bom_item.material_id)
+                    .first()
+                    .supplier_name
+                )
+                if (
+                    material_name == same_material_name
+                    and supplier_name == same_supplier_name
+                    and are_material_models_similar(
+                        bom_item.material_model, same_bom_item.material_model
+                    )
+                ):
+                    for i in range(34, 44):
+                        setattr(
+                            same_bom_item,
+                            f"size_{i}_total_usage",
+                            getattr(bom_item, f"size_{i}_total_usage"),
+                        )
+                    same_bom_item.total_usage = bom_item.total_usage
+                    same_bom_item.unit_usage = bom_item.unit_usage
+                    db.session.flush()
+                    break
+        same_bom.bom_status = "4"
+        db.session.flush()
+                    
+                
+                
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+
+
+
+
+
+
+
+import re
+
+def are_material_models_similar(model1, model2):
+    """
+    Determine if two material model strings are similar.
+    Similarity rules:
+    1. If both contain a hyphen (`-`), compare the prefix before the last hyphen.
+    2. If no hyphen, check if they differ only in the last 1 or 2 digits.
+    """
+    # Pattern for detecting prefix before the last hyphen
+    pattern = r"^(.*?)-\d+$"
+    
+    match1 = re.match(pattern, model1)
+    match2 = re.match(pattern, model2)
+
+    if match1 and match2:
+        return match1.group(1) == match2.group(1)  # Compare prefixes if hyphen exists
+    
+    # If no hyphen, check numeric similarity
+    if model1.isdigit() and model2.isdigit() and len(model1) == len(model2):
+        return model1[:-1] == model2[:-1] or model1[:-2] == model2[:-2]  # Allow last 1-2 digit differences
+
+    # General similarity check for mixed alphanumeric models
+    prefix1 = re.match(r"^\D*(\d+)", model1)  # Extract leading numbers
+    prefix2 = re.match(r"^\D*(\d+)", model2)
+
+    if prefix1 and prefix2:
+        return prefix1.group(1) == prefix2.group(1)  # Compare extracted leading numbers
+    if model1 == model2:
+        return True
+
+    return False  # If no clear similarity pattern found

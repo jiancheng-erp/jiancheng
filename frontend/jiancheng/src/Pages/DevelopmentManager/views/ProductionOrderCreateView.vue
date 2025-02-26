@@ -2292,6 +2292,7 @@ export default {
                     type: 'error',
                     message: error.message || '请求失败，请稍后再试'
                 })
+                loadingInstance.close()
             } finally {
                 loadingInstance.close()
             }
@@ -2355,6 +2356,7 @@ export default {
                     type: 'error',
                     message: error.message || '保存失败，请稍后再试'
                 })
+                loadingInstance.close()
             } finally {
                 loadingInstance.close()
             }
@@ -2393,6 +2395,7 @@ export default {
                         type: 'info',
                         message: '已取消上传'
                     })
+                    loadingInstance.close()
                 })
         },
         handleUploadSuccess(response, file, fileList) {
@@ -2426,6 +2429,7 @@ export default {
                     type: 'error',
                     message: '下发失败'
                 })
+                loadingInstance.close()
                 return
             }
             this.$message({

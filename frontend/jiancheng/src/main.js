@@ -27,11 +27,14 @@ fetch('/frontend_config.json')
             const token = localStorage.getItem('token') // Get token from localStorage
             if (token) {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}` // Set the Authorization header globally
+                axios.defaults.timeout = 10000
+
             } else {
                 delete axios.defaults.headers.common['Authorization'] // Remove the Authorization header if no token is found
                 router.push({ name: 'login' }) // Redirect to the login page
             }
         }
+        
         const token = localStorage.getItem('token') // Get token from localStorage
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}` // Set the Authorization header globally
@@ -42,6 +45,26 @@ fetch('/frontend_config.json')
         for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
             app.component(key, component)
         }
+        axios.interceptors.response.use(
+            response => response, // If the response is successful, return it
+            error => {
+                if (error.response) {
+                    if (error.response.status === 500) {
+                        console.error('Internal Server Error:', error.response.data)
+                        app.config.globalProperties.$message.error('服务器存在错误，请联系管理员') // Display an error message
+                    } else if (error.response.status === 401) {
+                        // Handle unauthorized access
+                        localStorage.removeItem('token')
+                        app.config.globalProperties.$message.error('登陆过期')
+                        router.push({ name: 'login' })
+                    }
+                } else {
+                    console.error('Network error or no response from server:', error)
+                    app.config.globalProperties.$message.error('网络错误或服务器无响应，请联系管理员') // Display an error message
+                }
+                return Promise.reject(error) // Reject the error to allow specific handling in requests
+            }
+        )
 
         app.use(createPinia())
         app.use(router)
