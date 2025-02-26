@@ -14,7 +14,7 @@ dev_producion_order_bp = Blueprint("dev_producion_order_bp", __name__)
 
 
 @dev_producion_order_bp.route("/devproductionorder/getordershoelist", methods=["GET"])
-def get_order_list():
+def get_order_shoe_list():
     order_id = request.args.get("orderid")
 
     # Querying the necessary data with joins and filters
@@ -43,8 +43,6 @@ def get_order_list():
         .filter(Order.order_id == order_id)
         .all()
     )
-
-    print(entities)
 
     # Initialize the result list
     result_dict = {}
@@ -82,6 +80,8 @@ def get_order_list():
                 "editter": order_shoe.adjust_staff,
                 "typeInfos": [],  # Initialize list for type info (colors, etc.)
                 "colorSet": set(),  # Initialize set to track colors and prevent duplicate entries
+                "businessTechnicalRemark": order_shoe.business_technical_remark,
+                "businessMaterialRemark": order_shoe.business_material_remark,
             }
 
         # Check if this color already exists in typeInfos

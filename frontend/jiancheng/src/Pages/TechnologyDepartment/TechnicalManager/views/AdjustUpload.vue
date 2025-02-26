@@ -154,8 +154,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%"
-                style="max-height: 700px; overflow-y: scroll">
+            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%" :close-on-click-modal="false">
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
@@ -168,6 +167,14 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="审核人">
                         <el-input v-model="craftSheetDetail.reviewer" size="default"></el-input>
+                    </el-descriptions-item>
+                </el-descriptions>
+                <el-descriptions title="业务部备注" border>
+                    <el-descriptions-item label="工艺">
+                        {{ currentOrderShoeRow.businessTechnicalRemark }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="材料">
+                        {{ currentOrderShoeRow.businessMaterialRemark }}
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-descriptions title="工艺单特殊工艺信息" border :column="1">
@@ -270,7 +277,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -280,10 +289,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -291,7 +300,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -366,7 +376,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -376,10 +388,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -387,7 +399,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -462,7 +475,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -472,10 +487,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -483,7 +498,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -557,7 +573,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -567,10 +585,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -578,7 +596,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -652,7 +671,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -662,10 +683,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -673,7 +694,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -765,7 +787,9 @@
                                     <vxe-column field="materialSpecification" title="材料规格"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable :max-length="wordLengths.SPECIFICATION_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.materialSpecification" clearable
+                                                :max-length="wordLengths.SPECIFICATION_LENGTH"
+                                                showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
@@ -776,10 +800,10 @@
                                             </vxe-button>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="color" title="颜色"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable
+                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
@@ -787,7 +811,8 @@
                                     </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable
+                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注">
@@ -1017,8 +1042,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%"
-                style="height: 700px; overflow-y: scroll">
+            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%" :close-on-click-modal="false">
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
@@ -1031,6 +1055,14 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="审核人">
                         <el-input v-model="craftSheetDetail.reviewer" size="default"></el-input>
+                    </el-descriptions-item>
+                </el-descriptions>
+                <el-descriptions title="业务部备注" border>
+                    <el-descriptions-item label="工艺">
+                        {{ currentOrderShoeRow.businessTechnicalRemark }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="材料">
+                        {{ currentOrderShoeRow.businessMaterialRemark }}
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-descriptions title="工艺单特殊工艺信息" border :column="1">
@@ -1245,7 +1277,8 @@ export default {
                 COMMENT_LENGTH: constants.COMMENT_LENGTH,
                 PROCESSING_REMARK_LENGTH: constants.PROCESSING_REMARK_LENGTH,
                 SUPPLIER_NAME_LENGTH: constants.SUPPLIER_NAME_LENGTH
-            }
+            },
+            currentOrderShoeRow: {}
         }
     },
     async mounted() {
@@ -1718,6 +1751,7 @@ export default {
             console.log(this.unIssueBOMData)
         },
         async openUploadDialog(row) {
+            this.currentOrderShoeRow = row
             this.newcraftSheetId = ''
             this.materialWholeData = []
             this.currentShoeId = row.inheritId
@@ -1749,6 +1783,7 @@ export default {
             this.isProductionOrderCreateDialogVisible = true
         },
         async openEditDialog(row) {
+            this.currentOrderShoeRow = row
             this.newcraftSheetId = ''
             this.currentShoeId = row.inheritId
             await this.getCraftSheetData(row)

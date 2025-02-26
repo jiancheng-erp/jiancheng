@@ -115,6 +115,7 @@ export default {
                         )
                         this.$message.success('密码修改成功')
                         this.resetForm()
+                        this.$router.push('/login')
                     } catch (error) {
                         this.$message.error('修改失败，请检查当前密码或稍后再试')
                         console.error('Error updating password:', error)

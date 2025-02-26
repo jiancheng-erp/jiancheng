@@ -255,7 +255,7 @@
             <span>
                 <el-button @click="isScheduleDialogOpen = false">取消</el-button>
                 <el-button v-if="role == 6" type="primary" @click="modifyProductionSchedule">保存排期</el-button>
-                <el-button @click="startProduction">下发排期</el-button>
+                <!-- <el-button @click="startProduction">下发排期</el-button> -->
                 <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
                     type="success" @click="startProduction" :disabled="currentRow.processSheetUploadStatus != 4">
                     <el-tooltip v-if="currentRow.processSheetUploadStatus != 4" effect="dark" content="工艺单未下发"
