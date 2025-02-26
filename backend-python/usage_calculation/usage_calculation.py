@@ -653,7 +653,7 @@ def copy_usage_to_all():
                         bom_item.material_model, same_bom_item.material_model
                     )
                 ):
-                    for i in range(34, 44):
+                    for i in range(34, 47):
                         setattr(
                             same_bom_item,
                             f"size_{i}_total_usage",
