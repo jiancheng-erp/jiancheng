@@ -12,14 +12,24 @@
                 >
             </el-button-group>
         </el-col>
-        <el-col :span="4" :offset="0"
+        <el-col :span="2" :offset="0"
             ><el-button-group>
-                <el-button type="primary" size="default" @click="openCreatePage(null, 0)"
+                <el-button type="primary" size="default" @click="openPackagePage"
                     >新建包材采购订单</el-button
                 >
             </el-button-group>
         </el-col>
-        <el-col :span="4" :offset="12"
+        <el-col :span="2" :offset="1"
+            ><el-button type="primary" size="default" @click="openLastPage"
+                    >新建楦头采购订单</el-button
+                >
+        </el-col>
+        <el-col :span="2" :offset="1"
+            ><el-button type="primary" size="default" @click="openCutModelPage"
+                    >新建刀模采购订单</el-button
+                >
+        </el-col>
+        <el-col :span="4" :offset="4"
             ><el-button type="warning" size="large" @click="openUnsubmitDialog"
                 >待提交订单</el-button
             >
@@ -774,7 +784,7 @@ export default {
                 `${this.$apiBaseUrl}/logistics/assetsmaterialpurchaseorder`,
                 {
                     params: {
-                        purchaseorderstatus: '1'
+                        purchaseorderstatus: '2'
                     }
                 }
             )
@@ -788,7 +798,7 @@ export default {
                 `${this.$apiBaseUrl}/logistics/assetsmaterialpurchaseorder`,
                 {
                     params: {
-                        purchaseorderstatus: '0'
+                        purchaseorderstatus: '1'
                     }
                 }
             )
@@ -914,7 +924,16 @@ export default {
             window.open(url, '_blank')
         },
         openPackagePage(row) {
-            const url = `${window.location.origin}/logistics/packagepurchase/`
+            const url = `${window.location.origin}/packagepurchase/`
+            window.open(url, '_blank')
+        },
+        openLastPage(row) {
+            const url = `${window.location.origin}/lastpurchase/`
+            window.open(url, '_blank')
+        },
+        openCutModelPage(row) {
+            const url = `${window.location.origin}/cutmodelpurchase/`
+            window.open(url, '_blank')
         },
         manualAddMaterial() {
             const newItem = {

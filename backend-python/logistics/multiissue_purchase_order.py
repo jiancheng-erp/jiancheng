@@ -155,82 +155,160 @@ def get_all_purchase_divide_order():
 def get_single_purchase_divide_order():
     """Get a single purchase divide order."""
     purchase_divide_order_id = request.args.get("purchaseDivideOrderId")
-    query = (
-        db.session.query(
-            PurchaseDivideOrder,
-            PurchaseOrder,
-            PurchaseOrderItem,
-            BomItem,
-            Material,
-            MaterialType,
-            Supplier,
-        )
-        .join(
-            PurchaseOrder,
-            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
-        )
-        .join(
-            PurchaseOrderItem,
-            PurchaseDivideOrder.purchase_divide_order_id
-            == PurchaseOrderItem.purchase_divide_order_id,
-        )
-        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
-        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .filter(
-            PurchaseDivideOrder.purchase_divide_order_rid == purchase_divide_order_id
-        )
-        .all()
-    )
-    grouped_results = {}
-    for (
-        purchase_divide_order,
-        purchase_order,
-        purchase_order_item,
-        bom_item,
-        material,
-        material_type,
-        supplier,
-    ) in query:
-        divide_order_rid = purchase_divide_order.purchase_divide_order_rid
-        if divide_order_rid not in grouped_results:
-            grouped_results[divide_order_rid] = {
-                "purchaseDivideOrderId": divide_order_rid,
-                "purchaseOrderId": purchase_divide_order.purchase_order_id,
-                "supplierName": supplier.supplier_name,
-                "assetsItems": [],
-                "purchaseDivideOrderType": purchase_divide_order.purchase_divide_order_type,
-                "remark": purchase_divide_order.purchase_order_remark,
-                "evironmentalRequest": purchase_divide_order.purchase_order_environmental_request,
-                "shipmentAddress": purchase_divide_order.shipment_address,
-                "shipmentDeadline": purchase_divide_order.shipment_deadline,
-            }
-
-        # Append the assets item details to the corresponding group
-        obj = {
-            "materialId": bom_item.material_id,
-            "materialTypeId": material_type.material_type_id,
-            "materialType": material_type.material_type_name,
-            "materialName": material.material_name,
-            "materialModel": bom_item.material_model,
-            "materialSpecification": bom_item.material_specification,
-            "color": bom_item.bom_item_color,
-            "unit": material.material_unit,
-            "purchaseAmount": purchase_order_item.purchase_amount,
-            "approvalAmount": purchase_order_item.approval_amount,
-            "remark": bom_item.remark,
-            "sizeType": bom_item.size_type,
-        }
-        for size in SHOESIZERANGE:
-            obj[f"size{size}Amount"] = getattr(
-                purchase_order_item, f"size_{size}_purchase_amount"
+    purchase_divide_order_type = purchase_divide_order_id[-5]
+    if purchase_divide_order_type in ["F", "S"]:
+        query = (
+            db.session.query(
+                PurchaseDivideOrder,
+                PurchaseOrder,
+                PurchaseOrderItem,
+                BomItem,
+                Material,
+                MaterialType,
+                Supplier,
             )
-        grouped_results[divide_order_rid]["assetsItems"].append(obj)
+            .join(
+                PurchaseOrder,
+                PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+            )
+            .join(
+                PurchaseOrderItem,
+                PurchaseDivideOrder.purchase_divide_order_id
+                == PurchaseOrderItem.purchase_divide_order_id,
+            )
+            .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+            .join(Material, BomItem.material_id == Material.material_id)
+            .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                PurchaseDivideOrder.purchase_divide_order_rid == purchase_divide_order_id
+            )
+            .all()
+        )
 
-    # Convert the grouped results to a list
-    result = list(grouped_results.values())
-    return jsonify(result)
+        grouped_results = {}
+        for (
+            purchase_divide_order,
+            purchase_order,
+            purchase_order_item,
+            bom_item,
+            material,
+            material_type,
+            supplier,
+        ) in query:
+            divide_order_rid = purchase_divide_order.purchase_divide_order_rid
+            if divide_order_rid not in grouped_results:
+                grouped_results[divide_order_rid] = {
+                    "purchaseDivideOrderId": divide_order_rid,
+                    "purchaseOrderId": purchase_divide_order.purchase_order_id,
+                    "supplierName": supplier.supplier_name,
+                    "assetsItems": [],
+                    "purchaseDivideOrderType": purchase_divide_order.purchase_divide_order_type,
+                    "remark": purchase_divide_order.purchase_order_remark,
+                    "evironmentalRequest": purchase_divide_order.purchase_order_environmental_request,
+                    "shipmentAddress": purchase_divide_order.shipment_address,
+                    "shipmentDeadline": purchase_divide_order.shipment_deadline,
+                }
+
+            # Append the assets item details to the corresponding group
+            obj = {
+                "materialId": bom_item.material_id,
+                "materialTypeId": material_type.material_type_id,
+                "materialType": material_type.material_type_name,
+                "materialName": material.material_name,
+                "materialModel": bom_item.material_model,
+                "materialSpecification": bom_item.material_specification,
+                "color": bom_item.bom_item_color,
+                "unit": material.material_unit,
+                "purchaseAmount": purchase_order_item.purchase_amount,
+                "approvalAmount": purchase_order_item.approval_amount,
+                "remark": bom_item.remark,
+                "sizeType": bom_item.size_type,
+            }
+            for size in SHOESIZERANGE:
+                obj[f"size{size}Amount"] = getattr(
+                    purchase_order_item, f"size_{size}_purchase_amount"
+                )
+            grouped_results[divide_order_rid]["assetsItems"].append(obj)
+
+        # Convert the grouped results to a list
+        result = list(grouped_results.values())
+        return jsonify(result)
+    elif purchase_divide_order_type in ["X","O","I","P","C","L"]:
+        query = (
+            db.session.query(
+                PurchaseDivideOrder,
+                PurchaseOrder,
+                AssetsPurchaseOrderItem,
+                Material,
+                MaterialType,
+                Supplier,
+            )
+            .join(
+                PurchaseOrder,
+                PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+            )
+            .join(
+                AssetsPurchaseOrderItem,
+                PurchaseDivideOrder.purchase_divide_order_id
+                == AssetsPurchaseOrderItem.purchase_divide_order_id,
+            )
+            .join(Material, AssetsPurchaseOrderItem.material_id == Material.material_id)
+            .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                PurchaseDivideOrder.purchase_divide_order_rid == purchase_divide_order_id
+            )
+            .all()
+        )
+
+        grouped_results = {}
+        for (
+            purchase_divide_order,
+            purchase_order,
+            assets_purchase_order_item,
+            material,
+            material_type,
+            supplier,
+        ) in query:
+            divide_order_rid = purchase_divide_order.purchase_divide_order_rid
+            if divide_order_rid not in grouped_results:
+                grouped_results[divide_order_rid] = {
+                    "purchaseDivideOrderId": divide_order_rid,
+                    "purchaseOrderId": purchase_divide_order.purchase_order_id,
+                    "supplierName": supplier.supplier_name,
+                    "assetsItems": [],
+                    "purchaseDivideOrderType": purchase_divide_order.purchase_divide_order_type,
+                    "remark": purchase_divide_order.purchase_order_remark,
+                    "evironmentalRequest": purchase_divide_order.purchase_order_environmental_request,
+                    "shipmentAddress": purchase_divide_order.shipment_address,
+                    "shipmentDeadline": purchase_divide_order.shipment_deadline,
+                }
+
+            # Append the assets item details to the corresponding group
+            obj = {
+                "materialId": material.material_id,
+                "materialTypeId": material_type.material_type_id,
+                "materialType": material_type.material_type_name,
+                "materialName": material.material_name,
+                "materialModel": assets_purchase_order_item.material_model,
+                "materialSpecification": assets_purchase_order_item.material_specification,
+                "color": assets_purchase_order_item.color,
+                "unit": material.material_unit,
+                "purchaseAmount": assets_purchase_order_item.purchase_amount,
+                "remark": assets_purchase_order_item.remark,
+                "sizeType": assets_purchase_order_item.size_type,
+            }
+            for size in SHOESIZERANGE:
+                obj[f"size{size}Amount"] = getattr(
+                    assets_purchase_order_item, f"size_{size}_purchase_amount"
+                )
+            grouped_results[divide_order_rid]["assetsItems"].append(obj)
+        result = list(grouped_results.values())
+        return jsonify(result)
+    return jsonify({"message": "Invalid purchase divide order type."})
+            
+                
 
 
 @multiissue_purchase_order_bp.route(

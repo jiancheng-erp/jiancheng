@@ -3,6 +3,8 @@ import SecondLogisticsOrder from '../views/SecondOrderBOMView.vue'
 import TestGraph from '../views/TestGraphView.vue'
 import CreateAssetPurchaseView from '../views/CreateAssetPurchaseView.vue'
 import PackagePurchaseView from '@/components/PackagePurchaseView.vue'
+import LastPurchaseView from '@/components/LastPurchaseView.vue'
+import CutModelPurchaseView from '@/components/CutModelPurchaseView.vue'
 export default [
   {
     path: '/logistics/firstpurchase/orderid=:orderId',
@@ -54,5 +56,25 @@ export default [
       role: [3, 9]
     }
 
+  },
+  {
+    path: '/lastpurchase',
+    name: 'lastpurchase',
+    component: LastPurchaseView,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: [3, 9]
+    }
+  },
+  {
+    path: '/cutmodelpurchase',
+    name: 'cutmodelpurchase',
+    component: CutModelPurchaseView,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: [3, 9]
+    }
   }
 ]

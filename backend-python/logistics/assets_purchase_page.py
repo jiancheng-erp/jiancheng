@@ -29,7 +29,7 @@ def get_assets_material_purchase_order():
         .outerjoin(OrderShoe, PurchaseOrder.order_shoe_id == OrderShoe.order_shoe_id)
         .outerjoin(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .filter(PurchaseOrder.purchase_order_status == purchase_order_status)
-        .filter(PurchaseOrder.purchase_order_type.in_(["I", "O", "X"]))
+        .filter(PurchaseOrder.purchase_order_type.in_(["I", "O", "X", "P", "C","L"]))
     )
     response = query.all()
     result = []
@@ -42,6 +42,12 @@ def get_assets_material_purchase_order():
             purchase_order_type = "随订单采购"
         elif purchase_order.purchase_order_type == "X":
             purchase_order_type = "随订单鞋型采购"
+        elif purchase_order.purchase_order_type == "P":
+            purchase_order_type = "包材采购订单"
+        elif purchase_order.purchase_order_type == "C":
+            purchase_order_type = "刀模采购订单"
+        elif purchase_order.purchase_order_type == "L":
+            purchase_order_type = "楦头采购订单"
         result.append(
             {
                 "purchaseOrderId": purchase_order.purchase_order_id,
@@ -63,7 +69,7 @@ def get_assets_new_purchase_order_id():
     print(department)
     current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
     random_string = randomIdGenerater(6)
-    new_id = department + current_time_stamp + random_string
+    new_id = department + current_time_stamp + random_string + "A"
     return jsonify({"newId": new_id})
 
 

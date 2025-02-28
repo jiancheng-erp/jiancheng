@@ -29,7 +29,7 @@ def get_new_package_purchase_order_id():
 @package_api_bp.route("/logistics/newpackagepurchaseordersave", methods=["POST"])
 def new_package_purchase_order_save():
     try:
-        sub_purchase_order_id = request.json.get("purchaseOrderRid")
+        sub_purchase_order_id = request.json.get("purchaseOrderRId")
         material_list = request.json.get("data")
         purchase_order_type = request.json.get("purchaseOrderType")
         shoe_batch_type = request.json.get("batchInfoType", None)

@@ -74,6 +74,8 @@
     </el-form>
             <el-form-item prop="purchaseData">
                 <PurchaseItemsTable :material-type-options="materialTypeOptions"
+                    :batch-info-visible="1"
+                    :type-limit="[0]"
                     :purchaseData.sync="assetForm.purchaseData" @update-current-batch-info-type="handleBatchInfoTypeChange" @update-items="updateNewPurchaseData" />
             </el-form-item>
 
