@@ -747,6 +747,9 @@ def get_all_orders():
                 "orderEndDate": formatted_end_date,
                 "orderStatus": order_status_message,
                 "orderStatusVal": order_status.order_current_status,
+                "orderPackagingStatus": order.packaging_status,
+                "orderLastStatus": order.last_status,
+                "orderCuttingModelStatus": order.cutting_model_status,
             }
         )
     return jsonify(result)

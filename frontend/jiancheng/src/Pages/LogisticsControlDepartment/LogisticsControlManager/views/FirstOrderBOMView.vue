@@ -76,7 +76,6 @@
                                 <div v-if="scope.row.currentStatus === '已保存'">
                                     <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
                                     <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
-                                    <el-button type="warning" @click="openSubmitDialog(scope.row)">提交</el-button>
                                 </div>
                                 <div v-else-if="scope.row.currentStatus === '已提交'">
                                     <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>

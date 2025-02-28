@@ -1,5 +1,5 @@
 <template>
-    <el-select v-model="currentBatchInfoType" @change="changeBatchInfoType" placeholder="请选择鞋型尺码类型">
+    <el-select v-model="currentBatchInfoType" @change="changeBatchInfoType" placeholder="请选择鞋型尺码类型" v-if="batchInfoVisible">
         <el-option
             v-for="item in batchInfoTypeList"
             :key="item.batchInfoTypeId"
@@ -8,7 +8,7 @@
         >
         </el-option>
     </el-select>
-    <el-table :data="localTableData" border height="450">
+    <el-table :data="localTableData" border height="350">
         <el-table-column prop="materialType" label="材料类型">
             <template #default="scope">
                 <el-popover trigger="hover" placement="top">
@@ -47,7 +47,13 @@
         </el-table-column>
         <el-table-column prop="materialName" label="材料名称">
             <template #default="scope">
-                <el-input v-model="scope.row.materialName"> </el-input>
+                <el-select v-model="scope.row.materialName" filterable @change="
+                    handleMaterialNameSelect(scope.row, $event)
+                    ">
+                    <el-option v-for="item in filterByTypes(materialNameOptions, typeLimit)
+                    " :key="item.value" :value="item.value" :label="item.label">
+                    </el-option>
+                </el-select>
             </template>
         </el-table-column>
         <el-table-column prop="materialModel" label="材料型号">
@@ -81,14 +87,11 @@
             </template>
         </el-table-column>
         <el-table-column prop="unit" label="单位">
-            <template #default="scope">
-                <el-input v-model="scope.row.unit" placeholder=""> </el-input>
-            </template>
         </el-table-column>
         <el-table-column prop="purchaseAmount" label="采购数量">
             
             <template #default="scope">
-                {{ scope.row.purchaseAmount }}
+                
                 <el-input-number
                     v-if="scope.row.materialCategory == 0"
                     v-model="scope.row.purchaseAmount"
@@ -96,13 +99,17 @@
                     :step="0.0001"
                     size="small"
                 />
-                <el-button
-                    v-if="scope.row.materialCategory == 1"
+                <div v-if="scope.row.materialCategory == 1">
+                    {{ scope.row.purchaseAmount }}
+                    <el-button
+                    
                     type="primary"
                     size="default"
                     @click="openSizeDialog(scope.row, scope.$index)"
                     >尺码用量填写</el-button
                 >
+                </div>
+
             </template>
         </el-table-column>
         <el-table-column label="备注">
@@ -216,7 +223,7 @@ import axios from 'axios'
 import { markRaw } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 export default {
-    props: ['materialTypeOptions', 'purchaseData'],
+    props: ['materialTypeOptions', 'purchaseData', 'batchInfoVisible', 'typeLimit'],
     data() {
         return {
             Search: markRaw(Search),
@@ -254,7 +261,8 @@ export default {
             newMaterialVis: false,
             materialSelectRow: {},
             batchInfoTypeList: [],
-            currentBatchInfoType: null
+            currentBatchInfoType: null,
+            materialNameOptions: [],
         }
     },
     watch: {
@@ -265,8 +273,17 @@ export default {
     emits: ['update-items', 'update-current-batch-info-type'],
     mounted() {
         this.getBatchTypeList()
+        this.getAllMaterialName()
     },
     methods: {
+        async getAllMaterialName() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {
+                params: {
+                    department: '0'
+                }
+            })
+            this.materialNameOptions = response.data
+        },
         emitUpdate() {
             this.$emit('update-items', [...this.localTableData])
         },
@@ -421,7 +438,21 @@ export default {
             console.log(this.sizeData)
             this.isSizeDialogVisible = true
             this.currentSizeIndex = index
-        }
+        },
+        async handleMaterialNameSelect(row, selectedItem) {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
+            )
+            row.materialId = response.data.materialId
+            row.unit = response.data.unit
+            row.materialType = response.data.materialType
+        },
+        filterByTypes(options, types) {
+            if (types.length === 1 && types[0] === 0) {
+                return options
+            }
+            return options.filter((option) => types.includes(option.type))
+        },
     }
 }
 </script>
