@@ -117,9 +117,6 @@
                         <el-button type="primary" @click="openPreviewDialog(scope.row)"
                             >查看</el-button
                         >
-                        <el-button type="success" @click="downloadZip(scope.row)"
-                            >下载采购订单压缩包</el-button
-                        >
                     </template>
                 </el-table-column>
             </el-table>
