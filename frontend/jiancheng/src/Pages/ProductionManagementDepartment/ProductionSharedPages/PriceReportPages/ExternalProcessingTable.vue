@@ -11,7 +11,7 @@
 import { VxeUI } from 'vxe-table'
 import { defineProps, onMounted, nextTick, ref, reactive, watch, defineExpose, defineEmits, computed } from 'vue';
 
-const props = defineProps(['procedureInfo', 'readOnly', 'team', 'tableData']);
+const props = defineProps(['readOnly', 'tableData', 'supplierOptions']);
 const emit = defineEmits(["update-items"]);
 const gridRef = ref();
 
@@ -19,31 +19,22 @@ const editable = computed(() => {
     return !props.readOnly;
 });
 
-const procedureEditRender = reactive({
+const supplierEditRender = reactive({
     name: 'ElAutocomplete',
     attrs: {
         fetchSuggestions(queryString, cb) {
-            const results = props.procedureInfo
-                .filter(proc => proc.procedureName.toLowerCase().startsWith(queryString.toLowerCase()))
-                .map(proc => ({ value: proc.procedureName, price: proc.price }));
+            const results = props.supplierOptions
+                .filter(supplierObj => supplierObj.supplierName.includes(queryString))
+                .map(supplierObj => ({ value: supplierObj.supplierName, id: supplierObj.supplierId }));
             cb(results);
         },
     },
     events: {
         select({ $rowIndex, row }, selectedItem) {
-            row.procedure = selectedItem.value;
-            row.price = selectedItem.price;
+            row.supplierName = selectedItem.value;
+            row.supplierId = selectedItem.id;
         }
     }
-});
-
-const sectionEditRender = reactive({
-    name: 'VxeSelect',
-    options: [
-        { label: '前段', value: '前段' },
-        { label: '中段', value: '中段' },
-        { label: '后段', value: '后段' }
-    ]
 });
 
 // Ensure grid updates when tableData changes
@@ -58,22 +49,21 @@ const gridOptions = reactive({
     },
     columns: [
         editable ? { type: 'checkbox', width: 70 } : null,
-        { type: 'seq', width: 55 },
-        props.team === '成型' ? {
-            field: 'productionSection',
-            title: '工段',
-            editRender: editable ? sectionEditRender : null
-        } : null,
         {
-            field: 'procedure',
+            field: 'procedureName',
             title: '工序',
-            editRender: editable ? procedureEditRender : null
+            editRender: editable ? { name: 'VxeInput', props: { clearable: true } } : null
         },
-        props.team !== '成型' ? {
+        {
+            field: 'supplierName',
+            title: '加工厂家',
+            editRender: editable ? supplierEditRender : null
+        },
+        {
             field: 'price',
             title: '工价',
             editRender: editable ? { name: 'VxeNumberInput', props: { type: 'amount', min: 0 } } : null
-        } : null,
+        },
         {
             field: 'note',
             title: '备注',
@@ -87,7 +77,7 @@ const gridOptions = reactive({
 defineExpose({ gridOptions });
 
 const pushEvent = async () => {
-    const newRow = { rowId: 0, prodcutionSection: null, procedure: '', price: '0.00', note: '' };
+    const newRow = { rowId: 0, procedure: '', supplierId: null, supplierName: '', price: '0.00', note: '' };
     gridOptions.data.push(newRow)
     nextTick(() => {
         const $grid = gridRef.value

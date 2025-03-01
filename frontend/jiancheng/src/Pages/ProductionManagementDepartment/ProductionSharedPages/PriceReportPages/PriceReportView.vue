@@ -6,7 +6,7 @@
         <el-main>
             <el-row :gutter="20" style="text-align: center;">
                 <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{ `${props.teams}工序填报`
-                    }}</el-col>
+                }}</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -27,10 +27,22 @@
                 <el-col :span="24">
                     <el-tabs v-model="currentTab" tab-position="top">
                         <el-tab-pane v-for="item in panes" :key="item" :label="item" :name="item">
-                            <PriceReportTable ref="childComp"
-                                :tableData="priceReportInfo[item]['tableData']" :procedureInfo="procedureInfo"
-                                :readOnly="readOnly" :team="currentTab"
-                                @update-items="handleUpdateItems" />
+                            <h3>{{ `${currentTab}工序表` }}</h3>
+                            <el-row :gutter="20">
+                                <el-col>
+                                    <PriceReportTable :tableData="priceReportInfo[item]['tableData']"
+                                        :procedureInfo="procedureInfo"
+                                        :readOnly="readOnly" :team="currentTab" @update-items="handleUpdateItems" />
+                                </el-col>
+                            </el-row>
+                            <h3>{{ `${currentTab}外加工成本表` }}</h3>
+                            <el-row :gutter="20">
+                                <el-col>
+                                    <ExternalProcessingTable :tableData="externalProcessingData[item]['tableData']"
+                                        :supplierOptions="supplierOptions" :readOnly="readOnly"
+                                        @update-items="handleUpdateProcessing" />
+                                </el-col>
+                            </el-row>
                         </el-tab-pane>
                     </el-tabs>
                 </el-col>
@@ -62,9 +74,11 @@
 import { onMounted, ref, reactive, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 import PriceReportTable from './PriceReportTable.vue';
+import ExternalProcessingTable from './ExternalProcessingTable.vue';
 import AllHeader from '@/components/AllHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 const priceReportInfo = reactive({})
+const supplierOptions = ref([])
 const procedureInfo = ref({})
 const proxy = getCurrentInstance()
 const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
@@ -76,17 +90,23 @@ const teamsArr = ref([])
 const statusName = ref('')
 const rejectionReason = ref('')
 const currentTab = ref('')
-const childComp = ref(null)
+const externalProcessingData = reactive({})
 
 onMounted(async () => {
     setReportPanes()
     await getPriceReportDetail()
+    await getExternalProcessingData()
     getOrderInfo()
     getAllProcedures()
+    getAllSuppliers()
 })
 
 const handleUpdateItems = (items) => {
     priceReportInfo[currentTab.value]['tableData'] = items
+};
+
+const handleUpdateProcessing = (items) => {
+    externalProcessingData.value = items
 };
 
 const setReportPanes = () => {
@@ -94,6 +114,7 @@ const setReportPanes = () => {
     teamsArr.value.forEach(team => {
         panes.value.push(team)
         priceReportInfo[team] = { "tableData": [], reportId: null }
+        externalProcessingData[team] = { "tableData": [] }
     })
     currentTab.value = panes.value[0]
 }
@@ -119,13 +140,18 @@ const getAllProcedures = async () => {
     procedureInfo.value = response.data
 }
 
+const getAllSuppliers = async () => {
+    const response = await axios.get(`${apiBaseUrl}/logistics/allsuppliers`)
+    supplierOptions.value = response.data
+}
+
 const getPriceReportDetail = async () => {
     for (const team of teamsArr.value) {
-        const params = {
+        let params = {
             "orderShoeId": props.orderShoeId,
             "team": team
         }
-        const response = await axios.get(`${apiBaseUrl}/production/getpricereportdetailbyordershoeid`, { params })
+        let response = await axios.get(`${apiBaseUrl}/production/getpricereportdetailbyordershoeid`, { params })
         priceReportInfo[team]["tableData"] = response.data.detail
         priceReportInfo[team]["reportId"] = response.data.metaData.reportId
         statusName.value = response.data.metaData.statusName
@@ -139,11 +165,22 @@ const getPriceReportDetail = async () => {
     }
 }
 
+const getExternalProcessingData = async () => {
+    for (const team of teamsArr.value) {
+        let params = { "reportId": priceReportInfo[team]["reportId"] }
+        let response = await axios.get(`${apiBaseUrl}/production/getexternalprocessingcost`, { params })
+        externalProcessingData[team]["tableData"] = response.data
+    }
+}
+
 const handleSaveData = async () => {
     try {
         for (const [key, info] of Object.entries(priceReportInfo)) {
+            console.log(key, info)
             await axios.post(`${apiBaseUrl}/production/storepricereportdetail`,
                 { reportId: info.reportId, newData: info.tableData })
+            await axios.post(`${apiBaseUrl}/production/saveexternalprocessingcost`,
+                { reportId: info.reportId, newData: externalProcessingData[key]["tableData"] })
         }
         ElMessage.success("保存成功")
     }
