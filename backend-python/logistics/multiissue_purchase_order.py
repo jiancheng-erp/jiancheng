@@ -11,6 +11,7 @@ from general_document.size_purchase_divide_order import generate_size_excel_file
 from constants import SHOESIZERANGE
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
+from sqlalchemy.orm import aliased
 
 
 multiissue_purchase_order_bp = Blueprint("multiissue_purchase_order", __name__)
@@ -350,7 +351,6 @@ def create_total_purchase_order():
     db.session.commit()
     return jsonify({"totalPurchaseOrderId": total_purchase_order_id})
 
-
 @multiissue_purchase_order_bp.route(
     "/multiissue/getsingletotalpurchaseorder", methods=["GET"]
 )
@@ -358,7 +358,10 @@ def get_single_total_purchase_order():
     """Get a single total purchase order with aggregated materials."""
     total_purchase_order_id = request.args.get("totalPurchaseOrderId")
 
-    # Query to join related tables and fetch all required details
+    # Ensure AssetsPurchaseOrderItem is correctly aliased
+    AliasedAssetsPurchaseOrderItem = aliased(AssetsPurchaseOrderItem)  # ✅ Corrected alias
+
+    # Query with both BOM-based and asset-based purchase orders
     query = (
         db.session.query(
             TotalPurchaseOrder,
@@ -369,23 +372,17 @@ def get_single_total_purchase_order():
             Material,
             MaterialType,
             Supplier,
+            AliasedAssetsPurchaseOrderItem,  # ✅ Use alias
         )
-        .join(
-            PurchaseDivideOrder,
-            TotalPurchaseOrder.total_purchase_order_id
-            == PurchaseDivideOrder.total_purchase_order_id,
-        )
-        .join(
-            PurchaseOrder,
-            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
-        )
-        .join(
-            PurchaseOrderItem,
-            PurchaseDivideOrder.purchase_divide_order_id
-            == PurchaseOrderItem.purchase_divide_order_id,
-        )
-        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(PurchaseDivideOrder, TotalPurchaseOrder.total_purchase_order_id == PurchaseDivideOrder.total_purchase_order_id)
+        .join(PurchaseOrder, PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id)
+        .outerjoin(PurchaseOrderItem, PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id)
+        .outerjoin(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .outerjoin(AliasedAssetsPurchaseOrderItem, PurchaseDivideOrder.purchase_divide_order_id == AliasedAssetsPurchaseOrderItem.purchase_divide_order_id)
+        .outerjoin(Material, db.or_(
+            BomItem.material_id == Material.material_id, 
+            AliasedAssetsPurchaseOrderItem.material_id == Material.material_id  # ✅ Ensure correct mapping
+        ))
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id)
@@ -406,6 +403,8 @@ def get_single_total_purchase_order():
     }
     material_map = {}
 
+    print(query)
+
     for (
         total_purchase_order,
         purchase_divide_order,
@@ -415,12 +414,11 @@ def get_single_total_purchase_order():
         material,
         material_type,
         supplier,
+        assets_purchase_order_item,
     ) in query:
-        # Set supplier name for the total purchase order
+        # Set order-level details (only once)
         if not grouped_results["totalPurchaseOrderRid"]:
-            grouped_results["totalPurchaseOrderRid"] = (
-                total_purchase_order.total_purchase_order_rid
-            )
+            grouped_results["totalPurchaseOrderRid"] = total_purchase_order.total_purchase_order_rid
         if not grouped_results["supplierName"]:
             grouped_results["supplierName"] = supplier.supplier_name
         if not grouped_results["remark"]:
@@ -430,75 +428,96 @@ def get_single_total_purchase_order():
         if not grouped_results["shipmentDeadline"]:
             grouped_results["shipmentDeadline"] = total_purchase_order.shipment_deadline
         if not grouped_results["environmentalRequest"]:
-            grouped_results["environmentalRequest"] = (
-                total_purchase_order.total_purchase_order_environmental_request
-            )
+            grouped_results["environmentalRequest"] = total_purchase_order.total_purchase_order_environmental_request
         if not grouped_results["totalPurchaseOrderType"]:
-            grouped_results["totalPurchaseOrderType"] = (
-                purchase_divide_order.purchase_divide_order_type
-            )
-        # Create a unique key for the material based on its attributes
+            grouped_results["totalPurchaseOrderType"] = purchase_divide_order.purchase_divide_order_type
+
+        # Determine whether to use BOM-based or asset-based items
+        if purchase_order.purchase_order_type in ["F", "S"]:
+            material_id = bom_item.material_id if bom_item else None
+            material_model = bom_item.material_model if bom_item else None
+            material_specification = bom_item.material_specification if bom_item else None
+            color = bom_item.bom_item_color if bom_item else None
+            current_purchase_order_item = purchase_order_item
+            approval_amount = purchase_order_item.approval_amount if purchase_order_item else 0  # ✅ Approval amount only for BOM-based orders
+        else:  # Handle asset-based purchase orders
+            material_id = assets_purchase_order_item.material_id if assets_purchase_order_item else None
+            material_model = assets_purchase_order_item.material_model if assets_purchase_order_item else None
+            material_specification = assets_purchase_order_item.material_specification if assets_purchase_order_item else None
+            color = assets_purchase_order_item.color if assets_purchase_order_item else None
+            current_purchase_order_item = assets_purchase_order_item
+            approval_amount = 0
+
+        # Ensure material_id is set, otherwise skip this iteration
+        if material_id is None:
+            continue  
+
+        # Create a unique key for the material
         material_key = (
-            bom_item.material_id,
+            material_id,
             material_type.material_type_name,
             material.material_name,
-            bom_item.material_model,
-            bom_item.material_specification,
-            bom_item.bom_item_color,
+            material_model,
+            material_specification,
+            color,
         )
+        print(material_key)
 
-        # Check if the material already exists in the material map
+        # Initialize material entry if not exists
         if material_key not in material_map:
             material_map[material_key] = {
-                "materialId": bom_item.material_id,
+                "materialId": material_id,
                 "materialTypeId": material_type.material_type_id,
                 "materialType": material_type.material_type_name,
                 "materialName": material.material_name,
-                "materialModel": bom_item.material_model,
-                "materialSpecification": bom_item.material_specification,
-                "color": bom_item.bom_item_color,
+                "materialModel": material_model,
+                "materialSpecification": material_specification,
+                "color": color,
                 "unit": material.material_unit,
                 "purchaseAmount": 0,
                 "approvalAmount": 0,
                 "adjustPurchaseAmount": 0,
                 "isInboundSperate": (
-                    True if purchase_order_item.inbound_material_id else False
+                    True if current_purchase_order_item and current_purchase_order_item.material_id else False
                 ),
-                "remark": bom_item.remark,
-                "sizeType": bom_item.size_type,
-                "materialInboundId": purchase_order_item.inbound_material_id,
-                "materialInboundUnit": purchase_order_item.inbound_unit,
+                "remark": bom_item.remark if bom_item else None,
+                "sizeType": bom_item.size_type if bom_item else None,
+                "materialInboundId": current_purchase_order_item.inbound_material_id if current_purchase_order_item else None,
+                "materialInboundUnit": current_purchase_order_item.inbound_unit if current_purchase_order_item else None,
                 "materialInboundName": (
                     db.session.query(Material)
-                    .filter(
-                        Material.material_id == purchase_order_item.inbound_material_id
-                    )
+                    .filter(Material.material_id == current_purchase_order_item.inbound_material_id)
                     .first()
                     .material_name
-                    if purchase_order_item.inbound_material_id
+                    if current_purchase_order_item and current_purchase_order_item.inbound_material_id
                     else None
                 ),
                 **{f"size{size}Amount": 0 for size in SHOESIZERANGE},
             }
 
-        # Update the purchase amount and size-specific amounts
+        # Update amounts
         current_material = material_map[material_key]
-        current_material["purchaseAmount"] += purchase_order_item.purchase_amount
-        current_material["approvalAmount"] += purchase_order_item.approval_amount
-        current_material[
-            "adjustPurchaseAmount"
-        ] += purchase_order_item.adjust_purchase_amount
-        for size in SHOESIZERANGE:
-            current_material[f"size{size}Amount"] += (
-                getattr(purchase_order_item, f"size_{size}_purchase_amount", 0)
-                if getattr(purchase_order_item, f"size_{size}_purchase_amount", 0)
-                else 0
-            )
+        if current_purchase_order_item:
+            current_material["purchaseAmount"] += current_purchase_order_item.purchase_amount
+            current_material["approvalAmount"] += approval_amount
+            current_material["adjustPurchaseAmount"] += current_purchase_order_item.adjust_purchase_amount if current_purchase_order_item.adjust_purchase_amount else 0
+
+            # Handle size-based quantities for BOM-based orders
+            if purchase_divide_order.purchase_divide_order_type in ["F", "S"]:
+                for size in SHOESIZERANGE:
+                    current_material[f"size{size}Amount"] += (
+                        getattr(current_purchase_order_item, f"size_{size}_purchase_amount", 0)
+                        if getattr(current_purchase_order_item, f"size_{size}_purchase_amount", 0)
+                        else 0
+                    )
 
     # Convert materials map to a list
     grouped_results["assetsItems"] = list(material_map.values())
 
     return jsonify([grouped_results])
+
+
+
 
 
 @multiissue_purchase_order_bp.route(
@@ -518,6 +537,7 @@ def save_total_purchase_order():
             )
             .first()
         )
+
         if total_purchase_order:
             total_purchase_order.total_purchase_order_remark = order_data["remark"]
             total_purchase_order.total_purchase_order_environmental_request = (
@@ -527,57 +547,109 @@ def save_total_purchase_order():
             total_purchase_order.shipment_deadline = order_data["shipmentDeadline"]
 
         for material in order_data["assetsItems"]:
-            purchase_items = (
-                db.session.query(
-                    PurchaseOrderItem, BomItem, PurchaseDivideOrder, TotalPurchaseOrder
-                )
-                .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-                .join(
-                    PurchaseDivideOrder,
-                    PurchaseOrderItem.purchase_divide_order_id
-                    == PurchaseDivideOrder.purchase_divide_order_id,
-                )
-                .join(
-                    TotalPurchaseOrder,
-                    PurchaseDivideOrder.total_purchase_order_id
-                    == TotalPurchaseOrder.total_purchase_order_id,
-                )
-                .filter(
-                    TotalPurchaseOrder.total_purchase_order_id
-                    == total_purchase_order_id,
-                    BomItem.material_id == material["materialId"],
-                    BomItem.material_model == material["materialModel"],
-                    BomItem.material_specification == material["materialSpecification"],
-                    BomItem.bom_item_color == material["color"],
-                )
-                .all()
+            # ✅ Retrieve `purchase_order_type` dynamically
+            purchase_order_type_query = (
+                db.session.query(PurchaseOrder.purchase_order_type)
+                .join(PurchaseDivideOrder, PurchaseOrder.purchase_order_id == PurchaseDivideOrder.purchase_order_id)
+                .filter(PurchaseDivideOrder.total_purchase_order_id == total_purchase_order_id)
+                .first()
             )
-            if purchase_items:
-                # 例：买两包拉链，分给两个订单，每个订单一包
-                distributed_amount = float(material["adjustPurchaseAmount"]) / len(
-                    purchase_items
+            purchase_order_type = purchase_order_type_query[0] if purchase_order_type_query else None
+
+            if not purchase_order_type:
+                return jsonify({"message": "Purchase order type not found."}), 400
+
+            # ✅ Determine if it's BOM-based or Asset-based based on `purchase_order_type`
+            if purchase_order_type in ["F", "S"]:
+                # BOM-based order (Join using `BomItem`)
+                purchase_items = (
+                    db.session.query(
+                        PurchaseOrderItem, BomItem, PurchaseDivideOrder, TotalPurchaseOrder
+                    )
+                    .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+                    .join(
+                        PurchaseDivideOrder,
+                        PurchaseOrderItem.purchase_divide_order_id
+                        == PurchaseDivideOrder.purchase_divide_order_id,
+                    )
+                    .join(
+                        TotalPurchaseOrder,
+                        PurchaseDivideOrder.total_purchase_order_id
+                        == TotalPurchaseOrder.total_purchase_order_id,
+                    )
+                    .filter(
+                        TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id,
+                        BomItem.material_id == material["materialId"],
+                        BomItem.material_model == material["materialModel"],
+                        BomItem.material_specification == material["materialSpecification"],
+                        BomItem.bom_item_color == material["color"],
+                    )
+                    .all()
                 )
-                for (
-                    item,
-                    bom_item,
-                    purchase_divide_order,
-                    total_purchase_order,
-                ) in purchase_items:
-                    item.adjust_purchase_amount = distributed_amount
+            else:
+                # Asset-based order (`O, X, I, L, C, P`)
+                purchase_items = (
+                    db.session.query(
+                        AssetsPurchaseOrderItem, PurchaseDivideOrder, TotalPurchaseOrder
+                    )
+                    .join(
+                        PurchaseDivideOrder,
+                        AssetsPurchaseOrderItem.purchase_divide_order_id
+                        == PurchaseDivideOrder.purchase_divide_order_id,
+                    )
+                    .join(
+                        TotalPurchaseOrder,
+                        PurchaseDivideOrder.total_purchase_order_id
+                        == TotalPurchaseOrder.total_purchase_order_id,
+                    )
+                    .filter(
+                        TotalPurchaseOrder.total_purchase_order_id == total_purchase_order_id,
+                        AssetsPurchaseOrderItem.material_id == material["materialId"],
+                        AssetsPurchaseOrderItem.material_model == material["materialModel"],
+                        AssetsPurchaseOrderItem.material_specification == material["materialSpecification"],
+                        AssetsPurchaseOrderItem.color == material["color"],
+                    )
+                    .all()
+                )
+
+            if purchase_items:
+                # ✅ Distribute `adjust_purchase_amount` evenly among the matched items
+                distributed_amount = float(material["adjustPurchaseAmount"]) / len(purchase_items)
+
+                for purchase_item in purchase_items:
+                    # ✅ Determine if it's BOM-based or Asset-based
+                    if purchase_order_type in ["F", "S"]:
+                        purchase_order_item = purchase_item[0]  # `PurchaseOrderItem`
+                        purchase_order_item.PurchaseOrderItem.adjust_purchase_amount = distributed_amount  # ✅ Explicit reference
+                    else:
+                        purchase_order_item = purchase_item  # `AssetsPurchaseOrderItem`
+                        purchase_order_item.AssetsPurchaseOrderItem.adjust_purchase_amount = distributed_amount  # ✅ Explicit reference
+
+                    # ✅ Handle inbound material ID and unit
                     if material["isInboundSperate"]:
                         if material["materialInboundId"]:
-                            item.inbound_material_id = material["materialInboundId"]
-                            item.inbound_unit = material["materialInboundUnit"]
+                            if purchase_order_type in ["F", "S"]:
+                                purchase_order_item.PurchaseOrderItem.inbound_material_id = material["materialInboundId"]
+                                purchase_order_item.PurchaseOrderItem.inbound_unit = material["materialInboundUnit"]
+                            else:
+                                purchase_order_item.AssetsPurchaseOrderItem.inbound_material_id = material["materialInboundId"]
+                                purchase_order_item.AssetsPurchaseOrderItem.inbound_unit = material["materialInboundUnit"]
                         else:
-                            return jsonify({"message": "Material ID is required."})
+                            return jsonify({"message": "Material ID is required for inbound material."}), 400
                     else:
-                        item.inbound_material_id = material["materialId"]
-                        item.inbound_unit = material["materialUnit"]
+                        if purchase_order_type in ["F", "S"]:
+                            purchase_order_item.PurchaseOrderItem.inbound_material_id = material["materialId"]
+                            purchase_order_item.PurchaseOrderItem.inbound_unit = material["unit"]
+                        else:
+                            purchase_order_item.AssetsPurchaseOrderItem.inbound_material_id = material["materialId"]
+                            purchase_order_item.AssetsPurchaseOrderItem.inbound_unit = material["unit"]
 
     db.session.commit()
     return jsonify(
         {"message": "Total purchase order and materials saved successfully."}
     )
+
+
 
 
 @multiissue_purchase_order_bp.route(

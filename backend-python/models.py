@@ -653,6 +653,9 @@ class AssetsPurchaseOrderItem(db.Model):
     size_46_purchase_amount = db.Column(db.Integer, nullable=True)
     size_type = db.Column(db.String(10), nullable=False, default="E")
     craft_name = db.Column(db.String(100), nullable=True)
+    inbound_material_id = db.Column(db.BigInteger, nullable=True)
+    inbound_unit = db.Column(db.String(5), nullable=True)
+    adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
 
     def __repr__(self):
         return f"<AssetsPurchaseOrderItem(assets_purchase_order_item_id={self.assets_purchase_order_item_id})>"
