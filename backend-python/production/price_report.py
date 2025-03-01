@@ -469,3 +469,58 @@ def download_production_form():
     new_name = f"鞋型{res['shoe_rid']}_产量流程卡.xlsx"
     generate_excel_file(template_path, new_file_path, res)
     return send_file(new_file_path, as_attachment=True, download_name=new_name)
+
+
+@price_report_bp.route("/production/getexternalprocessingcost", methods=["GET"])
+def get_external_processing_cost():
+    report_id = request.args.get("reportId")
+    response = (
+        db.session.query(ExternalProcessingCost, Supplier, UnitPriceReport)
+        .join(Supplier, ExternalProcessingCost.supplier_id == Supplier.supplier_id)
+        .join(
+            UnitPriceReport,
+            ExternalProcessingCost.report_id == UnitPriceReport.report_id,
+        )
+        .filter(UnitPriceReport.report_id == report_id)
+        .all()
+    )
+    result = []
+    for row in response:
+        processing_cost, supplier, _ = row
+        obj = {
+            "reportId": processing_cost.report_id,
+            "rowId": processing_cost.row_id,
+            "price": processing_cost.price,
+            "procedureName": processing_cost.procedure_name,
+            "supplierId": supplier.supplier_id,
+            "supplierName": supplier.supplier_name,
+            "note": processing_cost.note,
+        }
+        result.append(obj)
+    return result
+
+
+@price_report_bp.route("/production/saveexternalprocessingcost", methods=["POST"])
+def save_external_processing_cost():
+    data = request.get_json()
+    report_id = data["reportId"]
+    new_data = data["newData"]
+    # delete old data
+    ExternalProcessingCost.query.filter_by(report_id=report_id).delete()
+    # insert new data
+    new_row_id = 1
+    result = []
+    for row in new_data:
+        obj = {
+            "report_id": report_id,
+            "row_id": new_row_id,
+            "supplier_id": row["supplierId"],
+            "procedure_name": row["procedureName"],
+            "price": row["price"],
+            "note": row["note"],
+        }
+        new_row_id += 1
+        result.append(obj)
+    db.session.bulk_insert_mappings(ExternalProcessingCost, result)
+    db.session.commit()
+    return jsonify({"message": "success"})
