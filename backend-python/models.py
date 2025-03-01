@@ -653,6 +653,9 @@ class AssetsPurchaseOrderItem(db.Model):
     size_46_purchase_amount = db.Column(db.Integer, nullable=True)
     size_type = db.Column(db.String(10), nullable=False, default="E")
     craft_name = db.Column(db.String(100), nullable=True)
+    inbound_material_id = db.Column(db.BigInteger, nullable=True)
+    inbound_unit = db.Column(db.String(5), nullable=True)
+    adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
 
     def __repr__(self):
         return f"<AssetsPurchaseOrderItem(assets_purchase_order_item_id={self.assets_purchase_order_item_id})>"
@@ -866,12 +869,26 @@ class Supplier(db.Model):
         return "Supplier"
 
 
+class ExternalProcessingCost(db.Model):
+    __tablename__ = 'external_processing_cost'
+
+    report_id = db.Column(db.Integer, primary_key=True, nullable=False)
+    row_id = db.Column(db.Integer, primary_key=True, nullable=False)
+    procedure_name = db.Column(db.String(50), default=0.000)
+    price = db.Column(db.Numeric(10, 3), default=0.000)
+    supplier_id = db.Column(db.Integer, nullable=False, default=1)
+    note = db.Column(db.String(100), nullable=True)
+
+    def __repr__(self):
+        return f"<ExternalProcessingCost(report_id={self.report_id}, row_id={self.row_id}, price={self.price}, supplier_id={self.supplier_id})>"
+
+
 class SizeMaterialStorage(db.Model):
     __tablename__ = "size_material_storage"
     size_material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True
     )
-    size_material_specification = db.Column(db.String(40), default="", nullable=False)
+    size_material_specification = db.Column(db.String(100), default="", nullable=False)
     size_material_model = db.Column(db.String(50), default="", nullable=True)
     size_34_estimated_inbound_amount = db.Column(db.Integer, default=0)
     size_35_estimated_inbound_amount = db.Column(db.Integer, default=0)
@@ -1000,7 +1017,7 @@ class ReportTemplateDetail(db.Model):
     row_id = db.Column(db.Integer, primary_key=True, nullable=False)
     production_section = db.Column(db.String(20))
     procedure_name = db.Column(db.String(50), nullable=True)
-    price = db.Column(db.Float, nullable=True)
+    price = db.Column(db.DECIMAL(10, 3), nullable=True)
     note = db.Column(db.String(100), nullable=True)
 
 

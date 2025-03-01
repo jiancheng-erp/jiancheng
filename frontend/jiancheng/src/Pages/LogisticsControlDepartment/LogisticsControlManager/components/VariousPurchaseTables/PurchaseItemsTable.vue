@@ -9,7 +9,7 @@
         </el-option>
     </el-select>
     <el-table :data="localTableData" border height="350">
-        <el-table-column prop="materialType" label="材料类型">
+        <el-table-column label="材料类型">
             <template #default="scope">
                 <el-popover trigger="hover" placement="top">
                     <p>
@@ -222,6 +222,7 @@
 import axios from 'axios'
 import { markRaw } from 'vue'
 import { Search } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 export default {
     props: ['materialTypeOptions', 'purchaseData', 'batchInfoVisible', 'typeLimit'],
     data() {
@@ -380,6 +381,7 @@ export default {
             row.supplierName = selectedItem.value
         },
         changeWarehouseName(row) {
+        console.log(row.materialType)
             row.warehouseName = row.materialType.warehouseName
             if (row.materialType.materialTypeName === '底材' || row.materialType.materialTypeName === '楦头' || row.materialType.materialTypeName === '刀模') {
                 row.materialCategory = 1
