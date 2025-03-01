@@ -41,6 +41,7 @@
                                         <template #default="scope">
                                             <el-button type="primary"
                                                 @click="openPreviewDialog(scope.row)">查看详情</el-button>
+
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -52,8 +53,14 @@
                             <template #default="scope">
                                 <el-button v-if="scope.row.totalPurchaseOrderStatus === '1'" type="primary"
                                     @click="openTotalPreviewDialog(scope.row, true)">查看详情并下发</el-button>
-                                <el-button v-else type="success"
+                                <div v-else>
+                                    <el-button type="success"
                                     @click="openTotalPreviewDialog(scope.row), false">查看详情</el-button>
+                                    <el-button type="primary" @click="downloadTotalPurchaseOrder(scope.row)">下载总采购订单（分厂家）</el-button>
+                                    
+                                </div>
+
+                                
                             </template>
                         </el-table-column>
                     </el-table>
@@ -81,8 +88,8 @@
                                 <el-table-column label="操作">
                                     <template #default="scope">
                                         <el-button type="primary" @click="openPreviewDialog(scope.row)">查看详情</el-button>
-                                        <el-button type="success"
-                                            @click="handleIssueTotalPurchaseOrder(scope.row)">下发</el-button>
+                                        <!-- <el-button type="success"
+                                            @click="handleIssueTotalPurchaseOrder(scope.row)">下发</el-button> -->
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -470,6 +477,9 @@ export default {
             }
         },
         async openTotalPreviewDialog(row, mode) {
+            console.log(row.purchaseDivideOrders[0].orderId)
+            this.shoeSizeColumns = await getShoeSizesName(row.purchaseDivideOrders[0].orderId)
+            this.currentShoeSizeType = this.shoeSizeColumns[0].type
             this.modifiedMode = mode
             this.purchaseOrderCreateVis = true
             const res = await axios.get(
@@ -532,6 +542,9 @@ export default {
             )
             row.materialInboundId = response.data.materialId
             row.materialInboundUnit = response.data.unit
+        },
+        downloadTotalPurchaseOrder(row) {
+            window.open(`${this.$apiBaseUrl}/multiissue/downloadtotalpurchaseorder?totalPurchaseOrderRid=${row.totalPurchaseOrderRid}`)
         }
     }
 }

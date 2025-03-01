@@ -82,7 +82,8 @@ open_routes = [
     "/devproductionorder/downloadpicnotes",
     "/logistics/downloadassetzip",
     "/craftsheet/downloadcraftsheet",
-    "/order/exportorder"
+    "/order/exportorder",
+    "/multiissue/downloadtotalpurchaseorder"
 ]
 
 
