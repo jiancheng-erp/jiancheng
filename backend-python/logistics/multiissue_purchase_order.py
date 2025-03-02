@@ -820,7 +820,8 @@ def submit_total_purchase_order():
                         material_specification=material_specification,
                         material_storage_color=material_color,
                         total_purchase_order_id=total_purchase_order.total_purchase_order_id,
-                        actual_inbound_material_id=actual_inbound_material_id if actual_inbound_material_id else None,
+                        actual_inbound_material_id=actual_inbound_material_id if actual_inbound_material_id else material_id,
+                        # TODO: delete actual inbound unit
                         actual_inbound_unit=actual_inbound_unit if actual_inbound_unit else None,
                         craft_name=craft_name,
                         production_instruction_item_id=production_instruction_item_id
