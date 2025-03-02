@@ -209,6 +209,17 @@ class Event(db.Model):
 class MaterialStorage(db.Model):
     __tablename__ = "material_storage"
 
+    __table_args__ = (
+        db.UniqueConstraint(
+            "actual_inbound_material_id",
+            "material_model",
+            "material_specification",
+            "material_storage_color",
+            "order_shoe_id",
+            name="unq_material_storage",
+        ),
+    )
+
     material_storage_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True, nullable=False
     )
@@ -870,7 +881,7 @@ class Supplier(db.Model):
 
 
 class ExternalProcessingCost(db.Model):
-    __tablename__ = 'external_processing_cost'
+    __tablename__ = "external_processing_cost"
 
     report_id = db.Column(db.Integer, primary_key=True, nullable=False)
     row_id = db.Column(db.Integer, primary_key=True, nullable=False)
