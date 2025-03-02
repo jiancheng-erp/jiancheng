@@ -357,9 +357,10 @@ def save_bom_usage():
                 pairs=bom_item["pairs"] if bom_item["pairs"] else 0.00,
             )
             for i in range(len(bom_item["sizeInfo"])):
+                name = i + 34
                 setattr(
                     bom_item_entity,
-                    f"size_{i}_total_usage",
+                    f"size_{name}_total_usage",
                     bom_item["sizeInfo"][i]["approvalAmount"],
                 )
             db.session.add(bom_item_entity)
@@ -406,94 +407,6 @@ def save_bom_usage():
     return jsonify({"status": "success"})
 
 
-@second_bom_bp.route("/secondbom/getbomdetails", methods=["GET"])
-def get_bom_details():
-    order_id = request.args.get("orderid")
-    order_shoe_id = request.args.get("ordershoeid")
-    bom_id = (
-        db.session.query(Bom, OrderShoe, Order, Shoe)
-        .join(OrderShoe, Bom.order_shoe_id == OrderShoe.order_shoe_id)
-        .join(Order, OrderShoe.order_id == Order.order_id)
-        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .filter(
-            Order.order_rid == order_id,
-            Shoe.shoe_rid == order_shoe_id,
-            Bom.bom_type == 1,
-        )
-        .first()
-        .Bom.bom_id
-    )
-    bom_rid = db.session.query(Bom).filter(Bom.bom_id == bom_id).first().bom_rid
-    bom_items = (
-        db.session.query(BomItem, Material, MaterialType, Department, Supplier)
-        .join(Material, BomItem.material_id == Material.material_id)
-        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(Department, BomItem.department_id == Department.department_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .filter(BomItem.bom_id == bom_id)
-        .all()
-    )
-
-    shoe_size_names = get_order_batch_type_helper(order_id)
-    result = []
-    for bom_item in bom_items:
-        item, material, material_type, department, supplier = bom_item
-        sizeInfo = []
-        first_bom_item_record = (
-            db.session.query(BomItem, Bom)
-            .join(Bom, BomItem.bom_id == Bom.bom_id)
-            .filter(
-                Bom.order_shoe_type_id == order_shoe_type_id,
-                Bom.bom_type == 0,
-                BomItem.material_id == material.material_id,
-                BomItem.material_model == bom_item.material_model,
-                BomItem.material_specification == bom_item.material_specification,
-            )
-            .first()
-        )
-        if first_bom_item_record:
-            first_bom_usage = first_bom_item_record.BomItem.unit_usage
-        else:
-            first_bom_usage = 0
-        for i in range(len(shoe_size_names)):
-            index = i + 34
-            obj = {
-                "size": shoe_size_names[i]["label"],
-                "approvalAmount": (
-                    getattr(bom_item, f"size_{index}_total_usage")
-                    if getattr(bom_item, f"size_{index}_total_usage")
-                    else 0.00
-                ),
-            }
-            sizeInfo.append(obj)
-        result.append(
-            {
-                "materialName": material.material_name,
-                "materialType": material_type.material_type_name,
-                "materialSpecification": item.material_specification,
-                "supplierName": supplier.supplier_name,
-                "useDepart": department.department_id,
-                "craftName": item.craft_name,
-                "firstBomUsage": first_bom_usage,
-                "pairs": item.pairs if item.pairs else 0.00,
-                "unitUsage": (
-                    item.unit_usage
-                    if item.unit_usage
-                    else 0.00 if material.material_category == 0 else None
-                ),
-                "approvalUsage": item.total_usage if item.total_usage else 0.00,
-                "unit": material.material_unit,
-                "color": item.bom_item_color,
-                "comment": item.remark,
-                "materialCategory": material.material_category,
-                "sizeInfo": sizeInfo,
-            }
-        )
-    fin_result = {"bomId": bom_rid, "bomData": result}
-    print(fin_result)
-    return jsonify(fin_result)
-
-
 @second_bom_bp.route("/secondbom/editbom", methods=["POST"])
 def edit_bom():
     bom_rid = request.json.get("bomId")
@@ -520,10 +433,12 @@ def edit_bom():
         bom_item.unit_usage = item["unitUsage"]
         bom_item.total_usage = item["approvalUsage"]
         bom_item.pairs = item["pairs"]
-        for i, size in enumerate(SHOESIZERANGE):
+        length = min(len(SHOESIZERANGE), len(item["sizeInfo"]))
+        for i in range(length):
+            db_size = i + 34
             setattr(
                 bom_item,
-                f"size_{size}_total_usage",
+                f"size_{db_size}_total_usage",
                 item["sizeInfo"][i]["approvalAmount"],
             )
         db.session.flush()
