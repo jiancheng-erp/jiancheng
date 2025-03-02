@@ -80,7 +80,7 @@
                     </el-descriptions>
                 </el-col>
             </el-row>
-            
+            <div v-if="currentEditPurchaseOrderRid !== ''">
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
                     <el-form ref="purchaseForm" :model="assetForm" :rules="rules">
@@ -100,6 +100,7 @@
 
                 </el-col>
             </el-row>
+        </div>
         </el-main>
         <el-dialog
             :title="`订单 ${currentOrderRid} 开发部尺码对照表`"

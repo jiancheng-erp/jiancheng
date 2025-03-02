@@ -70,25 +70,27 @@
                     采购订单创建 {{ currentEditPurchaseOrderRid }}
                 </el-col>
             </el-row>
-            <el-row :gutter="20">
-                <el-col :span="24" :offset="0">
-                    <el-form ref="purchaseForm" :model="assetForm" :rules="rules">
-                        <purchase-items-table 
-                            :material-type-options="materialTypeOptions" 
-                            @update-items="updateNewPurchaseData"
-                            :batch-info-visible="0"
-                            :purchaseData.sync="assetForm.purchaseData"
-                            :type-limit="[6]"
-                        ></purchase-items-table>
-                    </el-form>
-                </el-col>
-            </el-row>
-            <el-row :gutter="20">
-                <el-col :span="4" :offset="22">
-                    <el-button type="primary" size="medium" @click="savePackagePurchaseOrder" :disabled="currentEditPurchaseOrderRid === ''">保存采购订单</el-button>
+            <div v-if="currentEditPurchaseOrderRid !== ''">
+                <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <el-form ref="purchaseForm" :model="assetForm" :rules="rules">
+                            <purchase-items-table 
+                                :material-type-options="materialTypeOptions" 
+                                @update-items="updateNewPurchaseData"
+                                :batch-info-visible="0"
+                                :purchaseData.sync="assetForm.purchaseData"
+                                :type-limit="[6]"
+                            ></purchase-items-table>
+                        </el-form>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="4" :offset="22">
+                        <el-button type="primary" size="medium" @click="savePackagePurchaseOrder" :disabled="currentEditPurchaseOrderRid === ''">保存采购订单</el-button>
 
-                </el-col>
-            </el-row>
+                    </el-col>
+                </el-row>
+            </div>
             
             
             
@@ -191,7 +193,7 @@ export default {
             }
         },
         viewPackagingInfo(row) {
-            window.open(`${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${row.orderRid}&filetype=1`);
+            window.open(`${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${row.orderRid}&filetype=2`);
         },
         async createPackagePurchaseOrder(row) {
             if (this.currentEditPurchaseOrderRid != '') {
