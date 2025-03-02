@@ -65,7 +65,7 @@
                         </el-table-column>
                     </el-table>
                     <el-pagination style="margin-top: 10px" background layout="prev, pager, next"
-                        :total="finishedPurchaseOrderData.length" :page-size="pageSize"
+                        :total="filteredFinishedSize" :page-size="pageSize"
                         :current-page="finishedCurrentPage"
                         @current-change="(page) => handlePageChange('finished', page)"></el-pagination>
                 </el-tab-pane>
@@ -94,7 +94,7 @@
                                 </el-table-column>
                             </el-table>
                             <el-pagination style="margin-top: 10px" background layout="prev, pager, next"
-                                :total="unfinishedPurchaseOrderData.length" :page-size="pageSize"
+                                :total="filteredUnfinishedSize" :page-size="pageSize"
                                 :current-page="unfinishedCurrentPage"
                                 @current-change="(page) => handlePageChange('unfinished', page)"></el-pagination>
                         </el-col>
@@ -338,7 +338,9 @@ export default {
             tabPlaneData: [],
             statusFilter: '1',
             modifiedMode: false,
-            materialNameOptions: []
+            materialNameOptions: [],
+            filteredFinishedSize:0,
+            filteredUnfinishedSize:0
         }
     },
     computed: {
@@ -347,6 +349,23 @@ export default {
             const filteredData = this.finishedPurchaseOrderData.filter(
                 (order) => order.totalPurchaseOrderStatus === this.statusFilter
             )
+            // filter based on search input
+            if (this.purchaseOrderSearch) {
+                return filteredData.filter((order) =>
+                    order.totalPurchaseOrderRid.includes(this.purchaseOrderSearch)
+                )
+            }
+            if (this.OrderSearch) {
+                return filteredData.filter((order) =>
+                    order.purchaseDivideOrders.some((divideOrder) =>
+                        divideOrder.orderRid.includes(this.OrderSearch)
+                    )
+                )
+            }
+            this.filteredFinishedSize = filteredData.length
+            if (this.supplierSearch) {
+                return filteredData.filter((order) => order.supplierName.includes(this.supplierSearch))
+            }
             // Paginate the filtered data
             const start = (this.finishedCurrentPage - 1) * this.pageSize
             const end = start + this.pageSize
@@ -354,6 +373,24 @@ export default {
         },
         // Paginated data for unfinished orders
         paginatedUnfinishedPurchaseOrderData() {
+            // Filter based on search input
+            if (this.purchaseOrderSearch) {
+                return this.issuePageUnfinishedPurchaseOrderData.filter((order) =>
+                    order.purchaseDivideOrderId.includes(this.purchaseOrderSearch)
+                )
+            }
+            if (this.OrderSearch) {
+                return this.issuePageUnfinishedPurchaseOrderData.filter((order) =>
+                    order.orderRid.includes(this.OrderSearch)
+                )
+            }
+            if (this.supplierSearch) {
+                return this.issuePageUnfinishedPurchaseOrderData.filter((order) =>
+                    order.supplierName.includes(this.supplierSearch)
+                )
+            }
+            // make the page correct
+            this.filteredUnfinishedSize = this.issuePageUnfinishedPurchaseOrderData.length
             const start = (this.unfinishedCurrentPage - 1) * this.pageSize
             const end = start + this.pageSize
             console.log(this.unfinishedCurrentPage)
