@@ -500,7 +500,7 @@ def get_single_total_purchase_order():
         if current_purchase_order_item:
             current_material["purchaseAmount"] += current_purchase_order_item.purchase_amount
             current_material["approvalAmount"] += approval_amount
-            current_material["adjustPurchaseAmount"] += current_purchase_order_item.adjust_purchase_amount if current_purchase_order_item.adjust_purchase_amount else 0
+            current_material["adjustPurchaseAmount"] += current_purchase_order_item.adjust_purchase_amount if current_purchase_order_item.adjust_purchase_amount else current_purchase_order_item.purchase_amount
 
             # Handle size-based quantities for BOM-based orders
             if purchase_divide_order.purchase_divide_order_type in ["F", "S"]:
