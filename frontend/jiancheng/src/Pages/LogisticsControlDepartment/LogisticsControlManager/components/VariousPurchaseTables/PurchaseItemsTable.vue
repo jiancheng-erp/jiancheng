@@ -12,9 +12,6 @@
         <el-table-column label="材料类型">
             <template #default="scope">
                 <el-popover trigger="hover" placement="top">
-                    <p>
-                        {{ scope.row.materialType ? scope.row.materialType.materialTypeName : '' }}
-                    </p>
                     <template #reference>
                         <el-select
                             v-model="scope.row.materialType"
@@ -381,7 +378,7 @@ export default {
             row.supplierName = selectedItem.value
         },
         changeWarehouseName(row) {
-        console.log(row.materialType)
+            console.log(row.materialType)
             row.warehouseName = row.materialType.warehouseName
             if (row.materialType.materialTypeName === '底材' || row.materialType.materialTypeName === '楦头' || row.materialType.materialTypeName === '刀模') {
                 row.materialCategory = 1
@@ -447,7 +444,6 @@ export default {
             )
             row.materialId = response.data.materialId
             row.unit = response.data.unit
-            row.materialType = response.data.materialType
         },
         filterByTypes(options, types) {
             if (types.length === 1 && types[0] === 0) {
