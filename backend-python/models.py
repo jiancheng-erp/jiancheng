@@ -626,6 +626,12 @@ class PurchaseOrderItem(db.Model):
     inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_unit = db.Column(db.String(5), nullable=True)
     adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
+    material_id = db.Column(db.BigInteger, nullable=True)
+    material_specification = db.Column(db.String(100), nullable=True)
+    material_model = db.Column(db.String(50), nullable=True)
+    color = db.Column(db.String(40), nullable=True)
+    size_type = db.Column(db.String(1), nullable=False, default="E")
+    craft_name = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         return (
