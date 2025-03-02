@@ -619,7 +619,7 @@ def save_total_purchase_order():
                 for purchase_item in purchase_items:
                     # ✅ Determine if it's BOM-based or Asset-based
                     if purchase_order_type in ["F", "S"]:
-                        purchase_order_item = purchase_item[0]  # `PurchaseOrderItem`
+                        purchase_order_item = purchase_item # `PurchaseOrderItem`
                         purchase_order_item.PurchaseOrderItem.adjust_purchase_amount = distributed_amount  # ✅ Explicit reference
                     else:
                         purchase_order_item = purchase_item  # `AssetsPurchaseOrderItem`
@@ -721,7 +721,7 @@ def submit_total_purchase_order():
                 .join(PurchaseOrder, PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id)
                 .join(Material, BomItem.material_id == Material.material_id)
                 .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-                .filter(PurchaseOrderItem.purchase_divide_order_id == purchase_divide_order.purchase_divide_order_id)
+                .filter(PurchaseOrderItem.purchase_divide_order_id == purchase_divide_order.PurchaseDivideOrder.purchase_divide_order_id)
                 .all()
             )
         else:
@@ -755,6 +755,7 @@ def submit_total_purchase_order():
                 order_shoe_id = purchase_item.PurchaseOrder.order_shoe_id   # ✅ Use `purchase_order`
                 order_id = purchase_item.PurchaseOrder.order_id
                 production_instruction_item_id = purchase_item.BomItem.production_instruction_item_id
+                craft_name = purchase_item.BomItem.craft_name
 
             else:
                 # ✅ Asset-based orders: Use `AssetsPurchaseOrderItem`
@@ -768,12 +769,13 @@ def submit_total_purchase_order():
                 order_shoe_id = purchase_item.PurchaseOrder.order_shoe_id  # ✅ Use `purchase_divide_order` relationship
                 order_id = purchase_item.PurchaseOrder.order_id
                 production_instruction_item_id = None
+                craft_name = purchase_order_item.craft_name
 
             # ✅ Shared Fields (Common for both BOM & Asset-based)
             material_quantity = purchase_order_item.purchase_amount
             actual_inbound_material_id = purchase_order_item.inbound_material_id
             actual_inbound_unit = purchase_order_item.inbound_unit
-            craft_name = purchase_order_item.craft_name
+            
 
 
             # Determine if size-based

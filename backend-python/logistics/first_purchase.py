@@ -520,12 +520,18 @@ def get_purchase_divide_orders():
     query = (
         db.session.query(
             PurchaseDivideOrder,
+            TotalPurchaseOrder,
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
             Material,
             MaterialType,
             Supplier,
+        )
+        .outerjoin(
+            TotalPurchaseOrder,
+            PurchaseDivideOrder.total_purchase_order_id
+            == TotalPurchaseOrder.total_purchase_order_id,
         )
         .join(
             PurchaseOrder,
@@ -548,6 +554,7 @@ def get_purchase_divide_orders():
     grouped_results = {}
     for (
         purchase_divide_order,
+        total_purchase_order,
         purchase_order,
         purchase_order_item,
         bom_item,
@@ -557,6 +564,15 @@ def get_purchase_divide_orders():
     ) in query:
         divide_order_rid = purchase_divide_order.purchase_divide_order_rid
         if divide_order_rid not in grouped_results:
+            if total_purchase_order:
+                if total_purchase_order.total_purchase_order_status == "1":
+                    purchase_divide_order_status = "已保存"
+                elif total_purchase_order.total_purchase_order_status == "2":
+                    purchase_divide_order_status = "已下发"
+                else:
+                    purchase_divide_order_status = "未处理"
+            else:
+                purchase_divide_order_status = "未处理"
             grouped_results[divide_order_rid] = {
                 "purchaseDivideOrderId": divide_order_rid,
                 "purchaseOrderId": purchase_divide_order.purchase_order_id,
@@ -567,6 +583,7 @@ def get_purchase_divide_orders():
                 "evironmentalRequest": purchase_divide_order.purchase_order_environmental_request,
                 "shipmentAddress": purchase_divide_order.shipment_address,
                 "shipmentDeadline": purchase_divide_order.shipment_deadline,
+                "purchaseDivideOrderStatus": purchase_divide_order_status,
             }
 
         # Append the assets item details to the corresponding group
@@ -1035,6 +1052,121 @@ def submit_purchase_divide_orders():
             if len(purchase_order_id) >= 5 and purchase_order_id[-5] == "F":
                 zipf.write(file, filename)  # Add the file to the zip
 
+    processor: EventProcessor = current_app.config["event_processor"]
+    try:
+        event_arr = []
+        for operation_id in [50, 51]:
+            event = Event(
+                staff_id=3,
+                handle_time=datetime.datetime.now(),
+                operation_id=operation_id,
+                event_order_id=order_id,
+                event_order_shoe_id=order_shoe_id,
+            )
+            processor.processEvent(event)
+            event_arr.append(event)
+    except Exception:
+        return jsonify({"status": "event processor error"}), 500
+    db.session.add_all(event_arr)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+@first_purchase_bp.route("/firstpurchase/advanceprocess", methods=["POST"])
+def advance_process():
+    purchase_order_id = request.json.get("purchaseOrderId")
+    purchase_order = (
+        db.session.query(PurchaseOrder)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
+        .first()
+    )
+    purchase_order.purchase_order_status = "2"
+    order_shoe_id = purchase_order.order_shoe_id
+    order_id = purchase_order.order_id
+    order_shoe_rid = (
+        db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
+        .first()
+        .Shoe.shoe_rid
+    )
+    order_rid = (
+        db.session.query(Order)
+        .filter(Order.order_id == order_id)
+        .first()
+        .order_rid
+    )
+    materials_data = []
+    query = (
+        db.session.query(
+            PurchaseDivideOrder,
+            PurchaseOrder,
+            PurchaseOrderItem,
+            BomItem,
+            Material,
+            MaterialType,
+            Supplier,
+        )
+        .join(
+            PurchaseOrderItem,
+            PurchaseDivideOrder.purchase_divide_order_id
+            == PurchaseOrderItem.purchase_divide_order_id,
+        )
+        .join(
+            PurchaseOrder,
+            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+        )
+        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(Material, BomItem.material_id == Material.material_id)
+        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
+        .all()
+    )
+    for (
+        purchase_divide_order,
+        purchase_order,
+        purchase_order_item,
+        bom_item,
+        material,
+        material_type,
+        supplier,
+    ) in query:
+        materials_data.append(
+            {
+                "supplier_name": supplier.supplier_name,
+                "material_name": material.material_name,
+                "model": bom_item.material_model or "",
+                "specification": bom_item.material_specification or "",
+                "approval_amount": bom_item.total_usage,  # Assuming bom_item has approval quantity
+                "purchase_amount": purchase_order_item.purchase_amount,
+            }
+        )
+    customer_name = (
+        db.session.query(Order, Customer)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .filter(Order.order_id == order_id)
+        .first()
+        .Customer.customer_name
+    )
+    template_path = os.path.join(FILE_STORAGE_PATH, "材料统计表模板.xlsx")
+
+    materials_output_path = os.path.join(
+        FILE_STORAGE_PATH,
+        order_rid,
+        order_shoe_rid,
+        "purchase_order",
+        "材料统计表.xlsx",
+    )
+
+    generate_material_statistics_file(
+        template_path=template_path,
+        save_path=materials_output_path,
+        order_rid=order_rid,
+        order_shoe_rid=order_shoe_rid,
+        customer_name=customer_name,
+        materials_data=materials_data,
+    )
+    db.session.flush()
     processor: EventProcessor = current_app.config["event_processor"]
     try:
         event_arr = []

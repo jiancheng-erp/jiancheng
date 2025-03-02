@@ -79,8 +79,8 @@
                                 </div>
                                 <div v-else-if="scope.row.currentStatus === '已提交'">
                                     <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>
-                                    <el-button type="success"
-                                        @click="downloadPurchaseOrderZip(scope.row)">下载采购订单压缩包</el-button>
+                                    <!-- <el-button type="success"
+                                        @click="downloadPurchaseOrderZip(scope.row)">下载采购订单压缩包</el-button> -->
                                     <el-button type="success"
                                         @click="downloadMaterialStasticExcel(scope.row)">下载材料统计单</el-button>
                                 </div>
@@ -285,6 +285,13 @@
             <el-dialog :title="`一次采购订单 ${previewBomId} 预览`" v-model="isPreviewDialogVisible" width="90%"
                 :close-on-click-modal="false">
                 <div style="height: 500px; overflow-y: scroll; overflow-x: hidden">
+                    <el-row :gutter="20">
+                        <el-col :span="6" :offset="0">
+                            <el-button type="primary" size="default" :disabled="!allPurchaseDivideOrderIssued" @click="advanceProcess">推进一次采购流程</el-button>
+                            
+                        </el-col>
+                    </el-row>
+                    
                     <el-row v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
                         style="margin-bottom: 20px">
                         <el-col :span="23">
@@ -308,6 +315,12 @@
                                     </span>
                                 </el-col>
                             </el-row>
+                            <el-row :gutter="20">
+                                <el-col :span="6" :offset="0">
+                                    <span style="color: red; font-weight: bolder;">订单状态: {{ purchaseDivideOrder.purchaseDivideOrderStatus }}</span>
+                                </el-col>
+                            </el-row>
+                            
                             <div v-if="
                                 factoryFieldJudge(purchaseDivideOrder.purchaseDivideOrderType)
                             ">
@@ -501,6 +514,7 @@ export default {
             currentOrderShoeRow: {},
             previewBomId: '',
             Search: markRaw(Search),
+            previewAdvanceSymbol: true,
         }
     },
     async mounted() {
@@ -536,6 +550,9 @@ export default {
                     materialProductionInstructionType:
                         typeMap[item.productionInstructionType] || item.productionInstructionType
                 }))
+        },
+        allPurchaseDivideOrderIssued() {
+            return this.purchaseTestData.every(item => item.purchaseDivideOrderStatus === "已下发") && this.previewAdvanceSymbol;
         }
     },
     methods: {
@@ -730,6 +747,12 @@ export default {
             this.createVis = false
         },
         async openPreviewDialog(row) {
+            if (row.currentStatus === '已提交') {
+                this.previewAdvanceSymbol = false
+            }
+            else {
+                this.previewAdvanceSymbol = true
+            }
             this.previewBomId = row.purchaseOrderId
             try {
                 const response = await axios.get(
@@ -1003,6 +1026,40 @@ export default {
                     this.$message({
                         type: 'info',
                         message: '已取消保存'
+                    })
+                })
+        },
+        advanceProcess() {
+            this.$confirm('确定推进一次采购流程吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+                .then(async () => {
+                    const response = await axios.post(
+                        `${this.$apiBaseUrl}/firstpurchase/advanceprocess`,
+                        {
+                            purchaseOrderId: this.previewBomId
+                        }
+                    )
+                    if (response.status !== 200) {
+                        this.$message({
+                            type: 'error',
+                            message: '推进失败'
+                        })
+                        return
+                    }
+                    this.$message({
+                        type: 'success',
+                        message: '推进成功'
+                    })
+                    this.isPreviewDialogVisible = false
+                    this.getAllShoeListInfo()
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消推进'
                     })
                 })
         },
