@@ -633,8 +633,9 @@ def get_display_orders_manager():
     current_user_id = current_user_id
     if current_user_role == BUSINESS_MANAGER_ROLE:
         entities = (
-            db.session.query(Order, Customer, OrderStatus, OrderStatusReference)
-            .filter(Order.supervisor_id == current_user_id)
+            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .join(Customer, Order.customer_id == Customer.customer_id)
             .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
             .outerjoin(
@@ -642,13 +643,15 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
+            .filter(Order.supervisor_id == current_user_id)
             .order_by(Order.order_rid.asc())
             .all()
         )
     elif current_user_role == BUSINESS_CLERK_ROLE:
         entities = (
-            db.session.query(Order, Customer, OrderStatus, OrderStatusReference)
-            .filter(Order.salesman_id == current_user_id)
+            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .join(Customer, Order.customer_id == Customer.customer_id)
             .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
             .outerjoin(
@@ -656,12 +659,13 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
+            .filter(Order.salesman_id == current_user_id)
             .order_by(Order.order_rid.asc())
             .all()
         )
     result = []
     for entity in entities:
-        order, customer, order_status, order_status_reference = entity
+        order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
         formatted_end_date = order.end_date.strftime("%Y-%m-%d")
         order_status_message = "N/A"
@@ -684,6 +688,8 @@ def get_display_orders_manager():
         result.append(
             {
                 "orderDbId": order.order_id,
+                "customerProductName": order_shoe.customer_product_name,
+                "shoeRId": shoe.shoe_rid,
                 "orderRid": order.order_rid,
                 "orderCid": order.order_cid,
                 "customerName": customer.customer_name,
