@@ -632,6 +632,7 @@ class PurchaseOrderItem(db.Model):
     color = db.Column(db.String(40), nullable=True)
     size_type = db.Column(db.String(1), nullable=False, default="E")
     craft_name = db.Column(db.String(100), nullable=True)
+    remark = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         return (
