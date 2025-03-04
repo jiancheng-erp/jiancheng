@@ -4,6 +4,7 @@ import os
 import zipfile
 from itertools import groupby
 from operator import itemgetter
+import json
 
 from api_utility import randomIdGenerater
 from app_config import app, db
@@ -312,6 +313,13 @@ def get_shoe_bom_items():
             f"{name_obj['label']}": {"approvalAmount": 0.00, "purchaseAmount": 0.00}
             for name_obj in size_name_info
         }
+        inbound_material_id = purchase_order_item.inbound_material_id if purchase_order_item else material.material_id
+        inbound_material_name = (
+            db.session.query(Material)
+            .filter(Material.material_id == inbound_material_id)
+            .first()
+            .material_name
+        )
 
         # If key already exists, accumulate the data; otherwise, initialize
         if key not in combined_items:
@@ -321,22 +329,25 @@ def get_shoe_bom_items():
                 "materialType": material_type.material_type_name,
                 "materialProductionInstructionType": production_instruction_item.material_type,
                 "materialId": material.material_id,
+                "inboundMaterialId": inbound_material_id,
+                "inboundUnit": purchase_order_item.inbound_unit if purchase_order_item else material.material_unit,
                 "materialName": material.material_name,
-                "materialModel": bom_item.material_model,
-                "materialSpecification": bom_item.material_specification,
-                "color": bom_item.bom_item_color if bom_item.bom_item_color else "",
+                "inboundMaterialName": inbound_material_name,
+                "materialModel": purchase_order_item.material_model if purchase_order_item else bom_item.material_model,
+                "materialSpecification": purchase_order_item.material_specification if purchase_order_item else bom_item.material_specification,
+                "color": purchase_order_item.color if purchase_order_item else bom_item.bom_item_color,
                 "unit": material.material_unit,
                 "unitUsage": bom_item.unit_usage
                 or (0.00 if material.material_category == 0 else None),
                 "approvalUsage": bom_item.total_usage or 0.00,
                 "useDepart": bom_item.department_id,
                 "purchaseAmount": (
-                    purchase_order_item.purchase_amount if purchase_order_item else 0.00
+                    purchase_order_item.purchase_amount if purchase_order_item else bom_item.total_usage
                 ),
                 "supplierId": supplier.supplier_id,
                 "supplierName": supplier.supplier_name,
                 "materialCategory": material.material_category,
-                "remark": bom_item.remark,
+                "remark": purchase_order_item.remark if purchase_order_item else bom_item.remark,
                 "sizeInfo": copy.deepcopy(
                     size_info_template
                 ),  # Deep copy to ensure independence
@@ -344,6 +355,11 @@ def get_shoe_bom_items():
         else:
             combined_items[key]["approvalUsage"] += (
                 bom_item.total_usage if bom_item.total_usage else 0.00
+            )
+            combined_items[key]["purchaseAmount"] += (
+                purchase_order_item.purchase_amount
+                if purchase_order_item
+                else bom_item.total_usage
             )
 
         # Accumulate data for each size in sizeInfo
@@ -454,7 +470,6 @@ def save_purchase():
                 purchase_divide_order_id=purchase_divide_order_id,
                 bom_item_id=item["bomItemId"],
             )
-            db.session.add(purchase_order_item)
             if items[0]["materialCategory"] == 0:
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
@@ -480,9 +495,14 @@ def save_purchase():
                 .first()
             )
             # in case of switching new material and supplier, update the bom item
-            bom_item.material_specification = item["materialSpecification"]
-            bom_item.material_model = item["materialModel"]
-            bom_item.bom_item_color = item["color"]
+            purchase_order_item.material_specification = item["materialSpecification"]
+            purchase_order_item.material_model = item["materialModel"]
+            purchase_order_item.color = item["color"]
+            purchase_order_item.inbound_unit = item["inboundUnit"]
+            purchase_order_item.material_id = bom_item.material_id
+            purchase_order_item.size_type = bom_item.size_type
+            purchase_order_item.craft_name = bom_item.craft_name
+            purchase_order_item.remark = item["remark"]
             # find supplier id
             supplier_id = (
                 db.session.query(Supplier)
@@ -493,20 +513,22 @@ def save_purchase():
             # find material with supplier id
             material = (
                 db.session.query(Material)
-                .filter(Material.material_name == item["materialName"])
+                .filter(Material.material_name == item["inboundMaterialName"])
                 .filter(Material.material_supplier == supplier_id)
                 .first()
             )
             if not material:
                 material = Material(
-                    material_name=item["materialName"],
+                    material_name=item["inboundMaterialName"],
                     material_supplier=supplier_id,
-                    material_unit=item["unit"],
+                    material_unit=item["inboundUnit"],
                     material_type_id=item["materialTypeId"],
+                    material_usage_department="1",
                 )
                 db.session.add(material)
                 db.session.flush()
-            bom_item.material_id = material.material_id
+            purchase_order_item.inbound_material_id = material.material_id
+            db.session.add(purchase_order_item)
         
     db.session.commit()
     return jsonify({"status": "success"})
@@ -543,7 +565,7 @@ def get_purchase_divide_orders():
             == PurchaseOrderItem.purchase_divide_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
@@ -588,16 +610,16 @@ def get_purchase_divide_orders():
 
         # Append the assets item details to the corresponding group
         obj = {
-            "materialId": bom_item.material_id,
+            "materialId": purchase_order_item.inbound_material_id,
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
-            "materialModel": bom_item.material_model,
-            "materialSpecification": bom_item.material_specification,
-            "color": bom_item.bom_item_color,
+            "materialModel": purchase_order_item.material_model,
+            "materialSpecification": purchase_order_item.material_specification,
+            "color": purchase_order_item.color,
             "unit": material.material_unit,
             "purchaseAmount": purchase_order_item.purchase_amount,
-            "remark": bom_item.remark,
-            "sizeType": bom_item.size_type,
+            "remark": purchase_order_item.remark,
+            "sizeType": purchase_order_item.size_type,
         }
         for size in SHOESIZERANGE:
             obj[f"size{size}Amount"] = getattr(
@@ -630,9 +652,11 @@ def edit_purchase_items():
                 f"size_{i}_purchase_amount",
                 item["sizeInfo"][i]["purchaseAmount"],
             )
-        bom_item.material_specification = item["materialSpecification"]
-        bom_item.material_model = item["materialModel"]
-        bom_item.bom_item_color = item["color"]
+        purchase_order_item.material_specification = item["materialSpecification"]
+        purchase_order_item.material_model = item["materialModel"]
+        purchase_order_item.color = item["color"]
+        purchase_order_item.inbound_unit = item["inboundUnit"]
+        purchase_order_item.remark = item["remark"]
         # find supplier id
         supplier_id = (
             db.session.query(Supplier)
@@ -643,20 +667,21 @@ def edit_purchase_items():
         # find material with supplier id
         material = (
             db.session.query(Material)
-            .filter(Material.material_name == item["materialName"])
+            .filter(Material.material_name == item["inboundMaterialName"])
             .filter(Material.material_supplier == supplier_id)
             .first()
         )
         if not material:
             material = Material(
-                material_name=item["materialName"],
+                material_name=item["inboundMaterialName"],
                 material_supplier=supplier_id,
-                material_unit=item["unit"],
+                material_unit=item["inboundUnit"],
                 material_type_id=item["materialTypeId"],
+                material_usage_department="1",
             )
             db.session.add(material)
             db.session.flush()
-        bom_item.material_id = material.material_id
+        purchase_order_item.inbound_material_id = material.material_id
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -665,7 +690,8 @@ def edit_purchase_items():
 def revert_to_original_bom_item():
     bom_ids = request.get_json()
     response = (
-        db.session.query(BomItem, ProductionInstructionItem)
+        db.session.query(PurchaseOrderItem, BomItem, ProductionInstructionItem)
+        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
         .join(
             ProductionInstructionItem,
             BomItem.production_instruction_item_id
@@ -674,7 +700,7 @@ def revert_to_original_bom_item():
         .filter(BomItem.bom_item_id.in_(bom_ids))
         .all()
     )
-    for bom_item, production_instruction_item in response:
+    for purchase_order_item, bom_item, production_instruction_item in response:
         bom_item.material_specification = (
             production_instruction_item.material_specification
         )
@@ -757,7 +783,7 @@ def submit_purchase_divide_orders():
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
@@ -772,26 +798,45 @@ def submit_purchase_divide_orders():
         material_type,
         supplier,
     ) in query:
+        current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
+        random_string = randomIdGenerater(6)
+        supplier_id_string = str(supplier.supplier_id).zfill(4)
+        total_purchase_order_rid = (
+            "T" + current_time_stamp + random_string + "F" + supplier_id_string
+        )
+        total_purchase_order = TotalPurchaseOrder(
+            total_purchase_order_rid=total_purchase_order_rid,
+            supplier_id=supplier.supplier_id,
+            create_date=datetime.datetime.now(),
+            total_purchase_order_remark="",
+            total_purchase_order_environmental_request="",
+            shipment_address="温州市瓯海区梧田工业基地镇南路8号（健诚集团）",
+            shipment_deadline="请在7-10日内交货",
+            total_purchase_order_status="2",
+        )
+        db.session.add(total_purchase_order)
+        db.session.flush()
+        purchase_divide_order.total_purchase_order_id = total_purchase_order.total_purchase_order_id
         materials_data.append(
             {
                 "supplier_name": supplier.supplier_name,
                 "material_name": material.material_name,
-                "model": bom_item.material_model or "",
-                "specification": bom_item.material_specification or "",
+                "model": purchase_order_item.material_model or "",
+                "specification": purchase_order_item.material_specification or "",
                 "approval_amount": bom_item.total_usage,  # Assuming bom_item has approval quantity
                 "purchase_amount": purchase_order_item.purchase_amount,
             }
         )
 
-        material_id = bom_item.material_id
+        material_id = purchase_order_item.material_id
         material_quantity = purchase_order_item.purchase_amount
-        material_specification = bom_item.material_specification
-        material_model = bom_item.material_model
-        color = bom_item.bom_item_color
-        remark = bom_item.remark
-        size_type = bom_item.size_type
+        material_specification = purchase_order_item.material_specification
+        material_model = purchase_order_item.material_model
+        color = purchase_order_item.color
+        remark = purchase_order_item.remark
+        size_type = purchase_order_item.size_type
         if is_craft_existed:
-            craft_name = bom_item.craft_name
+            craft_name = purchase_order_item.craft_name
         else:
             craft_name = ""
         if purchase_divide_order.purchase_divide_order_type == "N":
@@ -807,9 +852,11 @@ def submit_purchase_divide_orders():
                 material_model=material_model,
                 material_specification=material_specification,
                 material_storage_color=color,
-                purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
+                total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                 craft_name=craft_name,
                 production_instruction_item_id=bom_item.production_instruction_item_id,
+                actual_inbound_material_id=purchase_order_item.inbound_material_id,
+                actual_inbound_unit=purchase_order_item.inbound_unit,
             )
             db.session.add(material_storage)
         elif purchase_divide_order.purchase_divide_order_type == "S":
@@ -826,9 +873,10 @@ def submit_purchase_divide_orders():
                 unit_price=0,
                 material_outsource_status="0",
                 department_id=bom_item.department_id,
+                size_material_model=material_model,
                 size_material_specification=material_specification,
                 size_material_color=color,
-                purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
+                total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                 size_storage_type=batch_info_type_name,
                 craft_name=craft_name,
                 production_instruction_item_id=bom_item.production_instruction_item_id,
@@ -870,7 +918,7 @@ def submit_purchase_divide_orders():
             ProductionInstructionItem.production_instruction_item_id
             == BomItem.production_instruction_item_id,
         )
-        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
         .all()
@@ -900,7 +948,6 @@ def submit_purchase_divide_orders():
         supplier,
     ) in purchase_divide_orders:
         purchase_order_id = purchase_divide_order.purchase_divide_order_rid
-        print(purchase_order_id)
         if purchase_divide_order.purchase_divide_order_type == "N":
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
@@ -910,7 +957,7 @@ def submit_purchase_divide_orders():
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
-                    "订单信息": order_rid + "-" + order_shoe_rid,
+                    "订单信息": order_rid,
                     "seriesData": [],
                 }
 
@@ -920,50 +967,65 @@ def submit_purchase_divide_orders():
                     "物品名称": (
                         material.material_name
                         + " "
-                        + (bom_item.material_model if bom_item.material_model else "")
+                        + (purchase_order_item.material_model if purchase_order_item.material_model else "")
                         + " "
                         + (
-                            bom_item.material_specification
-                            if bom_item.material_specification
+                            purchase_order_item.material_specification
+                            if purchase_order_item.material_specification
                             else ""
                         )
                         + " "
-                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                        + (purchase_order_item.color if purchase_order_item.color else "")
                     ),
                     "数量": purchase_order_item.purchase_amount,
                     "单位": material.material_unit,
-                    "备注": bom_item.remark,
+                    "备注": purchase_order_item.remark,
                     "用途说明": "",
                 }
             )
         elif purchase_divide_order.purchase_divide_order_type == "S":
+# 获取 order_size_table 并转换为字典
+            order_size_table = (
+                db.session.query(Order)
+                .filter(Order.order_id == order_id)
+                .first()
+                .order_size_table
+            )
+            if order_size_table:
+                order_size_table = json.loads(order_size_table)
+            else:
+                order_size_table = {}  # 确保是字典
+
+            # 获取 batch_info_type 信息
             batch_info_type = (
                 db.session.query(BatchInfoType, Order)
-                .join(
-                    Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id
-                )
+                .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
                 .filter(Order.order_id == order_id)
                 .first()
             )
-            shoe_size_list = []
-            for i in SHOESIZERANGE:
-                if getattr(batch_info_type.BatchInfoType, f"size_{i}_name") is not None:
-                    shoe_size_list.append(
-                        {i: getattr(batch_info_type.BatchInfoType, f"size_{i}_name")}
-                    )
-            if purchase_order_id not in size_purchase_divide_order_dict:
-                size_purchase_divide_order_dict[purchase_order_id] = {
-                    "供应商": supplier.supplier_name,
-                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
-                    "备注": purchase_divide_order.purchase_order_remark,
-                    "环保要求": purchase_divide_order.purchase_order_environmental_request,
-                    "发货地址": purchase_divide_order.shipment_address,
-                    "交货期限": purchase_divide_order.shipment_deadline,
-                    "订单信息": order_rid + "-" + order_shoe_rid,
-                    "seriesData": [],
-                }
 
-            # Append the current PurchaseOrderItem to the 'seriesData' list of the relevant order
+            # 1️⃣ 创建 "客人码" -> "实际尺码" 映射
+            customer_size_map = {}  # { "7.5": 34, "8.0": 35, "8.5": 36 }
+            for i in SHOESIZERANGE:
+                size_name = getattr(batch_info_type.BatchInfoType, f"size_{i}_name", None)
+                if size_name:
+                    customer_size_map[size_name] = i  # 例如 {"7.5": 34, "8.0": 35, "8.5": 36}
+
+            # 2️⃣ 确保 `order_size_table` 至少有 `客人码`
+            if "客人码" not in order_size_table or not order_size_table["客人码"]:
+                order_size_table["客人码"] = list(customer_size_map.keys())  # 从 batch_info_type 生成客人码
+
+            # 3️⃣ 根据 `material_name` 选择合适的尺码来源
+            if "大底" in material.material_name:
+                size_values = order_size_table.get("大底", order_size_table["客人码"])  # 兜底使用 `客人码`
+            elif "中底" in material.material_name:
+                size_values = order_size_table.get("中底", order_size_table["客人码"])
+            elif "楦头" in material.material_name:
+                size_values = order_size_table.get("楦头", order_size_table["客人码"])
+            else:
+                size_values = order_size_table["客人码"]
+
+            # 4️⃣ 转换为实际尺码并构造最终的 obj
             obj = {
                 "物品名称": (
                     material.material_name
@@ -980,12 +1042,26 @@ def submit_purchase_divide_orders():
                 ),
                 "备注": bom_item.remark,
             }
-            for size_dic in shoe_size_list:
-                for size, size_name in size_dic.items():
-                    obj[size_name] = getattr(
-                        purchase_order_item, f"size_{size}_purchase_amount"
-                    )
+            for size_value in size_values:
+                if size_value in customer_size_map:
+                    actual_size = customer_size_map[size_value]  # 例如 7.5 -> 34
+                    obj[size_value] = getattr(purchase_order_item, f"size_{actual_size}_purchase_amount", 0)
+
+            # 5️⃣ 添加到 seriesData
+            if purchase_order_id not in size_purchase_divide_order_dict:
+                size_purchase_divide_order_dict[purchase_order_id] = {
+                    "供应商": supplier.supplier_name,
+                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "备注": purchase_divide_order.purchase_order_remark,
+                    "环保要求": purchase_divide_order.purchase_order_environmental_request,
+                    "发货地址": purchase_divide_order.shipment_address,
+                    "交货期限": purchase_divide_order.shipment_deadline,
+                    "订单信息": order_rid,
+                    "seriesData": [],
+                }
+
             size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
+            print(size_purchase_divide_order_dict)
     customer_name = (
         db.session.query(Order, Customer)
         .join(Customer, Order.customer_id == Customer.customer_id)
@@ -1215,3 +1291,9 @@ def download_material_statistics():
     )
     new_name = order_rid + "_" + order_shoe_rid + "_材料统计表.xlsx"
     return send_file(file_path, as_attachment=True, download_name=new_name)
+
+@first_purchase_bp.route("/logistics/getallunit", methods=["GET"])
+def get_all_unit():
+    units = db.session.query(Unit).all()
+    result = [{"label": unit.unit_name, "value": unit.unit_name} for unit in units]
+    return jsonify(result)

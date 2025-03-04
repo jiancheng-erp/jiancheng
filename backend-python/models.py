@@ -626,6 +626,13 @@ class PurchaseOrderItem(db.Model):
     inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_unit = db.Column(db.String(5), nullable=True)
     adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
+    material_id = db.Column(db.BigInteger, nullable=True)
+    material_specification = db.Column(db.String(100), nullable=True)
+    material_model = db.Column(db.String(50), nullable=True)
+    color = db.Column(db.String(40), nullable=True)
+    size_type = db.Column(db.String(1), nullable=False, default="E")
+    craft_name = db.Column(db.String(100), nullable=True)
+    remark = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         return (
@@ -1370,3 +1377,14 @@ class ThirdGradeAccounts(db.Model):
     account_name = db.Column(db.String(20), nullable=False)
     account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
     account_belongs_sg = db.Column(db.Integer, nullable=False)
+
+class Unit(db.Model):
+    __tablename__ = "unit"
+    unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    unit_name = db.Column(db.String(10), nullable=False)
+
+    def __repr__(self):
+        return f"<Unit(unit_id={self.unit_id})>"
+
+    def __name__(self):
+        return "Unit"
