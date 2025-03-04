@@ -1024,6 +1024,7 @@ def submit_purchase_divide_orders():
                 size_values = order_size_table.get("楦头", order_size_table["客人码"])
             else:
                 size_values = order_size_table["客人码"]
+            print(size_values)
 
             # 4️⃣ 转换为实际尺码并构造最终的 obj
             obj = {
@@ -1042,9 +1043,10 @@ def submit_purchase_divide_orders():
                 ),
                 "备注": bom_item.remark,
             }
-            for size_value in size_values:
-                if size_value in customer_size_map:
-                    actual_size = customer_size_map[size_value]  # 例如 7.5 -> 34
+            for index, size_value in enumerate(size_values):
+                customer_value = order_size_table["客人码"][index]
+                if customer_value in customer_size_map:
+                    actual_size = customer_size_map[customer_value]  # 例如 7.5 -> 34
                     obj[size_value] = getattr(purchase_order_item, f"size_{actual_size}_purchase_amount", 0)
 
             # 5️⃣ 添加到 seriesData

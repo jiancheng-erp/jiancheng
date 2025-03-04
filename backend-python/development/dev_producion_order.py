@@ -1526,9 +1526,9 @@ def get_size_table():
         customer_size_list = customer_size_list[3:]
         standard_size_dict = {
             "客人码": customer_size_list,
-            "大底": ["" for i in range(len(customer_size_list))],
-            "中底": ["" for i in range(len(customer_size_list))],
-            "楦头": ["" for i in range(len(customer_size_list))],
+            "大底": customer_size_list,
+            "中底": customer_size_list,
+            "楦头": customer_size_list,
             "备注": [""],
         }
         grid_options = transform_standard_size_dict_to_grid(standard_size_dict)
