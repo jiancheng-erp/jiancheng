@@ -17,7 +17,7 @@
                 >{{ buttonText }}</el-button
             >
         </el-col>
-        <el-col :span="4" :offset="1"
+        <el-col :span="4"
             ><el-input
                 v-model="orderRidFilter"
                 placeholder="订单号筛选"
@@ -25,11 +25,10 @@
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(1)"
-                style="width: 300px;"
             ></el-input>
         </el-col>
 
-        <el-col :span="4" :offset="2"
+        <el-col :span="4"
             ><el-input
                 v-model="orderCidFilter"
                 placeholder="客户订单号筛选"
@@ -37,10 +36,9 @@
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(2)"
-                style="width: 300px"
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2"
+        <el-col :span="4"
             ><el-input
                 v-model="orderCustomerNameFilter"
                 placeholder="客户名称筛选"
@@ -48,8 +46,20 @@
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(3)"
-                style="width: 300px"
             ></el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="orderStartDateFilter"
+                type="daterange"
+                unlink-panels
+                range-separator="至"
+                start-placeholder="订单开始日期起"
+                end-placeholder="订单开始日期终"
+                :shortcuts="shortcuts"
+                size="default"
+                @change="filterDisplayOrder(5)"
+            />
         </el-col>
     </el-row>
     <el-row :gutter="10" style="margin-top: 20px">
@@ -60,7 +70,27 @@
                 <el-radio-button label="未下发订单" value="未下发" />
             </el-radio-group>
         </el-col>
-        <el-col :span="4" :offset="1"
+        <el-col :span="4">
+            <el-input
+                v-model="customerProductNameFilter"
+                placeholder="客户型号筛选"
+                size="default"
+                :suffix-icon="'el-icon-search'"
+                clearable
+                @input="filterDisplayOrder(7)"
+            ></el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-input
+                v-model="shoeRIdSearch"
+                placeholder="工厂型号筛选"
+                size="default"
+                :suffix-icon="'el-icon-search'"
+                clearable
+                @input="filterDisplayOrder(8)"
+            ></el-input>
+        </el-col>
+        <el-col :span="4"
             ><el-input
                 v-model="orderCustomerBrandFilter"
                 placeholder="客户商标筛选"
@@ -68,47 +98,21 @@
                 :suffix-icon="'el-icon-search'"
                 clearable
                 @input="filterDisplayOrder(4)"
-                style="width: 300px"
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2">
-            <div class="demo-date-picker">
-                <div class="block">
-                    <span class=""></span>
-                    <el-date-picker
-                        v-model="orderStartDateFilter"
-                        type="daterange"
-                        unlink-panels
-                        range-separator="至"
-                        start-placeholder="订单开始日期起"
-                        end-placeholder="订单开始日期终"
-                        :shortcuts="shortcuts"
-                        size="default"
-                        @change="filterDisplayOrder(5)"
-                        style="width: 300px"
-                    />
-                </div>
-            </div>
-        </el-col>
 
-        <el-col :span="4" :offset="2">
-            <div class="demo-date-picker">
-                <div class="block">
-                    <span class=""></span>
-                    <el-date-picker
-                        v-model="orderEndDateFilter"
-                        type="daterange"
-                        unlink-panels
-                        range-separator="至"
-                        start-placeholder="订单结束日期起"
-                        end-placeholder="订单结束日期终"
-                        :shortcuts="shortcuts"
-                        size="default"
-                        @change="filterDisplayOrder(6)"
-                        style="width: 300px"
-                    />
-                </div>
-            </div>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="orderEndDateFilter"
+                type="daterange"
+                unlink-panels
+                range-separator="至"
+                start-placeholder="订单结束日期起"
+                end-placeholder="订单结束日期终"
+                :shortcuts="shortcuts"
+                size="default"
+                @change="filterDisplayOrder(6)"
+            />
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -118,6 +122,7 @@
                 <el-radio-button label="降序排列" value="desc" />
             </el-radio-group>
         </el-col>
+
     </el-row>
     <el-row :gutter="20">
         <el-table :data="paginatedDisplayData" border stripe height="500">
@@ -125,14 +130,17 @@
             <el-table-column prop="orderCid" label="客户订单号" />
             <el-table-column prop="customerName" label="客户名" />
             <el-table-column prop="customerBrand" label="客户商标" />
+            <el-table-column prop="customerProductName" label="客户型号" />
+            <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
             <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
             <el-table-column prop="orderStatus" label="订单状态" />
-            <el-table-column label="操作" width="300">
+            <el-table-column label="操作" width="200">
                 <template #default="scope">
-                    <el-button
+                    <el-button-group>
+                        <el-button
                         type="primary"
-                        size="default"
+                        size="medium"
                         @click="openOrderDetail(scope.row.orderDbId)"
                         >查看订单详情</el-button
                     >
@@ -143,6 +151,7 @@
                         @click="deleteOrder(scope.row)"
                         >删除订单</el-button
                     >
+                    </el-button-group>
                 </template>
             </el-table-column>
         </el-table>
@@ -716,6 +725,8 @@ export default {
             orderEndDateFilter: '',
             orderCustomerNameFilter: '',
             orderCustomerBrandFilter: '',
+            customerProductNameFilter: '',
+            shoeRIdSearch: '',
             displayData: [],
             prevDisplayData: [],
             filterData: [],
@@ -1266,10 +1277,31 @@ export default {
                     //console.log(this.orderEndDateFilter)
                     this.filterOrderByEndDate()
                     break
+                case 7:
+                    this.filterOrderByShoeRId()
+                case 8:
+                    this.filterByCustomerProductName()
             }
             return
         },
-
+        filterOrderByShoeRId() {
+            this.filterData = this.displayData.filter((task) => {
+                const filterMatch = task.shoeRId
+                    .toLowerCase()
+                    .includes(this.shoeRIdSearch.toLowerCase())
+                return filterMatch
+            })
+            this.displayData = this.filterData
+        },
+        filterByCustomerProductName() {
+            this.filterData = this.displayData.filter((task) => {
+                const filterMatch = task.customerProductName
+                    .toLowerCase()
+                    .includes(this.customerProductNameFilter.toLowerCase())
+                return filterMatch
+            })
+            this.displayData = this.filterData
+        },
         filterDisplayOrder() {
             this.filterList = [
                 this.orderRidFilter,
@@ -1277,7 +1309,9 @@ export default {
                 this.orderCustomerNameFilter,
                 this.orderCustomerBrandFilter,
                 this.orderStartDateFilter,
-                this.orderEndDateFilter
+                this.orderEndDateFilter,
+                this.shoeRIdSearch,
+                this.customerProductNameFilter
             ]
             this.indexToFilter = this.filterList
                 .filter((filter) => filter)
