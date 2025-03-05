@@ -5,25 +5,33 @@
     <el-row :gutter="20">
         <el-col :span="4" :offset="0" style="white-space: nowrap">
             鞋型号搜索：
-            <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes"
-                :suffix-icon="Search"></el-input>
+            <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes" :suffix-icon="Search"></el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="shoeTableData" style="width: 100%" stripe border height="580" :key="tableDataKey">
+            <el-table :data="shoeTableData" style="width: 100%" stripe border height="580" row-key="shoeId">
                 <el-table-column type="expand">
                     <template #default="props">
                         <el-table :data="props.row.shoeTypeData" border :row-key="(row) => {
-                                return `${row.shoeId}`
-                            }
+                            return `${row.shoeId}`
+                        }
                             ">
                             <el-table-column type="index" />
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px">
                             </el-table-column>
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
-                                    <el-image :src="getUniqueImageUrl(scope.row.shoeImageUrl)" style="width: 150px; height: 100px" loading="eager" />
+                                    <el-image :src="getUniqueImageUrl(scope.row.shoeImageUrl)"
+                                        style="width: 150px; height: 100px" loading="eager" />
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="鞋型图片">
+                                <template #default="scope">
+                                    <el-image :src="getUniqueImageUrl(scope.row.shoeImageUrl)"
+                                        style="width: 150px; height: 100px" />
+                                    <el-upload class="upload-demo" :show-file-list="false"
+                                        :before-upload="(file) => handleUpload(file, row)"></el-upload>
                                 </template>
                             </el-table-column>
                             <el-table-column label="操作">
@@ -146,8 +154,8 @@
         <el-upload :action="`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`" :on-success="handleUploadSuccess"
             :on-error="handleUploadError" :on-exceed="handleUploadExceed" :headers="uploadHeaders"
             :list-type="'picture-card'" :auto-upload="false"
-            :data="{ shoeRid: this.currentShoeImageId, shoeColorName: this.currentShoeColor, shoeColorId:this.currentShoeColorId }" :limit="1" :file-list="fileList"
-            accept="image/*" ref="imageReUpload" :drag="true"></el-upload>
+            :data="{ shoeRid: this.currentShoeImageId, shoeColorName: this.currentShoeColor, shoeColorId: this.currentShoeColorId }"
+            :limit="1" :file-list="fileList" accept="image/*" ref="imageReUpload" :drag="true"></el-upload>
         <template #footer>
             <span>
                 <el-button @click="reUploadImageDialogVis = false">取消</el-button>
@@ -184,7 +192,6 @@ export default {
                 colorNameIT: '',
                 colorNameSP: ''
             },
-            tableDataKey: 0,
             reUploadImageDialogVis: false,
             editShoeDialogVis: false,
             addShoeDialogVis: false,
@@ -194,10 +201,12 @@ export default {
             shoeTableData: [],
             colorOptions: [],
             userRole: localStorage.getItem('role'),
-            staffRole : localStorage.getItem('staffid'),
+            staffRole: localStorage.getItem('staffid'),
             shoeModel: false,
             colorModel: '',
             idModel: '',
+            currentImageRow: {},
+            expandedRows: []
         }
     },
     mounted() {
@@ -227,7 +236,6 @@ export default {
             this.shoeTableData = response.data
         },
         async getFilterShoes() {
-            console.log(this.userRole)
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
                 params: { shoerid: this.inheritIdSearch, role: this.staffRole }
             })
@@ -252,17 +260,19 @@ export default {
             this.currentShoeImageId = row.shoeRid
             this.currentShoeColor = row.colorName
             this.currentShoeColorId = row.colorId
+            this.currentImageRow = row
         },
         async handleUploadSuccess() {
+            // const localImageUrl = URL.createObjectURL(this.fileList[0]);
+            // this.$set(row, "shoeImageUrl", localImageUrl);
             this.$message({
                 message: '上传成功',
                 type: 'success'
             })
             this.reUploadImageDialogVis = false
             this.fileList = []
-            await this.getAllShoes()
+            await this.getFilterShoes()
             this.$forceUpdate();
-            this.tableDataKey++
         },
         handleUploadError() {
             this.fileList = []
@@ -285,13 +295,13 @@ export default {
             )
             if (response.status === 200) {
                 this.$message({
-                        type: 'success',
-                        message: '添加成功'
-                    })
+                    type: 'success',
+                    message: '添加成功'
+                })
             }
             this.getAllColors()
             this.addShoeColorDialogVis = false
-            
+
             this.colorForm = {
                 colorName: '',
                 colorNameEN: '',

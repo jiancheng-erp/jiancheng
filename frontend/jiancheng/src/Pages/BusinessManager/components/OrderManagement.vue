@@ -17,7 +17,7 @@
                 >{{ buttonText }}</el-button
             >
         </el-col>
-        <el-col :span="4"
+        <el-col :span="4" :offset="1"
             ><el-input
                 v-model="orderRidFilter"
                 placeholder="订单号筛选"
@@ -63,7 +63,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="10" style="margin-top: 20px">
-        <el-col :span="4" :offset="0">
+        <el-col :span="5" :offset="0">
             <el-radio-group v-model="radio" size="small" @change="switchRadio(radio)">
                 <el-radio-button label="全部订单" value="all" />
                 <el-radio-button label="已下发订单" value="已下发" />
