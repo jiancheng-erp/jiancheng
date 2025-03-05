@@ -26,14 +26,6 @@
                                         style="width: 150px; height: 100px" loading="eager" />
                                 </template>
                             </el-table-column>
-                            <el-table-column label="鞋型图片">
-                                <template #default="scope">
-                                    <el-image :src="getUniqueImageUrl(scope.row.shoeImageUrl)"
-                                        style="width: 150px; height: 100px" />
-                                    <el-upload class="upload-demo" :show-file-list="false"
-                                        :before-upload="(file) => handleUpload(file, row)"></el-upload>
-                                </template>
-                            </el-table-column>
                             <el-table-column label="操作">
                                 <template #default="scope">
                                     <el-button type="primary"
@@ -98,6 +90,7 @@
                     <el-option label="开发一部" value="开发一部"></el-option>
                     <el-option label="开发二部" value="开发二部"></el-option>
                     <el-option label="开发三部" value="开发三部"></el-option>
+                    <el-option label="开发五部" value="开发五部"></el-option>
                 </el-select>
             </el-form-item>
         </el-form>
@@ -140,6 +133,7 @@
                     <el-option label="开发一部" value="开发一部"></el-option>
                     <el-option label="开发二部" value="开发二部"></el-option>
                     <el-option label="开发三部" value="开发三部"></el-option>
+                    <el-option label="开发五部" value="开发五部"></el-option>
                 </el-select>
             </el-form-item>
         </el-form>
