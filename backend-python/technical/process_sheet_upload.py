@@ -2482,7 +2482,8 @@ def issue_production_order():
                             bom_item_add_type="1",
                             total_usage=0,
                             material_second_type=item.material_second_type,
-                            craft_name=craft
+                            craft_name=craft,
+                            production_instruction_item_id = item.production_instruction_item_id
                         )
                         db.session.add(bom_item)
         db.session.flush()
