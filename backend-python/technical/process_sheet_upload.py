@@ -429,6 +429,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("insideMaterialData")) > 0:
@@ -549,6 +550,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("accessoryMaterialData")) > 0:
@@ -669,6 +671,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
 
@@ -784,6 +787,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("midsoleMaterialData")) > 0:
@@ -898,6 +902,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("lastMaterialData")) > 0:
@@ -1012,6 +1017,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
         if len(data.get("hotsoleMaterialData")) > 0:
@@ -1126,6 +1132,7 @@ def save_craft_sheet():
                     craft_name=craft_name,
                     after_usage_symbol = 0,
                     processing_remark=processing_remark,
+                    production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
     order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
@@ -2475,7 +2482,8 @@ def issue_production_order():
                             bom_item_add_type="1",
                             total_usage=0,
                             material_second_type=item.material_second_type,
-                            craft_name=craft
+                            craft_name=craft,
+                            production_instruction_item_id = item.production_instruction_item_id
                         )
                         db.session.add(bom_item)
         db.session.flush()
