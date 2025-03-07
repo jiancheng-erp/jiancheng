@@ -97,19 +97,6 @@ class Customer(db.Model):
         return f"<Customer(customer_id={self.customer_id})>"
 
 
-class Message(db.Model):
-    __tablename__ = "message"
-    message_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    sender_id = db.Column(db.Integer, nullable=False, index=True)
-    receiver_id = db.Column(db.Integer, nullable=False, index=True)
-    content = db.Column(db.String(100), nullable=True)
-    send_datetime = db.Column(db.DateTime)
-    is_viewed = db.Column(db.Boolean, nullable=False, default=False)
-
-    def __repr__(self):
-        return f"<Message {self.message_id}>"
-
-
 class QuantityReportItem(db.Model):
     __tablename__ = "quantity_report_item"
     quantity_report_item_id = db.Column(
@@ -409,9 +396,7 @@ class OrderShoeBatchInfo(db.Model):
     order_shoe_type_id = db.Column(
         db.BigInteger,
     )
-    price_per_pair = db.Column(db.DECIMAL(10, 3), nullable=True)
     total_price = db.Column(db.DECIMAL(10, 3), nullable=True)
-    currency_type = db.Column(db.String(3), nullable=True)
 
     def __repr__(self):
         return f"<OrderShoeBatchInfo(order_shoe_batch_info_id={self.order_shoe_batch_info_id})>"
