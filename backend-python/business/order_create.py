@@ -173,9 +173,7 @@ def create_new_order():
 				size_44_amount = batch['size44Ratio']*quantity_per_ratio,
 				size_45_amount = batch['size45Ratio']*quantity_per_ratio,
 				size_46_amount = batch['size46Ratio']*quantity_per_ratio,
-				price_per_pair = 0,
 				total_price = 0,
-				currency_type = "",
 				total_amount = batch['totalQuantityRatio']*quantity_per_ratio,
 				packaging_info_id = batch['packagingInfoId'],
 				packaging_info_quantity = quantity_per_ratio)
@@ -198,22 +196,6 @@ def order_price_update():
 	currency_type_form = request.json.get('currencyTypeForm')
 	order_id = request.json.get('orderId')
 	staff_id = request.json.get('staffId')
-	# for order_shoe_type_id in unit_price_form.keys():
-	# 	unit_price = float(unit_price_form[order_shoe_type_id])
-	# 	entities = (db.session.query(OrderShoeBatchInfo)
-	# 		.filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
-	# 		.all())
-	# 	for entity in entities:
-	# 		entity.price_per_pair = unit_price
-	# 		entity.total_price = unit_price * entity.total_amount
-
-	# for order_shoe_type_id in currency_type_form.keys():
-	# 	currency_type = str(currency_type_form[order_shoe_type_id])
-	# 	entities = (db.session.query(OrderShoeBatchInfo)
-	# 		.filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
-	# 		.all())
-	# 	for entity in entities:
-	# 		entity.currency_type = currency_type
 	
 	for order_shoe_type_id in unit_price_form.keys():
 		unit_price = float(unit_price_form[order_shoe_type_id])

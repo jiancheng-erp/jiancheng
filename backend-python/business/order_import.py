@@ -296,9 +296,7 @@ def confirm_import_order():
                     size_43_amount=item["11/43"],
                     size_44_amount=item["12/44"],
                     size_45_amount=item["13/45"],
-                    price_per_pair=item["pricePerPair"],
                     total_price=item["totalPrice"],
-                    currency_type=item["currencyType"],
                 )
                 arr.append(order_shoe_batch)
 

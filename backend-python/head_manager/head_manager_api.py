@@ -4,6 +4,7 @@ from sqlalchemy import func
 from datetime import datetime
 from event_processor import EventProcessor
 import time
+from decimal import Decimal
 
 
 head_manager_bp = Blueprint("head_manager_bp", __name__)
@@ -823,12 +824,16 @@ def save_production_order_Price():
     unit_price_form = request.json.get('unitPriceForm')
     currency_type_form = request.json.get('currencyTypeForm')
     for order_shoe_type_id in unit_price_form.keys():
-        unit_price = float(unit_price_form[order_shoe_type_id])
+        unit_price = Decimal(unit_price_form[order_shoe_type_id])
+        currency_type = currency_type_form[order_shoe_type_id]
+        # find order_shoe_type
+        order_shoe_type = db.session.query(OrderShoeType).filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id).first()
+        order_shoe_type.unit_price = unit_price
+        order_shoe_type.currency_type = currency_type
         entities = (db.session.query(OrderShoeBatchInfo)
             .filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
 			.all())
         for entity in entities:
-            entity.price_per_pair = unit_price
             entity.total_price = unit_price * entity.total_amount
     db.session.commit()
 
