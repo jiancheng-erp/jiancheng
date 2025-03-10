@@ -52,8 +52,8 @@ def get_all_shoes():
 @shoe_bp.route("/shoe/getallshoesnew", methods=["GET"])
 def get_all_shoes_new():
     shoe_rid = request.args.get("shoerid")
-    current_user_role, current_user_id, current_department_name = current_user_info()
-    shoe_department = current_department_name
+    _, _, department = current_user_info()
+    shoe_department = department.department_name
     if shoe_rid is None:
         if shoe_department in ["开发一部", "开发二部", "开发三部"]:
             shoe_entities = (

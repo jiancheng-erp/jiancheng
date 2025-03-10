@@ -6,8 +6,13 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size=""
-                :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4"><el-input v-model="searchOrder" placeholder="请输入订单号"
+                :suffix-icon="Search" clearable @change="filterData"></el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-input v-model="searchShoe" placeholder="请输入工厂型号"
+                :suffix-icon="Search" clearable @change="filterDataByShoe">
+            </el-input>
         </el-col>
     </el-row>
 
@@ -16,11 +21,9 @@
             <el-table :data="displayData" style="height: 500px" @row-dblclick="handleRowClick">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
                 <el-table-column prop="orderRid" label="订单号"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
-                <!-- <el-table-column prop="prevTime" label="前序流程下发时间"></el-table-column>
-                <el-table-column prop="prevDepart" label="前序处理部门"></el-table-column>
-                <el-table-column prop="prevUser" label="前序处理人"></el-table-column> -->
             </el-table>
 
         </el-col>
@@ -35,6 +38,7 @@ export default {
         return {
             Search,
             searchOrder: "",
+            searchShoe: "",
             displayData: this.pendingTaskData
         }
     },
@@ -46,18 +50,17 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.pendingTaskData
             }
-            this.displayData = this.pendingTaskData.filter(task => task.orderId.includes(this.searchOrder));
+            this.displayData = this.pendingTaskData.filter(task => task.orderRid.toLowerCase().includes(this.searchOrder.toLowerCase()));
+        },
+        filterDataByShoe() {
+            if (!this.searchShoe) {
+                this.displayData = this.pendingTaskData
+            }
+            this.displayData = this.pendingTaskData.filter(task => task.shoeRId.toLowerCase().includes(this.searchShoe.toLowerCase()));
         },
         handleRowClick(row) {
-            let url;
-            if (row.taskName === '面料用量计算') {
-                url = `${window.location.origin}/usagecalculation/usagecalculationinput/orderid=${row.orderId}`;
-            } else if (row.taskName === '生产BOM用量填写') {
-                url = `${window.location.origin}/usagecalculation/secondBOM/orderid=${row.orderId}`;
-            }
-            if (url) {
-                window.open(url, '_blank');
-            }
+            let url = row['taskURL']
+            window.open(url, '_blank');
         },
     }
 }

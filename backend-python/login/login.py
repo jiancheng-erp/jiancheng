@@ -106,12 +106,12 @@ def current_user():
 
 @jwt_required()
 def current_user_info():
+    """
+    return current character, staff and department object
+    """
     username = get_jwt_identity()
     user = User.query.filter_by(user_name=username).first()
     staff = Staff.query.filter_by(staff_id=user.staff_id).first()
     department = Department.query.filter_by(department_id = staff.department_id).first()
-    staff_name = staff.staff_name
-    staff_id = staff.staff_id
-    role = staff.character_id
-    department_name = department.department_name
-    return role, staff_id, department_name
+    character = Character.query.filter_by(character_id = staff.character_id).first()
+    return character, staff, department

@@ -308,7 +308,7 @@ def inbound_finished():
                     break
         if is_finished:
             processor: EventProcessor = current_app.config["event_processor"]
-            staff_id = current_user_info()[1]
+            staff_id = current_user_info()[1].staff_id
             try:
                 for operation in [84, 85]:
                     event = Event(
@@ -391,7 +391,7 @@ def outbound_finished():
             record.shoe_outbound_rid = rid
         next_group_id += 1
         processor: EventProcessor = current_app.config["event_processor"]
-        staff_id = current_user_info()[1]
+        staff_id = current_user_info()[1].staff_id
         try:
             for operation in [30]:
                 event = Event(

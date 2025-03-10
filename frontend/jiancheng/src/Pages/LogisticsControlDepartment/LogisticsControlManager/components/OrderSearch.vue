@@ -143,6 +143,7 @@ export default {
             pageSize: 10,
             totalPages: 0,
             totalData: 0,
+            viewPastTasks: 0,
         }
     },
     async mounted() {
@@ -159,19 +160,11 @@ export default {
                         orderSearch: this.orderSearch,
                         shoeRIdSearch: this.shoeRIdSearch,
                         customerSearch: this.customerSearch,
+                        viewPastTasks: this.viewPastTasks
                     },
                 })
-                this.orderFilterData = response.data // Update table data
-                const response2 = await axios.get(`${this.$apiBaseUrl}/order/getorderpageinfo`, {
-                params: {
-                    orderSearch: this.orderSearch,
-                    customerSearch: this.customerSearch,
-                    shoeRIdSearch: this.shoeRIdSearch,
-                },
-                })
-                this.totalData = response2.data.totalOrders // Total orders for pagination
-                console.log("Total orders:", response2)
-                console.log("Total orders:", this.totalData)
+                this.orderFilterData = response.data.result // Update table data
+                this.totalData = response.data.total // Update total data count
             } catch (error) {
                 console.error("Error fetching order data:", error)
             }

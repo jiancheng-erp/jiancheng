@@ -5,8 +5,15 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="19"><el-input v-model="searchOrder" placeholder="请输入订单号" size=""
-                :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4">
+            <el-input v-model="searchOrder" placeholder="请输入订单号"
+                :suffix-icon="Search" clearable @input="filterData">
+            </el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-input v-model="searchShoe" placeholder="请输入工厂型号"
+                :suffix-icon="Search" clearable @input="filterDataByShoe">
+            </el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
@@ -14,10 +21,9 @@
             <el-table :data="displayData" style="height: 500px" @row-dblclick="handleRowClick">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
                 <el-table-column prop="orderRid" label="订单号"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
-                <el-table-column prop="prevTime" label="前序流程下发时间"></el-table-column>
-                <el-table-column prop="prevDepart" label="前序处理部门"></el-table-column>
-                <el-table-column prop="prevUser" label="前序处理人"></el-table-column>
+                <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
             </el-table>
 
         </el-col>
@@ -32,6 +38,7 @@ export default {
         return {
             Search,
             searchOrder: "",
+            searchShoe: "",
             displayData: this.inProgressTaskData
         }
     },
@@ -43,18 +50,17 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.inProgressTaskData
             }
-            this.displayData = this.inProgressTaskData.filter(task => task.orderId.includes(this.searchOrder));
+            this.displayData = this.inProgressTaskData.filter(task => task.orderRid.includes(this.searchOrder));
+        },
+        filterDataByShoe() {
+            if (!this.searchShoe) {
+                this.displayData = this.inProgressTaskData
+            }
+            this.displayData = this.inProgressTaskData.filter(task => task.shoeRId.toLowerCase().includes(this.searchShoe.toLowerCase()));
         },
         handleRowClick(row) {
-            let url;
-            if (row.taskName === '一次采购订单创建') {
-                url = `${window.location.origin}/logistics/firstpurchase/orderid=${row.orderId}`;
-            } else if (row.taskName === '二次采购订单创建') {
-                url = `${window.location.origin}/logistics/secondpurchase/orderid=${row.orderId}`;
-            }
-            if (url) {
-                window.open(url, '_blank');
-            }
+            let url = row['taskURL']
+            window.open(url, '_blank');
         },
     }
 }

@@ -27,11 +27,11 @@
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
                                     }}</el-descriptions-item>
-                                <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
-                                <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
-                                <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="商标" align="center">{{
+                                    orderData.customerBrand
                                     }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
@@ -68,7 +68,7 @@
                             </template>
                         </el-table-column>
                         <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
-                        <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
+                        <el-table-column prop="customerProductName" label="客户型号" align="center"></el-table-column>
                         <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                         <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center">
@@ -130,7 +130,7 @@
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column prop="inheritId" label="工厂型号" align="center"
                                     width="100"></el-table-column>
-                                <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
+                                <el-table-column prop="customerProductName" label="客户型号" align="center"></el-table-column>
                                 <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                                 <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
                                 <el-table-column label="操作" align="center">
@@ -152,27 +152,50 @@
             </el-dialog>
             <el-dialog :title="`投产指令单创建 ${newProductionInstructionId}`" v-model="isProductionOrderCreateDialogVisible"
                 width="90%" :close-on-click-modal="false" fullscreen style="overflow-y: scroll">
-                <el-descriptions title="投产指令单公用信息" border :column="2">
-                    <el-descriptions-item label="本码">
-                        <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="配码">
-                        <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="码差">
-                        <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="设计师">
-                        <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="楦型">
-                        <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="工艺备注">
-                        <el-input type="textarea" autosize maxlength="150" show-word-limit
-                            v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
-                    </el-descriptions-item>
-                </el-descriptions>
+                <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                            <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
+                                <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
+                            </el-descriptions-item>
+                            <el-descriptions-item label="工厂型号" align="center">{{
+                                currentShoeId
+                                }}</el-descriptions-item>
+                            <el-descriptions-item label="客户号" align="center">{{
+                                currentOrderShoeRow.customerProductName
+                                }}</el-descriptions-item>
+                            <el-descriptions-item label="商标" align="center">{{
+                                orderData.customerBrand
+                                }}</el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
+                <el-row>
+                    <el-col>
+                        <el-descriptions title="投产指令单公用信息" border :column="2">
+                            <el-descriptions-item label="本码">
+                                <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="配码">
+                                <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="码差">
+                                <el-input v-model="productionInstructionDetail.sizeDifference"
+                                    size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="设计师">
+                                <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="楦型">
+                                <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="工艺备注">
+                                <el-input type="textarea" autosize maxlength="150" show-word-limit
+                                    v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
@@ -894,9 +917,9 @@
                             <el-descriptions title="鞋型基本信息" border direction="vertical" column="4"
                                 style="margin-top: 20px">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
-                                    <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
+                                    <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                                 </el-descriptions-item>
-                                <el-descriptions-item label="型号" align="center">{{
+                                <el-descriptions-item label="工厂型号" align="center">{{
                                     currentShoeId
                                     }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
@@ -1016,27 +1039,50 @@
             </el-dialog>
             <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible"
                 :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
-                <el-descriptions title="投产指令单公用信息" border :column="2">
-                    <el-descriptions-item label="本码">
-                        <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="配码">
-                        <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="码差">
-                        <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="设计师">
-                        <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="楦型">
-                        <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="工艺备注">
-                        <el-input type="textarea" autosize maxlength="150" show-word-limit
-                            v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
-                    </el-descriptions-item>
-                </el-descriptions>
+                <el-row :gutter="20">
+                    <el-col :span="24" :offset="0">
+                        <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                            <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
+                                <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
+                            </el-descriptions-item>
+                            <el-descriptions-item label="工厂型号" align="center">{{
+                                currentShoeId
+                                }}</el-descriptions-item>
+                            <el-descriptions-item label="客户号" align="center">{{
+                                currentOrderShoeRow.customerProductName
+                                }}</el-descriptions-item>
+                            <el-descriptions-item label="商标" align="center">{{
+                                orderData.customerBrand
+                                }}</el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
+                <el-row>
+                    <el-col>
+                        <el-descriptions title="投产指令单公用信息" border :column="2">
+                            <el-descriptions-item label="本码">
+                                <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="配码">
+                                <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="码差">
+                                <el-input v-model="productionInstructionDetail.sizeDifference"
+                                    size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="设计师">
+                                <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="楦型">
+                                <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="工艺备注">
+                                <el-input type="textarea" autosize maxlength="150" show-word-limit
+                                    v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0"><el-button type="primary" size="default"
                             @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
@@ -1817,7 +1863,11 @@ export default {
         SearchIcon() {
             return Search
         },
-
+        getShoeImageUrl() {
+            // find index of activeTab
+            const index = this.currentOrderShoeRow.typeInfos.findIndex((item) => item.color === this.activeTab)
+            return this.currentOrderShoeRow.typeInfos[index].image
+        }
     },
     methods: {
         filterByTypes(options, types) {

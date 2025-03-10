@@ -10,12 +10,8 @@
                 <el-table-column prop="orderRid" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
-                <el-table-column prop="customerName" label="客户"></el-table-column>                
-                <el-table-column prop="orderShoeCount" label="鞋型数量"></el-table-column>
-                <!-- <el-table-column prop="prevTime" label="前序流程下发时间"></el-table-column>
-                <el-table-column prop="prevDepart" label="前序处理部门"></el-table-column>
-                <el-table-column prop="prevUser" label="前序处理人"></el-table-column> -->
-
+                <el-table-column prop="customerName" label="客户"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
             </el-table>
 
         </el-col>
@@ -38,12 +34,8 @@
                 <el-table-column prop="orderRid" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
-                <el-table-column prop="customerName" label="客户"></el-table-column>                
-                <el-table-column prop="orderShoeCount" label="鞋型数量"></el-table-column>
-                
-                    <!-- <el-table-column prop="prevTime" label="前序流程下发时间"></el-table-column>
-                    <el-table-column prop="prevDepart" label="前序处理部门"></el-table-column>
-                    <el-table-column prop="prevUser" label="前序处理人"></el-table-column> -->
+                <el-table-column prop="customerName" label="客户"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
             </el-table>
 
         </el-col>
@@ -67,16 +59,8 @@ export default {
             this.$emit('changeToProgress')
         },
         handleRowClick(row) {
-            console.log("123123123")
-            let url;
-            if (row.taskName === '面料用量计算') {
-                url = `${window.location.origin}/usagecalculation/usagecalculationinput/orderid=${row.orderId}`;
-            } else if (row.taskName === '生产BOM用量填写') {
-                url = `${window.location.origin}/usagecalculation/secondBOM/orderid=${row.orderId}`;
-            }
-            if (url) {
-                window.open(url, '_blank');
-            }
+            let url = row['taskURL']
+            window.open(url, '_blank');
         },
     }
 }

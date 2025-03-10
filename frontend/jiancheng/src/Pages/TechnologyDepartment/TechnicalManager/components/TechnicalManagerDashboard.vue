@@ -26,10 +26,10 @@ import { onMounted, ref, getCurrentInstance } from 'vue';
 import axios from 'axios';
 
 import { Grid, Memo } from '@element-plus/icons-vue'
-import DashboardGrid from './Dashboard/DashboardGrid.vue';
-import DashboardList from './Dashboard/DashboardList.vue'
-import DashboardPend from './Dashboard/DashboardListPend.vue'
-import DashboardProgress from './Dashboard/DashboardListProgress.vue'
+import DashboardGrid from '@/components/Dashboard/DashboardGrid.vue';
+import DashboardList from '@/components/Dashboard/DashboardList.vue';
+import DashboardListPend from '@/components/Dashboard/DashboardListPend.vue';
+import DashboardListProgress from '@/components/Dashboard/DashboardListProgress.vue';
 
 const proxy = getCurrentInstance()
 const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
@@ -37,8 +37,8 @@ const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
 const components = {
         DashboardGrid,
         DashboardList,
-        DashboardPend,
-        DashboardProgress
+        DashboardListPend,
+        DashboardListProgress
 }
 const pendingData = ref([])
 const inProgressData = ref([])
@@ -55,10 +55,12 @@ onMounted(()=> {
         const firstBomProgress = response.data.inProgressOrders
         firstBomPending.forEach(element => {
             element['taskName'] = "技术部调版分配"
+            element['taskURL'] = `${window.location.origin}/processsheet/orderid=${element.orderId}`;
             pendingData.value.push(element)
         });
         firstBomProgress.forEach(element => {
             element['taskName'] = "技术部调版分配"
+            element['taskURL'] = `${window.location.origin}/processsheet/orderid=${element.orderId}`;
             inProgressData.value.push(element)
         });
     })
@@ -71,10 +73,12 @@ onMounted(()=> {
         const firstBomProgress = response.data.inProgressOrders
         firstBomPending.forEach(element => {
             element['taskName'] = "二次BOM用量审批"
+            element['taskURL'] = `${window.location.origin}/technicalmanager/secondbomusagereview/orderid=${element.orderId}`;
             pendingData.value.push(element)
         });
         firstBomProgress.forEach(element => {
             element['taskName'] = "二次BOM用量审批"
+            element['taskURL'] = `${window.location.origin}/technicalmanager/secondbomusagereview/orderid=${element.orderId}`;
             inProgressData.value.push(element)
         });
     })
@@ -89,10 +93,10 @@ const changeToList = () => {
     currentDash.value = 'DashboardList'
 }
 const changeToPend = () => {
-    currentDash.value = 'DashboardPend'
+    currentDash.value = 'DashboardListPend'
 }
 const changeToProgress = () => {
-    currentDash.value = 'DashboardProgress'
+    currentDash.value = 'DashboardListProgress'
 }
 </script>
 
