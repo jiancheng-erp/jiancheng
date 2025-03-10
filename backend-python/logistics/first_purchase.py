@@ -320,7 +320,6 @@ def get_shoe_bom_items():
             .first()
             .material_name
         )
-
         # If key already exists, accumulate the data; otherwise, initialize
         if key not in combined_items:
             combined_items[key] = {
@@ -351,6 +350,7 @@ def get_shoe_bom_items():
                 "sizeInfo": copy.deepcopy(
                     size_info_template
                 ),  # Deep copy to ensure independence
+                "warehouseUsageInfo": json.loads(purchase_order_item.related_selected_material_storage) if purchase_order_item else [],
             }
         else:
             combined_items[key]["approvalUsage"] += (
@@ -503,6 +503,7 @@ def save_purchase():
             purchase_order_item.size_type = bom_item.size_type
             purchase_order_item.craft_name = bom_item.craft_name
             purchase_order_item.remark = item["remark"]
+            purchase_order_item.related_selected_material_storage = json.dumps(item["warehouseUsageInfo"])
             # find supplier id
             supplier_id = (
                 db.session.query(Supplier)
@@ -529,7 +530,26 @@ def save_purchase():
                 db.session.flush()
             purchase_order_item.inbound_material_id = material.material_id
             db.session.add(purchase_order_item)
-        
+            #use warehouseUsageInfo to update the storage
+            if len(item["warehouseUsageInfo"]) > 0:
+                for storage in item["warehouseUsageInfo"]:
+                    storage_id = storage["materialStorageId"]
+                    storage_amount = storage["useAmount"]
+                    if storage["type"] == 0:
+                        material_storage = (
+                            db.session.query(MaterialStorage)
+                            .filter(MaterialStorage.material_storage_id == storage_id)
+                            .first()
+                        )
+                        material_storage.current_amount -= storage_amount
+                    else:
+                        size_material_storage = (
+                            db.session.query(SizeMaterialStorage)
+                            .filter(SizeMaterialStorage.size_material_storage_id == storage_id)
+                            .first()
+                        )
+                        size_material_storage.total_current_amount -= storage_amount
+                db.session.flush()
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -620,6 +640,7 @@ def get_purchase_divide_orders():
             "purchaseAmount": purchase_order_item.purchase_amount,
             "remark": purchase_order_item.remark,
             "sizeType": purchase_order_item.size_type,
+            
         }
         for size in SHOESIZERANGE:
             obj[f"size{size}Amount"] = getattr(
@@ -682,6 +703,40 @@ def edit_purchase_items():
             db.session.add(material)
             db.session.flush()
         purchase_order_item.inbound_material_id = material.material_id
+        if purchase_order_item.related_selected_material_storage:
+            #revert the storage
+            for storage in json.loads(purchase_order_item.related_selected_material_storage):
+                storage_id = storage["materialStorageId"]
+                storage_amount = storage["useAmount"]
+                material_storage = (
+                    db.session.query(MaterialStorage)
+                    .filter(MaterialStorage.material_storage_id == storage_id)
+                    .first()
+                )
+                material_storage.current_amount += storage_amount
+            db.session.flush()
+        purchase_order_item.related_selected_material_storage = json.dumps(item["warehouseUsageInfo"])
+        if len(item["warehouseUsageInfo"]) > 0:
+            for storage in item["warehouseUsageInfo"]:
+                storage_id = storage["materialStorageId"]
+                storage_amount = storage["useAmount"]
+                if storage["type"] == 0:
+                    material_storage = (
+                        db.session.query(MaterialStorage)
+                        .filter(MaterialStorage.material_storage_id == storage_id)
+                        .first()
+                    )
+                    material_storage.current_amount -= storage_amount
+                else:
+                    size_material_storage = (
+                        db.session.query(SizeMaterialStorage)
+                        .filter(SizeMaterialStorage.size_material_storage_id == storage_id)
+                        .first()
+                    )
+                    size_material_storage.total_current_amount -= storage_amount
+            db.session.flush()
+        
+        
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -841,6 +896,7 @@ def submit_purchase_divide_orders():
             craft_name = ""
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
+                order_id = order_id,
                 order_shoe_id=order_shoe_id,
                 material_id=material_id,
                 estimated_inbound_amount=material_quantity,
@@ -867,6 +923,7 @@ def submit_purchase_divide_orders():
                 )
 
             size_material_storage = SizeMaterialStorage(
+                order_id=order_id,
                 order_shoe_id=order_shoe_id,
                 material_id=material_id,
                 total_estimated_inbound_amount=material_quantity,
@@ -1263,6 +1320,158 @@ def advance_process():
     db.session.add_all(event_arr)
     db.session.commit()
     return jsonify({"status": "success"})
+
+@first_purchase_bp.route("/logistics/getmaterialstoragesimiliar", methods=["GET"])
+def get_material_storage_similiar():
+    material_id = request.args.get("materialId")
+    material_model = request.args.get("materialModel")
+    material = (
+        db.session.query(Material)
+        .filter(Material.material_id == material_id)
+        .first()
+        
+        
+    )
+    material_category = material.material_category
+    if material_category == 0:
+        material_storage = (
+            db.session.query(MaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe)
+            .join(Material, MaterialStorage.material_id == Material.material_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+            .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .filter(MaterialStorage.material_id == material_id)
+            .filter(MaterialStorage.material_model == material_model)
+            .filter(MaterialStorage.current_amount > 0)
+            .filter(OrderStatus.order_current_status > 9)
+            .all()
+        )
+        result = [
+            {
+                "similiarType": 0,
+                "materialStorageId": storage.MaterialStorage.material_storage_id,
+                "actualInboundAmount": storage.MaterialStorage.current_amount,
+                "unitPrice": storage.MaterialStorage.unit_price,
+                "craftName": storage.MaterialStorage.craft_name,
+                "materialName": material.material_name,
+                "materialModel": storage.MaterialStorage.material_model,
+                "materialSpecification": storage.MaterialStorage.material_specification,
+                "color": storage.MaterialStorage.material_storage_color,
+                "unit": material.material_unit,
+                "supplierName": storage.Supplier.supplier_name,
+                "purchaseAmount": storage.MaterialStorage.current_amount,
+                "orderRid": storage.Order.order_rid if storage.Order else "",
+                "orderShoeRid": storage.Shoe.shoe_rid if storage.Shoe else "",
+            }
+            for storage in material_storage
+        ]
+    else:
+        size_material_storage = (
+            db.session.query(SizeMaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe)
+            .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .outerjoin(Order, SizeMaterialStorage.order_id == Order.order_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .outerjoin(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+            .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .filter(SizeMaterialStorage.material_id == material_id)
+            .filter(SizeMaterialStorage.size_material_model == material_model)
+            .filter(SizeMaterialStorage.total_current_amount > 0)
+            .filter(OrderStatus.order_current_status > 9)
+            .all()
+        )
+        result = [
+            {
+                "similiarType": 1,
+                "materialStorageId": storage.SizeMaterialStorage.size_material_storage_id,
+                "actualInboundAmount": storage.SizeMaterialStorage.total_current_amount,
+                "unitPrice": storage.SizeMaterialStorage.unit_price,
+                "craftName": storage.SizeMaterialStorage.craft_name,
+                "materialName": material.material_name,
+                "materialModel": storage.SizeMaterialStorage.size_material_model,
+                "materialSpecification": storage.SizeMaterialStorage.size_material_specification,
+                "color": storage.SizeMaterialStorage.size_material_color,
+                "unit": material.material_unit,
+                "supplierName": storage.Supplier.supplier_name,
+                "purchaseAmount": storage.SizeMaterialStorage.total_current_amount,
+                "orderRid": storage.Order.order_rid if storage.Order else "",
+                "orderShoeRid": storage.Shoe.shoe_rid if storage.Shoe else "",
+            }
+            for storage in size_material_storage
+        ]
+    return jsonify(result)
+
+@first_purchase_bp.route("/logistics/getselectedmaterialstorage", methods=["GET"])
+def get_selected_material_storage():
+    warehouseUsageInfo = request.args.get("warehouseUsageInfo")
+    warehouseUsageInfo = json.loads(warehouseUsageInfo)
+    result = []
+    for item in warehouseUsageInfo:
+        material_storage_id = item["materialStorageId"]
+        similiar_type = item["similiarType"]
+        if similiar_type == 0:
+            material_storage = (
+                db.session.query(MaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe)
+                .join(Material, MaterialStorage.material_id == Material.material_id)
+                .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
+                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+                .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+                .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+                .filter(MaterialStorage.material_storage_id == material_storage_id)
+                .first()
+            )
+            result.append(
+                {
+                    "similiarType": 0,
+                    "materialStorageId": material_storage.MaterialStorage.material_storage_id,
+                    "actualInboundAmount": material_storage.MaterialStorage.current_amount,
+                    "unitPrice": material_storage.MaterialStorage.unit_price,
+                    "craftName": material_storage.MaterialStorage.craft_name,
+                    "materialName": material_storage.Material.material_name,
+                    "materialModel": material_storage.MaterialStorage.material_model,
+                    "materialSpecification": material_storage.MaterialStorage.material_specification,
+                    "color": material_storage.MaterialStorage.material_storage_color,
+                    "unit": material_storage.Material.material_unit,
+                    "supplierName": material_storage.Supplier.supplier_name,
+                    "purchaseAmount": material_storage.MaterialStorage.current_amount,
+                    "orderRid": material_storage.Order.order_rid if material_storage.Order else "",
+                    "orderShoeRid": material_storage.Shoe.shoe_rid if material_storage.Shoe else "",
+                }
+            )
+        else:
+            size_material_storage = (
+                db.session.query(SizeMaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe)
+                .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+                .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                .outerjoin(Order, SizeMaterialStorage.order_id == Order.order_id)
+                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+                .outerjoin(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+                .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+                .filter(SizeMaterialStorage.size_material_storage_id == material_storage_id)
+                .first()
+            )
+            result.append(
+                {
+                    "similiarType": 1,
+                    "materialStorageId": size_material_storage.SizeMaterialStorage.size_material_storage_id,
+                    "actualInboundAmount": size_material_storage.SizeMaterialStorage.total_current_amount,
+                    "unitPrice": size_material_storage.SizeMaterialStorage.unit_price,
+                    "craftName": size_material_storage.SizeMaterialStorage.craft_name,
+                    "materialName": size_material_storage.Material.material_name,
+                    "materialModel": size_material_storage.SizeMaterialStorage.size_material_model,
+                    "materialSpecification": size_material_storage.SizeMaterialStorage.size_material_specification,
+                    "color": size_material_storage.SizeMaterialStorage.size_material_color,
+                    "unit": size_material_storage.Material.material_unit,
+                    "supplierName": size_material_storage.Supplier.supplier_name,
+                    "purchaseAmount": size_material_storage.SizeMaterialStorage.total_current_amount,
+                    "orderRid": size_material_storage.Order.order_rid if size_material_storage.Order else "",
+                    "orderShoeRid": size_material_storage.Shoe.shoe_rid if size_material_storage.Shoe else "",
+                }
+            )
+    return jsonify(result)
 
 
 @first_purchase_bp.route("/firstpurchase/downloadpurchaseorderzip", methods=["GET"])

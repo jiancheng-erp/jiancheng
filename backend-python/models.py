@@ -618,6 +618,7 @@ class PurchaseOrderItem(db.Model):
     size_type = db.Column(db.String(1), nullable=False, default="E")
     craft_name = db.Column(db.String(100), nullable=True)
     remark = db.Column(db.String(100), nullable=True)
+    related_selected_material_storage = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return (
