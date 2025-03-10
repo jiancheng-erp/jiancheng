@@ -189,11 +189,11 @@
     <el-dialog title="鞋型备注" v-model="remarkDialogVis" width="50%">
         <el-form>
             <el-form-item label="工艺备注">
-                <el-input type="textarea" :rows="2" v-model="remarkForm.technicalRemark"></el-input>
+                <el-input type="textarea" :rows="2" v-model="remarkForm.technicalRemark" :maxlength="255"></el-input>
             </el-form-item>
 
             <el-form-item label="材料备注">
-                <el-input type="textarea" :rows="2" v-model="remarkForm.materialRemark"></el-input>
+                <el-input type="textarea" :rows="2" v-model="remarkForm.materialRemark" :maxlength="255"></el-input>
             </el-form-item>
         </el-form>
 

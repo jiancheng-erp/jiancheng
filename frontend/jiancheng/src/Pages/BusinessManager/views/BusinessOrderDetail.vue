@@ -288,7 +288,7 @@
                     :rows="2"
                     v-model="this.remarkForm.technicalRemark"
                     :show-word-limit="true"
-                    :maxlength="100"
+                    :maxlength="255"
                 ></el-input>
             </el-form-item>
 
@@ -298,7 +298,7 @@
                     :rows="2"
                     v-model="this.remarkForm.materialRemark"
                     :show-word-limit="true"
-                    :maxlength="100"
+                    :maxlength="255"
                 ></el-input>
             </el-form-item>
         </el-form>
