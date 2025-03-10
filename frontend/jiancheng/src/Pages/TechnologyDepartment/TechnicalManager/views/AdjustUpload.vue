@@ -154,7 +154,8 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%" :close-on-click-modal="false">
+            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%"
+                :close-on-click-modal="false">
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
@@ -345,8 +346,12 @@
                                         <template #edit="{ row }">
                                             <el-select v-model="row.supplierName" filterable
                                                 :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                                <el-option-group v-for="(names, letter) in sortSupplierOptions"
+                                                    :key="letter" :label="letter">
+                                                    <el-option v-for="name in names" :key="name" :value="name"
+                                                        :label="name"></el-option>
+                                                </el-option-group>
+
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -1042,7 +1047,8 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%" :close-on-click-modal="false">
+            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%"
+                :close-on-click-modal="false">
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
@@ -1143,6 +1149,7 @@ import MaterialDataTable from '../components/MaterialDataTable.vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 import * as constants from '@/Pages/utils/constants'
+import pinyin from "pinyin";
 export default {
     components: {
         AllHeader,
@@ -1302,7 +1309,37 @@ export default {
         },
         SearchIcon() {
             return Search
-        }
+        },
+        sortSupplierOptions() {
+            const groups = {};
+
+            this.supplierNameOptions.forEach((item) => {
+                let name = item.supplierName
+                // Get the first Pinyin character
+                const firstLetter = pinyin(name, { style: pinyin.STYLE_NORMAL })[0][0][0].toUpperCase();
+
+                // Create group if it doesn't exist
+                if (!groups[firstLetter]) {
+                    groups[firstLetter] = [];
+                }
+
+                // Add name to its group
+                groups[firstLetter].push(name);
+            });
+
+            // Sort the groups alphabetically
+            return Object.keys(groups)
+                .sort()
+                .reduce((acc, key) => {
+                    acc[key] = groups[key].sort((a, b) => {
+                        const pinyinA = pinyin(a, { style: pinyin.STYLE_NORMAL }).join('');
+                        const pinyinB = pinyin(b, { style: pinyin.STYLE_NORMAL }).join('');
+                        return pinyinA.localeCompare(pinyinB);
+                    });
+                    return acc;
+                }, {});
+            // return [...this.supplierNameOptions].sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'zh-CN'));
+        },
     },
     methods: {
         filterByTypes(options, types) {
