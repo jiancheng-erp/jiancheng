@@ -220,7 +220,13 @@
                                         @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
                                 </template>
                             </el-table-column>
+                            <el-table-column prop="storageAmount" label="使用仓库数量"></el-table-column>
                             <el-table-column prop="remark" label="开发部备注"></el-table-column>
+                            <el-table-column label="操作">
+                                <template #default="scope">
+                                    <el-button type="primary" @click="openSimiliarMaterialDialog(scope.row, scope.$index)">库存相似材料</el-button>
+                                </template>
+                            </el-table-column>
                         </el-table>
                     </el-col>
 
@@ -471,6 +477,63 @@
             </span>
         </template>
     </el-dialog>
+    <el-dialog
+        title="查看库存相似材料"
+        v-model="isSimiliarMaterialDialogVisible"
+        :draggable="true"
+        :modal="false"
+        :before-close="closeSimiliarDialog"
+        width="80%">
+        <span>
+            <span>已选库存相似材料</span>
+            <el-table :data="selectSimiliarData" border stripe>
+                <el-table-column prop="orderRid" label="订单编号"></el-table-column>
+                <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
+                <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
+                <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                <el-table-column prop="color" label="颜色"></el-table-column>
+                <el-table-column prop="unit" label="单位"></el-table-column>
+                <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
+                <el-table-column label="使用数量">
+                    <template #default="scope">
+                        <el-input-number v-model="scope.row.useAmount" :min="0" :step="0.001" size="small" />
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作">
+                    <template #default="scope">
+                        <el-button type="primary" @click="handleSimiliarMaterialDelete(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <span>相似库存材料</span>
+            <el-table :data="similiarData" border stripe>
+                <el-table-column prop="orderRid" label="订单编号"></el-table-column>
+                <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
+                <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
+                <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                <el-table-column prop="color" label="颜色"></el-table-column>
+                <el-table-column prop="unit" label="单位"></el-table-column>
+                <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
+                <el-table-column label="操作">
+                    <template #default="scope">
+                        <el-button type="primary" @click="handleSimiliarMaterial(scope.row)">使用该库存材料</el-button>
+                    </template>
+                </el-table-column>
+                
+            </el-table>
+        </span>
+        <template #footer>
+        <span>
+            <el-button @click="closeSimiliarDialog">取消</el-button>
+            <el-button type="primary" @click="saveSimiliarData">确认</el-button>
+        </span>
+        </template>
+    </el-dialog>
+    
 </template>
 
 <script>
@@ -492,6 +555,7 @@ export default {
         return {
             batchInfoSpanMethod: null,
             currentSizeIndex: 0,
+            currentSimiliarIndex: 0,
             purchaseOrderCreateVis: false,
             createEditSymbol: 0,
             newPurchaseOrderId: '',
@@ -526,7 +590,11 @@ export default {
             previewBomId: '',
             Search: markRaw(Search),
             previewAdvanceSymbol: true,
-            unitOptions: []
+            unitOptions: [],
+            isSimiliarMaterialDialogVisible: false,
+            selectSimiliarData: [],
+            similiarData: []
+
         }
     },
     async mounted() {
@@ -615,6 +683,38 @@ export default {
             }
             
             console.log(row.inboundMaterialName)
+        },
+        handleSimiliarMaterial(row) {
+            this.selectSimiliarData.push(row)
+            this.similiarData = this.similiarData.filter(item => item !== row)
+        },
+        handleSimiliarMaterialDelete(row) {
+            this.similiarData.push(row)
+            this.selectSimiliarData = this.selectSimiliarData.filter(item => item !== row)
+        },
+        closeSimiliarDialog() {
+            this.similiarData = []
+            this.selectSimiliarData = []
+            this.isSimiliarMaterialDialogVisible = false
+        },
+        saveSimiliarData() {
+            if (this.selectSimiliarData.length === 0) {
+                this.bomTestData[this.currentSimiliarIndex].similiarMaterial = []
+                this.isSimiliarMaterialDialogVisible = false
+                return
+            }
+            // add a json object to bomTestData, like {type：0/1, ,materialstorageid: , useAmount: }
+            // transform the selectSimiliarData to the format json object
+            const similiarMaterial = this.selectSimiliarData.map(item => {
+                return {
+                    type: item.similiarType,
+                    materialStorageId: item.materialStorageId,
+                    useAmount: item.useAmount
+                }
+            })
+            this.bomTestData[this.currentSimiliarIndex].warehouseUsageInfo = similiarMaterial
+            this.isSimiliarMaterialDialogVisible = false
+
         },
         async getAllMaterialNames() {
             const params = { department: 0 }
@@ -756,6 +856,12 @@ export default {
             await this.getBOMDetails(row)
             this.currentBOMId = row.totalBomId
             this.currentPurchaseShoeId = row.inheritId
+            this.bomTestData.forEach((item) => {
+                item.storageAmount = item.warehouseUsageInfo.reduce(
+                    (total, item) => total + item.useAmount,
+                    0
+                )
+            })
             if (this.bomTestData && Array.isArray(this.bomTestData)) {
                 this.bomTestData.forEach((item) => {
                     // Set the item-level purchaseAmount to match approvalAmount
@@ -774,6 +880,36 @@ export default {
         },
         handleGenerateClose() {
             this.createVis = false
+        },
+        async openSimiliarMaterialDialog(row, index) {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/logistics/getmaterialstoragesimiliar`,
+                {
+                    params: {
+                        materialId: row.materialId,
+                        materialModel: row.materialModel,
+                        materialSpecification: row.materialSpecification,
+
+                    }
+                }
+            )
+            this.similiarData = response.data
+            if (row.warehouseUsageInfo.length > 0) {
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/logistics/getselectedmaterialstorage`,
+                    {
+                        params: {
+                            warehouseUsageInfo: row.warehouseUsageInfo
+                        }
+                    }
+                )
+                this.selectSimiliarData = response.data
+            }
+            else {
+                this.selectSimiliarData = []
+            }
+            this.currentSizeIndex = index
+            this.isSimiliarMaterialDialogVisible = true
         },
         async openPreviewDialog(row) {
             if (row.currentStatus === '已提交') {
