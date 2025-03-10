@@ -20,18 +20,17 @@ import { getCurrentInstance, onMounted, ref } from 'vue';
 import axios from 'axios';
 
 import { Grid, Memo } from '@element-plus/icons-vue'
-import DashboardGrid from './Dashboard/DashboardGrid.vue';
-import DashboardList from './Dashboard/DashboardList.vue'
-import DashboardPend from './Dashboard/DashboardListPend.vue'
-import DashboardProgress from './Dashboard/DashboardListProgress.vue'
-
+import DashboardGrid from '@/components/Dashboard/DashboardGrid.vue';
+import DashboardList from '@/components/Dashboard/DashboardList.vue';
+import DashboardListPend from '@/components/Dashboard/DashboardListPend.vue';
+import DashboardListProgress from '@/components/Dashboard/DashboardListProgress.vue';
 
 
 const components = {
         DashboardGrid,
         DashboardList,
-        DashboardPend,
-        DashboardProgress
+        DashboardListPend,
+        DashboardListProgress
 }
 const pendingData = ref([])
 const inProgressData = ref([])
@@ -50,15 +49,15 @@ onMounted(()=> {
         const firstBomProgress = response.data.inProgressOrders
         firstBomPending.forEach(element => {
             element['taskName'] = "投产指令单创建"
+            element['taskURL'] = `${window.location.origin}/developmentmanager/productionorder/create/orderid=${element.orderId}`;
             pendingData.value.push(element)
         });
         firstBomProgress.forEach(element => {
             element['taskName'] = "投产指令单创建"
+            element['taskURL'] = `${window.location.origin}/developmentmanager/productionorder/create/orderid=${element.orderId}`;
             inProgressData.value.push(element)
         });
     })
-    console.log(inProgressData)
-    console.log(pendingData)
 })
 const currentDash = ref('DashboardGrid')
 const changeToGrid = () => {
@@ -68,10 +67,10 @@ const changeToList = () => {
     currentDash.value = 'DashboardList'
 }
 const changeToPend = () => {
-    currentDash.value = 'DashboardPend'
+    currentDash.value = 'DashboardListPend'
 }
 const changeToProgress = () => {
-    currentDash.value = 'DashboardProgress'
+    currentDash.value = 'DashboardListProgress'
 }
 </script>
 

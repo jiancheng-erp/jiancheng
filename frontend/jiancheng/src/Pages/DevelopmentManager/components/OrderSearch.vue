@@ -41,17 +41,15 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="4" :offset="0">
-            <el-radio-group v-model="orderStatus" @change="tableFilter">
+            <el-radio-group v-model="viewPastTasks" @change="tableFilter">
                 <el-radio-button label="全部订单" :value="0"></el-radio-button>
                 <el-radio-button label="已完成订单" :value="1"></el-radio-button>
             </el-radio-group>
-            
-            
         </el-col>
     </el-row>
     
     <el-row>
-        <el-table :data="orderFilterData" border stripe height="550" :default-expand-all="isExpand">
+        <el-table :data="orderFilterData" border stripe height="550">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.shoes" :border="true">
@@ -111,6 +109,7 @@
             </el-table-column>
             <el-table-column prop="orderRid" label="订单号"></el-table-column>
             <el-table-column prop="customerName" label="客人名称"></el-table-column>
+            <el-table-column prop="shoeRid" label="工厂型号" />
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
@@ -145,8 +144,7 @@ export default {
     data() {
         return {
             Search,
-            orderStatus: 0,
-            isExpand: false,
+            viewPastTasks: 0,
             orderSearch: '',
             shoeRIdSearch: '',
             orderData: [],
@@ -173,23 +171,11 @@ export default {
                         customerSearch: this.customerSearch,
                         shoeRIdSearch: this.shoeRIdSearch,
                         orderStatus: this.orderStatus,
-                        statusValue: 0,
+                        viewPastTasks: this.viewPastTasks,
                     },
                 })
-                this.orderFilterData = response.data // Update table data
-                const response2 = await axios.get(`${this.$apiBaseUrl}/order/getorderpageinfo`, {
-                params: {
-                    orderSearch: this.orderSearch,
-                    customerSearch: this.customerSearch,
-                    shoeRIdSearch: this.shoeRIdSearch,
-                    orderStatus: this.orderStatus,
-                    statusValue: 0,
-                },
-                })
-                this.totalData = response2.data.totalOrders // Total orders for pagination
-                console.log("Total orders:", response2)
-                console.log("Total orders:", this.totalData)
-                this.isExpand = true
+                this.orderFilterData = response.data.result // Update table data
+                this.totalData = response.data.total // Update total data count
             } catch (error) {
                 console.error("Error fetching order data:", error)
             }

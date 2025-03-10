@@ -6,8 +6,10 @@
         </el-col>        
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
-        <el-col :span="4" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
-        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="2" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
+        <el-col :span="4" :offset="14"><el-input v-model="searchOrder" placeholder="请输入订单号" :suffix-icon="Search" clearable @change="filterData"></el-input>
+        </el-col>
+        <el-col :span="4"><el-input v-model="searchShoe" placeholder="请输入工厂型号" :suffix-icon="Search" clearable @change="filterDataByShoe"></el-input>
         </el-col>
     </el-row>
     
@@ -19,7 +21,7 @@
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
                 <el-table-column prop="customerName" label="客户"></el-table-column>                
-            <el-table-column prop="orderShoeCount" label="鞋型数量"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
             </el-table>
 
         </el-col>
@@ -33,7 +35,8 @@ export default {
     data() {
         return {
             Search,
-            searchOrder:"",
+            searchOrder: "",
+            searchShoe: "",
             displayData:this.pendingTaskData
         }
     },
@@ -46,6 +49,12 @@ export default {
                 this.displayData = this.pendingTaskData
             }
             this.displayData = this.pendingTaskData.filter(task => task.orderRid.includes(this.searchOrder));
+        },
+        filterDataByShoe() {
+            if (!this.searchShoe) {
+                this.displayData = this.pendingTaskData
+            }
+            this.displayData = this.pendingTaskData.filter(task => task.shoeRId.toLowerCase().includes(this.searchShoe.toLowerCase()));
         },
         handleRowClick(row) {
             let url;

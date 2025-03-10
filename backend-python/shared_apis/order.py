@@ -31,14 +31,28 @@ BUSINESS_CLERK_ROLE = 21
 
 # 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
-# 开发一部经理角色码
-FIRST_DEV_DEPARTMENT_MANAGER = 7
-# 开发二部经理角色码
-SECOND_DEV_DEPARTMENT_MANAGER = 22
-# 开发三部经理角色码
-THIRD_DEV_DEPARTMENT_MANAGER = 23
-# TODO 开发部门经理映射（之后要修改为int值，与departmentid绑定）
-DEV_DEPARTMENT_MANAGER_MAPPING = {7: "开发一部", 22: "开发二部", 23: "开发三部"}
+# 开发部经理角色码
+DEV_DEPARTMENT_MANAGER = 7
+# 开发一部部门码
+DEV_DEPARTMENT_1 = 11
+# 开发二部部门码
+DEV_DEPARTMENT_2 = 14
+# 开发三部部门码
+DEV_DEPARTMENT_3 = 15
+# 开发五部部门码
+DEV_DEPARTMENT_5 = 16
+
+
+# 面料计算，一次bom填写
+USAGE_CALCULATION_ORDER_SHOE_STATUS = 4
+# 面料计算文员角色码
+USAGE_CALCULATION_ROLE = 18
+# 面料计算部门码
+
+# 工艺单
+CRAFT_SHEET_ORDER_SHOE_STATUS = 9
+# 面料计算文员角色码
+TECH_DEPARTMENT_MANAGER = 5
 
 
 @order_bp.route("/ordershoe/getordershoebyorder", methods=["GET"])
@@ -55,70 +69,62 @@ def get_order_shoe_by_order():
 
 @order_bp.route("/order/getdevordershoebystatus", methods=["GET"])
 def get_dev_orders():
-    print("NEW DEV ORDER API CALL")
     # TODO hard code deparment name, should be department id
-    current_user_role, current_user_id, current_department_name = current_user_info()
+    _, _, department = current_user_info()
     # if current_user_role not in (DEV_DEPARTMENT_MANAGER_MAPPING.keys()):
     #     return jsonify({"error": "not a manager"}), 401
 
-    shoe_department = current_department_name
+    shoe_department = department.department_name
     print("department" + shoe_department)
     status_val = DEV_ORDER_SHOE_STATUS
     t_s = time.time()
-    print("ORDERSHOESTATUS GET REQUEST WITH STATUS OF")
     status_val = request.args.get("ordershoestatus")
-    order_shoe_by_department_table = (
-        db.session.query(
-            OrderShoe.shoe_id,
-            OrderShoe.order_shoe_id,
-            OrderShoe.order_id,
-            Shoe,
-        )
-        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-        .filter(Shoe.shoe_department_id == shoe_department)
-        .subquery()
-    )
+    # order_shoe_by_department_table = (
+    #     db.session.query(
+    #         OrderShoe.shoe_id,
+    #         OrderShoe.order_shoe_id,
+    #         OrderShoe.order_id,
+    #         Shoe,
+    #     )
+    #     .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+    #     .filter(Shoe.shoe_department_id == shoe_department)
+    #     .first()
+    # )
     entities = (
         db.session.query(
             Order,
             Customer,
-            func.count(order_shoe_by_department_table.c.order_shoe_id),
+            Shoe,
             OrderShoeStatus.current_status_value,
         )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .join(
-            order_shoe_by_department_table,
-            order_shoe_by_department_table.c.order_id == Order.order_id,
-        )
-        .join(
             OrderShoeStatus,
-            OrderShoeStatus.order_shoe_id
-            == order_shoe_by_department_table.c.order_shoe_id,
+            OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
-        .group_by(Order.order_id, OrderShoeStatus.current_status_value)
-        .order_by(Order.start_date.desc())
+        .filter(Shoe.shoe_department_id == shoe_department)
         .all()
     )
 
     pending_orders, in_progress_orders = [], []
     for entity in entities:
-        order, customer, count, status_value = entity
+        order, customer, shoe, status_value = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
         formatted_deadline_date = order.end_date.strftime("%Y-%m-%d")
         response_obj = {
             "orderId": order.order_id,
             "orderRid": order.order_rid,
             "customerName": customer.customer_name,
-            "orderShoeCount": count,
+            "shoeRId": shoe.shoe_rid,
             "statusValue": status_value,
             "createTime": formatted_start_date,
             "deadlineTime": formatted_deadline_date,
         }
-        print("current entity has status value of")
-        print(status_value)
         if status_value == 0:
             pending_orders.append(response_obj)
         elif status_value == 1:
@@ -140,35 +146,33 @@ def get_orders_by_status():
         db.session.query(
             Order,
             Customer,
-            func.count(OrderShoe.order_shoe_id),
+            Shoe,
             OrderShoeStatus.current_status_value,
         )
-        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
-        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
-        .group_by(Order.order_id, OrderShoeStatus.current_status_value)
         .order_by(Order.start_date.desc())
         .all()
     )
     pending_orders, in_progress_orders = [], []
     for entity in entities:
-        order, customer, count, status_value = entity
+        order, customer, shoe, status_value = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
         formatted_deadline_date = order.end_date.strftime("%Y-%m-%d")
         response_obj = {
             "orderId": order.order_id,
             "orderRid": order.order_rid,
             "customerName": customer.customer_name,
-            "orderShoeCount": count,
+            "shoeRId": shoe.shoe_rid,
             "statusValue": status_value,
             "createTime": formatted_start_date,
             "deadlineTime": formatted_deadline_date,
         }
-        print("current entity has status value of")
-        print(status_value)
         if status_value == 0:
             pending_orders.append(response_obj)
         elif status_value == 1:
@@ -240,6 +244,7 @@ def get_order_info():
         "orderId": entities.Order.order_rid,
         "orderDBId": entities.Order.order_id,
         "customerName": entities.Customer.customer_name,
+        "customerBrand": entities.Customer.customer_brand,
         "createTime": formatted_start_date,
         "deadlineTime": formatted_end_date,
         "status": (
@@ -629,11 +634,14 @@ def get_order_shoe_sizes_info():
 # 如果用户非业务经理,显示当前用户添加的订单
 @order_bp.route("/order/getbusinessdisplayorderbyuser", methods=["GET"])
 def get_display_orders_manager():
-    current_user_role, current_user_id, current_department = current_user_info()
-    current_user_id = current_user_id
+    character, staff, _ = current_user_info()
+    current_staff_id = staff.staff_id
+    current_user_role = character.character_id
     if current_user_role == BUSINESS_MANAGER_ROLE:
         entities = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+            )
             .join(OrderShoe, OrderShoe.order_id == Order.order_id)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .join(Customer, Order.customer_id == Customer.customer_id)
@@ -643,13 +651,15 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
-            .filter(Order.supervisor_id == current_user_id)
+            .filter(Order.supervisor_id == current_staff_id)
             .order_by(Order.order_rid.asc())
             .all()
         )
     elif current_user_role == BUSINESS_CLERK_ROLE:
         entities = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+            )
             .join(OrderShoe, OrderShoe.order_id == Order.order_id)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .join(Customer, Order.customer_id == Customer.customer_id)
@@ -659,7 +669,7 @@ def get_display_orders_manager():
                 OrderStatus.order_current_status
                 == OrderStatusReference.order_status_id,
             )
-            .filter(Order.salesman_id == current_user_id)
+            .filter(Order.salesman_id == current_staff_id)
             .order_by(Order.order_rid.asc())
             .all()
         )
@@ -919,57 +929,103 @@ def get_order_doc_info():
 @order_bp.route("/order/getorderfullinfo", methods=["GET"])
 def get_order_full_info():
     page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 10, type=int)
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
     shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
-    order_status = request.args.get("orderStatus", "", type=int)
-    status_value = request.args.get("statusValue", "", type=int)
+    view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
 
-    # Set the pagination variables
-    per_page = 10  # Define how many results per page
-    offset = (page - 1) * per_page
+    character, staff, department = current_user_info()
+
+    order_shoe_status = (
+        db.session.query(
+            OrderShoe.order_shoe_id,
+            func.group_concat(OrderShoeStatus.current_status).label("current_status"),
+        )
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .group_by(OrderShoe.order_shoe_id)
+        .subquery()
+    )
+
+    order_shoe_status_reference = (
+        db.session.query(
+            OrderShoe.order_shoe_id,
+            func.group_concat(OrderShoeStatusReference.status_name).label(
+                "status_name"
+            ),
+        )
+        .join(
+            OrderShoeStatus,
+            OrderShoeStatusReference.status_id == OrderShoeStatus.current_status,
+        )
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .group_by(OrderShoe.order_shoe_id)
+        .subquery()
+    )
+
     query = (
         db.session.query(
             Order,
-            OrderStatus,
             OrderStatusReference,
             OrderShoe,
-            OrderShoeStatus,
-            OrderShoeStatusReference,
+            order_shoe_status_reference.c.status_name.label(
+                "order_shoe_status_reference_names"
+            ),
             Customer,
             Shoe,
-            PurchaseOrder,
-            Bom,
         )
-        .outerjoin(OrderStatus, Order.order_id == OrderStatus.order_id)
-        .outerjoin(
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .join(
             OrderStatusReference,
             OrderStatus.order_current_status == OrderStatusReference.order_status_id,
         )
-        .outerjoin(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .outerjoin(
-            OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(
+            order_shoe_status,
+            OrderShoe.order_shoe_id == order_shoe_status.c.order_shoe_id,
         )
-        .outerjoin(
-            OrderShoeStatusReference,
-            OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
+        .join(
+            order_shoe_status_reference,
+            OrderShoe.order_shoe_id == order_shoe_status_reference.c.order_shoe_id,
         )
-        .outerjoin(Customer, Order.customer_id == Customer.customer_id)
-        .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .outerjoin(TotalBom, TotalBom.order_shoe_id == OrderShoe.order_shoe_id)
-        .outerjoin(Bom, Bom.total_bom_id == TotalBom.total_bom_id)
-        .outerjoin(PurchaseOrder, PurchaseOrder.bom_id == TotalBom.total_bom_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
         )
+        .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_id.desc())
     )
-    if order_status == 1:
-        query = query.filter(OrderShoeStatus.current_status > status_value).all()
-    else:
-        query = query.all()
+
+    if character.character_id == DEV_DEPARTMENT_MANAGER:
+        query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
+        query = query.filter(Shoe.shoe_department_id == department.department_name)
+        if view_past_tasks == 1:
+            query = query.filter(~func.find_in_set('0', order_shoe_status.c.current_status))
+
+    #TODO
+    # if character.character_id == USAGE_CALCULATION_ROLE:
+    #     query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
+    #     if view_past_tasks == 1:
+    #         query = query.filter(OrderShoe. > USAGE_CALCULATION_ORDER_SHOE_STATUS)
+    #     else:
+    #         query = query.filter(func.find_in_set('0', order_shoe_status.c.current_status))
+
+    # if character.character_id == TECH_DEPARTMENT_MANAGER:
+    #     query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
+    #     if view_past_tasks == 1:
+    #         query = query.filter(
+    #             OrderShoeStatus.current_status > CRAFT_SHEET_ORDER_SHOE_STATUS
+    #         )
+    #     else:
+    #         query = query.filter(
+    #             OrderShoeStatus.current_status >= CRAFT_SHEET_ORDER_SHOE_STATUS
+    #         )
+
+    count_result = query.distinct().count()
+    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
 
     # Initialize a dictionary to group orders
     orders_dict = {}
@@ -977,16 +1033,12 @@ def get_order_full_info():
     # Loop through the query result
     for (
         order,
-        order_status,
         order_status_reference,
         order_shoe,
-        order_shoe_status,
-        order_shoe_status_reference,
+        order_shoe_status_reference_names,
         customer,
         shoe,
-        purchase_order,
-        bom,
-    ) in query:
+    ) in response:
         formatted_start_date = (
             order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A"
         )
@@ -999,6 +1051,7 @@ def get_order_full_info():
             orders_dict[order.order_id] = {
                 "orderId": order.order_id if order.order_id else "N/A",
                 "orderRid": order.order_rid if order.order_rid else "N/A",
+                "shoeRid": shoe.shoe_rid if shoe else "N/A",
                 "customerName": customer.customer_name if customer else "N/A",
                 "createTime": formatted_start_date,
                 "deadlineTime": formatted_end_date,
@@ -1022,46 +1075,30 @@ def get_order_full_info():
                 "secondBom": "N/A",
                 "firstOrder": "N/A",
                 "secondOrder": "N/A",
-                "statuses": "",  # To hold the combined statuses as a string
+                "statuses": "".join(
+                    order_shoe_status_reference_names.split(" | ")
+                ),  # To hold the combined statuses as a string
             }
 
-        # Add the status for the current OrderShoe, checking for duplicates
-        if order_shoe_status_reference:
-            status_string = f"{order_shoe_status_reference.status_name}"
+        # # Assign BOM based on bom_type
+        # if bom:
+        #     if bom.bom_type == 0:
+        #         orders_dict[order.order_id]["shoes"][shoe_key]["firstBom"] = bom.bom_rid
+        #     elif bom.bom_type == 1:
+        #         orders_dict[order.order_id]["shoes"][shoe_key][
+        #             "secondBom"
+        #         ] = bom.bom_rid
 
-            # Ensure the status is only added once
-            if (
-                status_string
-                not in orders_dict[order.order_id]["shoes"][shoe_key]["statuses"]
-            ):
-                if orders_dict[order.order_id]["shoes"][shoe_key]["statuses"]:
-                    orders_dict[order.order_id]["shoes"][shoe_key]["statuses"] += (
-                        " | " + status_string
-                    )
-                else:
-                    orders_dict[order.order_id]["shoes"][shoe_key][
-                        "statuses"
-                    ] = status_string
-
-        # Assign BOM based on bom_type
-        if bom:
-            if bom.bom_type == 0:
-                orders_dict[order.order_id]["shoes"][shoe_key]["firstBom"] = bom.bom_rid
-            elif bom.bom_type == 1:
-                orders_dict[order.order_id]["shoes"][shoe_key][
-                    "secondBom"
-                ] = bom.bom_rid
-
-        # Assign purchase orders based on purchase_order_type
-        if purchase_order:
-            if purchase_order.purchase_order_type == "F":
-                orders_dict[order.order_id]["shoes"][shoe_key][
-                    "firstOrder"
-                ] = purchase_order.purchase_order_rid
-            elif purchase_order.purchase_order_type == "S":
-                orders_dict[order.order_id]["shoes"][shoe_key][
-                    "secondOrder"
-                ] = purchase_order.purchase_order_rid
+        # # Assign purchase orders based on purchase_order_type
+        # if purchase_order:
+        #     if purchase_order.purchase_order_type == "F":
+        #         orders_dict[order.order_id]["shoes"][shoe_key][
+        #             "firstOrder"
+        #         ] = purchase_order.purchase_order_rid
+        #     elif purchase_order.purchase_order_type == "S":
+        #         orders_dict[order.order_id]["shoes"][shoe_key][
+        #             "secondOrder"
+        #         ] = purchase_order.purchase_order_rid
 
     # Convert the shoes from dictionary to list and create the final result list
     result = []
@@ -1071,10 +1108,7 @@ def get_order_full_info():
         )  # Convert shoe dict to list
         result.append(order_data)
 
-    # Apply pagination to the result
-    result = result[offset : offset + per_page]
-
-    return jsonify(result)
+    return jsonify({"result": result, "total": count_result})
 
 
 @order_bp.route("/order/getorderpageinfo", methods=["GET"])
@@ -1295,7 +1329,8 @@ def export_order():
 @order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
 def approve_outbound_by_business():
     order_ids = request.get_json()
-    staff_id = current_user_info()[1]
+    character, staff, department = current_user_info()
+    staff_id = staff.staff_id
     db.session.query(Order).filter(
         Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
     ).update({Order.is_outbound_allowed: 1}, synchronize_session=False)
@@ -1323,7 +1358,8 @@ def approve_outbound_by_business():
 @order_bp.route("/order/approveoutboundbygeneralmanager", methods=["PATCH"])
 def approve_outbound_by_general_manager():
     order_ids = request.get_json()
-    staff_id = current_user_info()[1]
+    character, staff, department = current_user_info()
+    staff_id = staff.staff_id
     db.session.query(Order).filter(
         Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
     ).update({Order.is_outbound_allowed: 2}, synchronize_session=False)

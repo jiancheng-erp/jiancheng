@@ -19,7 +19,7 @@
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
                 <el-table-column prop="deadlineTime" label="订单截止时间"></el-table-column>
                 <el-table-column prop="customerName" label="客户"></el-table-column>                
-            <el-table-column prop="orderShoeCount" label="鞋型数量"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
             </el-table>
 
         </el-col>

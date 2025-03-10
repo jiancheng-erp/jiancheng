@@ -75,7 +75,7 @@ def get_order_shoe_list():
                 "orderShoeId": order_shoe.order_shoe_id,
                 "inheritId": shoe.shoe_rid,
                 "status": status_string,
-                "customerId": order_shoe.customer_product_name,
+                "customerProductName": order_shoe.customer_product_name,
                 "designer": shoe.shoe_designer,
                 "editter": order_shoe.adjust_staff,
                 "typeInfos": [],  # Initialize list for type info (colors, etc.)
