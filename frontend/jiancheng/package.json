@@ -25,6 +25,8 @@
     "jspdf": "^2.5.2",
     "mermaid": "^10.9.1",
     "pinia": "^2.1.7",
+    "pinyin": "^4.0.0-alpha.2",
+    "segmentit": "^2.0.3",
     "vue": "^3.4.21",
     "vue-cal": "^4.8.1",
     "vue-flow": "^0.3.0",
