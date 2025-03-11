@@ -16,6 +16,9 @@ from flask import Blueprint, jsonify, request, send_file, current_app
 from general_document.material_statistics import generate_material_statistics_file
 from general_document.purchase_divide_order import generate_excel_file
 from general_document.size_purchase_divide_order import generate_size_excel_file
+from general_document.cutmodel_purchase_divide_order import generate_cut_model_excel_file
+from general_document.last_purchase_divide_order import generate_last_excel_file
+from general_document.package_purchase_divide_order import generate_package_excel_file
 from models import *
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.sql.expression import or_
@@ -993,6 +996,13 @@ def submit_purchase_divide_orders():
         os.mkdir(
             os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order")
         )
+    customer_name = (
+        db.session.query(Customer)
+        .join(Order, Order.customer_id == Customer.customer_id)
+        .filter(Order.order_id == order_id)
+        .first()
+        .customer_name
+    )
 
     # Iterate through the query results and group items by PurchaseDivideOrder
     for (
@@ -1014,6 +1024,7 @@ def submit_purchase_divide_orders():
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
+                    "客户名": customer_name,
                     "订单信息": order_rid,
                     "seriesData": [],
                 }
@@ -1034,6 +1045,8 @@ def submit_purchase_divide_orders():
                         + " "
                         + (purchase_order_item.color if purchase_order_item.color else "")
                     ),
+                    "型号" : material.material_name + " " + purchase_order_item.material_model if purchase_order_item.material_model else "",
+                    "类别" : purchase_order_item.material_specification if purchase_order_item.material_specification else "",
                     "数量": purchase_order_item.purchase_amount,
                     "单位": material.material_unit,
                     "备注": purchase_order_item.remark,
@@ -1098,6 +1111,8 @@ def submit_purchase_divide_orders():
                     + " "
                     + (bom_item.bom_item_color if bom_item.bom_item_color else "")
                 ),
+                "型号" : material.material_name + " " + purchase_order_item.material_model if purchase_order_item.material_model else "",
+                "类别" : purchase_order_item.material_specification if purchase_order_item.material_specification else "",
                 "备注": bom_item.remark,
             }
             for index, size_value in enumerate(size_values):
@@ -1112,6 +1127,7 @@ def submit_purchase_divide_orders():
                     "供应商": supplier.supplier_name,
                     "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                     "备注": purchase_divide_order.purchase_order_remark,
+                    "客户名": customer_name,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,

@@ -2,6 +2,7 @@ import shutil
 from openpyxl import load_workbook
 import os
 from openpyxl.styles import Border, Side, Alignment
+from openpyxl.drawing.image import Image
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -11,6 +12,53 @@ def load_template(template_path, new_file_path):
     wb = load_workbook(new_file_path)
     ws = wb.active
     return wb, ws
+def copy_text_to_new_sheet(source_file, dest_wb, sheet_name="Package Info"):
+    """Copy text from source file into a new worksheet in destination workbook, with error handling."""
+    try:
+        # Load source workbook
+        source_wb = load_workbook(source_file, data_only=False)
+        source_ws = source_wb.active
+
+        # Create a new worksheet in the destination workbook
+        if sheet_name in dest_wb.sheetnames:
+            dest_wb.remove(dest_wb[sheet_name])  # Remove existing sheet if any
+        dest_ws = dest_wb.create_sheet(sheet_name)
+
+        max_col = source_ws.max_column
+        max_row = source_ws.max_row
+
+        # Copy cell values
+        for row in range(1, max_row + 1):
+            for col in range(1, max_col + 1):
+                cell = source_ws.cell(row=row, column=col)
+                dest_ws.cell(row=row, column=col, value=cell.value)
+
+        print(f"Successfully copied text to new sheet: {sheet_name}")
+        return source_ws, dest_ws  # Return both worksheets
+
+    except Exception as e:
+        print(f"⚠️ Error copying text to new sheet: {e}")
+        return None, None  # Return None to indicate failure but continue execution
+
+def copy_images_with_absolute_positioning(source_ws, dest_ws):
+    """Copy images from source worksheet to destination worksheet while keeping absolute positions, with error handling."""
+    try:
+        if source_ws is None or dest_ws is None:
+            print("⚠️ Skipping image copying due to missing source/destination worksheet.")
+            return
+
+        for img in source_ws._images:
+            new_img = Image(img.ref)  # Copy the image
+
+            # Check the type of anchor (oneCellAnchor or twoCellAnchor)
+            if hasattr(img, "anchor"):
+                new_img.anchor = img.anchor  # Copy exact position anchor
+                dest_ws.add_image(new_img)  # Place image at the same position
+
+        print("✅ Successfully copied images with absolute positioning.")
+
+    except Exception as e:
+        print(f"⚠️ Error copying images: {e}")
 def add_borders(ws, start_cell, end_cell):
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -66,7 +114,7 @@ def save_workbook(wb, new_file_path):
     wb.save(new_file_path)
 
 # Main function to generate the Excel file
-def generate_excel_file(template_path, new_file_path, order_data):
+def generate_package_excel_file(template_path, new_file_path, package_info_file, order_data):
     print(f"Generating Excel file for order {order_data.get('订单信息', '')}")
     wb, ws = load_template(template_path, new_file_path)
 
@@ -102,6 +150,10 @@ def generate_excel_file(template_path, new_file_path, order_data):
     # Merge and apply borders
     merge_cells(ws, row)
     add_borders(ws, "A3", f"H{row+1}")
+    source_ws, dest_ws = copy_text_to_new_sheet(package_info_file, wb, "Package Info")
+
+    # Copy images into the new worksheet with absolute positioning
+    copy_images_with_absolute_positioning(source_ws, dest_ws)
 
     # Save the workbook
     save_workbook(wb, new_file_path)
@@ -109,23 +161,23 @@ def generate_excel_file(template_path, new_file_path, order_data):
     print(f"Workbook saved as {new_file_path}")
 
 
-# def test_case_1():
-#     template_path = "H:\git-projects\jiancheng\\backend-python\general_document/标准采购订单.xlsx"
-#     new_file_path = "H:\git-projects\jiancheng\\backend-python\general_document/pur_test.xlsx"
-#     order_data = {
-#         "订单信息": "订单编号12345",
-#         "供应商": "供应商A",
-#         "日期": "2024-11-19",
-#         "seriesData": [
-#             {"物品名称": "商品1", "单位": "个", "数量": 10, "单价": 5.5, "用途说明": "用途1", "备注": "备注1"},
-#             {"物品名称": "商品2", "单位": "箱", "数量": 20, "单价": 15.0, "用途说明": "用途2", "备注": "备注2"},
-#         ],
-#         "合计": 350,
-#         "备注": "总备注",
-#         "环保要求": "符合环保标准",
-#         "发货地址": "测试地址",
-#         "交货期限": "2024-12-01",
-#     }
-#     generate_excel_file(template_path, new_file_path, order_data)
-#     print("Test Case 1: Basic functionality passed.")
+# template_path = "H:/git-projects/jiancheng/backend-python/general_document/标准采购订单.xlsx"
+# new_file_path = "H:/git-projects/jiancheng/backend-python/general_document/pur_test.xlsx"
+# package_file = "H:/git-projects/jiancheng/backend-python/general_document/包装资料.xlsx"
+# order_data = {
+#     "订单信息": "订单编号12345",
+#     "供应商": "供应商A",
+#     "日期": "2024-11-19",
+#     "seriesData": [
+#         {"物品名称": "商品1", "单位": "个", "数量": 10, "单价": 5.5, "用途说明": "用途1", "备注": "备注1"},
+#         {"物品名称": "商品2", "单位": "箱", "数量": 20, "单价": 15.0, "用途说明": "用途2", "备注": "备注2"},
+#     ],
+#     "合计": 350,
+#     "备注": "总备注",
+#     "环保要求": "符合环保标准",
+#     "发货地址": "测试地址",
+#     "交货期限": "2024-12-01",
+# }
+# generate_package_excel_file(template_path, new_file_path, package_file, order_data)
+# print("Test Case 1: Basic functionality passed.")
 
