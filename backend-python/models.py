@@ -443,8 +443,8 @@ class OrderShoe(db.Model):
     process_sheet_upload_status = db.Column(db.String(1), nullable=True)
     production_order_upload_status = db.Column(db.String(1), nullable=True)
     customer_product_name = db.Column(db.String(50), nullable=False)
-    business_technical_remark = db.Column(db.String(100), nullable=True)
-    business_material_remark = db.Column(db.String(100), nullable=True)
+    business_technical_remark = db.Column(db.String(255), nullable=True)
+    business_material_remark = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
         return f"<OrderShoe(order_shoe_id={self.order_shoe_id})>"
