@@ -8,6 +8,9 @@ from decimal import Decimal
 import os
 from general_document.purchase_divide_order import generate_excel_file
 from general_document.size_purchase_divide_order import generate_size_excel_file
+from general_document.cutmodel_purchase_divide_order import generate_cut_model_excel_file
+from general_document.last_purchase_divide_order import generate_last_excel_file
+from general_document.package_purchase_divide_order import generate_package_excel_file
 from constants import SHOESIZERANGE
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
@@ -875,7 +878,8 @@ def submit_total_purchase_order():
         "环保要求": total_purchase_order.total_purchase_order_environmental_request,
         "发货地址": total_purchase_order.shipment_address,
         "交货期限": total_purchase_order.shipment_deadline,
-        "订单信息": f"{total_purchase_order.total_purchase_order_rid}",
+        "订单信息": db.session.query(Order).filter(Order.order_id == order_id).first().order_rid if order_id else None,
+        "客人名": db.session.query(Order,Customer).join(Customer,Order.customer_id == Customer.customer_id).filter(Order.order_id == order_id).first().Customer.customer_name if order_id else None,
         "seriesData": [],
     }
 
@@ -983,6 +987,8 @@ def submit_total_purchase_order():
                         f"{material_specification or ''} "
                         f"{material_color or ''}"
                     ).strip(),
+                    "型号": material_name + " " + material_model if material_model else "",
+                    "类别": material_specification or "",
                     "备注": bom_item.remark if bom_item else "",
                 }
                 for size_dic in shoe_size_list:
@@ -1002,6 +1008,8 @@ def submit_total_purchase_order():
                             f"{material_color or ''}"
                         ).strip(),
                         "数量": purchase_order_item.adjust_purchase_amount,
+                        "型号": material_name + " " + material_model if material_model else "",
+                        "类别": material_specification or "",
                         "单位": purchase_order_item.inbound_unit,
                         "备注": bom_item.remark if bom_item else "",
                         "用途说明": "",
@@ -1021,6 +1029,8 @@ def submit_total_purchase_order():
                     "单位": item["单位"],
                     "备注": item["备注"],
                     "用途说明": item["用途说明"],
+                    "型号": item["型号"],
+                    "类别": item["类别"],
                 }
             else:
                 consolidated_series_data[key]["数量"] += item["数量"]
@@ -1039,11 +1049,33 @@ def submit_total_purchase_order():
 
     # ✅ Choose the correct generation function
     if is_size_based:
-        generate_size_excel_file(
-            size_template_path, output_path, total_purchase_order_data
-        )
+        if purchase_order.purchase_order_type in ["F", "S"]: 
+            generate_size_excel_file(
+                size_template_path, output_path, total_purchase_order_data
+            )
+        elif purchase_order.purchase_order_type in ["L"]:
+            # for the last, the 类别 should be the material name, the 型号 should be the material model
+            for item in total_purchase_order_data["seriesData"]:
+                item["类别"] = item["物品名称"].split(" ")[0]  # ✅ 类别 = Material Name (first part)
+                item["型号"] = " ".join(item["物品名称"].split(" ")[1:])  # ✅ 型号 = Remaining parts
+            generate_last_excel_file(
+                size_template_path, output_path, total_purchase_order_data
+            )
+        elif purchase_order.purchase_order_type in ["C"]:
+            generate_size_excel_file(
+                size_template_path, output_path, total_purchase_order_data
+            )
     else:
-        generate_excel_file(template_path, output_path, total_purchase_order_data)
+        if purchase_order.purchase_order_type in ["F", "S"]:
+            generate_excel_file(template_path, output_path, total_purchase_order_data)
+        elif purchase_order.purchase_order_type in ["P"]:
+            order_rid = total_purchase_order_data["订单信息"]
+            package_info_file_path = os.path.join(
+                FILE_STORAGE_PATH, order_rid, "包装资料.xlsx"
+            )
+            generate_package_excel_file(
+                template_path, output_path, package_info_file_path, total_purchase_order_data
+            )
     db.session.commit()
 
     return jsonify({"message": "Total purchase order submitted successfully."})

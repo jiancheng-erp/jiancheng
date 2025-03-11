@@ -98,7 +98,7 @@ def get_next_column_name(current_column_name):
     return next_column_name
 
 
-def generate_size_excel_file(template_path, new_file_path, order_data):
+def generate_cut_model_excel_file(template_path, new_file_path, order_data):
     wb, ws = load_template(template_path, new_file_path)
 
     # Insert order details
