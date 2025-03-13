@@ -1532,6 +1532,8 @@ def get_size_table():
             "备注": [""],
         }
         grid_options = transform_standard_size_dict_to_grid(standard_size_dict)
+        order.order_size_table = json.dumps(standard_size_dict, ensure_ascii=False)
+        db.session.commit()
         return jsonify(grid_options), 200
     else:
         table_dict = (
@@ -1586,6 +1588,7 @@ def get_material_detail():
                 "materialId": material.Material.material_id,
                 "unit": material.Material.material_unit,
                 "materialType": material.MaterialType.material_type_name,
+                "materialCategory": material.Material.material_category
             }
         )
     else:
