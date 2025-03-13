@@ -47,7 +47,7 @@ export default [
     }
   },
   {
-    path: '/packagepurchase',
+    path: '/packagepurchase/orderid=:orderid',
     name: 'packagepurchase',
     component: PackagePurchaseView,
     props: true,
@@ -58,7 +58,7 @@ export default [
 
   },
   {
-    path: '/lastpurchase',
+    path: '/lastpurchase/orderid=:orderid',
     name: 'lastpurchase',
     component: LastPurchaseView,
     props: true,
@@ -68,7 +68,7 @@ export default [
     }
   },
   {
-    path: '/cutmodelpurchase',
+    path: '/cutmodelpurchase/orderid=:orderid',
     name: 'cutmodelpurchase',
     component: CutModelPurchaseView,
     props: true,

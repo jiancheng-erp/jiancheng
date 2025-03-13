@@ -22,8 +22,18 @@ from general_document.package_purchase_divide_order import generate_package_exce
 from models import *
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.expression import case
 
 first_purchase_bp = Blueprint("first_purrchase_bp", __name__)
+
+material_order = case(
+    (ProductionInstructionItem.material_type == "S", 1),
+    (ProductionInstructionItem.material_type == "I", 2),
+    (ProductionInstructionItem.material_type == "O", 3),
+    (ProductionInstructionItem.material_type == "M", 4),
+    (ProductionInstructionItem.material_type == "H", 5),
+    else_=6  # Default for any other values (if any)
+)
 
 
 @first_purchase_bp.route("/firstpurchase/getordershoelist", methods=["GET"])
@@ -258,6 +268,14 @@ def get_shoe_bom_items():
     order_id = request.args.get("orderid")
     # get shoe size names
     size_name_info = get_order_batch_type_helper(order_id)
+    material_order = case(
+        (ProductionInstructionItem.material_type == "S", 1),
+        (ProductionInstructionItem.material_type == "I", 2),
+        (ProductionInstructionItem.material_type == "O", 3),
+        (ProductionInstructionItem.material_type == "M", 4),
+        (ProductionInstructionItem.material_type == "H", 5),
+        else_=6  # Default for any other values (if any)
+    )
     # Query all Bom items under the given TotalBom, based on the bom_rid
     entities = (
         db.session.query(
@@ -285,6 +303,7 @@ def get_shoe_bom_items():
             TotalBom.total_bom_rid == bom_rid,
             ProductionInstructionItem.material_type.in_(["S", "I", "O", "M", "H"]),
         )
+        .order_by(material_order)
         .all()
     )
 
@@ -569,6 +588,7 @@ def get_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
+            ProductionInstructionItem,
             Material,
             MaterialType,
             Supplier,
@@ -588,10 +608,18 @@ def get_purchase_divide_orders():
             == PurchaseOrderItem.purchase_divide_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
+        )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
+        .order_by(
+            material_order,
+        )
         .all()
     )
 
@@ -603,6 +631,7 @@ def get_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
+        production_instruction_item,
         material,
         material_type,
         supplier,
