@@ -560,9 +560,7 @@ def submit_purchase_divide_orders():
     )
     order_id = order_info.Order.order_id
     order_rid = order_info.Order.order_rid
-    order_size_table = (
-        db.session.query(Order).filter(Order.order_id == order_id).first().order_size_table
-    )
+    order_size_table = order_info.Order.order_size_table
     order_size_dict = json.loads(order_size_table)
     materials_data = []
     query = (
