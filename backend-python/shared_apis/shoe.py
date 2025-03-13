@@ -5,6 +5,7 @@ from models import *
 from file_locations import IMAGE_STORAGE_PATH
 from api_utility import to_camel, to_snake
 from login.login import current_user, current_user_info
+import json
 
 shoe_bp = Blueprint("shoe_bp", __name__)
 
@@ -160,4 +161,27 @@ def get_shoe_batch_logistics():
         )
     
     return jsonify(result)
+
+@shoe_bp.route("/shoe/getshoebatchinfotypebysizetable", methods=["GET"])
+def get_shoe_batch_by_size_table():
+    orderId = request.args.get("orderId")
+    if orderId is None:
+        return jsonify("orderId is required"), 400
+    order_size_table = db.session.query(Order).filter_by(order_id = orderId).first().order_size_table
+    #transform order_size_table json to dict
+    order_size_table = json.loads(order_size_table)
+    print(order_size_table)
+    last_order_list = order_size_table['楦头']
+    #trans the list to result like "size34Slot": last_order_list['楦头'][0], max to size47slot, if last_order_list is not enough, fill with None
+    #use index to get the value
+    result = {}
+    for i in range(34, 47):
+        if i - 34 < len(last_order_list):
+            result[f'size{i}Slot'] = last_order_list[i-34]
+        else:
+            result[f'size{i}Slot'] = None
+    print(result)
+    return jsonify(result)
+    
+    
 

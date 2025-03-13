@@ -19,12 +19,12 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>一次采购订单创建</span>
                         </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
+                        <!-- <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>批量采购订单生成及下发</span>
                         </el-menu-item>
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>耗材/固定资产订单生成</span>
-                        </el-menu-item>
+                        </el-menu-item> -->
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>材料管理</span>
                         </el-menu-item>
@@ -113,12 +113,6 @@ export default {
                     break
                 case 2:
                     this.currentComponent = 'FirstPurchase'
-                    break
-                case 3:
-                    this.currentComponent = 'MultiPurchaseIssue'
-                    break
-                case 4:
-                    this.currentComponent = 'FixedAssets'
                     break
                 case 5:
                     this.currentComponent = 'MaterialManagement'

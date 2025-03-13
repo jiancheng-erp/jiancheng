@@ -250,6 +250,16 @@ def get_order_info():
         "status": (
             entities.OrderStatus.order_current_status if entities.OrderStatus else "N/A"
         ),
+        "lastStatus": (
+            entities.Order.last_status if entities.Order.last_status else "N/A"
+            
+        ),
+        "cuttingModelStatus": (
+            entities.Order.cutting_model_status if entities.Order.cutting_model_status else "N/A"
+        ),
+        "packagingStatus": (
+            entities.Order.packaging_status if entities.Order.packaging_status else "N/A"
+        ),
     }
     return jsonify(result)
 

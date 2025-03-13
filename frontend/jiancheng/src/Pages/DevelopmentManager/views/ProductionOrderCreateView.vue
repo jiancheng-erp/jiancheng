@@ -1864,9 +1864,8 @@ export default {
             return Search
         },
         getShoeImageUrl() {
-            // find index of activeTab
-            const index = this.currentOrderShoeRow.typeInfos.findIndex((item) => item.color === this.activeTab)
-            return this.currentOrderShoeRow.typeInfos[index].image
+            const index = this.currentOrderShoeRow.typeInfos.findIndex((item) => item.color === this.activeTab);
+            return index !== -1 ? this.currentOrderShoeRow.typeInfos[index].image : '';
         }
     },
     methods: {
@@ -2251,6 +2250,7 @@ export default {
             this.materialWholeData = []
             this.currentShoeId = row.inheritId
             this.currentShoeImageUrl = row.typeInfos[0].image
+            this.currentOrderShoeRow = row
             await this.getOrderShoeInfo(row.inheritId)
             this.getInstructionData(row)
             this.tabcolor = row.typeInfos.map((info) => info.color)
