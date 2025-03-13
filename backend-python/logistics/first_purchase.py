@@ -837,6 +837,8 @@ def submit_purchase_divide_orders():
     order_shoe_id = order_info.OrderShoe.order_shoe_id
     order_rid = order_info.Order.order_rid
     order_shoe_rid = order_info.Shoe.shoe_rid
+    order_size_table = order_info.Order.order_size_table
+    order_size_dict = json.loads(order_size_table)
     is_craft_existed = (
         db.session.query(CraftSheet)
         .filter(CraftSheet.order_shoe_id == order_shoe_id)
@@ -953,7 +955,12 @@ def submit_purchase_divide_orders():
                 quantity_map[f"size_{size}_quantity"] = getattr(
                     purchase_order_item, f"size_{size}_purchase_amount"
                 )
-
+            if "中底" in material.material_name:
+                material_size_table = order_size_dict["中底"]
+            elif "大底" in material.material_name:
+                material_size_table = order_size_dict["大底"]
+            else:
+                material_size_table = order_size_dict["客人码"]
             size_material_storage = SizeMaterialStorage(
                 order_id=order_id,
                 order_shoe_id=order_shoe_id,
@@ -969,6 +976,7 @@ def submit_purchase_divide_orders():
                 size_storage_type=batch_info_type_name,
                 craft_name=craft_name,
                 production_instruction_item_id=bom_item.production_instruction_item_id,
+                shoe_size_columns = material_size_table,
             )
             for size in SHOESIZERANGE:
                 setattr(
