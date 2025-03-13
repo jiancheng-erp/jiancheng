@@ -560,6 +560,10 @@ def submit_purchase_divide_orders():
     )
     order_id = order_info.Order.order_id
     order_rid = order_info.Order.order_rid
+    order_size_table = (
+        db.session.query(Order).filter(Order.order_id == order_id).first().order_size_table
+    )
+    order_size_dict = json.loads(order_size_table)
     materials_data = []
     query = (
         db.session.query(
@@ -654,7 +658,7 @@ def submit_purchase_divide_orders():
                 quantity_map[f"size_{size}_quantity"] = getattr(
                     assets_purchase_order_item, f"size_{size}_purchase_amount"
                 )
-
+            material_size_table = order_size_dict['楦头']
             size_material_storage = SizeMaterialStorage(
                 order_id=order_id,
                 material_id=material_id,
@@ -666,6 +670,7 @@ def submit_purchase_divide_orders():
                 size_material_color=color,
                 total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                 craft_name=craft_name,
+                shoe_size_columns = material_size_table,
             )
             for size in SHOESIZERANGE:
                 setattr(
