@@ -4,7 +4,7 @@
             <AllHeader></AllHeader>
         </el-header> <!--引用header-->
         <el-container>
-            <el-aside><!--引用aside-->
+            <el-aside width="280px"><!--引用aside-->
                 <div>
                     <el-avatar :icon="UserFilled" :size="100" />
                 </div>
@@ -20,7 +20,7 @@
                             <span>批量采购订单生成及下发</span>
                         </el-menu-item> -->
                         <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>材料待入库</span>
+                            <span>多码采购入库</span>
                         </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>材料待出库</span>

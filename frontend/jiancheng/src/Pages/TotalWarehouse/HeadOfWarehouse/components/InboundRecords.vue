@@ -7,7 +7,8 @@
             </el-date-picker>
         </el-col>
         <el-col :span="6" :offset="1">
-            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable>
             </el-input>
         </el-col>
 
@@ -15,8 +16,8 @@
     <el-row :gutter="20">
         <el-col :span="24">
             <el-table :data="tableData" border>
-                <el-table-column prop="totalPurchaseOrderRId" label="采购单号"></el-table-column>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
+                <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
@@ -51,38 +52,34 @@
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
                     <td style="padding:5px; width: 150px;" align="left">入库方式:{{
                         determineInboundName(currentRow.inboundType)
-                    }}</td>
+                        }}</td>
                 </tr>
             </table>
             <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
                 style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                 <tr>
-                    <th width="55">序号</th>
-                    <th>材料名</th>
-                    <th>型号</th>
-                    <th>规格</th>
+                    <th width="100">材料名</th>
+                    <th width="100">型号</th>
+                    <th width="200">规格</th>
                     <th width="80">颜色</th>
                     <th width="55">单位</th>
                     <th>订单号</th>
-                    <th>工厂型号</th>
-                    <th v-if="currentRow.materialCategory === 1" width="55"
+                    <th v-if="currentRow.isSizedMaterial === 1" width="50"
                         v-for="(column, index) in recordData.shoeSizeColumns" :key="index">{{ column.label }}</th>
                     <th v-else width="100">数量</th>
-                    <th v-if="currentRow.inboundType != 2" width="100">单价</th>
-                    <th v-if="currentRow.inboundType == 2" width="100">复合单价</th>
-                    <th width="100">总价</th>
+                    <th v-if="currentRow.inboundType != 2" width="80">单价</th>
+                    <th v-if="currentRow.inboundType == 2" width="80">复合单价</th>
+                    <th width="80">总价</th>
                     <th>备注</th>
                 </tr>
                 <tr v-for="(item, index) in recordData.items" :key="index" align="center">
-                    <td>{{ index + 1 }}</td>
                     <td>{{ item.materialName }}</td>
                     <td>{{ item.materialModel }}</td>
                     <td>{{ item.materialSpecification }}</td>
                     <td>{{ item.colorName }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
-                    <td>{{ item.shoeRId }}</td>
-                    <td v-if="currentRow.materialCategory === 'S'" v-for="(column, index) in recordData.shoeSizeColumns"
+                    <td v-if="currentRow.isSizedMaterial === 1" v-for="(column, index) in recordData.shoeSizeColumns"
                         :key="index">{{ item[column.prop] }}
                     </td>
                     <td v-else>{{ item.inboundQuantity }}</td>
@@ -219,29 +216,22 @@ export default {
         },
         async handleView(row) {
             this.currentRow = row
-            console.log(row)
             try {
-                let params = { "inboundBatchId": row.inboundBatchId, "materialCategory": row.materialCategory }
+                let params = { "inboundBatchId": row.inboundBatchId, "isSizedMaterial": row.isSizedMaterial }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
                 this.recordData["items"] = response.data
-
                 console.log(this.recordData["items"])
                 // if the purchase divide order type is S, then the inbound record is for shoe size
-                if (row.materialCategory == 1) {
-                    params = { "sizeMaterialStorageId": this.recordData["items"][0].materialStorageId, "orderId": row.orderId, "purchaseDivideOrderId": row.purchaseDivideOrderId }
-                    response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
-                    this.recordData["sizeMaterialInboundTable"] = response.data
-                    this.recordData["shoeSizeColumns"] = []
-                    // insert shoe size columns into current row
-                    this.recordData["sizeMaterialInboundTable"].forEach((element, index) => {
-                        // for display
-                        if (element.predictQuantity > 0) {
-                            this.recordData["shoeSizeColumns"].push({
-                                "prop": `amount${index}`,
-                                "label": element.shoeSizeName
-                            })
-                        }
-                    })
+                if (row.isSizedMaterial == 1) {
+                    let sizeColumns = []
+                    let tempTable = []
+                    let firstItem = this.recordData["items"][0]
+                    sizeColumns = JSON.parse(firstItem.shoeSizeColumns)
+                    for (let i = 0; i < sizeColumns.length; i++) {
+                        let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
+                        tempTable.push(obj)
+                    }
+                    this.recordData["shoeSizeColumns"] = tempTable
                 }
                 console.log(this.recordData)
                 this.dialogVisible = true
@@ -256,7 +246,7 @@ export default {
 </script>
 <style media="print">
 @page {
-    size: auto;
+    size: 241mm 93mm;
     margin: 3mm;
 }
 
