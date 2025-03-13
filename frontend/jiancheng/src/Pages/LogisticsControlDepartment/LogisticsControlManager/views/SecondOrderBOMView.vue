@@ -24,9 +24,30 @@
                         <el-descriptions-item label="订单预计截止日期" align="center">{{
                             orderData.deadlineTime
                         }}</el-descriptions-item>
-                        <el-descriptions-item label="调版及技术部确认状态" align="center">{{
-                            technicalConfirmStatus
-                        }}</el-descriptions-item>
+                        <el-descriptions-item label="楦头采购状态" align="center">{{
+                            orderData.lastStatus === '0' ? '未采购' : orderData.lastStatus === '1' ? '已保存' : '已采购'
+                        }}
+                            <el-button v-if="orderData.lastStatus === ('0' || '1')" type="primary" size="default"
+                                @click="openLastPurchasePage(orderData.orderDBId)">采购</el-button>
+                            <el-button v-else type="primary" size="default" @click="downloadLastZip(orderData.orderDBId)">下载楦头采购订单</el-button>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="刀模采购状态 " align="center">{{
+                            orderData.cuttingModelStatus === '0' ? '未采购' : orderData.cuttingModelStatus === '1' ? '已保存' : '已采购'
+                        }}
+                            <el-button v-if="orderData.cuttingModelStatus === ('0' || '1')" type="primary" size="default"
+                                @click="openCutModelPurchasePage(orderData.orderDBId)">采购</el-button>
+                            <el-button v-else type="primary" size="default" @click="">下载刀模采购订单</el-button>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="包材采购状态" align="center">{{
+                            orderData.packagingStatus === '0' ? '未采购' : orderData.packagingStatus === '1' ? '已保存' : '已采购'
+                        }}
+                            <el-button v-if="orderData.packagingStatus === ('0' || '1')" type="primary" size="default"
+                                @click="openPackagePurchasePage(orderData.orderDBId)">采购</el-button>
+                            <el-button v-else type="primary" size="default" @click="downloadPackageZip(orderData.orderDBId)">下载包材采购订单</el-button>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="尺码数量对照表" align="center">
+                            <el-button type="primary" size="default" @click="openSizeComparisonDialog">查看</el-button>
+                        </el-descriptions-item>
                     </el-descriptions>
                 </el-col>
             </el-row>
@@ -59,7 +80,7 @@
                                     <el-table-column label="操作">
                                         <template #default="scope">
                                             <el-button type="primary"
-                                                @click="openFirstBOMPreviewDialog(scope.row)">查看采购BOM表
+                                                @click="openSecondBOMPreviewDialog(scope.row)">查看采购BOM表
                                             </el-button>
                                         </template>
                                     </el-table-column>
@@ -79,9 +100,7 @@
                                 <div v-if="scope.row.currentStatus === '已保存'">
                                     <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
                                     <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
-                                    <!-- <el-button type="warning" @click="openSubmitDialog(scope.row)"
-                                        >提交</el-button
-                                    > -->
+                                    <el-button type="warning" @click="openSubmitDialog(scope.row)">提交</el-button>
                                 </div>
                                 <div v-else-if="scope.row.currentStatus === '已提交'">
                                     <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>
@@ -105,16 +124,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="投产指令单" align="center">
                         <el-button type="primary" size="default" @click="downloadProductionOrderList">
                             查看投产指令单
@@ -161,7 +180,7 @@
                 </el-row>
                 <el-row style="margin-top: 10px">
                     <el-col :span="24">
-                        <el-table :data="bomTestData" border stripe width="100%">
+                        <el-table :data="bomTestData" border stripe width="100%" height="400">
                             <el-table-column prop="materialProductionInstructionType" label="材料开发部标注类型"
                                 :formatter="translateProductionInstructionType"></el-table-column>
                             <el-table-column prop="materialType" label="材料类型" />
@@ -177,12 +196,13 @@
                             </el-table-column>
                             <el-table-column label="材料名称">
                                 <template #default="scope">
-                                    <el-select v-if="isEditEnabled" v-model="scope.row.materialName" placeholder="请选择"
-                                        @change="handleMaterialNameSelect(scope.row)" clearable filterable>
+                                    <el-select v-if="isEditEnabled" v-model="scope.row.inboundMaterialName"
+                                        placeholder="请选择" @change="handleMaterialNameSelect(scope.row)" clearable
+                                        filterable>
                                         <el-option v-for="item in materialNameOptions" :key="item.materialName"
                                             :label="item.label" :value="item.value" />
                                     </el-select>
-                                    <span v-else>{{ scope.row.materialName }}</span>
+                                    <span v-else>{{ scope.row.inboundMaterialName }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column label="材料型号">
@@ -206,18 +226,36 @@
                                     <span v-else>{{ scope.row.color }}</span>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="unit" label="单位"></el-table-column>
+                            <el-table-column label="单位">
+                                <template #default="scope">
+                                    <el-select v-model="scope.row.inboundUnit" placeholder="请选择" filterable
+                                        @change="handleUnitChange(scope.row)"
+                                        :disabled="!isEditEnabled && scope.row.unit === '双'  && scope.row.materialCategory === 1">
+                                        <el-option v-for="item in unitOptions" :key="item.value" :label="item.label"
+                                            :value="item.value" />
+                                    </el-select>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量"></el-table-column>
                             <el-table-column prop="approvalUsage" label="核定用量"></el-table-column>
                             <el-table-column prop="purchaseAmount" label="采购数量" width="150">
                                 <template #default="scope">
                                     <el-input-number v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.purchaseAmount" :min="0" size="small" />
+                                        v-model="scope.row.purchaseAmount" :min="0" size="small"
+                                        :ref="'purchaseInput-' + scope.$index"
+                                        @keydown="handleKeydown($event, scope.$index)" />
                                     <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default"
                                         @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
                                 </template>
                             </el-table-column>
+                            <el-table-column prop="storageAmount" label="使用仓库数量"></el-table-column>
                             <el-table-column prop="remark" label="开发部备注"></el-table-column>
+                            <el-table-column label="操作">
+                                <template #default="scope">
+                                    <el-button type="primary"
+                                        @click="openSimiliarMaterialDialog(scope.row, scope.$index)">库存相似材料</el-button>
+                                </template>
+                            </el-table-column>
                         </el-table>
                     </el-col>
 
@@ -232,7 +270,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`预览BOM表 ${previewFirstBomId}`" v-model="isPreviewFirstDialogVisible" width="90%">
+            <el-dialog :title="`预览BOM表 ${previewSecondBomId}`" v-model="isPreviewSecondDialogVisible" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
@@ -253,7 +291,7 @@
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
-                            <el-table :data="firstBomPreviewData" border style="width: 100%">
+                            <el-table :data="secondBomPreviewData" border style="width: 100%">
                                 <el-table-column prop="materialType" label="材料类型" />
                                 <!-- <el-table-column prop="materialDetailType" label="材料二级类型" /> -->
                                 <el-table-column prop="materialName" label="材料名称" />
@@ -271,13 +309,19 @@
                                 <el-table-column prop="approvalUsage" label="核定用量">
                                 </el-table-column>
                                 <el-table-column prop="remark" label="备注" />
+                                <el-table-column prop="isInboundSperate" label="入库单位是否不同"></el-table-column>
+                                <el-table-column prop="materialInboundName" label="入库材料名称">
+
+                                </el-table-column>
+                                <el-table-column prop="materialInboundUnit" label="入库单位"></el-table-column>
+                                <el-table-column prop="remark" label="开发部备注"></el-table-column>
                             </el-table>
                         </el-col>
                     </el-row>
                 </div>
                 <template #footer>
                     <span>
-                        <el-button type="primary" @click="isPreviewFirstDialogVisible = false">确认</el-button>
+                        <el-button type="primary" @click="isPreviewSecondDialogVisible = false">确认</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -285,6 +329,14 @@
             <el-dialog :title="`二次采购订单 ${previewBomId} 预览`" v-model="isPreviewDialogVisible" width="90%"
                 :close-on-click-modal="false">
                 <div style="height: 500px; overflow-y: scroll; overflow-x: hidden">
+                    <el-row :gutter="20">
+                        <el-col :span="6" :offset="0">
+                            <el-button type="primary" size="default" :disabled="!allPurchaseDivideOrderIssued"
+                                @click="advanceProcess">推进二次采购流程</el-button>
+
+                        </el-col>
+                    </el-row>
+
                     <el-row v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
                         style="margin-bottom: 20px">
                         <el-col :span="23">
@@ -308,6 +360,13 @@
                                     </span>
                                 </el-col>
                             </el-row>
+                            <el-row :gutter="20">
+                                <el-col :span="6" :offset="0">
+                                    <span style="color: red; font-weight: bolder;">订单状态: {{
+                                        purchaseDivideOrder.purchaseDivideOrderStatus }}</span>
+                                </el-col>
+                            </el-row>
+
                             <div v-if="
                                 factoryFieldJudge(purchaseDivideOrder.purchaseDivideOrderType)
                             ">
@@ -375,7 +434,8 @@
     <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
         <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
         <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane v-for="item in tabPlaneData" :key="item.purchaseDivideOrderId"
+            <el-tab-pane v-for="( item,index ) in tabPlaneData"
+                :key="index"
                 :label="item.purchaseDivideOrderId + '    ' + item.supplierName" :name="item.purchaseDivideOrderId"
                 style="min-height: 500px">
                 <el-row :gutter="20">
@@ -447,18 +507,90 @@
             </span>
         </template>
     </el-dialog>
+    <el-dialog title="查看库存相似材料" v-model="isSimiliarMaterialDialogVisible" :draggable="true" :modal="false"
+        :before-close="closeSimiliarDialog" width="80%">
+        <span>
+            <span>已选库存相似材料</span>
+            <el-table :data="selectSimiliarData" border stripe>
+                <el-table-column prop="orderRid" label="订单编号"></el-table-column>
+                <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
+                <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
+                <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                <el-table-column prop="color" label="颜色"></el-table-column>
+                <el-table-column prop="unit" label="单位"></el-table-column>
+                <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
+                <el-table-column label="使用数量">
+                    <template #default="scope">
+                        <el-input-number v-model="scope.row.useAmount" :min="0" :step="0.001" size="small" />
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作">
+                    <template #default="scope">
+                        <el-button type="primary" @click="handleSimiliarMaterialDelete(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <span>相似库存材料</span>
+            <el-table :data="similiarData" border stripe>
+                <el-table-column prop="orderRid" label="订单编号"></el-table-column>
+                <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
+                <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
+                <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                <el-table-column prop="color" label="颜色"></el-table-column>
+                <el-table-column prop="unit" label="单位"></el-table-column>
+                <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
+                <el-table-column label="操作">
+                    <template #default="scope">
+                        <el-button type="primary" @click="handleSimiliarMaterial(scope.row)">使用该库存材料</el-button>
+                    </template>
+                </el-table-column>
+
+            </el-table>
+        </span>
+        <template #footer>
+            <span>
+                <el-button @click="closeSimiliarDialog">取消</el-button>
+                <el-button type="primary" @click="saveSimiliarData">确认</el-button>
+            </span>
+        </template>
+    </el-dialog>
+    <el-dialog :title="`订单 ${orderData.orderId} 开发部尺码对照表`" v-model="isSizeComparisonDialogVisible" width="80%"
+        draggable="true">
+        <span>
+            <el-row justify="center" align="middle">
+                <h3>码数对照表</h3>
+            </el-row>
+            <el-row :gutter="20">
+                <el-col :span="24" :offset="0">
+                    <vxe-grid v-bind="sizeGridOptions">
+
+                    </vxe-grid>
+                </el-col>
+            </el-row>
+        </span>
+        <template #footer>
+            <span>
+                <el-button @click="isSizeComparisonDialogVisible = false">Cancel</el-button>
+                <el-button type="primary" @click="">OK</el-button>
+            </span>
+        </template>
+    </el-dialog>
+
 </template>
 
 <script>
+import { Search } from '@element-plus/icons-vue'
 import AllHeader from '@/components/AllHeader.vue'
 import Arrow from '@/components/OrderArrowView.vue'
 import axios from 'axios'
 import { getShoeSizesName } from '@/Pages/utils/getShoeSizesName'
 import { shoeBatchInfoTableSpanMethod } from '@/Pages/ProductionManagementDepartment/utils'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { markRaw } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
-
 export default {
     props: ['orderId'],
     components: {
@@ -469,6 +601,7 @@ export default {
         return {
             batchInfoSpanMethod: null,
             currentSizeIndex: 0,
+            currentSimiliarIndex: 0,
             purchaseOrderCreateVis: false,
             createEditSymbol: 0,
             newPurchaseOrderId: '',
@@ -476,6 +609,8 @@ export default {
             isPurchaseOrderVis: false,
             createVis: false,
             isSizeDialogVisible: false,
+            isSizeComparisonDialogVisible: false,
+            sizeGridOptions: [],
             sizeData: [],
             tabPlaneData: [],
             orderData: {},
@@ -483,9 +618,9 @@ export default {
             testTableFilterData: [],
             orderProduceInfo: [],
             bomTestData: [],
-            firstBomPreviewData: [],
-            previewFirstBomId: '',
-            isPreviewFirstDialogVisible: false,
+            secondBomPreviewData: [],
+            previewSecondBomId: '',
+            isPreviewSecondDialogVisible: false,
             supplierNameOptions: [],
             currentBOMId: '',
             purchaseTestData: [],
@@ -496,14 +631,17 @@ export default {
             getShoeSizesName,
             shoeSizeColumns: [],
             orderInfoVisible: true,
-            technicalConfirmStatus: '未确认',
-            orderInfoVisible: true,
             isEditEnabled: false,
             materialTypeOptions: [],
             materialNameOptions: [],
             currentOrderShoeRow: {},
             previewBomId: '',
             Search: markRaw(Search),
+            previewAdvanceSymbol: true,
+            unitOptions: [],
+            isSimiliarMaterialDialogVisible: false,
+            selectSimiliarData: [],
+            similiarData: [],
         }
     },
     async mounted() {
@@ -514,7 +652,8 @@ export default {
         this.$setAxiosToken()
         this.getOrderInfo()
         this.getAllShoeListInfo()
-        this.getTechnicalConfirmStatus()
+        await this.getAllPurchaseUnit()
+
     },
     computed: {
         processedBomTestData() {
@@ -540,9 +679,42 @@ export default {
                     materialProductionInstructionType:
                         typeMap[item.productionInstructionType] || item.productionInstructionType
                 }))
+        },
+        allPurchaseDivideOrderIssued() {
+            return this.purchaseTestData.every(item => item.purchaseDivideOrderStatus === "已下发") && this.previewAdvanceSymbol;
         }
     },
     methods: {
+        handleKeydown(event, index) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Stop default behavior
+
+                this.focusNextInput(index + 1);
+            }
+        },
+
+        focusNextInput(startIndex) {
+            this.$nextTick(() => {
+                let nextIndex = startIndex;
+                const maxIndex = this.bomTestData.length;
+
+                // Find the next available input (skip rows with buttons)
+                while (nextIndex < maxIndex && !this.$refs["purchaseInput-" + nextIndex]) {
+                    nextIndex++; // Move to next row
+                }
+
+                const inputComponent = this.$refs["purchaseInput-" + nextIndex];
+
+                if (inputComponent) {
+                    // Focus the input inside el-input-number
+                    const inputElement = inputComponent.$el.querySelector("input");
+                    if (inputElement) {
+                        inputElement.focus();
+                        inputElement.select(); // Optional: Select text for easier editing
+                    }
+                }
+            });
+        },
         async revertMaterialChanges() {
             ElMessageBox.confirm('确定要还原所有材料更改吗？', '提示', {
                 confirmButtonText: '确定',
@@ -579,6 +751,64 @@ export default {
             row.materialType = selectedMaterial.materialTypeName
             row.unit = selectedMaterial.unit
         },
+        async handleUnitChange(row) {
+            if (row.inboundUnit !== row.unit) {
+                row.inboundMaterialName = row.materialName + '-' + row.inboundUnit
+            }
+            else {
+                row.inboundMaterialName = row.materialName
+            }
+
+            console.log(row.inboundMaterialName)
+        },
+        handleSimiliarMaterial(row) {
+            this.selectSimiliarData.push(row)
+            this.similiarData = this.similiarData.filter(item => item !== row)
+        },
+        handleSimiliarMaterialDelete(row) {
+            this.similiarData.push(row)
+            this.selectSimiliarData = this.selectSimiliarData.filter(item => item !== row)
+        },
+        async openSizeComparisonDialog(row) {
+            await this.getSizeTableData(row);
+            this.sizeGridOptions.editConfig = false;
+            for (let item of this.sizeGridOptions.columns) {
+                item.width = 125;
+            }
+            this.isSizeComparisonDialogVisible = true;
+        },
+        async getSizeTableData(row) {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getsizetable?orderId=${this.orderData.orderDBId}`
+            )
+
+            this.sizeGridOptions = response.data
+            console.log(this.sizeGridOptions)
+        },
+        closeSimiliarDialog() {
+            this.similiarData = []
+            this.selectSimiliarData = []
+            this.isSimiliarMaterialDialogVisible = false
+        },
+        saveSimiliarData() {
+            if (this.selectSimiliarData.length === 0) {
+                this.bomTestData[this.currentSimiliarIndex].similiarMaterial = []
+                this.isSimiliarMaterialDialogVisible = false
+                return
+            }
+            // add a json object to bomTestData, like {type：0/1, ,materialstorageid: , useAmount: }
+            // transform the selectSimiliarData to the format json object
+            const similiarMaterial = this.selectSimiliarData.map(item => {
+                return {
+                    type: item.similiarType,
+                    materialStorageId: item.materialStorageId,
+                    useAmount: item.useAmount
+                }
+            })
+            this.bomTestData[this.currentSimiliarIndex].warehouseUsageInfo = similiarMaterial
+            this.isSimiliarMaterialDialogVisible = false
+
+        },
         async getAllMaterialNames() {
             const params = { department: 0 }
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
@@ -591,12 +821,6 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/allsuppliers`)
             this.supplierNameOptions = response.data
         },
-        async getTechnicalConfirmStatus() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/order/gettechnicalconfirmstatus?orderid=${this.orderId}`
-            )
-            this.technicalConfirmStatus = response.data.status
-        },
         translateProductionInstructionType(row) {
             const typeMap = {
                 S: '面料',
@@ -606,7 +830,6 @@ export default {
                 O: '大底',
                 H: '烫底'
             }
-            console.log(typeMap[row.materialProductionInstructionType])
             return typeMap[row.materialProductionInstructionType] || row.materialProductionInstructionType
         },
         toggleOrderInfo() {
@@ -622,37 +845,28 @@ export default {
                 )
             )
         },
-        async getAllDepartmentOptions() {
-            const response = await this.$axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
-            this.departmentOptions = response.data
-        },
-        async getAllColorOptions() {
-            const response = await this.$axios.get(`${this.$apiBaseUrl}/general/allcolors`)
-            this.colorOptions = response.data
-        },
         async getNewPurchaseOrderId() {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/secondpurchase/getnewpurchaseorderid`
             )
             this.newPurchaseOrderId = response.data.purchaseOrderId
         },
-        async getFirstBomPreviewData(row) {
+        async getSecondBomPreviewData(row) {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/usagecalculation/getshoebomitems`,
                 {
                     params: {
-                        bomrid: row.firstBomId
+                        bomrid: row.secondBomId
                     }
                 }
             )
-            this.firstBomPreviewData = response.data
+            this.secondBomPreviewData = response.data
         },
         async getOrderInfo() {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`
             )
             this.orderData = response.data
-            console.log(this.orderData.status)
         },
         async getAllShoeListInfo() {
             const response = await axios.get(
@@ -683,9 +897,16 @@ export default {
                     }
                 }
             )
-            console.log(response.data)
             this.bomPreviewData = response.data
             this.bomTestData = response.data
+            for (const item of this.bomTestData) {
+                item.purchaseAmount = Number(item.purchaseAmount)
+            }
+        },
+        async getAllPurchaseUnit() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallunit`)
+            this.unitOptions = response.data
+            console.log(this.unitOptions)
         },
         tableWholeFilter() {
             if (!this.inheritIdSearch) {
@@ -706,6 +927,9 @@ export default {
         },
         openSizeDialog(row, index) {
             this.sizeData = row.sizeInfo
+            for (const sizeRow of this.sizeData) {
+                sizeRow.purchaseAmount = parseFloat(sizeRow.approvalAmount) || 0
+            }
             this.isSizeDialogVisible = true
             this.currentSizeIndex = index
         },
@@ -725,6 +949,12 @@ export default {
             await this.getBOMDetails(row)
             this.currentBOMId = row.totalBomId
             this.currentPurchaseShoeId = row.inheritId
+            this.bomTestData.forEach((item) => {
+                item.storageAmount = item.warehouseUsageInfo.reduce(
+                    (total, item) => total + item.useAmount,
+                    0
+                )
+            })
             if (this.bomTestData && Array.isArray(this.bomTestData)) {
                 this.bomTestData.forEach((item) => {
                     // Set the item-level purchaseAmount to match approvalAmount
@@ -744,13 +974,43 @@ export default {
         handleGenerateClose() {
             this.createVis = false
         },
-        getFilteredFactoryOptions(materialName) {
-            const filteredOptions = this.factoryOptions.filter(
-                (option) => option.materialName === materialName
+        async openSimiliarMaterialDialog(row, index) {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/logistics/getmaterialstoragesimiliar`,
+                {
+                    params: {
+                        materialId: row.materialId,
+                        materialModel: row.materialModel,
+                        materialSpecification: row.materialSpecification,
+
+                    }
+                }
             )
-            return [{ factoryName: '询价' }, ...filteredOptions]
+            this.similiarData = response.data
+            if (row.warehouseUsageInfo.length > 0) {
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/logistics/getselectedmaterialstorage`,
+                    {
+                        params: {
+                            warehouseUsageInfo: row.warehouseUsageInfo
+                        }
+                    }
+                )
+                this.selectSimiliarData = response.data
+            }
+            else {
+                this.selectSimiliarData = []
+            }
+            this.currentSizeIndex = index
+            this.isSimiliarMaterialDialogVisible = true
         },
         async openPreviewDialog(row) {
+            if (row.currentStatus === '已提交') {
+                this.previewAdvanceSymbol = false
+            }
+            else {
+                this.previewAdvanceSymbol = true
+            }
             this.previewBomId = row.purchaseOrderId
             try {
                 const response = await axios.get(
@@ -768,10 +1028,10 @@ export default {
             }
             this.isPreviewDialogVisible = true
         },
-        async openFirstBOMPreviewDialog(row) {
-            this.previewFirstBomId = row.firstBomId
-            await this.getFirstBomPreviewData(row)
-            this.isPreviewFirstDialogVisible = true
+        async openSecondBOMPreviewDialog(row) {
+            this.previewSecondBomId = row.secondBomId
+            await this.getSecondBomPreviewData(row)
+            this.isPreviewSecondDialogVisible = true
         },
         async openEditDialog(row) {
             const loadingInstance = this.$loading({
@@ -779,8 +1039,8 @@ export default {
                 text: '等待中，请稍后...',
                 background: 'rgba(0, 0, 0, 0.7)'
             })
-            this.currentBOMId = row.totalBomId
             this.currentOrderShoeRow = row
+            this.currentBOMId = row.totalBomId
             await this.getOrderShoeBatchInfo(row.orderShoeId)
             await this.getBOMDetails(row)
             loadingInstance.close()
@@ -845,7 +1105,7 @@ export default {
                 type: 'success',
                 message: '保存成功'
             })
-            this.createVis = false
+            // this.createVis = false
             this.getAllShoeListInfo()
         },
         async submitBOMUsage(row) {
@@ -1027,6 +1287,40 @@ export default {
                     })
                 })
         },
+        advanceProcess() {
+            this.$confirm('确定推进二次采购流程吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+                .then(async () => {
+                    const response = await axios.post(
+                        `${this.$apiBaseUrl}/secondpurchase/advanceprocess`,
+                        {
+                            purchaseOrderId: this.previewBomId
+                        }
+                    )
+                    if (response.status !== 200) {
+                        this.$message({
+                            type: 'error',
+                            message: '推进失败'
+                        })
+                        return
+                    }
+                    this.$message({
+                        type: 'success',
+                        message: '推进成功'
+                    })
+                    this.isPreviewDialogVisible = false
+                    this.getAllShoeListInfo()
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消推进'
+                    })
+                })
+        },
         downloadProductionOrderList() {
             window.open(
                 `${this.$apiBaseUrl}/devproductionorder/download?ordershoerid=${this.currentPurchaseShoeId}&orderid=${this.orderData.orderId}`
@@ -1046,7 +1340,35 @@ export default {
             window.open(
                 `${this.$apiBaseUrl}/secondpurchase/downloadmaterialstatistics?orderrid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`
             )
-        }
+        },
+        openLastPurchasePage(orderId) {
+            //open a new page named lastpurchase
+            window.open(`${window.location.origin}/lastpurchase/orderid=${orderId}`, '_blank')
+        },
+        openPackagePurchasePage(orderId) {
+            //open a new page named packagepurchase
+            window.open(`${window.location.origin}/packagepurchase/orderid=${orderId}`, '_blank')
+        },
+        openCutModelPurchasePage(orderId) {
+            //open a new page named cutmodelpurchase
+            window.open(`${window.location.origin}/cutmodelpurchase/orderid=${orderId}`, '_blank')
+        },
+        downloadLastZip(orderId) {
+            window.open(
+                `${this.$apiBaseUrl}/logistics/downloadlastpurchaseorders?orderId=${orderId}`
+            )
+        },
+        downloadPackageZip(orderId) {
+            window.open(
+                `${this.$apiBaseUrl}/logistics/downloadpackagepurchaseorders?orderId=${orderId}`
+            )
+        },
+        downloadCutModelZip(orderId) {
+            window.open(
+                `${this.$apiBaseUrl}/logistics/downloadcutmodelpurchaseorders?orderId=${orderId}`
+            )
+        },
+        
     }
 }
 </script>

@@ -16,9 +16,9 @@
                         <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>二次（总仓）采购订单创建</span>
                         </el-menu-item>
-                        <el-menu-item index="11" @click="handleMenuClick(11)">
+                        <!-- <el-menu-item index="11" @click="handleMenuClick(11)">
                             <span>批量采购订单生成及下发</span>
-                        </el-menu-item>
+                        </el-menu-item> -->
                         <el-menu-item index="1" @click="handleMenuClick(1)">
                             <span>材料待入库</span>
                         </el-menu-item>

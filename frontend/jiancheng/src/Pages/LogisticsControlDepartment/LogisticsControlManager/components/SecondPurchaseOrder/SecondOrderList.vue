@@ -8,7 +8,7 @@
             <el-table :data="pendingTaskData" style="height: 200px" @row-click="handleRowClick"
                 v-loading="datafinished">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
-                <el-table-column prop="orderId" label="订单号"></el-table-column>
+                <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
             </el-table>
 
@@ -30,7 +30,7 @@
             <el-table :data="inProgressTaskData" style="height: 200px" @row-click="handleRowClick"
                 v-loading="datafinished">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
-                <el-table-column prop="orderId" label="订单号"></el-table-column>
+                <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>
             </el-table>
 
