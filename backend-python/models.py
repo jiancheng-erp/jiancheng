@@ -232,7 +232,7 @@ class MaterialStorage(db.Model):
     material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
     material_outsource_outbound_date = db.Column(db.Date)
     material_storage_color = db.Column(db.String(40), default="", nullable=True)
-    total_purchase_order_id = db.Column(db.BigInteger, nullable=False)
+    total_purchase_order_id = db.Column(db.BigInteger, nullable=True)
     material_estimated_arrival_date = db.Column(db.Date)
     material_storage_status = db.Column(db.SmallInteger, default=0)
     department_id = db.Column(db.Integer)
@@ -954,6 +954,7 @@ class SizeMaterialStorage(db.Model):
     material_storage_status = db.Column(db.SmallInteger, default=0)
     craft_name = db.Column(db.String(200), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    shoe_size_columns = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f"<SizeMaterialStorage {self.size_material_specification}>"
@@ -1118,7 +1119,26 @@ class InboundRecord(db.Model):
     inbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     inbound_rid = db.Column(db.String(50), nullable=True)
     inbound_batch_id = db.Column(db.Integer, nullable=True)
-    inbound_amount = db.Column(db.DECIMAL(10, 5))
+    supplier_id = db.Column(db.Integer, nullable=True)
+    inbound_datetime = db.Column(db.DateTime, nullable=False)
+    inbound_type = db.Column(db.SmallInteger, nullable=False)
+    total_price = db.Column(db.DECIMAL(10, 3), nullable=True)
+    remark = db.Column(db.String(40), nullable=True)
+    is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
+
+    def __repr__(self):
+        return f"<InboundRecord {self.inbound_rid}>"
+
+
+class InboundRecordDetail(db.Model):
+    __tablename__ = 'inbound_record_detail'
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    inbound_record_id = db.Column(db.BigInteger, nullable=True)
+    unit_price = db.Column(db.DECIMAL(10, 3), nullable=False, default=0.000)
+    inbound_amount = db.Column(db.DECIMAL(10, 5), nullable=False)
+    composite_unit_cost = db.Column(db.DECIMAL(10, 3), nullable=True)
+
     size_34_inbound_amount = db.Column(db.Integer, nullable=True)
     size_35_inbound_amount = db.Column(db.Integer, nullable=True)
     size_36_inbound_amount = db.Column(db.Integer, nullable=True)
@@ -1132,14 +1152,13 @@ class InboundRecord(db.Model):
     size_44_inbound_amount = db.Column(db.Integer, nullable=True)
     size_45_inbound_amount = db.Column(db.Integer, nullable=True)
     size_46_inbound_amount = db.Column(db.Integer, nullable=True)
-    inbound_datetime = db.Column(db.DateTime, nullable=False)
-    inbound_type = db.Column(db.SmallInteger, nullable=False)
+
     material_storage_id = db.Column(db.BigInteger, nullable=True)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
 
     def __repr__(self):
-        return f"<InboundRecord {self.inbound_rid}>"
+        return f"<InboundRecordDetail id={self.id} inbound_record_id={self.inbound_record_id}>"
 
 
 class OutboundRecord(db.Model):

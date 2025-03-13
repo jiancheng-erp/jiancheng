@@ -2246,6 +2246,7 @@ export default {
             console.log(this.sizeGridOptions)
         },
         async openPreviewDialog(row) {
+            this.currentOrderShoeRow = row
             this.newProductionInstructionId = ''
             this.materialWholeData = []
             this.currentShoeId = row.inheritId
