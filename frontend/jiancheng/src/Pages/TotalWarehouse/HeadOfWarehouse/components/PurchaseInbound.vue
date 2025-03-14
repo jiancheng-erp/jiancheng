@@ -14,10 +14,8 @@
                         value-format="YYYY-MM-DD HH:mm:ss" clearable />
                 </el-form-item>
                 <el-form-item prop="supplierName" label="厂家名称">
-                    <el-select v-model="inboundForm.supplierName" filterable clearable>
-                        <el-option v-for="item in materialSupplierOptions" :key="item" :value="item"
-                            :label="item"></el-option>
-                    </el-select>
+                    <el-autocomplete v-model="inboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
+                        @select="handleSupplierSelect" />
                 </el-form-item>
                 <el-form-item prop="inboundType" label="入库类型">
                     <el-select v-model="inboundForm.inboundType" filterable clearable>
@@ -30,6 +28,19 @@
                 </el-form-item> -->
                 <el-form-item prop="remark" label="备注">
                     <el-input v-model="inboundForm.remark"></el-input>
+                </el-form-item>
+                <el-form-item prop="shoeSize" label="码段">
+                    <el-select v-model="inboundForm.shoeSize" filterable clearable @change="insertShoeSizeColumns">
+                        <el-option v-for="item in logisticsShoeSizes" :key="item.batchInfoTypeId"
+                            :value="item.batchInfoTypeId" :label="item.batchInfoTypeName">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item prop="payMethod" label="结算方式">
+                    <el-select v-model="inboundForm.payMethod" filterable clearable>
+                        <el-option v-for="item in ['应付账款', '现金']" :key="item" :value="item"
+                            :label="item"></el-option>
+                    </el-select>
                 </el-form-item>
             </el-form>
         </el-col>
@@ -96,11 +107,11 @@
                         <vxe-input v-model="row.remark" clearable></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column v-for="item in shoeSizeColumns" :field="item.value" :title="item.column"
+                <vxe-column v-for="item in shoeSizeColumns" :field="item.prop" :title="item.label"
                     :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row[item.value]" type="integer" clearable @change="updateTotalShoes(row)"
-                            :min="0"></vxe-number-input>
+                        <vxe-number-input v-model="row[item.prop]" type="integer" clearable
+                            @change="updateTotalShoes(row)" :min="0"></vxe-number-input>
                     </template>
                 </vxe-column>
             </vxe-table>
@@ -114,6 +125,7 @@
                         class="radio-class"></el-radio>
                 </template>
             </el-table-column>
+            <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
             <el-table-column prop="materialName" label="材料名称"></el-table-column>
             <el-table-column prop="materialModel" label="材料型号"></el-table-column>
             <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
@@ -131,56 +143,75 @@
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false"
         @closed="closePreviewDialog">
-        <div>
-            <div style="border: 1px solid #409eff; padding: 16px">
-                <div ref="topElRef">
-                    <div style="margin-bottom: 8px;">
-                        <div style="display: inline-block;width: 100%;">
-                            <div style="float: left; width: 25%;height: 28px;line-height: 28px;">
-                                {{ `厂家名称：${previewInboundForm.supplierName}` }}
-                            </div>
-                            <div style="float: left; width: 25%;height: 28px;line-height: 28px;">
-                                {{ `入库单号：${previewInboundForm.inboundRId}` }}
-                            </div>
-                            <div style="float: left; width: 25%;height: 28px;line-height: 28px;">
-                                {{ `日期：${previewInboundForm.currentDateTime}` }}
-                            </div>
-                            <div style="float: left; width: 25%;height: 28px;line-height: 28px;">
-                                {{ `入库类型：${determineInboundName(previewInboundForm.inboundType)}` }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <vxe-table ref="previewTableRef" border height="300" :print-config="{}" :data="previewData" header-align="center" align="center">
-                    <vxe-column field="materialName" title="名称" ></vxe-column>
-                    <vxe-column field="materialModel" title="型号"></vxe-column>
-                    <vxe-column field="materialSpecification" title="规格" width="200" :cell-style="{ 'white-space': 'normal', 'word-break': 'break-word' }"></vxe-column>
-                    <vxe-column field="materialColor" title="颜色"></vxe-column>
-                    <vxe-column field="actualInboundUnit" title="单位"></vxe-column>
-                    <vxe-column field="orderRId" title="订单号"></vxe-column>
-                    <vxe-column v-if="materialTableData.length > 0 && materialTableData[0].materialCategory == 0"
-                        field="inboundQuantity" title="数量"></vxe-column>
-                    <vxe-column v-else v-for="item in shoeSizeColumns" :field="item.value"
-                        :title="item.column"></vxe-column>
-                    <vxe-column field="unitPrice" title="单价"></vxe-column>
-                    <vxe-column field="totalPrice" title="金额"></vxe-column>
-                    <vxe-column field="remark" title="备注"></vxe-column>
-                </vxe-table>
-                <div ref="bottomElRef">
-                    <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
-                        <div style="display: flex;">
-                            <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                                calculateInboundTotal }}</span></span>
-                            <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                                calculateTotalPriceSum }}</span></span>
-                        </div>
-                    </div>
+        <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
+            <h2 style="text-align: center;">健诚鞋业入库单</h2>
+            <div style="display: flex; justify-content: flex-end; padding: 5px;">
+                <span style="font-weight: bolder;font-size: 16px;">
+                    单据编号：{{ previewInboundForm.inboundRId }}
+                </span>
+            </div>
+            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
+                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                <tr>
+                    <!-- <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ inboundForm.totalPurchaseOrderRId }}
+                    </td> -->
+                    <td style="padding:5px; width: 150px;" align="left">供应商:{{ previewInboundForm.supplierName }}</td>
+                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{ previewInboundForm.currentDateTime }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">入库方式:{{
+                        determineInboundName(previewInboundForm.inboundType)
+                        }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{previewInboundForm.payMethod}}</td>
+                </tr>
+            </table>
+            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
+                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                <tr>
+                    <th width="100">材料名</th>
+                    <th width="100">型号</th>
+                    <th width="200">规格</th>
+                    <th width="80">颜色</th>
+                    <th width="55">单位</th>
+                    <th>订单号</th>
+                    <th v-if="previewData.length > 0 && previewData[0].materialCategory == 0" width="100">数量</th>
+                    <th v-else width="50" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
+                        column.label }}
+                    </th>
+                    <th v-if="previewInboundForm.inboundType != 2" width="80">单价</th>
+                    <th v-if="previewInboundForm.inboundType == 2" width="80">复合单价</th>
+                    <th width="80">总价</th>
+                    <th>备注</th>
+                </tr>
+                <tr v-for="(item, index) in previewData" :key="index" align="center">
+                    <td>{{ item.materialName }}</td>
+                    <td>{{ item.materialModel }}</td>
+                    <td>{{ item.materialSpecification }}</td>
+                    <td>{{ item.materialColor }}</td>
+                    <td>{{ item.actualInboundUnit }}</td>
+                    <td>{{ item.orderRId }}</td>
+                    <td v-if="previewData.length > 0 && previewData[0].materialCategory == 0">{{ item.inboundQuantity }}
+                    </td>
+                    <td v-else v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
+                    </td>
+                    <td>{{ item.unitPrice }}</td>
+                    <td>{{ item.totalPrice }}</td>
+                    <td>{{ item.remark }}</td>
+                </tr>
+            </table>
+            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
+                <div style="display: flex;">
+                    <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
+                        calculateInboundTotal }}</span></span>
+                    <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
+                        calculateTotalPriceSum }}</span></span>
+                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{ previewInboundForm.remark }}</span></span>
                 </div>
             </div>
         </div>
         <template #footer>
-            <el-button type="primary" @click="submitInboundForm">入库</el-button>
-            <el-button type="primary" @click="printEvent">打印</el-button>
+            <el-button type="primary" v-print="'#printView'">打印</el-button>
+            <el-button type="primary"
+                @click="downloadPDF(`健诚鞋业入库单${inboundForm.inboundRId}`, `printView`)">下载PDF</el-button>
+            <el-button v-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
         </template>
     </el-dialog>
 </template>
@@ -188,7 +219,8 @@
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MaterialSearchDialog from './MaterialSearchDialog.vue';
-import VxeUI from 'vxe-table'
+import htmlToPdf from '@/Pages/utils/htmlToPdf';
+import print from 'vue3-print-nb'
 export default {
     components: {
         MaterialSearchDialog,
@@ -218,7 +250,9 @@ export default {
                 warehouseName: '',
                 inboundType: 0,
                 inboundRId: '',
-                remark: ''
+                remark: '',
+                shoeSize: null,
+                payMethod: '',
             },
             rowTemplate: {
                 materialName: '',
@@ -228,6 +262,7 @@ export default {
                 materialCraftName: '',
                 inboundQuantity: 0,
                 unitPrice: 0,
+
             },
             isMaterialSelectDialogVis: false,
             materialSelection: {},
@@ -254,11 +289,13 @@ export default {
                 { label: '复合入库', value: 2 }
             ],
             shoeSizeColumns: [],
-            previewData: []
+            previewData: [],
+            logisticsShoeSizes: []
         }
     },
-    mounted() {
+    async mounted() {
         this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
+        await this.getLogisticsShoeSizes()
     },
     computed: {
         calculateInboundTotal() {
@@ -275,12 +312,58 @@ export default {
             }, 0);
             return Number(total).toFixed(2);
         },
+        filteredShoeSizeColumns() {
+            return this.shoeSizeColumns.filter(column =>
+                this.previewData.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
+            )
+        }
     },
     methods: {
+        querySuppliers(queryString, callback) {
+            const results = this.materialSupplierOptions
+                .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
+                .map((item) => ({ value: item }));
+
+            callback(results);
+        },
+        handleSupplierSelect(item) {
+            this.inboundForm.supplierName = item.value;
+        },
+        async getLogisticsShoeSizes() {
+            const response = await axios.get(`${this.$apiBaseUrl}/batchtype/getallbatchtypeslogistics`)
+            this.logisticsShoeSizes = response.data.batchDataTypes
+        },
+        insertShoeSizeColumns() {
+            let selectedShoeSize = this.logisticsShoeSizes.filter((item) => item.batchInfoTypeId == this.inboundForm.shoeSize)[0]
+            let tempTable = []
+
+            if (selectedShoeSize) {
+                let length = Object.keys(selectedShoeSize).filter(key => key.startsWith("size")).length;
+                for (let i = 0; i < length; i++) {
+                    let db_size = i + 34
+                    let size_name = selectedShoeSize[`size${db_size}Name`]
+                    if (size_name === null) {
+                        break
+                    }
+                    let obj = {
+                        "label": size_name,
+                        "prop": `amount${i}`
+                    }
+                    tempTable.push(obj)
+
+                }
+            }
+
+            this.shoeSizeColumns = [...tempTable]
+            console.log(this.shoeSizeColumns)
+        },
         updateTotalShoes(row) {
             let total = 0
             for (let i = 0; i < this.shoeSizeColumns.length; i++) {
-                total += Number(row[this.shoeSizeColumns[i].value])
+                if (row[this.shoeSizeColumns[i].prop] === undefined) {
+                    row[this.shoeSizeColumns[i].prop] = 0
+                }
+                total += Number(row[this.shoeSizeColumns[i].prop])
             }
             row.inboundQuantity = total
             row.totalPrice = (total * row.unitPrice).toFixed(2)
@@ -364,9 +447,9 @@ export default {
             let sizeColumns = []
             let tempTable = []
             if (this.materialTableData[0].materialCategory == 1) {
-                sizeColumns = JSON.parse(this.materialTableData[0].shoeSizeColumns)
+                sizeColumns = this.materialTableData[0].shoeSizeColumns
                 for (let i = 0; i < sizeColumns.length; i++) {
-                    let obj = { "column": sizeColumns[i], "value": `amount${i}` }
+                    let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
                     tempTable.push(obj)
                     let estimatedInboundAmount = this.materialTableData[this.currentIndex][`estimatedInboundAmount${i}`]
                     let actualInboundAmount = this.materialTableData[this.currentIndex][`actualInboundAmount${i}`]
@@ -390,7 +473,9 @@ export default {
                 currentDateTime: this.inboundForm.currentDateTime,
                 supplierName: this.inboundForm.supplierName,
                 remark: this.inboundForm.remark,
-                items: this.materialTableData
+                items: this.materialTableData,
+                batchInfoTypeId: this.inboundForm.shoeSize,
+                payMethod: this.inboundForm.payMethod,
             }
             try {
                 const response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
@@ -416,11 +501,20 @@ export default {
                     this.previewData = JSON.parse(JSON.stringify(this.materialTableData))
                     this.previewInboundForm = JSON.parse(JSON.stringify(this.inboundForm))
                     for (let i = 0; i < this.previewData.length; i++) {
+                        let item = this.previewData[i]
                         // trim and upper the orderRId
-                        this.previewData[i].orderRId = this.previewData[i].orderRId.trim().toUpperCase()
-                        this.previewData[i].materialModel = this.previewData[i].materialModel.trim()
-                        this.previewData[i].materialSpecification = this.previewData[i].materialSpecification.trim()
-                        this.previewData[i].materialColor = this.previewData[i].materialColor.trim()
+                        if (item.orderRId != null) {
+                            item.orderRId = item.orderRId.trim().toUpperCase();
+                        }
+                        if (item.materialModel != null) {
+                            item.materialModel = item.materialModel.trim();
+                        }
+                        if (item.materialSpecification != null) {
+                            item.materialSpecification = item.materialSpecification.trim();
+                        }
+                        if (item.materialColor != null) {
+                            item.materialColor = item.materialColor.trim();
+                        }
                     }
                     this.isPreviewDialogVis = true;
                 } else {
@@ -433,29 +527,9 @@ export default {
             this.isInbounded = 0
             this.isPreviewDialogVis = false;
         },
-        async printEvent() {
-            const $table = this.$refs.previewTableRef
-            if ($table) {
-                const printRest = await $table.getPrintHtml()
-                const topEl = this.$refs.topElRef
-                const bottomEl = this.$refs.bottomElRef
-                const topHtml = topEl ? topEl.innerHTML : ''
-                const bottomHtml = bottomEl ? bottomEl.innerHTML : ''
-                VxeUI.print({
-                    title: '健诚鞋业入库单',
-                    pageBreaks: [
-                        // 第一页
-                        {
-                            bodyHtml: topHtml + printRest.html + bottomHtml
-                        }
-                    ],
-                    customStyle: `
-                        @page { size: 241mm 93mm; margin: 0; }
-                        .vxe-body--column { white-space: normal; word-wrap: break-word; }
-                    `,
-                })
-            }
-        }
+        downloadPDF(title, domName) {
+            htmlToPdf.getPdf(title, domName);
+        },
     },
 }
 </script>
@@ -471,13 +545,30 @@ export default {
 .radio-class .el-radio__label {
     display: none;
 }
+</style>
 
+<style media="print">
+@page {
+    size: 241mm 93mm;
+    margin: 3mm;
+}
+
+html {
+    background-color: #ffffff;
+    margin: 0px;
+}
+
+body {
+    border: solid 1px #ffffff;
+}
+</style>
+
+<style lang="scss" scoped>
 @media print {
-    @page {
-        size: 241mm 93mm;
-        /* Custom page size */
-        margin: 0;
-        /* Remove any extra margins */
+    #printView {
+        display: block;
+        width: 100%;
+        overflow: hidden;
     }
 }
 </style>

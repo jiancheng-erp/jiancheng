@@ -17,6 +17,7 @@ from sqlalchemy import and_, asc, desc, exists, func, not_, or_, text, literal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 import json
+from accounting.accounting_transaction import add_payable_entity, material_inbound_accounting_event
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
@@ -746,7 +747,7 @@ def _find_order_shoe(order_rid):
     return entities.Order, entities.OrderShoe
 
 
-def _find_storage_in_db(item, supplier_name):
+def _find_storage_in_db(item, supplier_name, batch_info_type_id):
     """
     处理用户手动输入的材料信息
     """
@@ -833,6 +834,17 @@ def _find_storage_in_db(item, supplier_name):
                 order_shoe_id=order_shoe_id,
             )
         elif material_category == 1:
+            batch_info_type = db.session.query(BatchInfoType).filter(
+                BatchInfoType.batch_info_type_id == batch_info_type_id
+            ).first()
+            shoe_size_columns = []
+            for i in range(len(SHOESIZERANGE)):
+                db_name = i + 34
+                size_name = getattr(batch_info_type, f"size_{db_name}_name")
+                if size_name:
+                    shoe_size_columns.append(size_name)
+                else:
+                    break
             storage = SizeMaterialStorage(
                 material_id=material_id,
                 size_material_specification=material_specification,
@@ -840,6 +852,7 @@ def _find_storage_in_db(item, supplier_name):
                 size_material_color=material_color,
                 order_id=order_id,
                 order_shoe_id=order_shoe_id,
+                shoe_size_columns=shoe_size_columns,
             )
         db.session.add(storage)
         db.session.flush()
@@ -871,6 +884,8 @@ def inbound_material():
     inbound_rid = "IR" + formatted_timestamp + f"{counter:02}"
 
     supplier_name = data.get("supplierName", None)
+    
+    batch_info_type_id = data.get("batchInfoTypeId", None)
 
     supplier = (
         db.session.query(Supplier)
@@ -886,6 +901,7 @@ def inbound_material():
         inbound_batch_id=next_group_id,
         supplier_id=supplier.supplier_id,
         remark=remark,
+        pay_method=data.get("payMethod", None),
     )
     db.session.add(inbound_record)
     db.session.flush()
@@ -897,7 +913,7 @@ def inbound_material():
         storage_id = item.get("materialStorageId", None)
         # 用户手填材料
         if not storage_id:
-            storage_id, storage = _find_storage_in_db(item, supplier_name)
+            storage_id, storage = _find_storage_in_db(item, supplier_name, batch_info_type_id)
         # 用户选择了材料
         else:
             if item["materialCategory"] == 0:
@@ -955,6 +971,18 @@ def inbound_material():
                 setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     inbound_record.total_price = total_price
+
+    # 财务
+    code = material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
+    # create payee if not exist
+    if code == 1:
+        payable_entity_code = add_payable_entity(supplier_name)
+        if payable_entity_code == 0:
+            material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
+    elif code == 2:
+        return jsonify(
+            {"message": "payable entity not exist"}, 400
+        )
     db.session.commit()
     return jsonify({"message": "success", "inboundRId": inbound_rid})
 
@@ -1327,6 +1355,8 @@ def get_material_inbound_records():
             "inboundRId": inbound_record.inbound_rid,
             "isSizedMaterial": inbound_record.is_sized_material,
             "supplierName": supplier.supplier_name,
+            "payMethod": inbound_record.pay_method,
+            "remark": inbound_record.remark,
         }
         result.append(obj)
     return {"result": result, "total": count_result}

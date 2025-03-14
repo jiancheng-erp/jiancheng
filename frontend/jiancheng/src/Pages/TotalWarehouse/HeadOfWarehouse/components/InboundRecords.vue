@@ -35,7 +35,7 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="入库单详情" v-model="dialogVisible" width="80%">
+    <el-dialog title="入库单详情" v-model="dialogVisible" width="90%">
         <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
             <h2 style="text-align: center;">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px;">
@@ -46,13 +46,12 @@
             <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
                 style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                 <tr>
-                    <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ currentRow.totalPurchaseOrderRId }}
-                    </td>
-                    <td style="padding:5px; width: 150px;" align="left">供应商:{{ recordData.items[0].supplierName }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">供应商:{{ currentRow.supplierName }}</td>
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
                     <td style="padding:5px; width: 150px;" align="left">入库方式:{{
                         determineInboundName(currentRow.inboundType)
                         }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{currentRow.payMethod}}</td>
                 </tr>
             </table>
             <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
@@ -65,7 +64,7 @@
                     <th width="55">单位</th>
                     <th>订单号</th>
                     <th v-if="currentRow.isSizedMaterial === 1" width="50"
-                        v-for="(column, index) in recordData.shoeSizeColumns" :key="index">{{ column.label }}</th>
+                        v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ column.label }}</th>
                     <th v-else width="100">数量</th>
                     <th v-if="currentRow.inboundType != 2" width="80">单价</th>
                     <th v-if="currentRow.inboundType == 2" width="80">复合单价</th>
@@ -79,7 +78,7 @@
                     <td>{{ item.colorName }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
-                    <td v-if="currentRow.isSizedMaterial === 1" v-for="(column, index) in recordData.shoeSizeColumns"
+                    <td v-if="currentRow.isSizedMaterial === 1" v-for="(column, index) in filteredShoeSizeColumns"
                         :key="index">{{ item[column.prop] }}
                     </td>
                     <td v-else>{{ item.inboundQuantity }}</td>
@@ -95,6 +94,7 @@
                         calculateInboundTotal() }}</span></span>
                     <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
                         calculateTotalPriceSum() }}</span></span>
+                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{ currentRow.remark }}</span></span>
                 </div>
             </div>
         </div>
@@ -147,6 +147,13 @@ export default {
     },
     mounted() {
         this.getInboundRecordsTable()
+    },
+    computed: {
+        filteredShoeSizeColumns() {
+            return this.recordData.shoeSizeColumns.filter(column =>
+                this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
+            )
+        }
     },
     methods: {
         calculateInboundTotal() {
@@ -226,7 +233,7 @@ export default {
                     let sizeColumns = []
                     let tempTable = []
                     let firstItem = this.recordData["items"][0]
-                    sizeColumns = JSON.parse(firstItem.shoeSizeColumns)
+                    sizeColumns = firstItem.shoeSizeColumns
                     for (let i = 0; i < sizeColumns.length; i++) {
                         let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
                         tempTable.push(obj)
