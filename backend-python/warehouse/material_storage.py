@@ -474,7 +474,7 @@ def get_materials():
         )
     if filters["supplier"] and filters["supplier"] != "":
         material_query = material_query.filter(
-            Supplier.supplier_name.ilike(f"%{filters["supplier"]}%")
+            Supplier.supplier_name.ilike(f"%{filters['supplier']}%")
         )
     entities = material_query.first()
 
