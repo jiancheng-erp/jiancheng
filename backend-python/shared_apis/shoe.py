@@ -6,6 +6,7 @@ from file_locations import IMAGE_STORAGE_PATH
 from api_utility import to_camel, to_snake
 from login.login import current_user, current_user_info
 import json
+import time
 
 shoe_bp = Blueprint("shoe_bp", __name__)
 
@@ -52,59 +53,109 @@ def get_all_shoes():
 
 @shoe_bp.route("/shoe/getallshoesnew", methods=["GET"])
 def get_all_shoes_new():
+    time_s = time.time()
     shoe_rid = request.args.get("shoerid")
     _, _, department = current_user_info()
-    shoe_department = department.department_name
-    if shoe_rid is None:
-        if shoe_department in ["开发一部", "开发二部", "开发三部"]:
-            shoe_entities = (
-                db.session.query(Shoe)
-                .filter(Shoe.shoe_department_id == shoe_department)
-                .all()
-            )
-        else:
-            shoe_entities = (
-                db.session.query(Shoe)
-                .all()
-            )
-    else:
-        if shoe_department in ["开发一部", "开发二部", "开发三部"]:
-            shoe_entities = (
-                db.session.query(Shoe)
-                .filter(Shoe.shoe_department_id == shoe_department)
-                .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
-                .all()
-            )
-        else:
-            shoe_entities = (
-                db.session.query(Shoe)
-                .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
-                .all()
-            )
+    user_department = department.department_name
     result_data = []
-    for shoe in shoe_entities:
-        shoe_response_data = dict()
-        for attr in SHOE_TABLE_ATTRNAMES:
-            shoe_response_data[to_camel(attr)] = getattr(shoe, attr)
-        shoe_type_entities = (db.session.query(ShoeType, Color)
-                              .join(Color, ShoeType.color_id == Color.color_id)
-                              .filter(ShoeType.shoe_id == shoe.shoe_id)
-                              .all())
-        shoe_type_list = []
-        for shoe_type in shoe_type_entities:
-            shoe_type_response_data = dict()
-            for attr in SHOETYPE_TABLE_ATTRNAMES:
-                shoe_type_response_data[to_camel(attr)] = getattr(shoe_type.ShoeType, attr)
-            shoe_type_response_data['colorName'] = shoe_type.Color.color_name
-            shoe_type_response_data['shoeRid'] = shoe.shoe_rid
-            if shoe_type.ShoeType.shoe_image_url:
-                shoe_type_response_data['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.ShoeType.shoe_image_url
-            else:
-                shoe_type_response_data['shoeImageUrl'] = None
-            shoe_type_list.append(shoe_type_response_data)
-        shoe_response_data['shoeTypeData'] = shoe_type_list
-        result_data.append(shoe_response_data)
+    
+    query = (
+        db.session.query(Shoe, ShoeType, Color)
+            .outerjoin(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
+            .outerjoin(Color, ShoeType.color_id == Color.color_id)
+    )
+    print("shoe rid is " + str(shoe_rid))
+    if user_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
+        query = query.filter(Shoe.shoe_department_id == user_department)
+    if shoe_rid is not None:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    response = query.all()
+    meta_data = {}
+    for row in response:
+        shoe, shoe_type, color = row
+        if shoe.shoe_id not in meta_data.keys():
+            meta_data[shoe.shoe_id] = dict()
+            for attr in SHOE_TABLE_ATTRNAMES:
+                meta_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
+            shoe_type_dict = dict()
+            if shoe_type:
+                for attr in SHOETYPE_TABLE_ATTRNAMES:
+                    shoe_type_dict[to_camel(attr)] = getattr(shoe_type, attr)
+                    shoe_type_dict['colorName'] = color.color_name
+                    shoe_type_dict['shoeRid'] = shoe.shoe_rid
+                    if shoe_type.shoe_image_url:
+                        shoe_type_dict['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+                    else:
+                        shoe_type_dict['shoeImageUrl'] = None
+                meta_data[shoe.shoe_id]['shoeTypeData'] = [shoe_type_dict]
+        else:
+            if shoe_type:
+                shoe_type_dict = dict()
+                for attr in SHOETYPE_TABLE_ATTRNAMES:
+                    shoe_type_dict[to_camel(attr)] = getattr(shoe_type, attr)
+                    shoe_type_dict['colorName'] = color.color_name
+                    shoe_type_dict['shoeRid'] = shoe.shoe_rid
+                    if shoe_type.shoe_image_url:
+                        shoe_type_dict['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+                    else:
+                        shoe_type_dict['shoeImageUrl'] = None
+                meta_data[shoe.shoe_id]['shoeTypeData'].append(shoe_type_dict)
+    for key in meta_data.keys():
+        result_data.append(meta_data[key])
+    time_t2 = time.time()
+    print("get all shoes new time taken is " + " " + str(time_t2 - time_s))
     return jsonify(result_data), 200
+
+    # if shoe_rid is None:
+    #     if shoe_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
+    #         shoe_entities = (
+    #             db.session.query(Shoe)
+    #             .filter(Shoe.shoe_department_id == shoe_department)
+    #             .all()
+    #         )
+    #     else:
+    #         shoe_entities = (
+    #             db.session.query(Shoe)
+    #             .all()
+    #         )
+    # else:
+    #     if shoe_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
+    #         shoe_entities = (
+    #             db.session.query(Shoe)
+    #             .filter(Shoe.shoe_department_id == shoe_department)
+    #             .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+    #             .all()
+    #         )
+    #     else:
+    #         shoe_entities = (
+    #             db.session.query(Shoe)
+    #             .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+    #             .all()
+    #         )
+    # time_t1 = time.time()
+    # for shoe in shoe_entities:
+    #     shoe_response_data = dict()
+    #     for attr in SHOE_TABLE_ATTRNAMES:
+    #         shoe_response_data[to_camel(attr)] = getattr(shoe, attr)
+    #     shoe_type_entities = (db.session.query(ShoeType, Color)
+    #                           .join(Color, ShoeType.color_id == Color.color_id)
+    #                           .filter(ShoeType.shoe_id == shoe.shoe_id)
+    #                           .all())
+    #     shoe_type_list = []
+    #     for shoe_type in shoe_type_entities:
+    #         shoe_type_response_data = dict()
+    #         for attr in SHOETYPE_TABLE_ATTRNAMES:
+    #             shoe_type_response_data[to_camel(attr)] = getattr(shoe_type.ShoeType, attr)
+    #         shoe_type_response_data['colorName'] = shoe_type.Color.color_name
+    #         shoe_type_response_data['shoeRid'] = shoe.shoe_rid
+    #         if shoe_type.ShoeType.shoe_image_url:
+    #             shoe_type_response_data['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.ShoeType.shoe_image_url
+    #         else:
+    #             shoe_type_response_data['shoeImageUrl'] = None
+    #         shoe_type_list.append(shoe_type_response_data)
+    #     shoe_response_data['shoeTypeData'] = shoe_type_list
+    #     result_data.append(shoe_response_data)
+    
 
 
 @shoe_bp.route("/shoe/getshoebatchinfotype", methods=["GET"])

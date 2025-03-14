@@ -72,7 +72,7 @@ def create_new_order():
 	db.session.add(new_order)
 	db.session.flush()
 	### os mkdir 
-	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
+	# os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
 
 	new_order_id = Order.query.filter_by(order_rid = order_rid).first().order_id
 	new_order_status = OrderStatus(
@@ -112,7 +112,7 @@ def create_new_order():
 			db.session.add(new_order_shoe_entity)
 			db.session.flush()
 
-			os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
+			# os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
 
 			new_order_shoe_status_entity = OrderShoeStatus(
 				order_shoe_id = new_order_shoe_entity.order_shoe_id,
@@ -181,6 +181,10 @@ def create_new_order():
 		db.session.add_all(batch_info_entity_array)
 	print("order added to DB")
 	db.session.commit()
+	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
+	print(shoe_id_to_rid.keys())
+	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
+
 	result = jsonify({"message": "Order imported successfully"}), 200
 	# except Exception as e:
 	# 	result = jsonify({"message": str(e)}, 500)

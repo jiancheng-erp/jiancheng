@@ -14,7 +14,8 @@
                 <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
                 <el-tab-pane label="项目录入"><FinancialItemEntry /></el-tab-pane>
                 <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane>
-                <el-tab-pane label="项目管理"><FinancialItemManager /></el-tab-pane>
+                <el-tab-pane label="项目详情查看"><FinancialAccountDetail /></el-tab-pane>
+                <el-tab-pane label="项目管理"><FinancialAccountManagement /></el-tab-pane>
                 <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane>
                 <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
             </el-tabs>
@@ -32,7 +33,8 @@ import FinancialHistoryRecord from '../components/FinancialHistoryRecord.vue'
 import FinancialItemEntry from '../components/FinancialItemEntry.vue'
 import InventoryView from '../components/InventoryView.vue'
 import OrderStatusConfirm from '../components/OrderStatusConfirm.vue'
-import FinancialItemManager from '../components/FinancialItemManager.vue'
+import FinancialAccountDetail from '../components/FinancialAccountDetail.vue'
+import FinancialAccountManagement from '../components/FinancialAccountManagement.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { useRouter } from 'vue-router'
 
