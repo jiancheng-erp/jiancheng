@@ -13,9 +13,9 @@ accounts_management_bp = Blueprint("accounts_management", __name__)
 # fg, sg tg = firstGrade, secondGrade, thirdGrade
 # curd on differnt grades of accounts
 
-first_grade_attr_list = FirstGradeAccounts.__table__.columns.keys()
-second_grade_attr_list = SecondGradeAccounts.__table__.columns.keys()
-third_grade_attr_list = ThirdGradeAccounts.__table__.columns.keys()
+first_grade_attr_list = FirstGradeAccount.__table__.columns.keys()
+second_grade_attr_list = SecondGradeAccount.__table__.columns.keys()
+third_grade_attr_list = ThirdGradeAccount.__table__.columns.keys()
 first_grade_prefix = "first_grade_"
 second_grade_prefix = "second_grade_"
 third_grade_prefix = "third_grade_"
@@ -26,11 +26,11 @@ def add_first_grade_account():
     account_name = request.json.get("first_grade_account_name")
     if not account_name:
         return jsonify({"msg":"account name cannot be empty"}), 400
-    existing_entity = db.session.query(FirstGradeAccounts).filter_by(account_name = account_name).first()
+    existing_entity = db.session.query(FirstGradeAccount).filter_by(account_name = account_name).first()
     if existing_entity:
         return jsonify({"msg":"first grade account name duplicates"}), 400
     else:
-        db_entity = FirstGradeAccounts()
+        db_entity = FirstGradeAccount()
         db_entity.account_name = account_name
         db.session.add(db_entity)
         db.session.commit()
@@ -46,8 +46,8 @@ def add_second_grade_account():
         return jsonify({"msg":"account name cannot be empty"}), 400
     if not account_belongs_to:
         return jsonify({"msg":"secondary account must be associated with a first grade account"}), 400
-    existing_entity = db.session.query(SecondGradeAccounts).filter_by(account_name = account_name).all()
-    existing_parent = db.session.query(FirstGradeAccounts).filter_by(account_id = account_belongs_to).first()
+    existing_entity = db.session.query(SecondGradeAccount).filter_by(account_name = account_name).all()
+    existing_parent = db.session.query(FirstGradeAccount).filter_by(account_id = account_belongs_to).first()
     if not existing_parent:
         return jsonify({"msg":"associated first grade account doesnt exist"}), 400
     else:
@@ -55,7 +55,7 @@ def add_second_grade_account():
             for entity in existing_entity:
                 if entity.account_belongs_fg == existing_parent.account_id:
                     return jsonify({"msg":"associated account with this name already exists"}), 400
-        new_entity = SecondGradeAccounts()
+        new_entity = SecondGradeAccount()
         new_entity.account_name =  account_name
         new_entity.account_belongs_fg = account_belongs_to
         db.session.add(new_entity)
@@ -73,8 +73,8 @@ def add_third_grade_account():
         return jsonify({"msg":"account name cannot be empty"}), 400
     if not account_belongs_to:
         return jsonify({"msg":"third grade account must be associated with a first grade account"}), 400
-    existing_entity = db.session.query(ThirdGradeAccounts).filter_by(account_name = account_name).all()
-    existing_parent = db.session.query(SecondGradeAccounts).filter_by(account_id = account_belongs_to).first()
+    existing_entity = db.session.query(ThirdGradeAccount).filter_by(account_name = account_name).all()
+    existing_parent = db.session.query(SecondGradeAccount).filter_by(account_id = account_belongs_to).first()
     if not existing_parent:
         return jsonify({"msg":"associated second grade account doesnt exist"}), 400
     else:
@@ -82,7 +82,7 @@ def add_third_grade_account():
             for entity in existing_entity:
                 if entity.account_belongs_sg == existing_parent.account_id:
                     return jsonify({"msg":"associated account with this name already exists"}), 400
-        new_entity = ThirdGradeAccounts()
+        new_entity = ThirdGradeAccount()
         new_entity.account_name =  account_name
         new_entity.account_belongs_sg = account_belongs_to
         db.session.add(new_entity)
@@ -93,7 +93,7 @@ def add_third_grade_account():
 ## GET accounts
 @accounts_management_bp.route("/accountsmanagement/firstgrade/getaccounts", methods=["GET"])
 def get_first_grade_account():
-    db_entities = db.session.query(FirstGradeAccounts).all()
+    db_entities = db.session.query(FirstGradeAccount).all()
     response_accounts_list = []
     for entity in db_entities:
         response_entity = {}
@@ -105,7 +105,7 @@ def get_first_grade_account():
 
 @accounts_management_bp.route("/accountsmanagement/secondgrade/getaccounts", methods=["GET"])
 def get_second_grade_account():
-    db_entities = db.session.query(SecondGradeAccounts).all()
+    db_entities = db.session.query(SecondGradeAccount).all()
     response_accounts_list = []
     for entity in db_entities:
         response_entity = {}
@@ -117,7 +117,7 @@ def get_second_grade_account():
 
 @accounts_management_bp.route("/accountsmanagement/thirdgrade/getaccounts", methods=["GET"])
 def get_third_grade_account():
-    db_entities = db.session.query(ThirdGradeAccounts).all()
+    db_entities = db.session.query(ThirdGradeAccount).all()
     response_accounts_list = []
     for entity in db_entities:
         response_entity = {}
@@ -132,9 +132,9 @@ def get_third_grade_account():
 def get_all_accounts():
     
     response_list = []
-    fg_accounts = db.session.query(FirstGradeAccounts).all()
-    sg_accounts = db.session.query(SecondGradeAccounts).all()
-    tg_accounts = db.session.query(ThirdGradeAccounts).all()
+    fg_accounts = db.session.query(FirstGradeAccount).all()
+    sg_accounts = db.session.query(SecondGradeAccount).all()
+    tg_accounts = db.session.query(ThirdGradeAccount).all()
     sec_acc_to_res = {}
 
     for sec_acc in sg_accounts:
@@ -172,8 +172,8 @@ def update_first_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(FirstGradeAccounts).filter_by(account_name = old_account_name).first() or db.sesison.query(FirstGradeAccounts).filter_by(account_id = account_id).first()
-    new_existing = db.session.query(FirstGradeAccounts).filter_by(account_name = new_account_name).first()
+    old_existing = db.session.query(FirstGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(FirstGradeAccount).filter_by(account_id = account_id).first()
+    new_existing = db.session.query(FirstGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})
     if new_existing:
@@ -188,8 +188,8 @@ def update_second_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(SecondGradeAccounts).filter_by(account_name = old_account_name).first() or db.sesison.query(SecondGradeAccounts).filter_by(account_id = account_id).first()
-    new_existing = db.session.query(SecondGradeAccounts).filter_by(account_name = new_account_name).first()
+    old_existing = db.session.query(SecondGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(SecondGradeAccount).filter_by(account_id = account_id).first()
+    new_existing = db.session.query(SecondGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})
     if new_existing:
@@ -204,8 +204,8 @@ def update_third_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(ThirdGradeAccounts).filter_by(account_name = old_account_name).first() or db.sesison.query(ThirdGradeAccounts).filter_by(account_id = account_id).first()
-    new_existing = db.session.query(ThirdGradeAccounts).filter_by(account_name = new_account_name).first()
+    old_existing = db.session.query(ThirdGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(ThirdGradeAccount).filter_by(account_id = account_id).first()
+    new_existing = db.session.query(ThirdGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})
     if new_existing:
