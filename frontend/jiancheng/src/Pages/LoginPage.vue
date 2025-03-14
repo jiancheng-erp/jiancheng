@@ -130,6 +130,8 @@ const handleSubmit = () => {
                         window.location.href = 'businessmanager'
                     } else if (response.data.role === 22) {
                         window.location.href = 'productionclerk'
+                    } else if (response.data.role === 23) {
+                        window.location.href = 'warehouseclerk'
                     } else {
                         console.log('Invalid role!')
                     }

@@ -4,6 +4,7 @@ DEFAULT_HUMAN_RESOURCES_PAYABLE_ACCOUNT_ID = 3
 from models import *
 from app_config import app, db
 from sqlalchemy import func
+from constants import ACCOUNTING_PAYEE_NOT_FOUND, ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND, ACCOUNTING_PAYEE_EXISTING
 
 # def add_material_paybable(supplier, amount, unit):
 
@@ -14,7 +15,7 @@ def add_payable_entity(name, address='', bank_info='', contact_info=''):
     existing_entity = db.session.query(AccountingPayeePayer).filter_by(payee_name = name).first()
     if existing_entity:
         print("entity already exist")
-        return False
+        return ACCOUNTING_PAYEE_EXISTING
     entity_type = 0
     payable_entity_name = name
     new_payable_entity = AccountingPayeePayer()
@@ -29,41 +30,39 @@ def add_payable_entity(name, address='', bank_info='', contact_info=''):
     new_payable_account_entity.account_payable_balance = 0.00
     # unit 1 CNY default 
     new_payable_account_entity.account_unit_id = 1
-    new_payable_account_entity.account_owner = new_payable_entity.payee_id
+    new_payable_account_entity.account_owner_id = new_payable_entity.payee_id
     db.session.add(new_payable_account_entity)
-    db.session.commit()
     print("new accounting entity and its account added successfully")
-    return True
+    return 0
 
-def material_inbound_accounting_event(supplier_name, amount, unit=1,has_conversion=0,conversion_id=0):
+def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, unit=1,has_conversion=0,conversion_id=0):
     # 只处理材料入库 应收账目 工具入库使用 default_inbound_accounting_event()
     # supplier name 对应 accountingpayeepayer 表 payee name
     payee_entity = db.session.query(AccountingPayeePayer).filter_by(payee_name=supplier_name).first()
     if not payee_entity:
         print("supplier doenst existing in accounting table, check accounting_payee_payer")
-        return False
+        return ACCOUNTING_PAYEE_NOT_FOUND
     else:
         #应付款增加 材料费用
         transaction_type = 1
         new_transaction_entity = AccountingForeignAccountEvent()
         new_transaction_entity.transaction_type = transaction_type
-        payable_account_entity = db.session.query(AccountingPayableAccount).filter_by(account_owner = payee_entity.payee_id).first()
+        payable_account_entity = db.session.query(AccountingPayableAccount).filter_by(account_owner_id = payee_entity.payee_id).first()
         if not payable_account_entity:
             print("entity payable account not found in accounting payable account table")
-            return False
+            return ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND
         # TODO type check 
         new_transaction_entity.payable_payee_account_id = payable_account_entity.account_id
         new_transaction_entity.transaction_amount = amount
         new_transaction_entity.transaction_amount_unit = unit
         new_transaction_entity.transaction_has_conversion = has_conversion
         new_transaction_entity.transaction_conversion_id = conversion_id
+        new_transaction_entity.inbound_record_id = inbound_record_id
         db.session.add(new_transaction_entity)
-        db.session.flush()
         current_balance = payable_account_entity.account_payable_balance 
         payable_account_entity.account_payable_balance = current_balance + amount
-        db.session.update(payable_account_entity)
-        db.session.commit()
-        return True
+        return 0
+
 # def add_sales_collectable():
 #     return
 def add_composition_payable():

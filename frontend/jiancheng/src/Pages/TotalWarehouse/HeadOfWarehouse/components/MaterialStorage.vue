@@ -15,7 +15,7 @@
             </el-button-group>
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
+            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
             @confirm="handleSearch" />
     </el-row>
     <el-table :data="tableData" border stripe height="600" @selection-change="handleSelectionChange"
@@ -242,14 +242,21 @@ export default {
                 selectedCompositeSupplier: null,
             },
             isConfirmOrderShoesDialogOpen: false,
+            materialNameOptions: [],
         }
     },
     mounted() {
         this.getAllMaterialTypes()
         this.getAllSuppliers()
+        this.getMaterialNameOptions()
         this.getMaterialTableData()
     },
     methods: {
+        async getMaterialNameOptions() {
+            const params = { department: 0 }
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
+            this.materialNameOptions = response.data
+        },
         updateMultInboundDialogVis(newVal) {
             this.isMultiInboundDialogVisible = newVal
         },
