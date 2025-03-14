@@ -1362,7 +1362,6 @@ class TotalPurchaseOrder(db.Model):
         return f"<TotalPurchaseOrder(total_purchase_order_id={self.total_purchase_order_id})>"
 
 
-# TODO 公司数据库未同步
 class FirstGradeAccount(db.Model):
     __tablename__ = "accounting_fg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1374,8 +1373,10 @@ class SecondGradeAccount(db.Model):
     __tablename__ = "accounting_sg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
-    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
     account_belongs_fg = db.Column(db.Integer, nullable=False)
+    account_payable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
+    account_recievable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
+    account_cash_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
 
 
 class ThirdGradeAccount(db.Model):
@@ -1384,6 +1385,61 @@ class ThirdGradeAccount(db.Model):
     account_name = db.Column(db.String(20), nullable=False)
     account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
     account_belongs_sg = db.Column(db.Integer, nullable=False)
+    account_type = db.Column(db.String(1), nullable=False)
+    account_bound_event = db.Column(db.String(1), nullable=True)
+
+class Unit(db.Model):
+    __tablename__ = "unit"
+    unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    unit_name = db.Column(db.String(10), nullable=False)
+
+    def __repr__(self):
+        return f"<Unit(unit_id={self.unit_id})>"
+
+    def __name__(self):
+        return "Unit"
+
+class AccountingPayableAccount(db.Model):
+    __tablename__ ="accounting_payable_account"
+    account_id = db.Column(db.Integer, primary_key=True, nullable=False,
+                           autoincrement=True)
+    account_payable_balance = db.Column(db.DECIMAL(10,3), nullable=False)
+    account_unit_id = db.Column(db.Integer,nullable=False)
+    account_owner_id = db.Column(db.Integer, nullable=False)
+
+class AccountingRecievableAccount(db.Model):
+    __tablename__ = "accounting_recievable_account"
+    account_id = db.Column(db.Integer, primary_key=True, nullable=False,
+                           autoincrement=True)
+    account_recievable_balance = db.Column(db.DECIMAL(10,3), nullable=False)
+    account_unit_id = db.Column(db.Integer, nullable=False)
+    account_owner_id = db.Column(db.Integer, nullable=False)
+
+class AccountingPayeePayer(db.Model):
+    __tablename__ = "accounting_payee_payer"
+    payee_id = db.Column(db.Integer, primary_key=True, nullable=False,
+                         autoincrement=True)
+    payee_name = db.Column(db.String(50), nullable=False)
+    payee_address = db.Column(db.String(50), nullable=True)
+    payee_bank_info = db.Column(db.String(50), nullable=True)
+    payee_contact_info = db.Column(db.String(20), nullable=True)
+    entity_type = db.Column(db.String(1),nullable=False)
+
+class AccountingForeignAccountEvent(db.Model):
+    __tablename__ = "accounting_foreign_account_event"
+    transaction_id= db.Column(db.Integer, primary_key=True, nullable=False,
+                              autoincrement=True)
+    # 0 代表应收增加 1 代表应付增加 
+    # 如应收减少说明资金向内流动 如应付减少说明资金向外流动
+    # 新订单导致应收增加 材料入库 复合入库应付增加
+    transaction_type = db.Column(db.String(1), nullable=False)
+    payable_payee_account_id = db.Column(db.Integer, nullable=False)
+    transaction_amount = db.Column(db.DECIMAL(10,3), nullable=False)
+    #应收/应付默认为CNY
+    transaction_amount_unit = db.Column(db.Integer, nullable=False, default=1)
+    #默认无单位转换 
+    transaction_has_conversion = db.Column(db.String(1), nullable=False, default=0)
+    transaction_conversion_id = db.Column(db.Integer, nullable=True)
 
 
 class AccountingCurrencyUnit(db.Model):
@@ -1425,68 +1481,3 @@ class AccountingThirdGradeRecord(db.Model):
     record_is_processed = db.Column(db.Integer, nullable=False)
     # 记录id
     record_id = db.Column(db.Integer, primary_key=True, nullable=False)
-
-
-class Unit(db.Model):
-    __tablename__ = "unit"
-    unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    unit_name = db.Column(db.String(10), nullable=False)
-
-    def __repr__(self):
-        return f"<Unit(unit_id={self.unit_id})>"
-
-    def __name__(self):
-        return "Unit"
-
-
-class AccountingPayableAccount(db.Model):
-    __tablename__ = "accounting_payable_account"
-    account_id = db.Column(
-        db.Integer, primary_key=True, nullable=False, autoincrement=True
-    )
-    account_payable_balance = db.Column(db.DECIMAL(10, 3), nullable=False)
-    account_unit_id = db.Column(db.Integer, nullable=False)
-    account_owner_id = db.Column(
-        db.Integer, nullable=False, comment="AccountPayeePayer表的主键"
-    )
-
-
-class AccountingRecievableAccount(db.Model):
-    __tablename__ = "accounting_recievable_account"
-    account_id = db.Column(
-        db.Integer, primary_key=True, nullable=False, autoincrement=True
-    )
-    account_recievable_balance = db.Column(db.DECIMAL(10, 3), nullable=False)
-    account_unit_id = db.Column(db.Integer, nullable=False)
-    account_owner_id = db.Column(db.Integer, nullable=False)
-
-
-class AccountingPayeePayer(db.Model):
-    __tablename__ = "accounting_payee_payer"
-    payee_id = db.Column(
-        db.Integer, primary_key=True, nullable=False, autoincrement=True
-    )
-    payee_name = db.Column(db.String(50), nullable=False)
-    payee_address = db.Column(db.String(50), nullable=True)
-    payee_bank_info = db.Column(db.String(50), nullable=True)
-    payee_contact_info = db.Column(db.String(20), nullable=True)
-    entity_type = db.Column(db.String(1), nullable=False)
-
-
-class AccountingForeignAccountEvent(db.Model):
-    __tablename__ = "accounting_foreign_account_event"
-    transaction_id = db.Column(
-        db.Integer, primary_key=True, nullable=False, autoincrement=True
-    )
-    # 0 代表应收增加 1 代表应付增加
-    # 如应收减少说明资金向内流动 如应付减少说明资金向外流动
-    # 新订单导致应收增加 材料入库 复合入库应付增加
-    transaction_type = db.Column(db.String(1), nullable=False)
-    payable_payee_account_id = db.Column(db.Integer, nullable=False)
-    transaction_amount = db.Column(db.DECIMAL(10, 3), nullable=False)
-    # 应收/应付默认为CNY
-    transaction_amount_unit = db.Column(db.Integer, nullable=False, default=1)
-    # 默认无单位转换
-    transaction_has_conversion = db.Column(db.String(1), nullable=False, default=0)
-    transaction_conversion_id = db.Column(db.Integer, nullable=True)
-    inbound_record_id = db.Column(db.BigInteger, nullable=True)
