@@ -820,11 +820,6 @@ def delete_order():
     order_shoe_type_ids = [
         entity.order_shoe_type_id for entity in order_shoe_type_entities
     ]
-    order_shoe_batch_entities = (
-        db.session.query(OrderShoeBatchInfo)
-        .filter(OrderShoeBatchInfo.order_shoe_type_id.in_(order_shoe_type_ids))
-        .all()
-    )
 
     db.session.query(OrderShoeBatchInfo).filter(
         OrderShoeBatchInfo.order_shoe_type_id.in_(order_shoe_type_ids)
@@ -832,7 +827,14 @@ def delete_order():
     db.session.query(OrderShoeType).filter(
         OrderShoeType.order_shoe_id.in_(order_shoe_ids)
     ).delete()
+    db.session.query(OrderShoeStatus).filter(
+        OrderShoeStatus.order_shoe_id.in_(order_shoe_ids)
+    ).delete()
+    db.session.query(OrderShoeProductionInfo).filter(
+        OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids)
+    ).delete()
     db.session.query(OrderShoe).filter_by(order_id=order_id).delete()
+    db.session.query(OrderStatus).filter_by(order_id=order_id).delete()
     db.session.delete(order_entity)
     db.session.commit()
     return jsonify({"message": "Delete OK"}), 200

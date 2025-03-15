@@ -329,7 +329,8 @@ export default {
                         shoeAdjuster: '',
                         shoeDepartmentId: ''
                     }
-                    this.getAllShoes()
+                    this.inheritIdSearch=''
+                    await this.getAllShoes()
                 }
             })
         },
