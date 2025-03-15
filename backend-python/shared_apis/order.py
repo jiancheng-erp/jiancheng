@@ -108,6 +108,7 @@ def get_dev_orders():
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
         .filter(Shoe.shoe_department_id == shoe_department)
+        .order_by(Order.start_date.asc())
         .all()
     )
 
