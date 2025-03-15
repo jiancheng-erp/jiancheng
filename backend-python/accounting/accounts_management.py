@@ -202,7 +202,7 @@ def get_all_accounts():
         sec_response_entity = {}
         for attr_name in second_grade_attr_list:
             sec_response_entity[to_camel(second_grade_prefix + attr_name)] = getattr(sec_acc, attr_name, None)
-        sec_response_entity['associatedThirdGradeAccounts'] = []
+        sec_response_entity['associatedThirdGradeAccount'] = []
         sec_acc_to_res[sec_acc.account_id] = sec_response_entity
     for thr_acc in tg_accounts:
         thr_response_entity = {}
@@ -210,14 +210,14 @@ def get_all_accounts():
             thr_response_entity[to_camel(third_grade_prefix + attr_name)] = getattr(thr_acc, attr_name, None)
         thr_belongs_to = thr_acc.account_belongs_sg
         if thr_belongs_to != None:
-            sec_acc_to_res[thr_belongs_to]["associatedThirdGradeAccounts"].append(thr_response_entity)
+            sec_acc_to_res[thr_belongs_to]["associatedThirdGradeAccount"].append(thr_response_entity)
 
     fir_acc_to_res = {}
     for fir_acc in fg_accounts:
         response_entity = {}
         for attr_name in first_grade_attr_list:
             response_entity[to_camel(first_grade_prefix + attr_name)] = getattr(fir_acc, attr_name, None) 
-        response_entity["associatedSecondGradeAccounts"] = []
+        response_entity["associatedSecondGradeAccount"] = []
         fir_acc_to_res[fir_acc.account_id] = response_entity
     
     for sec_entity in sec_acc_to_res.values():
