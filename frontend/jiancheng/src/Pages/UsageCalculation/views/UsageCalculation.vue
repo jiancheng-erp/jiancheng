@@ -19,6 +19,9 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>用量计算</span>
                         </el-menu-item>
+                        <el-menu-item index="10" @click="handleMenuClick(10)">
+                            <span>退回任务列表</span>
+                        </el-menu-item>
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>生产BOM用量填写</span>
                         </el-menu-item>
@@ -35,7 +38,7 @@
                 </div>
             </el-aside>
             <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
+                <component :is="currentComponent" :departmentId="departmentId"></component>
             </el-main>
         </el-container>
     </el-container>
@@ -49,6 +52,7 @@ import UsageCaculationView from '../components/UsageCalculationView.vue'
 import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import SecondBOMListView from '../components/SecondBOMListView.vue';
+import RevertDashboard from '@/components/RevertDashboard.vue';
 import axios from 'axios'
 
 
@@ -59,13 +63,15 @@ export default {
         UsageCaculationView,
         OrderSearch,
         PersonalInfo,
-        SecondBOMListView
+        SecondBOMListView,
+        RevertDashboard
     },
     data() {
         return {
             UserFilled,
             currentComponent: 'Dashboard',
-            userName: ''
+            userName: '',
+            departmentId: '14'
         }
     },
     mounted() {
@@ -93,6 +99,9 @@ export default {
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'
+                    break
+                case 10:
+                    this.currentComponent = 'RevertDashboard'
                     break
             }
         },

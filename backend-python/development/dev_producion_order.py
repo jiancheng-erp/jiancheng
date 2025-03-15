@@ -533,6 +533,7 @@ def get_production_instruction():
         )
         # Map material type to the appropriate array in the dictionary
         material_data = {
+            "productionInstructionItemId": item.production_instruction_item_id,
             "materialId": item.material_id,
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,

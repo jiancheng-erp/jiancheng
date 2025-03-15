@@ -1,4 +1,5 @@
 import ProductionOrderCreateView from "../views/ProductionOrderCreateView.vue";
+import RevertOrderDealView from "../views/RevertOrderDealView.vue";
 
 export default [
     {
@@ -10,5 +11,16 @@ export default [
             requiresAuth: true,
             role: 7
         }
+    },
+    {
+        path: "/developmentmanager/revertproductionorder/orderid=:orderId",
+        name: "developmentmanager-revertproductionorder",
+        component: RevertOrderDealView,
+        props: true,
+        meta: {
+            requiresAuth: true,
+            role: 7
+        }
     }
+
 ];

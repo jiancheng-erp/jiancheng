@@ -45,6 +45,9 @@ from accounting.accounts_management import accounts_management_bp
 from logistics.package_api import package_api_bp
 from logistics.last_api import last_api_bp
 from logistics.cut_model_api import cut_model_api_bp
+from shared_apis.revert_order import revert_order_api
+from development.dev_revert_api import dev_revert_api
+from usage_calculation.usage_revert_api import usage_revert_api
 def register_blueprints():
     app.register_blueprint(price_report_bp)
     app.register_blueprint(order_bp)
@@ -92,3 +95,6 @@ def register_blueprints():
     app.register_blueprint(package_api_bp)
     app.register_blueprint(last_api_bp)
     app.register_blueprint(cut_model_api_bp)
+    app.register_blueprint(revert_order_api)
+    app.register_blueprint(dev_revert_api)
+    app.register_blueprint(usage_revert_api)

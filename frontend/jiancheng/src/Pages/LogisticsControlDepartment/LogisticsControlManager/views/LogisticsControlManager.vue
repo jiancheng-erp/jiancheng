@@ -19,6 +19,9 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>一次采购订单创建</span>
                         </el-menu-item>
+                        <el-menu-item index="3" @click="handleMenuClick(3)">
+                            <span>退回任务列表</span>
+                        </el-menu-item>
                         <!-- <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>批量采购订单生成及下发</span>
                         </el-menu-item>
@@ -50,7 +53,7 @@
                 </div>
             </el-aside>
             <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
+                <component :is="currentComponent" :departmentId="departmentId"></component>
             </el-main>
         </el-container>
     </el-container>
@@ -70,6 +73,7 @@ import MultiPurchaseIssue from '../components/MultiPurchaseIssue.vue'
 import OrderSearch from '../components/OrderSearch.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
+import RevertDashboard from '@/components/RevertDashboard.vue'
 import TestPage from '../components/TestPage.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 export default {
@@ -86,14 +90,16 @@ export default {
         OrderSearch,
         PersonalInfo,
         LogisticsBatchTypeManagement,
-        MultiPurchaseIssue
+        MultiPurchaseIssue,
+        RevertDashboard
 
     },
     data() {
         return {
             UserFilled,
             currentComponent:'Dashboard',
-            userName: ''
+            userName: '',
+            departmentId: '3'
         }
     },
     mounted() {
@@ -113,6 +119,9 @@ export default {
                     break
                 case 2:
                     this.currentComponent = 'FirstPurchase'
+                    break
+                case 3:
+                    this.currentComponent = 'RevertDashboard'
                     break
                 case 5:
                     this.currentComponent = 'MaterialManagement'
