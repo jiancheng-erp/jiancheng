@@ -55,11 +55,11 @@ async function getAllAccounts(){
 
 function updateSecondGradeTabs(targetName: TabPaneName){
     console.log(firstGradeAccounts.value)
-    secondGradeAccounts.value = firstGradeAccounts.value[targetName['paneName']].associatedSecondGradeAccounts
+    secondGradeAccounts.value = firstGradeAccounts.value[targetName['paneName']].associatedSecondGradeAccount
 }
 function updateThirdGradeTabs(targetName: TabPaneName){
     console.log(secondGradeAccounts.value)
-    thirdGradeAccounts.value = secondGradeAccounts.value.find((account)=> account.secondGradeAccountId == targetName['paneName']).associatedThirdGradeAccounts
+    thirdGradeAccounts.value = secondGradeAccounts.value.find((account)=> account.secondGradeAccountId == targetName['paneName']).associatedThirdGradeAccount
 }
 function updateThirdGradeInfo(targetName: TabPaneName){
     console.log(targetName['paneName'])

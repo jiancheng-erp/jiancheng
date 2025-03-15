@@ -12,19 +12,19 @@
             <el-button class="aside-item" size = "small" @click="openAddThirdGradeAccountDialog">
             填加三级科目
             </el-button>
-            <el-button size = "small" @click="openPayableAccountConfigureDialog">
+            <!-- <el-button size = "small" @click="openPayableAccountConfigureDialog">
             设置应付账目所属
             </el-button>
             <el-button size="small" @click="openRecievableAccountConfigureDialog">
             设置应收账目所属
-            </el-button>
+            </el-button> -->
         </el-form>
-    <el-form-item>
+    <!-- <el-form-item>
                 "TODO"
                 "设置各仓库入库材料默认三级账号"
                 "设置应付款 应收款默认三级账号"
                 "设置各级账号功能及与应收应付关系"
-    </el-form-item>
+    </el-form-item> -->
 
     <el-dialog title="一级财务项目" v-model="addFirstGradeAccountDialogVis" :before-close="handleClose">
         <el-form>
@@ -261,6 +261,9 @@ async function addFirstGradeAccount(){
     const res = await axios.post($api_baseUrl +　`/accountsmanagement/firstgrade/addaccount`,{'firstGradeAccountName':newFirstGradeAccountName.value})
     newFirstGradeAccountName.value = ''
     addFirstGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
+
 }
 async function addSecondGradeAccount(){
     console.log(newSecondGradeAccountName.value)
@@ -270,6 +273,8 @@ async function addSecondGradeAccount(){
     firstGradeAccountBelonged.value = ''
     newSecondGradeAccountName.value = ''
     addSecondGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
 
 }
 async function addThirdGradeAccount(){
@@ -286,6 +291,9 @@ async function addThirdGradeAccount(){
     secondGradeAccountBelonged.value = ''
     newThirdGradeAccountTypeId.value = ''
     addThirdGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
+
 }
 async function boundPayableAccountEvent(){
     const res = await axios.post($api_baseUrl + `/accountsmanagement/thirdgrade/boundpayableaccount`,
@@ -301,9 +309,7 @@ async function boundPayableAccountEvent(){
     payableAccountConfigureDialogVis.value = false
 }
 function updateSecondGradeAccounts(){
-    console.log(firstGradeAccountBelonged.value)
-    displaySecondGradeAccounts.value = displayFirstGradeAccounts.value[selectedFirstGradeAccount.value].associatedSecondGradeAccounts
-    console.log(displaySecondGradeAccounts.value)
+    displaySecondGradeAccounts.value = displayFirstGradeAccounts.value[selectedFirstGradeAccount.value].associatedSecondGradeAccount
 }
 
 function closeAddFirstDialog(){

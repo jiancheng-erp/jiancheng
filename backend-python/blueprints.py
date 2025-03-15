@@ -42,6 +42,7 @@ from production.production_lines import production_lines_bp
 from production.production_report import production_report_bp
 from logistics.multiissue_purchase_order import multiissue_purchase_order_bp
 from accounting.accounts_management import accounts_management_bp
+from accounting.payable_management import payable_management_bp
 from logistics.package_api import package_api_bp
 from logistics.last_api import last_api_bp
 from logistics.cut_model_api import cut_model_api_bp
@@ -93,6 +94,7 @@ def register_blueprints():
     app.register_blueprint(production_report_bp)
     app.register_blueprint(multiissue_purchase_order_bp)
     app.register_blueprint(accounts_management_bp)
+    app.register_blueprint(payable_management_bp)
     app.register_blueprint(package_api_bp)
     app.register_blueprint(last_api_bp)
     app.register_blueprint(cut_model_api_bp)

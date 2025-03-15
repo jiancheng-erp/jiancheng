@@ -1426,6 +1426,29 @@ class AccountingPayableAccount(db.Model):
         db.Integer, nullable=False, comment="AccountPayeePayer表的主键"
     )
 
+# class AccountingPayableTransaction(db.Model):
+#     __tablename__="accounting_payable_transaction"
+#     transaction_id = db.Column(
+#         db.Integer, primary_key=True, nullable=False, autoincrement=True
+#     )
+#     transaction_amount = db.Column(db.DECIMAL(12, 3), nullable=False)
+#     transaction_unit = db.Column(db.Integer, nullable=False)
+#     transaction_date = db.Column(db.Date, nullable=False)
+#     from_account_grade = db.Column(db.String(1), nullable=False)
+#     from_account_id = db.Column(db.Integer, nullable=False)
+#     to_account_id = db.Column(db.Integer, nullable=False)
+
+
+class AccountingPayableTransaction(db.Model):
+    __tablename__ = "accounting_payable_transaction"
+    transaction_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    transaction_amount = db.Column(db.DECIMAL(12,3), nullable=False)
+    transaction_unit = db.Column(db.BigInteger, nullable=False)
+    transaction_date = db.Column(db.DateTime, nullable=False)
+    from_account_grade = db.Column(db.BigInteger, nullable=False)
+    from_account_id = db.Column(db.BigInteger, nullable=False)
+    to_account_id = db.Column(db.BigInteger, nullable=False)
+
 
 class AccountingRecievableAccount(db.Model):
     __tablename__ = "accounting_recievable_account"
