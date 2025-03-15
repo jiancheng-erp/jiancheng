@@ -1375,7 +1375,6 @@ class SecondGradeAccount(db.Model):
     __tablename__ = "accounting_sg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
-    account_balance = db.Column(db.DECIMAL(12, 3), nullable=True, default=0.000)
     account_belongs_fg = db.Column(db.Integer, nullable=False)
     account_payable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
     account_recievable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
@@ -1455,3 +1454,46 @@ class AccountingForeignAccountEvent(db.Model):
     transaction_has_conversion = db.Column(db.String(1), nullable=False, default=0)
     transaction_conversion_id = db.Column(db.Integer, nullable=True)
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
+
+
+
+
+class AccountingCurrencyUnit(db.Model):
+    __tablename__ = "accounting_currency_unit"
+    unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    unit_name_en = db.Column(db.String(20), nullable=False)
+    unit_name_cn = db.Column(db.String(20), nullable=False)
+
+
+class AccountingUnitConversionTable(db.Model):
+    __tablename__ = "accounting_unit_conversion_table"
+    conversion_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    unit_from = db.Column(db.Integer, nullable=False)
+    unit_to = db.Column(db.Integer, nullable=False)
+    rate = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    rate_date = db.Column(db.DateTime, nullable=True)
+    rate_active = db.Column(db.Boolean, nullable=False, default=False)
+
+
+class AccountingThirdGradeRecord(db.Model):
+    __tablename__ = "accounting_tg_record"
+    # 记录名称（如 K25-014 鞋材供应商货款）
+    record_name = db.Column(db.String(20), nullable=False)
+    # 记录面向主体（供应商名称如 AB鞋材/5号客人某订单号货款）
+    record_object_id = db.Column(db.Integer, nullable=False)
+    # 记录资金流向（0 指付款， 1 指收款）
+    record_type = db.Column(db.Integer, nullable=False)
+    # 　资金数量
+    record_amount = db.Column(db.DECIMAL(10, 3), nullable=False)
+    # 记录创建时间
+    record_creation_date = db.Column(db.DateTime, nullable=False)
+    # 记录处理时间
+    record_processed_date = db.Column(db.DateTime, nullable=False)
+    # 记录金额单位id
+    record_amount_unit_id = db.Column(db.Integer, nullable=False)
+    # 记录金额单位转换id
+    record_amount_conversion_id = db.Column(db.Integer, nullable=False)
+    # 记录处理状态
+    record_is_processed = db.Column(db.Integer, nullable=False)
+    # 记录id
+    record_id = db.Column(db.Integer, primary_key=True, nullable=False)
