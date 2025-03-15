@@ -157,7 +157,7 @@ def get_orders_by_status():
         .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
-        .order_by(Order.start_date.desc())
+        .order_by(Order.start_date.asc())
         .all()
     )
     pending_orders, in_progress_orders = [], []
