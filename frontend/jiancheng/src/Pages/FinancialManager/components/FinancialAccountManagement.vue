@@ -261,6 +261,9 @@ async function addFirstGradeAccount(){
     const res = await axios.post($api_baseUrl +　`/accountsmanagement/firstgrade/addaccount`,{'firstGradeAccountName':newFirstGradeAccountName.value})
     newFirstGradeAccountName.value = ''
     addFirstGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
+
 }
 async function addSecondGradeAccount(){
     console.log(newSecondGradeAccountName.value)
@@ -270,6 +273,8 @@ async function addSecondGradeAccount(){
     firstGradeAccountBelonged.value = ''
     newSecondGradeAccountName.value = ''
     addSecondGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
 
 }
 async function addThirdGradeAccount(){
@@ -286,6 +291,9 @@ async function addThirdGradeAccount(){
     secondGradeAccountBelonged.value = ''
     newThirdGradeAccountTypeId.value = ''
     addThirdGradeAccountDialogVis.value = false
+    await getAllAccounts()
+    await getBoundInfo()
+
 }
 async function boundPayableAccountEvent(){
     const res = await axios.post($api_baseUrl + `/accountsmanagement/thirdgrade/boundpayableaccount`,
@@ -301,9 +309,7 @@ async function boundPayableAccountEvent(){
     payableAccountConfigureDialogVis.value = false
 }
 function updateSecondGradeAccounts(){
-    console.log(firstGradeAccountBelonged.value)
     displaySecondGradeAccounts.value = displayFirstGradeAccounts.value[selectedFirstGradeAccount.value].associatedSecondGradeAccounts
-    console.log(displaySecondGradeAccounts.value)
 }
 
 function closeAddFirstDialog(){
