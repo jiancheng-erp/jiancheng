@@ -143,7 +143,7 @@
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false"
         @closed="closePreviewDialog">
-        <div id="printView">
+        <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
             <h2 style="text-align: center;">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px;">
                 <span style="font-weight: bolder;font-size: 16px;">
@@ -563,11 +563,12 @@ body {
 }
 </style>
 
-<style scoped>
-#printView {
-    padding-left: 20px; 
-    padding-right: 20px;
-    color:black; 
-    font-family: SimHei;
+<style lang="scss" scoped>
+@media print {
+    #printView {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+    }
 }
 </style>
