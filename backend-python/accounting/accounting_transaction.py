@@ -5,7 +5,8 @@ from models import *
 from app_config import app, db
 from sqlalchemy import func
 from constants import ACCOUNTING_PAYEE_NOT_FOUND, ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND, ACCOUNTING_PAYEE_EXISTING
-
+from constants import PAYABLE_EVENT_TO_TEXT, PAYABLE_EVENT_INBOUND,PAYABLE_EVENT_COMPOSITE_INBOUND,PAYABLE_EVENT_MISC_INBOUND,ACCOUNT_TYPE_CASH,ACCOUNT_TYPE_PAYABLE,ACCOUNT_TYPE_RECIEVABLE
+ 
 # def add_material_paybable(supplier, amount, unit):
 
 #     supplier_name = supplier.name
@@ -52,6 +53,7 @@ def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, 
             print("entity payable account not found in accounting payable account table")
             return ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND
         # TODO type check 
+        tg_accounts_update = db.session.query(ThirdGradeAccount).filter_by(account_bound_event = PAYABLE_EVENT_INBOUND).all()
         new_transaction_entity.payable_payee_account_id = payable_account_entity.account_id
         new_transaction_entity.transaction_amount = amount
         new_transaction_entity.transaction_amount_unit = unit
@@ -61,6 +63,10 @@ def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, 
         db.session.add(new_transaction_entity)
         current_balance = payable_account_entity.account_payable_balance 
         payable_account_entity.account_payable_balance = current_balance + amount
+        if tg_accounts_update:
+            for account in tg_accounts_update:
+                tg_account_balance = account.account_balance
+                account.account_balance = tg_account_balance + amount
         return 0
 
 # def add_sales_collectable():

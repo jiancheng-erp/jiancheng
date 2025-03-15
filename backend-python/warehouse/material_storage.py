@@ -474,7 +474,7 @@ def get_materials():
         )
     if filters["supplier"] and filters["supplier"] != "":
         material_query = material_query.filter(
-            Supplier.supplier_name.ilike(f"%{filters["supplier"]}%")
+            Supplier.supplier_name.ilike(f"%{filters['supplier']}%")
         )
     entities = material_query.first()
 
@@ -892,7 +892,6 @@ def inbound_material():
         .filter(Supplier.supplier_name == supplier_name)
         .first()
     )
-
     # create inbound record
     inbound_record = InboundRecord(
         inbound_datetime=formatted_timestamp,
@@ -931,10 +930,12 @@ def inbound_material():
 
         # set cost
         unit_price = Decimal(item.get("unitPrice", 0))
-        if inbound_type != 2:
+        if inbound_type == 0:
             storage.unit_price = unit_price
             record_detail.unit_price = unit_price
-        if inbound_type == 2:
+        elif inbound_type == 1:
+            pass
+        elif inbound_type == 2:
             storage.composite_unit_cost = unit_price
             record_detail.composite_unit_cost = unit_price
 
@@ -973,16 +974,17 @@ def inbound_material():
     inbound_record.total_price = total_price
 
     # 财务
-    code = material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
-    # create payee if not exist
-    if code == 1:
-        payable_entity_code = add_payable_entity(supplier_name)
-        if payable_entity_code == 0:
-            material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
-    elif code == 2:
-        return jsonify(
-            {"message": "payable entity not exist"}, 400
-        )
+    if inbound_type != 1:
+        code = material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
+        # create payee if not exist
+        if code == 1:
+            payable_entity_code = add_payable_entity(supplier_name)
+            if payable_entity_code == 0:
+                material_inbound_accounting_event(supplier_name, total_price, inbound_record.inbound_record_id)
+        elif code == 2:
+            return jsonify(
+                {"message": "payable entity not exist"}, 400
+            )
     db.session.commit()
     return jsonify({"message": "success", "inboundRId": inbound_rid})
 
