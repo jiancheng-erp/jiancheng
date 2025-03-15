@@ -233,7 +233,7 @@ def update_first_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(FirstGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(FirstGradeAccounts).filter_by(account_id = account_id).first()
+    old_existing = db.session.query(FirstGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(FirstGradeAccount).filter_by(account_id = account_id).first()
     new_existing = db.session.query(FirstGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})
@@ -249,7 +249,7 @@ def update_second_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(SecondGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(SecondGradeAccounts).filter_by(account_id = account_id).first()
+    old_existing = db.session.query(SecondGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(SecondGradeAccount).filter_by(account_id = account_id).first()
     new_existing = db.session.query(SecondGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})
@@ -265,7 +265,7 @@ def update_third_grade_account_name():
     account_id = request.args.get("accountId")
     old_account_name = request.args.get("accountNameOld")
     new_account_name = request.args.get("accountNameNew")
-    old_existing = db.session.query(ThirdGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(ThirdGradeAccounts).filter_by(account_id = account_id).first()
+    old_existing = db.session.query(ThirdGradeAccount).filter_by(account_name = old_account_name).first() or db.sesison.query(ThirdGradeAccount).filter_by(account_id = account_id).first()
     new_existing = db.session.query(ThirdGradeAccount).filter_by(account_name = new_account_name).first()
     if not old_existing:
         return jsonify({"msg":"account with name or id not found"})

@@ -44,7 +44,7 @@ class BomItem(db.Model):
     size_type = db.Column(db.String(1), nullable=False, default="E")
     material_second_type = db.Column(db.String(10), nullable=True)
     craft_name = db.Column(db.String(200), nullable=True)
-    pairs = db.Column(db.DECIMAL(10, 5), nullable=True)
+    pairs = db.Column(db.DECIMAL(12, 5), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
 
     def __repr__(self):
@@ -215,19 +215,19 @@ class MaterialStorage(db.Model):
     order_shoe_id = db.Column(db.BigInteger)
     material_id = db.Column(db.BigInteger, nullable=False)
     estimated_inbound_amount = db.Column(
-        db.DECIMAL(10, 5),
+        db.DECIMAL(12, 5),
         default=0,
     )
     actual_purchase_amount = db.Column(
-        db.DECIMAL(10, 5),
+        db.DECIMAL(12, 5),
         default=0,
     )
     actual_inbound_amount = db.Column(
-        db.DECIMAL(10, 5),
+        db.DECIMAL(12, 5),
         default=0,
     )
-    current_amount = db.Column(db.DECIMAL(10, 5), default=0, nullable=False)
-    unit_price = db.Column(db.DECIMAL(10, 3), nullable=False, default=0.00)
+    current_amount = db.Column(db.DECIMAL(12, 5), default=0, nullable=False)
+    unit_price = db.Column(db.DECIMAL(12, 3), nullable=False, default=0.00)
     material_specification = db.Column(db.String(100), default="", nullable=True)
     material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
     material_outsource_outbound_date = db.Column(db.Date)
@@ -238,7 +238,7 @@ class MaterialStorage(db.Model):
     department_id = db.Column(db.Integer)
 
     craft_name = db.Column(db.String(200), nullable=True)
-    composite_unit_cost = db.Column(db.DECIMAL(10, 3), default=0.00)
+    composite_unit_cost = db.Column(db.DECIMAL(12, 3), default=0.00)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     actual_inbound_unit = db.Column(db.String(5), nullable=True)
     actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
@@ -311,6 +311,7 @@ class OrderShoeStatus(db.Model):
         nullable=False,
     )
     current_status_value = db.Column(db.Integer, nullable=False)
+    revert_info = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f"<OrderShoeStatus(order_shoe_status_id={self.order_shoe_status_id})>"
@@ -396,7 +397,7 @@ class OrderShoeBatchInfo(db.Model):
     order_shoe_type_id = db.Column(
         db.BigInteger,
     )
-    total_price = db.Column(db.DECIMAL(10, 3), nullable=True)
+    total_price = db.Column(db.DECIMAL(12, 3), nullable=True)
 
     def __repr__(self):
         return f"<OrderShoeBatchInfo(order_shoe_batch_info_id={self.order_shoe_batch_info_id})>"
@@ -547,6 +548,7 @@ class OrderStatus(db.Model):
     )
     order_status_value = db.Column(db.Integer, nullable=False)
     order_id = db.Column(db.BigInteger)
+    revert_info = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f"<OrderStatus(order_status_id={self.order_status_id})>"
@@ -778,9 +780,9 @@ class ShoeInboundRecord(db.Model):
     inbound_batch_id = db.Column(db.BigInteger)
     shoe_inbound_rid = db.Column(db.String(60), nullable=True)
     inbound_amount = db.Column(db.Integer, nullable=True)
-    inbound_revenue = db.Column(db.DECIMAL(10, 3), nullable=True)
+    inbound_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
     subsequent_stock = db.Column(db.Integer, nullable=True)
-    subsequent_revenue = db.Column(db.DECIMAL(10, 3), nullable=True)
+    subsequent_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
     inbound_type = db.Column(
         db.SmallInteger, nullable=False, default=0, comment="0: 自产\n1: 外包"
@@ -812,9 +814,9 @@ class ShoeOutboundRecord(db.Model):
     outbound_batch_id = db.Column(db.BigInteger)
     shoe_outbound_rid = db.Column(db.String(60), nullable=True)
     outbound_amount = db.Column(db.Integer, nullable=True)
-    outbound_revenue = db.Column(db.DECIMAL(10, 3), nullable=True)
+    outbound_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
     subsequent_stock = db.Column(db.Integer, nullable=True)
-    subsequent_revenue = db.Column(db.DECIMAL(10, 3), nullable=True)
+    subsequent_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
     outbound_department = db.Column(db.String(15), nullable=True)
@@ -978,7 +980,7 @@ class UnitPriceReportDetail(db.Model):
     )
     production_section = db.Column(db.String(20))
     procedure_name = db.Column(db.String(50), nullable=False)
-    price = db.Column(db.DECIMAL(10, 3), nullable=False)
+    price = db.Column(db.DECIMAL(12, 3), nullable=False)
     note = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
@@ -997,7 +999,7 @@ class UnitPriceReport(db.Model):
     team = db.Column(db.String(10), nullable=True)
     status = db.Column(db.SmallInteger, nullable=False)
     rejection_reason = db.Column(db.String(40), nullable=True)
-    price_sum = db.Column(db.DECIMAL(10, 3), default=0)
+    price_sum = db.Column(db.DECIMAL(12, 3), default=0)
 
     def __repr__(self):
         return f"<UnitPriceReport(report_id={self.report_id})>"
@@ -1022,7 +1024,7 @@ class ReportTemplateDetail(db.Model):
     row_id = db.Column(db.Integer, primary_key=True, nullable=False)
     production_section = db.Column(db.String(20))
     procedure_name = db.Column(db.String(50), nullable=True)
-    price = db.Column(db.DECIMAL(10, 3), nullable=True)
+    price = db.Column(db.DECIMAL(12, 3), nullable=True)
     note = db.Column(db.String(100), nullable=True)
 
 
@@ -1122,7 +1124,7 @@ class InboundRecord(db.Model):
     supplier_id = db.Column(db.Integer, nullable=True)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
     inbound_type = db.Column(db.SmallInteger, nullable=False)
-    total_price = db.Column(db.DECIMAL(10, 3), nullable=True)
+    total_price = db.Column(db.DECIMAL(12, 3), nullable=True)
     remark = db.Column(db.String(40), nullable=True)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
     pay_method = db.Column(db.String(10), nullable=True)
@@ -1136,9 +1138,9 @@ class InboundRecordDetail(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
-    unit_price = db.Column(db.DECIMAL(10, 3), nullable=False, default=0.000)
-    inbound_amount = db.Column(db.DECIMAL(10, 5), nullable=False)
-    composite_unit_cost = db.Column(db.DECIMAL(10, 3), nullable=True)
+    unit_price = db.Column(db.DECIMAL(12, 3), nullable=False, default=0.000)
+    inbound_amount = db.Column(db.DECIMAL(12, 5), nullable=False)
+    composite_unit_cost = db.Column(db.DECIMAL(12, 3), nullable=True)
 
     size_34_inbound_amount = db.Column(db.Integer, nullable=True)
     size_35_inbound_amount = db.Column(db.Integer, nullable=True)
@@ -1167,7 +1169,7 @@ class OutboundRecord(db.Model):
     outbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     outbound_rid = db.Column(db.String(60))
     outbound_batch_id = db.Column(db.Integer)
-    outbound_amount = db.Column(db.DECIMAL(10, 5))
+    outbound_amount = db.Column(db.DECIMAL(12, 5))
     size_34_outbound_amount = db.Column(db.Integer, nullable=True)
     size_35_outbound_amount = db.Column(db.Integer, nullable=True)
     size_36_outbound_amount = db.Column(db.Integer, nullable=True)
@@ -1223,7 +1225,7 @@ class OrderShoeType(db.Model):
     pre_sewing_amount = db.Column(db.Integer, default=0)
     sewing_amount = db.Column(db.Integer, default=0)
     molding_amount = db.Column(db.Integer, default=0)
-    unit_price = db.Column(db.DECIMAL(10, 3), default=0)
+    unit_price = db.Column(db.DECIMAL(12, 3), default=0)
     customer_color_name = db.Column(db.String(40), default="")
     currency_type = db.Column(db.String(4), nullable=True, default="")
 
@@ -1319,9 +1321,9 @@ class CraftSheetItem(db.Model):
     remark = db.Column(db.String(100), nullable=True)
     craft_name = db.Column(db.String(200), nullable=True)
     material_source = db.Column(db.String(1), nullable=True)
-    pairs = db.Column(db.DECIMAL(10, 5), nullable=True)
-    unit_usage = db.Column(db.DECIMAL(10, 5), nullable=True)
-    total_usage = db.Column(db.DECIMAL(10, 5), nullable=True)
+    pairs = db.Column(db.DECIMAL(12, 5), nullable=True)
+    unit_usage = db.Column(db.DECIMAL(12, 5), nullable=True)
+    total_usage = db.Column(db.DECIMAL(12, 5), nullable=True)
     after_usage_symbol = db.Column(db.String(1), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     processing_remark = db.Column(db.String(200), nullable=True)
@@ -1366,13 +1368,14 @@ class FirstGradeAccount(db.Model):
     __tablename__ = "accounting_fg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
-    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    account_balance = db.Column(db.DECIMAL(12, 3), nullable=True, default=0.000)
 
 
 class SecondGradeAccount(db.Model):
     __tablename__ = "accounting_sg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
+    account_balance = db.Column(db.DECIMAL(12, 3), nullable=True, default=0.000)
     account_belongs_fg = db.Column(db.Integer, nullable=False)
     account_payable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
     account_recievable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
@@ -1383,11 +1386,12 @@ class ThirdGradeAccount(db.Model):
     __tablename__ = "accounting_tg_account"
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
-    account_balance = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    account_balance = db.Column(db.DECIMAL(12, 3), nullable=True, default=0.000)
     account_belongs_sg = db.Column(db.Integer, nullable=False)
     account_type = db.Column(db.String(1), nullable=False)
     account_bound_event = db.Column(db.String(1), nullable=True)
 
+   
 class Unit(db.Model):
     __tablename__ = "unit"
     unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1399,85 +1403,55 @@ class Unit(db.Model):
     def __name__(self):
         return "Unit"
 
+
 class AccountingPayableAccount(db.Model):
-    __tablename__ ="accounting_payable_account"
-    account_id = db.Column(db.Integer, primary_key=True, nullable=False,
-                           autoincrement=True)
-    account_payable_balance = db.Column(db.DECIMAL(10,3), nullable=False)
-    account_unit_id = db.Column(db.Integer,nullable=False)
-    account_owner_id = db.Column(db.Integer, nullable=False)
+    __tablename__ = "accounting_payable_account"
+    account_id = db.Column(
+        db.Integer, primary_key=True, nullable=False, autoincrement=True
+    )
+    account_payable_balance = db.Column(db.DECIMAL(12, 3), nullable=False)
+    account_unit_id = db.Column(db.Integer, nullable=False)
+    account_owner_id = db.Column(
+        db.Integer, nullable=False, comment="AccountPayeePayer表的主键"
+    )
+
 
 class AccountingRecievableAccount(db.Model):
     __tablename__ = "accounting_recievable_account"
-    account_id = db.Column(db.Integer, primary_key=True, nullable=False,
-                           autoincrement=True)
-    account_recievable_balance = db.Column(db.DECIMAL(10,3), nullable=False)
+    account_id = db.Column(
+        db.Integer, primary_key=True, nullable=False, autoincrement=True
+    )
+    account_recievable_balance = db.Column(db.DECIMAL(12, 3), nullable=False)
     account_unit_id = db.Column(db.Integer, nullable=False)
     account_owner_id = db.Column(db.Integer, nullable=False)
 
+
 class AccountingPayeePayer(db.Model):
     __tablename__ = "accounting_payee_payer"
-    payee_id = db.Column(db.Integer, primary_key=True, nullable=False,
-                         autoincrement=True)
+    payee_id = db.Column(
+        db.Integer, primary_key=True, nullable=False, autoincrement=True
+    )
     payee_name = db.Column(db.String(50), nullable=False)
     payee_address = db.Column(db.String(50), nullable=True)
     payee_bank_info = db.Column(db.String(50), nullable=True)
     payee_contact_info = db.Column(db.String(20), nullable=True)
-    entity_type = db.Column(db.String(1),nullable=False)
+    entity_type = db.Column(db.String(1), nullable=False)
+
 
 class AccountingForeignAccountEvent(db.Model):
     __tablename__ = "accounting_foreign_account_event"
-    transaction_id= db.Column(db.Integer, primary_key=True, nullable=False,
-                              autoincrement=True)
-    # 0 代表应收增加 1 代表应付增加 
+    transaction_id = db.Column(
+        db.Integer, primary_key=True, nullable=False, autoincrement=True
+    )
+    # 0 代表应收增加 1 代表应付增加
     # 如应收减少说明资金向内流动 如应付减少说明资金向外流动
     # 新订单导致应收增加 材料入库 复合入库应付增加
     transaction_type = db.Column(db.String(1), nullable=False)
     payable_payee_account_id = db.Column(db.Integer, nullable=False)
-    transaction_amount = db.Column(db.DECIMAL(10,3), nullable=False)
-    #应收/应付默认为CNY
+    transaction_amount = db.Column(db.DECIMAL(12, 3), nullable=False)
+    # 应收/应付默认为CNY
     transaction_amount_unit = db.Column(db.Integer, nullable=False, default=1)
-    #默认无单位转换 
+    # 默认无单位转换
     transaction_has_conversion = db.Column(db.String(1), nullable=False, default=0)
     transaction_conversion_id = db.Column(db.Integer, nullable=True)
-
-
-class AccountingCurrencyUnit(db.Model):
-    __tablename__ = "accounting_currency_unit"
-    unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    unit_name_en = db.Column(db.String(20), nullable=False)
-    unit_name_cn = db.Column(db.String(20), nullable=False)
-
-
-class AccountingUnitConversionTable(db.Model):
-    __tablename__ = "accounting_unit_conversion_table"
-    conversion_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    unit_from = db.Column(db.Integer, nullable=False)
-    unit_to = db.Column(db.Integer, nullable=False)
-    rate = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
-    rate_date = db.Column(db.DateTime, nullable=True)
-    rate_active = db.Column(db.Boolean, nullable=False, default=False)
-
-
-class AccountingThirdGradeRecord(db.Model):
-    __tablename__ = "accounting_tg_record"
-    # 记录名称（如 K25-014 鞋材供应商货款）
-    record_name = db.Column(db.String(20), nullable=False)
-    # 记录面向主体（供应商名称如 AB鞋材/5号客人某订单号货款）
-    record_object_id = db.Column(db.Integer, nullable=False)
-    # 记录资金流向（0 指付款， 1 指收款）
-    record_type = db.Column(db.Integer, nullable=False)
-    # 　资金数量
-    record_amount = db.Column(db.DECIMAL(10, 3), nullable=False)
-    # 记录创建时间
-    record_creation_date = db.Column(db.DateTime, nullable=False)
-    # 记录处理时间
-    record_processed_date = db.Column(db.DateTime, nullable=False)
-    # 记录金额单位id
-    record_amount_unit_id = db.Column(db.Integer, nullable=False)
-    # 记录金额单位转换id
-    record_amount_conversion_id = db.Column(db.Integer, nullable=False)
-    # 记录处理状态
-    record_is_processed = db.Column(db.Integer, nullable=False)
-    # 记录id
-    record_id = db.Column(db.Integer, primary_key=True, nullable=False)
+    inbound_record_id = db.Column(db.BigInteger, nullable=True)

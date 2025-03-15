@@ -36,7 +36,7 @@
     </el-row>
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="90%">
-        <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
+        <div id="printView">
             <h2 style="text-align: center;">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px;">
                 <span style="font-weight: bolder;font-size: 16px;">
@@ -57,19 +57,19 @@
             <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
                 style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                 <tr>
-                    <th width="100">材料名</th>
-                    <th width="100">型号</th>
+                    <th width="80">材料名</th>
+                    <th width="80">型号</th>
                     <th width="200">规格</th>
-                    <th width="80">颜色</th>
-                    <th width="55">单位</th>
-                    <th>订单号</th>
-                    <th v-if="currentRow.isSizedMaterial === 1" width="50"
+                    <th width="60">颜色</th>
+                    <th width="40">单位</th>
+                    <th width="100">订单号</th>
+                    <th v-if="currentRow.isSizedMaterial === 1" width="40"
                         v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ column.label }}</th>
-                    <th v-else width="100">数量</th>
-                    <th v-if="currentRow.inboundType != 2" width="80">单价</th>
-                    <th v-if="currentRow.inboundType == 2" width="80">复合单价</th>
+                    <th v-else width="90">数量</th>
+                    <th v-if="currentRow.inboundType != 2" width="60">单价</th>
+                    <th v-if="currentRow.inboundType == 2" width="60">复合单价</th>
                     <th width="80">总价</th>
-                    <th>备注</th>
+                    <th width="100">备注</th>
                 </tr>
                 <tr v-for="(item, index) in recordData.items" :key="index" align="center">
                     <td>{{ item.materialName }}</td>
@@ -251,28 +251,11 @@ export default {
     }
 }
 </script>
-<style media="print">
-@page {
-    size: 241mm 93mm;
-    margin: 3mm;
-}
-
-html {
-    background-color: #ffffff;
-    margin: 0px;
-}
-
-body {
-    border: solid 1px #ffffff;
-}
-</style>
-
-<style lang="scss" scoped>
-@media print {
-    #printView {
-        display: block;
-        width: 100%;
-        overflow: hidden;
-    }
+<style>
+#printView {
+    padding-left: 20px; 
+    padding-right: 20px;
+    color:black; 
+    font-family: SimHei;
 }
 </style>
