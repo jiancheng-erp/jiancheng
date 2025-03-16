@@ -180,7 +180,7 @@
                 </el-table>
 
                 <span>
-                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7">保存数据</el-button>
+                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7 || role == 1">保存数据</el-button>
                     <el-button type="primary" @click="showMessage" v-if="orderData.orderStatus === 7">完成审批</el-button>
                 </span>
             </el-main>
@@ -217,6 +217,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 const { orderId } = defineProps(['orderId'])
+const role = ref(localStorage.getItem('role'))
 let orderData = ref({})
 let orderShoeData = ref([])
 let priceChangeNotAllowed = ref(false)

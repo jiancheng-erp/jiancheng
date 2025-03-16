@@ -8,7 +8,7 @@ export default [
         props: true,
         meta: {
             requiresAuth: true,
-            role: 2
+            role: [1, 2]
         }
     }
 ]
