@@ -18,6 +18,11 @@
             <el-table :data="tableData" border>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
+                <el-table-column label="入库类型">
+                    <template #default="scope">
+                        {{ determineInboundName(scope.row.inboundType) }}
+                    </template>
+                </el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
