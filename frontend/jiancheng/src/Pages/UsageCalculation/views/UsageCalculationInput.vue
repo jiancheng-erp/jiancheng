@@ -67,44 +67,50 @@
                                     <el-table-column prop="secondPurchaseOrderStatus" label="二次采购订单"></el-table-column>
                                     <el-table-column label="操作" align="center" width="400">
                                         <template #default="scope">
-                                            <el-button v-if="
-                                                parentScope.row.status.includes(
-                                                    '面料单位用量计算'
-                                                ) && scope.row.firstBomStatus === '等待用量填写'
-                                            " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
-                                            <div v-else-if="
-                                                scope.row.firstBomStatus === '用量填写已下发' ||
-                                                scope.row.firstBomStatus === 'BOM完成'
-                                            ">
-                                                <el-button type="primary"
-                                                    @click="openPreviewDialog(scope.row)">查看</el-button>
-                                                <el-button type="success" @click="downloadfirstBOM(scope.row)">
-                                                    下载一次BOM
-                                                </el-button>
-                                            </div>
-                                            <div v-else-if="
-                                                scope.row.firstBomStatus === '已提交' ||
-                                                scope.row.firstBomStatus === '用量填写已提交'
-                                            ">
-                                                <el-button type="primary"
-                                                    @click="openPreviewDialog(scope.row)">查看</el-button>
-                                            </div>
-
-                                            <div v-else-if="
-                                                parentScope.row.status.includes(
-                                                    '面料单位用量计算'
-                                                ) &&
-                                                scope.row.firstBomStatus === '用量填写已保存'
-                                            ">
+                                            <div v-if="role == 1">
                                                 <el-button type="primary"
                                                     @click="openEditDialog(scope.row)">编辑</el-button>
-                                                <el-button type="success"
-                                                    @click="openPreviewDialog(scope.row)">预览</el-button>
-                                                <el-button type="normal"
-                                                    @click="handleCopyToOtherColor(scope.row)">复制到其他颜色</el-button>
-                                                <el-button type="warning"
-                                                    @click="submitBOMUsage(scope.row)">提交</el-button>
+                                            </div>
+                                            <div v-else>
+                                                <el-button v-if="
+                                                    parentScope.row.status.includes(
+                                                        '面料单位用量计算'
+                                                    ) && scope.row.firstBomStatus === '等待用量填写'
+                                                " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
+                                                <div v-else-if="
+                                                    scope.row.firstBomStatus === '用量填写已下发' ||
+                                                    scope.row.firstBomStatus === 'BOM完成'
+                                                ">
+                                                    <el-button type="primary"
+                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
+                                                    <el-button type="success" @click="downloadfirstBOM(scope.row)">
+                                                        下载一次BOM
+                                                    </el-button>
+                                                </div>
+                                                <div v-else-if="
+                                                    scope.row.firstBomStatus === '已提交' ||
+                                                    scope.row.firstBomStatus === '用量填写已提交'
+                                                ">
+                                                    <el-button type="primary"
+                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
+                                                </div>
 
+                                                <div v-else-if="
+                                                    parentScope.row.status.includes(
+                                                        '面料单位用量计算'
+                                                    ) &&
+                                                    scope.row.firstBomStatus === '用量填写已保存'
+                                                ">
+                                                    <el-button type="primary"
+                                                        @click="openEditDialog(scope.row)">编辑</el-button>
+                                                    <el-button type="success"
+                                                        @click="openPreviewDialog(scope.row)">预览</el-button>
+                                                    <el-button type="normal"
+                                                        @click="handleCopyToOtherColor(scope.row)">复制到其他颜色</el-button>
+                                                    <el-button type="warning"
+                                                        @click="submitBOMUsage(scope.row)">提交</el-button>
+
+                                                </div>
                                             </div>
                                         </template></el-table-column>
                                 </el-table>
@@ -462,6 +468,7 @@ export default {
     },
     data() {
         return {
+            role: localStorage.getItem('role'),
             getShoeSizesName,
             shoeSizeColumns: [],
             createEditSymbol: 0,

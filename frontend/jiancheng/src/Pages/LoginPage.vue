@@ -2,25 +2,14 @@
     <div class="login-form-container">
         <h1>浙江健诚集团鞋业有限公司ERP系统</h1>
         <h2>(Version 0.1)</h2>
-        <el-form :model="loginForm" ref="loginFormRef" :rules="rules" class="login-form" @keyup.enter="handleSubmit" >
+        <el-form :model="loginForm" ref="loginFormRef" :rules="rules" class="login-form" @keyup.enter="handleSubmit">
             <el-form-item prop="username">
-                <el-input
-                    v-model="loginForm.username"
-                    autocomplete="off"
-                    placeholder="用户名"
-                    :prefix-icon="Avatar"
-                    class="input-large"
-                ></el-input>
+                <el-input v-model="loginForm.username" autocomplete="off" placeholder="用户名" :prefix-icon="Avatar"
+                    class="input-large"></el-input>
             </el-form-item>
             <el-form-item prop="password">
-                <el-input
-                    type="password"
-                    v-model="loginForm.password"
-                    autocomplete="off"
-                    placeholder="密码"
-                    :prefix-icon="Lock"
-                    class="input-large"
-                ></el-input>
+                <el-input type="password" v-model="loginForm.password" autocomplete="off" placeholder="密码"
+                    :prefix-icon="Lock" class="input-large"></el-input>
             </el-form-item>
             <el-button type="primary" @click="handleSubmit" class="button-large">登录</el-button>
         </el-form>
@@ -106,7 +95,7 @@ const handleSubmit = () => {
                         window.location.href = 'headofwarehouse'
                     } else if (response.data.role === 9) {
                         window.location.href = 'logistics'
-                    } 
+                    }
                     else if (response.data.role === 10) {
                         window.location.href = 'financialManager'
                     }
@@ -132,7 +121,10 @@ const handleSubmit = () => {
                         window.location.href = 'productionclerk'
                     } else if (response.data.role === 23) {
                         window.location.href = 'warehouseclerk'
-                    } else {
+                    } else if (response.data.role === 1) {
+                        window.location.href = 'administrator'
+                    }
+                    else {
                         console.log('Invalid role!')
                     }
                     loading.close()
@@ -142,7 +134,7 @@ const handleSubmit = () => {
                         confirmButtonText: '确定',
                         type: 'error'
                     })
-                    
+
                     console.log('Login failed!')
                     loading.close()
                 })

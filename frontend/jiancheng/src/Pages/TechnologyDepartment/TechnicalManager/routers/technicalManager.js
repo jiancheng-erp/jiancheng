@@ -8,7 +8,7 @@ export default [
         props: true,
         meta: {
           requiresAuth: true,
-          role: [3, 5, 6, 8]
+          role: [3, 5, 6, 8, 1]
         }
     },
     {
