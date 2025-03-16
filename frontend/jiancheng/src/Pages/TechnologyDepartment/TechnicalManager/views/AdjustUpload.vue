@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -73,32 +73,38 @@
                         <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center">
                             <template #default="scope">
-                                <div v-if="scope.row.status === '未上传'">
-                                    <el-button v-if="isEditor()" type="primary"
-                                        @click="openUploadDialog(scope.row)">创建工艺单</el-button>
-                                    <span v-else>工艺单未下发</span>
-                                </div>
-                                <div v-else-if="scope.row.status === '已上传'">
-                                    <el-button v-if="isEditor()" type="primary"
+                                <div v-if="role == 1">
+                                    <el-button type="primary"
                                         @click="openEditDialog(scope.row)">编辑工艺单</el-button>
-                                    <el-button v-if="isEditor()" type="success"
-                                        @click="openPreviewDialog(scope.row)">预览工艺单</el-button>
                                 </div>
-                                <div v-else-if="scope.row.status === '完成用量填写'">
-                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
-                                </div>
-                                <div v-else-if="
-                                    scope.row.status === '等待用量填写' ||
-                                    scope.row.status === '已审核并下发'
-                                ">
-                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
-                                </div>
-                                <div v-if="scope.row.status === '已审核并下发'">
-                                    <el-button type="success"
-                                        @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
-                                    <el-button type="warning"
-                                        @click="downloadProductionInstructionImage(scope.row)">下载备注图片
-                                    </el-button>
+                                <div v-else>
+                                    <div v-if="scope.row.status === '未上传'">
+                                        <el-button v-if="isEditor()" type="primary"
+                                            @click="openUploadDialog(scope.row)">创建工艺单</el-button>
+                                        <span v-else>工艺单未下发</span>
+                                    </div>
+                                    <div v-else-if="scope.row.status === '已上传'">
+                                        <el-button v-if="isEditor()" type="primary"
+                                            @click="openEditDialog(scope.row)">编辑工艺单</el-button>
+                                        <el-button v-if="isEditor()" type="success"
+                                            @click="openPreviewDialog(scope.row)">预览工艺单</el-button>
+                                    </div>
+                                    <div v-else-if="scope.row.status === '完成用量填写'">
+                                        <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
+                                    </div>
+                                    <div v-else-if="
+                                        scope.row.status === '等待用量填写' ||
+                                        scope.row.status === '已审核并下发'
+                                    ">
+                                        <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
+                                    </div>
+                                    <div v-if="scope.row.status === '已审核并下发'">
+                                        <el-button type="success"
+                                            @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
+                                        <el-button type="warning"
+                                            @click="downloadProductionInstructionImage(scope.row)">下载备注图片
+                                        </el-button>
+                                    </div>
                                 </div>
                             </template>
                         </el-table-column>
@@ -114,16 +120,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -229,7 +235,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(0)">手动添加面料</el-button>
                                 <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -327,7 +333,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(1)">手动添加里料</el-button>
                                 <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -429,7 +435,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(2)">手动添加辅料</el-button>
                                 <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -528,7 +534,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(3)">手动添加大底</el-button>
                                 <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -626,7 +632,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(4)">手动添加中底</el-button>
                                 <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -725,7 +731,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                                 <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -919,22 +925,22 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="型号" align="center">{{
                                     currentShoeId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -1159,7 +1165,7 @@ export default {
     props: ['orderId'],
     data() {
         return {
-            userRole: localStorage.getItem('role'),
+            role: localStorage.getItem('role'),
             orderShoeData: {},
             departmentOptions: [],
             activeTab: '',
@@ -1429,7 +1435,7 @@ export default {
             this.fileListPicNote = fileList // Sync file list for note upload
         },
         isEditor() {
-            return this.userRole == 5
+            return this.role == 5
         },
         async getAllDepartmentOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)

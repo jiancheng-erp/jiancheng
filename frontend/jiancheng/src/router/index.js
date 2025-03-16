@@ -20,6 +20,7 @@ import FinishedWarehouse from '@/Pages/TotalWarehouse/FinishedWarehouse/views/Fi
 import ProductionClerk from '@/Pages/ProductionManagementDepartment/ProductionClerk/views/ProductionClerk.vue'
 import FinancialManager from '@/Pages/FinancialManager/views/FinancialManager.vue'
 import WarehouseClerk from '@/Pages/TotalWarehouse/WarehouseClerk/views/WarehouseClerk.vue'
+import Administrator from '@/Pages/Administrator/views/Administrator.vue'
 
 //引入子路由
 import LogisticsRoutes from '../Pages/LogisticsControlDepartment/LogisticsControlManager/routers/logistics'
@@ -49,6 +50,15 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginPage
+    },
+    {
+      path :'/administrator',
+      name : 'administrator',
+      component: Administrator,
+      meta:{
+        requiresAuth: true,
+        role: 1
+      }
     },
     {
       path :'/generalmanager',

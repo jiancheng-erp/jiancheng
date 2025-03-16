@@ -9,7 +9,7 @@ export default [
         props: true,
         meta: {
             requiresAuth: true,
-            role: 7
+            role: [7, 1]
         }
     },
     {

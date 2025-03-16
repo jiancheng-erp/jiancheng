@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderData.customerBrand
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -73,20 +73,26 @@
                         <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center">
                             <template #default="scope">
-                                <el-button v-if="scope.row.status === '未上传'" type="primary"
-                                    @click="openUploadDialog(scope.row)">上传投产指令单</el-button>
-                                <div v-else-if="scope.row.status === '已下发'">
-                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
-                                    <el-button type="success"
-                                        @click="downloadProductionInstruction(scope.row)">下载投产指令单EXCEL</el-button>
-                                    <el-button type="warning"
-                                        @click="downloadProductionInstructionImage(scope.row)">下载备注图片</el-button>
-                                </div>
-
-                                <div v-else-if="scope.row.status === '已上传'">
+                                <div v-if="role == 1">
                                     <el-button type="primary" @click="openEditDialog(scope.row)">编辑投产指令单</el-button>
-                                    <el-button type="success" @click="openPreviewDialog(scope.row)">预览投产指令单</el-button>
-                                    <el-button type="warning" @click="uploadNoteImage(scope.row)">上传图片备注</el-button>
+                                </div>
+                                <div v-else>
+                                    <el-button v-if="scope.row.status === '未上传'" type="primary"
+                                        @click="openUploadDialog(scope.row)">上传投产指令单</el-button>
+                                    <div v-else-if="scope.row.status === '已下发'">
+                                        <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
+                                        <el-button type="success"
+                                            @click="downloadProductionInstruction(scope.row)">下载投产指令单EXCEL</el-button>
+                                        <el-button type="warning"
+                                            @click="downloadProductionInstructionImage(scope.row)">下载备注图片</el-button>
+                                    </div>
+
+                                    <div v-else-if="scope.row.status === '已上传'">
+                                        <el-button type="primary" @click="openEditDialog(scope.row)">编辑投产指令单</el-button>
+                                        <el-button type="success"
+                                            @click="openPreviewDialog(scope.row)">预览投产指令单</el-button>
+                                        <el-button type="warning" @click="uploadNoteImage(scope.row)">上传图片备注</el-button>
+                                    </div>
                                 </div>
                             </template></el-table-column>
                     </el-table></el-col>
@@ -111,16 +117,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -130,7 +136,8 @@
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column prop="inheritId" label="工厂型号" align="center"
                                     width="100"></el-table-column>
-                                <el-table-column prop="customerProductName" label="客户型号" align="center"></el-table-column>
+                                <el-table-column prop="customerProductName" label="客户型号"
+                                    align="center"></el-table-column>
                                 <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                                 <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
                                 <el-table-column label="操作" align="center">
@@ -160,13 +167,13 @@
                             </el-descriptions-item>
                             <el-descriptions-item label="工厂型号" align="center">{{
                                 currentShoeId
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="客户号" align="center">{{
                                 currentOrderShoeRow.customerProductName
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="商标" align="center">{{
                                 orderData.customerBrand
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -240,7 +247,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -328,7 +335,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -420,7 +427,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -512,7 +519,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -604,7 +611,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -696,7 +703,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -845,10 +852,10 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="工厂型号" align="center">{{
                         pastShoeDescription.shoeId
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         pastShoeDescription.color
-                        }}</el-descriptions-item>
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
@@ -921,22 +928,22 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="工厂型号" align="center">{{
                                     currentShoeId
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -1047,13 +1054,13 @@
                             </el-descriptions-item>
                             <el-descriptions-item label="工厂型号" align="center">{{
                                 currentShoeId
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="客户号" align="center">{{
                                 currentOrderShoeRow.customerProductName
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                             <el-descriptions-item label="商标" align="center">{{
                                 orderData.customerBrand
-                                }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -1127,7 +1134,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1222,7 +1229,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1315,7 +1322,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1408,7 +1415,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1502,7 +1509,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1597,7 +1604,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1726,6 +1733,7 @@ export default {
     props: ['orderId'],
     data() {
         return {
+            role: localStorage.getItem('role'),
             orderShoeData: {},
             departmentOptions: [],
             activeTab: '',
