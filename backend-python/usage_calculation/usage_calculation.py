@@ -297,7 +297,8 @@ def save_bom_usage():
         .filter(OrderShoeStatus.current_status == 4)
         .first()
     )
-    order_shoe_status.current_status_value = 1
+    if order_shoe_status:
+        order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"status": "success"})
 

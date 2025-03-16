@@ -14,36 +14,40 @@
                     <el-descriptions title="" :column="2" border>
                         <el-descriptions-item label="订单编号" align="center">{{
                             orderData.orderId
-                        }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         <el-descriptions-item label="订单创建时间" align="center">{{
                             orderData.createTime
-                        }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         <el-descriptions-item label="客户名称" align="center">{{
                             orderData.customerName
-                        }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         <el-descriptions-item label="订单预计截止日期" align="center">{{
                             orderData.deadlineTime
-                        }}</el-descriptions-item>
+                            }}</el-descriptions-item>
                         <el-descriptions-item label="楦头采购状态" align="center">{{
                             orderData.lastStatus === '0' ? '未采购' : orderData.lastStatus === '1' ? '已保存' : '已采购'
-                        }}
+                            }}
                             <el-button v-if="orderData.lastStatus === ('0' || '1')" type="primary" size="default"
                                 @click="openLastPurchasePage(orderData.orderDBId)">采购</el-button>
-                            <el-button v-else type="primary" size="default" @click="downloadLastZip(orderData.orderDBId)">下载楦头采购订单</el-button>
+                            <el-button v-else type="primary" size="default"
+                                @click="downloadLastZip(orderData.orderDBId)">下载楦头采购订单</el-button>
                         </el-descriptions-item>
                         <el-descriptions-item label="刀模采购状态 " align="center">{{
-                            orderData.cuttingModelStatus === '0' ? '未采购' : orderData.cuttingModelStatus === '1' ? '已保存' : '已采购'
-                        }}
-                            <el-button v-if="orderData.cuttingModelStatus === ('0' || '1')" type="primary" size="default"
-                                @click="openCutModelPurchasePage(orderData.orderDBId)">采购</el-button>
+                            orderData.cuttingModelStatus === '0' ? '未采购' : orderData.cuttingModelStatus === '1' ? '已保存'
+                                : '已采购'
+                            }}
+                            <el-button v-if="orderData.cuttingModelStatus === ('0' || '1')" type="primary"
+                                size="default" @click="openCutModelPurchasePage(orderData.orderDBId)">采购</el-button>
                             <el-button v-else type="primary" size="default" @click="">下载刀模采购订单</el-button>
                         </el-descriptions-item>
                         <el-descriptions-item label="包材采购状态" align="center">{{
-                            orderData.packagingStatus === '0' ? '未采购' : orderData.packagingStatus === '1' ? '已保存' : '已采购'
-                        }}
+                            orderData.packagingStatus === '0' ? '未采购' : orderData.packagingStatus === '1' ? '已保存' :
+                                '已采购'
+                            }}
                             <el-button v-if="orderData.packagingStatus === ('0' || '1')" type="primary" size="default"
                                 @click="openPackagePurchasePage(orderData.orderDBId)">采购</el-button>
-                            <el-button v-else type="primary" size="default" @click="downloadPackageZip(orderData.orderDBId)">下载包材采购订单</el-button>
+                            <el-button v-else type="primary" size="default"
+                                @click="downloadPackageZip(orderData.orderDBId)">下载包材采购订单</el-button>
                         </el-descriptions-item>
                         <el-descriptions-item label="尺码数量对照表" align="center">
                             <el-button type="primary" size="default" @click="openSizeComparisonDialog">查看</el-button>
@@ -97,23 +101,28 @@
                         <el-table-column prop="status" label="状态" align="center"></el-table-column>
                         <el-table-column label="操作" align="center" width="500">
                             <template #default="scope">
-                                <div v-if="scope.row.currentStatus === '已保存'">
+                                <div v-if="role == 1">
                                     <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
-                                    <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
-                                    <el-button type="warning" @click="openSubmitDialog(scope.row)">提交</el-button>
                                 </div>
-                                <div v-else-if="scope.row.currentStatus === '已提交'">
-                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>
-                                    <el-button type="success"
-                                        @click="downloadPurchaseOrderZip(scope.row)">下载采购订单压缩包</el-button>
-                                    <el-button type="success"
-                                        @click="downloadMaterialStasticExcel(scope.row)">下载材料统计单</el-button>
-                                </div>
-                                <div v-else-if="
-                                    scope.row.currentStatus === '未填写' &&
-                                    scope.row.status.includes('总仓采购订单创建')
-                                ">
-                                    <el-button type="primary" @click="handleGenerate(scope.row)">填写</el-button>
+                                <div v-else>
+                                    <div v-if="scope.row.currentStatus === '已保存'">
+                                        <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                                        <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                        <el-button type="warning" @click="openSubmitDialog(scope.row)">提交</el-button>
+                                    </div>
+                                    <div v-else-if="scope.row.currentStatus === '已提交'">
+                                        <el-button type="primary" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                        <el-button type="success"
+                                            @click="downloadPurchaseOrderZip(scope.row)">下载采购订单压缩包</el-button>
+                                        <el-button type="success"
+                                            @click="downloadMaterialStasticExcel(scope.row)">下载材料统计单</el-button>
+                                    </div>
+                                    <div v-else-if="
+                                        scope.row.currentStatus === '未填写' &&
+                                        scope.row.status.includes('总仓采购订单创建')
+                                    ">
+                                        <el-button type="primary" @click="handleGenerate(scope.row)">填写</el-button>
+                                    </div>
                                 </div>
                             </template>
                         </el-table-column>
@@ -124,16 +133,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="投产指令单" align="center">
                         <el-button type="primary" size="default" @click="downloadProductionOrderList">
                             查看投产指令单
@@ -230,7 +239,7 @@
                                 <template #default="scope">
                                     <el-select v-model="scope.row.inboundUnit" placeholder="请选择" filterable
                                         @change="handleUnitChange(scope.row)"
-                                        :disabled="!isEditEnabled && scope.row.unit === '双'  && scope.row.materialCategory === 1">
+                                        :disabled="!isEditEnabled && scope.row.unit === '双' && scope.row.materialCategory === 1">
                                         <el-option v-for="item in unitOptions" :key="item.value" :label="item.label"
                                             :value="item.value" />
                                     </el-select>
@@ -274,16 +283,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <!-- <el-descriptions-item label="生产订单" align="center"><el-button type="primary" size="default"
                             @click="downloadProductionOrder">查看生产订单</el-button>
                     </el-descriptions-item> -->
@@ -434,8 +443,7 @@
     <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
         <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
         <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane v-for="( item,index ) in tabPlaneData"
-                :key="index"
+            <el-tab-pane v-for="(item, index) in tabPlaneData" :key="index"
                 :label="item.purchaseDivideOrderId + '    ' + item.supplierName" :name="item.purchaseDivideOrderId"
                 style="min-height: 500px">
                 <el-row :gutter="20">
@@ -599,6 +607,7 @@ export default {
     },
     data() {
         return {
+            role: localStorage.getItem('role'),
             batchInfoSpanMethod: null,
             currentSizeIndex: 0,
             currentSimiliarIndex: 0,
@@ -1368,7 +1377,7 @@ export default {
                 `${this.$apiBaseUrl}/logistics/downloadcutmodelpurchaseorders?orderId=${orderId}`
             )
         },
-        
+
     }
 }
 </script>
