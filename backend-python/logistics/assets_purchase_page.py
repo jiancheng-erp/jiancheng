@@ -114,12 +114,18 @@ def get_material_type_and_name():
 def get_all_material_name():
     # Query for all material names and their types
     material_department = request.args.get("department", 0)
+    material_type_id = request.args.get("materialTypeId")
     material_name_list = (
         db.session.query(Material, MaterialType)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .filter(Material.material_usage_department == material_department)
-        .all()
     )
+
+    if material_type_id and material_type_id != "":
+        material_name_list = material_name_list.filter(
+            MaterialType.material_type_id == material_type_id
+        )
+    material_name_list = material_name_list.all()
 
     # Use a dictionary to store unique material names
     unique_materials = {}

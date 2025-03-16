@@ -199,6 +199,7 @@ class MaterialStorage(db.Model):
     __table_args__ = (
         db.UniqueConstraint(
             "actual_inbound_material_id",
+            "actual_inbound_unit",
             "material_model",
             "material_specification",
             "material_storage_color",
