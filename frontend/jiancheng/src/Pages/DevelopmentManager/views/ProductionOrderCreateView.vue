@@ -2078,7 +2078,7 @@ export default {
             });
 
             console.log("Updated Material Data:", this.materialWholeData);
-        }，
+        },
         addMaterialByManual(typeSymbol) {
             const preActiveMaterialData = this.materialWholeData.find(
                 (item) => item.color === this.activeTab
