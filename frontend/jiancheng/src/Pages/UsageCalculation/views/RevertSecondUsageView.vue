@@ -5,7 +5,7 @@
         </el-header>
         <el-main style="overflow-x: hidden">
             <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">二次BOM填写</el-col>
+                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">生产用量退回处理</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -30,6 +30,27 @@
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
                                 }}</el-descriptions-item>
+                            </el-descriptions>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-descriptions title="" :column="2" border>
+                                <el-descriptions-item label="退回时间" align="center">{{
+                                    revertData.revertTime
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回部门" align="center">{{
+                                    revertData.statusSource
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回原因" align="center">{{
+                                    revertData.revertReason
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回详细" align="center">{{
+                                    revertData.revertDetail
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="处理部门" align="center">{{
+                                    revertData.middleProcess
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -63,40 +84,10 @@
                                     <el-table-column prop="secondPurchaseOrderStatus" label="二次采购订单"></el-table-column>
                                     <el-table-column label="操作" align="center">
                                         <template #default="scope">
-                                            <div v-if="role == 1">
-                                                <el-button type="primary"
-                                                    @click="openEditDialog(scope.row)">编辑</el-button>
-                                            </div>
-                                            <div v-else>
-                                                <el-button v-if="
-                                                    parentScope.row.status.includes(
-                                                        '二次BOM填写'
-                                                    ) && scope.row.secondBomStatus === '未填写'
-                                                " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
-                                                <div v-else-if="scope.row.secondBomStatus === '已下发'">
-                                                    <el-button type="primary"
-                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
-                                                    <el-button type="success"
-                                                        @click="downloadSecondBOM(scope.row)">下载二次BOM表</el-button>
-                                                </div>
-                                                <div v-else-if="scope.row.secondBomStatus === '已提交'">
-                                                    <el-button type="primary"
-                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
-                                                </div>
-                                                <div v-else-if="
-                                                    parentScope.row.status.includes(
-                                                        '二次BOM填写'
-                                                    ) && scope.row.secondBomStatus === '已保存'
-                                                ">
                                                     <el-button type="primary"
                                                         @click="openEditDialog(scope.row)">编辑</el-button>
                                                     <el-button type="success"
                                                         @click="openPreviewDialog(scope.row)">预览</el-button>
-                                                    <el-button type="warning"
-                                                        @click="submitBOM(scope.row)">提交</el-button>
-                                                </div>
-                                            </div>
-
                                         </template></el-table-column>
                                 </el-table>
                             </template>
@@ -109,7 +100,7 @@
             </el-row>
             <el-row :gutter="22" style="margin-top: 10px">
                 <el-col :span="6" :offset="20"><el-button type="primary" size="default"
-                        @click="openIssueDialog">下发BOM</el-button>
+                        @click="pushRevertFlow">推进退回流程</el-button>
                 </el-col>
             </el-row>
 
@@ -561,15 +552,17 @@ export default {
             orderProduceInfo: [],
             currentOrderShoeId: '',
             sizeFormatterData: [],
-            shoeSizeColumns: []
+            shoeSizeColumns: [],
+            revertData: {},
         }
     },
     async mounted() {
         this.initializeSizeFormat()
-        this.getOrderInfo()
+        await this.getOrderInfo()
         this.getAllShoeBomInfo()
         this.getAllColorOptions()
         this.getAllDepartmentOptions()
+        this.getRevertInfo()
     },
     computed: {
         filteredColumns() {
@@ -1150,7 +1143,34 @@ export default {
             window.open(
                 `${this.$apiBaseUrl}/secondbom/download?ordershoerid=${row.orderShoeRid}&orderid=${this.orderData.orderId}`
             )
-        }
+        },
+        async getRevertInfo() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/revertorder/getsinglerevertorder?orderId=${this.orderId}`
+            )
+            this.revertData = response.data
+        },
+        async pushRevertFlow() {
+            const response = await axios.post(
+                `${this.$apiBaseUrl}/revertorder/processrevertorder`,
+                {
+                    orderId: this.orderId
+                }
+            )
+            if (response.status === 200) {
+                this.$message({
+                    type: 'success',
+                    message: '提交成功'
+                })
+                //close current page
+                window.close()
+            } else {
+                this.$message({
+                    type: 'error',
+                    message: '提交失败'
+                })
+            }
+        },
     }
 }
 </script>

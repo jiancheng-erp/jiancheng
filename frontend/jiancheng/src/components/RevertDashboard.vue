@@ -98,6 +98,15 @@ export default {
                 if (row.currentStatus === 4) {
                     window.open(`${window.location.origin}/usagecalculation/revertusagecalculation/orderid=${row.orderId}`)
                 }
+                else if (row.currentStatus === 11) {
+                    window.open(`${window.location.origin}/usagecalculation/revertsecondusagecalculation/orderid=${row.orderId}`)
+                }
+            }
+            else if (this.departmentId === "13") {
+                if (row.currentStatus === 9) {
+                    window.open(`${window.location.origin}/technicalmanager/revertcraftsheet/orderid=${row.orderId}`)
+                }
+
             }
         }
     }
