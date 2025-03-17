@@ -105,7 +105,7 @@
             <el-table-column prop="status" label="订单状态"></el-table-column>
             <el-table-column label="操作" width="350">
                 <template #default="scope">
-                    <el-button type="primary" size="default" @click="handleRowClick(scope.row)">查看二次BOM填写页面</el-button>
+                    <el-button type="primary" size="default" @click="handleRowClick(scope.row)">查看调版分配及工艺单上传页面</el-button>
                 </template>
             </el-table-column>
             
@@ -143,11 +143,12 @@ export default {
             pageSize: 10,
             totalPages: 0,
             totalData: 0,
+            viewPastTasks: 0,
         }
     },
     async mounted() {
         this.$setAxiosToken()
-        await this.getOrderData()
+        await this.getOrderData(this.currentPage)
     },
     methods: {
         async getOrderData() {
@@ -159,19 +160,11 @@ export default {
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
                         shoeRIdSearch: this.shoeRIdSearch,
+                        viewPastTasks: this.viewPastTasks
                     },
                 })
-                this.orderFilterData = response.data // Update table data
-                const response2 = await axios.get(`${this.$apiBaseUrl}/order/getorderpageinfo`, {
-                params: {
-                    orderSearch: this.orderSearch,
-                    customerSearch: this.customerSearch,
-                    shoeRIdSearch: this.shoeRIdSearch,
-                },
-                })
-                this.totalData = response2.data.totalOrders // Total orders for pagination
-                console.log("Total orders:", response2)
-                console.log("Total orders:", this.totalData)
+                this.orderFilterData = response.data.result // Update table data
+                this.totalData = response.data.total // Update total data count
             } catch (error) {
                 console.error("Error fetching order data:", error)
             }
@@ -186,9 +179,13 @@ export default {
             this.getOrderData()
         },
         handleRowClick(row) {
-            const url = `${window.location.origin}/technicalclerk/secondBOM/orderid=${row.orderId}`;
+            const url = `${window.location.origin}/processsheet/orderid=${row.orderId}`;
             window.open(url, '_blank');
         },
+        handleRowClick2(row) {
+            const url = `${window.location.origin}/technicalmanager/secondbomusagereview/orderid=${row.orderId}`;
+            window.open(url, '_blank');
+        }
     },
 }
 </script>

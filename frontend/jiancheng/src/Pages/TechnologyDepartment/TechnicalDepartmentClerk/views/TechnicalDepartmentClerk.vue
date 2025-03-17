@@ -16,13 +16,13 @@
                         <el-menu-item index="1" @click="handleMenuClick(1)">
                             <span>任务看板</span>
                         </el-menu-item>
-                        <!-- <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>一次BOM表填写</span>
-                        </el-menu-item> -->
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>二次BOM表填写</span>
+                        <el-menu-item index="2" @click="handleMenuClick(2)">
+                            <span>调版分配与下发</span>
                         </el-menu-item>
-                        <el-menu-item index="4" @click="handleMenuClick(4)">
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
+                            <span>退回任务列表</span>
+                        </el-menu-item>
+                        <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>订单查询</span>
                         </el-menu-item>
                         <el-menu-item index="8" @click="handleMenuClick(8)">
@@ -35,7 +35,7 @@
                 </div>
             </el-aside>
             <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
+                <component :is="currentComponent" :departmentId="departmentId"></component>
             </el-main>
         </el-container>
     </el-container>
@@ -45,26 +45,27 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
-import Dashboard from '../components/TechnicalClerkDashboard.vue';
-import FirstBOMCreate from '../components/FirstBOMListView.vue';
-import SecondBOMCreate from '../components/SecondBOMListView.vue'
+import Dashboard from '@/Pages/TechnologyDepartment/TechnicalDepartmentClerk/components/TechnicalClerkDashboard.vue'
 import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
+import AdjustList from '../../TechnicalManager/components/AdjustList.vue';
+import RevertDashboard from '@/components/RevertDashboard.vue';
 import axios from 'axios'
 export default {
     components: {
         AllHeader,
         Dashboard,
-        FirstBOMCreate,
-        SecondBOMCreate,
         OrderSearch,
-        PersonalInfo
+        PersonalInfo,
+        AdjustList,
+        RevertDashboard
     },
     data() {
         return {
             UserFilled,
             currentComponent: 'Dashboard',
-            userName: ''
+            userName: '',
+            departmentId: '13'
         }
     },
     mounted() {
@@ -76,21 +77,23 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getcurrentstaffandcharacter`)
             this.userName = response.data.staffName + '-' + response.data.characterName
         },
-
         handleMenuClick(index) {
             console.log(index)
             switch (index) {
                 case 1:
                     this.currentComponent = 'Dashboard'
                     break
-                // case 2:
-                //     this.currentComponent = 'FirstBOMCreate'
-                //     break
+                case 2:
+                    this.currentComponent = 'AdjustList'
+                    break
                 case 3:
-                    this.currentComponent = 'SecondBOMCreate'
+                    this.currentComponent = 'OrderSearch'
                     break
                 case 4:
-                    this.currentComponent = 'OrderSearch'
+                    this.currentComponent = 'BOMReviewList'
+                    break
+                case 5:
+                    this.currentComponent = 'RevertDashboard'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

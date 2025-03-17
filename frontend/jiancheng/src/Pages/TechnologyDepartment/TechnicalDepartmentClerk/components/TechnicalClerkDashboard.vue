@@ -26,10 +26,10 @@ import { onMounted, ref, getCurrentInstance } from 'vue';
 import axios from 'axios';
 
 import { Grid, Memo } from '@element-plus/icons-vue'
-import DashboardGrid from './Dashboard/DashboardGrid.vue';
-import DashboardList from './Dashboard/DashboardList.vue'
-import DashboardPend from './Dashboard/DashboardListPend.vue'
-import DashboardProgress from './Dashboard/DashboardListProgress.vue'
+import DashboardGrid from '@/components/Dashboard/DashboardGrid.vue';
+import DashboardList from '@/components/Dashboard/DashboardList.vue';
+import DashboardListPend from '@/components/Dashboard/DashboardListPend.vue';
+import DashboardListProgress from '@/components/Dashboard/DashboardListProgress.vue';
 
 const proxy = getCurrentInstance()
 const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
@@ -37,15 +37,14 @@ const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
 const components = {
         DashboardGrid,
         DashboardList,
-        DashboardPend,
-        DashboardProgress
+        DashboardListPend,
+        DashboardListProgress
 }
 const pendingData = ref([])
 const inProgressData = ref([])
 
 onMounted(()=> {
-    const firstBomStatus = 2
-    const secondBomStatus = 11
+    const firstBomStatus = 9
     const params = {
         ordershoestatus : firstBomStatus
     };
@@ -55,29 +54,16 @@ onMounted(()=> {
         const firstBomPending = response.data.pendingOrders
         const firstBomProgress = response.data.inProgressOrders
         firstBomPending.forEach(element => {
-            element['taskName'] = "一次BOM填写"
+            element['taskName'] = "技术部调版分配"
+            element['taskURL'] = `${window.location.origin}/processsheet/orderid=${element.orderId}`;
             pendingData.value.push(element)
         });
         firstBomProgress.forEach(element => {
-            element['taskName'] = "一次BOM填写"
+            element['taskName'] = "技术部调版分配"
+            element['taskURL'] = `${window.location.origin}/processsheet/orderid=${element.orderId}`;
             inProgressData.value.push(element)
         });
     })
-    params['ordershoestatus']  = secondBomStatus
-    axios.get(`${apiBaseUrl}/order/getprodordershoebystatus`, {params}).then(response => {
-        const secondBomPending = response.data.pendingOrders
-        const secondBomProgress = response.data.inProgressOrders
-        secondBomPending.forEach(element => {
-            element['taskName']  = "二次BOM填写"
-            pendingData.value.push(element)
-        });
-        secondBomProgress.forEach(element => {
-            element['taskName'] = "二次BOM填写"
-            inProgressData.value.push(element)
-        });
-    })
-    console.log(inProgressData)
-    console.log(pendingData)
 })
 const currentDash = ref('DashboardGrid')
 const changeToGrid = () => {
@@ -87,10 +73,10 @@ const changeToList = () => {
     currentDash.value = 'DashboardList'
 }
 const changeToPend = () => {
-    currentDash.value = 'DashboardPend'
+    currentDash.value = 'DashboardListPend'
 }
 const changeToProgress = () => {
-    currentDash.value = 'DashboardProgress'
+    currentDash.value = 'DashboardListProgress'
 }
 </script>
 
