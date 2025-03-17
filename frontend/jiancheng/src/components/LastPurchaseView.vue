@@ -649,7 +649,7 @@ export default {
             return true
         },
         async getBatchTypeList() {
-            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getshoebatchinfotypebysizetable`, {
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getlastshoebatchinfotypebysizetable`, {
                 params: {
                     orderId: this.orderid
                 }
