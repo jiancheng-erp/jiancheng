@@ -1435,7 +1435,7 @@ export default {
             this.fileListPicNote = fileList // Sync file list for note upload
         },
         isEditor() {
-            return this.role == 5
+            return this.role == 5 || this.role == 17
         },
         async getAllDepartmentOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
