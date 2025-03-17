@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderData.customerBrand
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -117,16 +117,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -167,13 +167,13 @@
                             </el-descriptions-item>
                             <el-descriptions-item label="工厂型号" align="center">{{
                                 currentShoeId
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="客户号" align="center">{{
                                 currentOrderShoeRow.customerProductName
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="商标" align="center">{{
                                 orderData.customerBrand
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -247,7 +247,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -335,7 +335,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -427,7 +427,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -519,7 +519,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -611,7 +611,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -703,7 +703,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -852,10 +852,10 @@
                     </el-descriptions-item>
                     <el-descriptions-item label="工厂型号" align="center">{{
                         pastShoeDescription.shoeId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="颜色" align="center">{{
                         pastShoeDescription.color
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
@@ -928,22 +928,22 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="工厂型号" align="center">{{
                                     currentShoeId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -1054,13 +1054,13 @@
                             </el-descriptions-item>
                             <el-descriptions-item label="工厂型号" align="center">{{
                                 currentShoeId
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="客户号" align="center">{{
                                 currentOrderShoeRow.customerProductName
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="商标" align="center">{{
                                 orderData.customerBrand
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -1134,7 +1134,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(0)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1229,7 +1229,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(1)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1322,7 +1322,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(2)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1415,7 +1415,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1509,7 +1509,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(4)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1604,7 +1604,7 @@
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{
                                     this.syncMaterialButtonText
-                                }}</el-button>
+                                    }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -2042,7 +2042,8 @@ export default {
                 })
         },
         async addPastMaterialToCurrent() {
-            console.log(this.selectShoeTypeRow[0].shoeTypeId)
+            console.log(this.selectShoeTypeRow[0].shoeTypeId);
+
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
                 {
@@ -2050,15 +2051,33 @@ export default {
                         shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
                     }
                 }
-            )
-            const pastMaterialData = response.data
-            console.log(this.materialWholeData)
-            this.materialWholeData[0].surfaceMaterialData = pastMaterialData.surfaceMaterialData
-            this.materialWholeData[0].insideMaterialData = pastMaterialData.insideMaterialData
-            this.materialWholeData[0].accessoryMaterialData = pastMaterialData.accessoryMaterialData
-            this.materialWholeData[0].outsoleMaterialData = pastMaterialData.outsoleMaterialData
-            this.materialWholeData[0].midsoleMaterialData = pastMaterialData.midsoleMaterialData
-            this.materialWholeData[0].hotsoleMaterialData = pastMaterialData.hotsoleMaterialData
+            );
+
+            const pastMaterialData = response.data;
+            console.log("Past Material Data:", pastMaterialData);
+            console.log("Current Material Data Before Update:", this.materialWholeData);
+
+            // Create a map for quick lookup of past material data by color
+            const pastMaterialMap = new Map();
+            pastMaterialData.forEach(item => {
+                pastMaterialMap.set(item.color, item);
+            });
+
+            // Update matching colors in materialWholeData
+            this.materialWholeData.forEach(material => {
+                const pastMaterial = pastMaterialMap.get(material.color);
+                if (pastMaterial) {
+                    // If color matches, update the material data
+                    material.surfaceMaterialData = pastMaterial.surfaceMaterialData;
+                    material.insideMaterialData = pastMaterial.insideMaterialData;
+                    material.accessoryMaterialData = pastMaterial.accessoryMaterialData;
+                    material.outsoleMaterialData = pastMaterial.outsoleMaterialData;
+                    material.midsoleMaterialData = pastMaterial.midsoleMaterialData;
+                    material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData;
+                }
+            });
+
+            console.log("Updated Material Data:", this.materialWholeData);
         },
         addMaterialByManual(typeSymbol) {
             const preActiveMaterialData = this.materialWholeData.find(
