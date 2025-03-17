@@ -313,56 +313,54 @@ def save_craft_sheet():
         )
         if len(data.get("surfaceMaterialData")) > 0:
             for material_data in data.get("surfaceMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -434,56 +432,54 @@ def save_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("insideMaterialData")) > 0:
             for material_data in data.get("insideMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -555,56 +551,54 @@ def save_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("accessoryMaterialData")) > 0:
             for material_data in data.get("accessoryMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -677,56 +671,54 @@ def save_craft_sheet():
 
         if len(data.get("outsoleMaterialData")) > 0:
             for material_data in data.get("outsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -792,56 +784,54 @@ def save_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("midsoleMaterialData")) > 0:
             for material_data in data.get("midsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -905,173 +895,56 @@ def save_craft_sheet():
                     production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
-        if len(data.get("lastMaterialData")) > 0:
-            for material_data in data.get("lastMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
-                        .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
-                        )
-                        .first()
-                    )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
-                    else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
-                        )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "楦头")
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
-                        db.session.flush()
-                        material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
-                material_color = (
-                    material_data.get("color") if material_data.get("color") else None
-                )
-                material_source = (
-                    material_data.get("materialSource")
-                    if material_data.get("materialSource") and material_data.get("materialSource") != None
-                    else 'C'
-                )
-                remark = (
-                    material_data.get("comment")
-                    if material_data.get("comment")
-                    else None
-                )
-                processing_remark = (
-                    material_data.get("processingRemark")
-                    if material_data.get("processingRemark")
-                    else None
-                )
-                department_id = (
-                    material_data.get("useDepart")
-                    if material_data.get("useDepart")
-                    else None
-                )
-                is_pre_purchase = (
-                    material_data.get("isPurchase")
-                    if material_data.get("isPurchase")
-                    else None
-                )
-                material_type = "L"
-                order_shoe_type_id = order_shoe_type_id
-                craft_name_list = material_data.get("materialCraftNameList", None)
-                if craft_name_list != [] and craft_name_list != None:
-                    craft_name = "@".join(craft_name_list)
-                else:
-                    craft_name = ""
-                craft_sheet_item = CraftSheetItem(
-                    craft_sheet_id=craft_sheet_id,
-                    material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
-                    color=material_color,
-                    remark=remark,
-                    department_id=department_id,
-                    material_source=material_source,
-                    material_type=material_type,
-                    order_shoe_type_id=order_shoe_type_id,
-                    material_second_type=material_second_type,
-                    craft_name=craft_name,
-                    after_usage_symbol = 0,
-                    processing_remark=processing_remark,
-                    production_instruction_item_id = material_data.get("productionInstructionItemId")
-                )
-                db.session.add(craft_sheet_item)
         if len(data.get("hotsoleMaterialData")) > 0:
             for material_data in data.get("hotsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1 if material_data.get("materialType") == "烫底" else 0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -1479,56 +1352,54 @@ def edit_craft_sheet():
         )
         if len(data.get("surfaceMaterialData")) > 0:
             for material_data in data.get("surfaceMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -1599,56 +1470,54 @@ def edit_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("insideMaterialData")) > 0:
             for material_data in data.get("insideMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -1719,56 +1588,54 @@ def edit_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("accessoryMaterialData")) > 0:
             for material_data in data.get("accessoryMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -1840,56 +1707,54 @@ def edit_craft_sheet():
 
         if len(data.get("outsoleMaterialData")) > 0:
             for material_data in data.get("outsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -1959,56 +1824,54 @@ def edit_craft_sheet():
                 db.session.add(craft_sheet_item)
         if len(data.get("midsoleMaterialData")) > 0:
             for material_data in data.get("midsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
@@ -2076,172 +1939,56 @@ def edit_craft_sheet():
                     production_instruction_item_id = material_data.get("productionInstructionItemId")
                 )
                 db.session.add(craft_sheet_item)
-        if len(data.get("lastMaterialData")) > 0:
-            for material_data in data.get("lastMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
-                        .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
-                        )
-                        .first()
-                    )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
-                    else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
-                        )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == "楦头")
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1,
-                        )
-                        db.session.add(material)
-                        db.session.flush()
-                        material_id = material.material_id
-                material_model = (
-                    material_data.get("materialModel")
-                    if material_data.get("materialModel")
-                    else None
-                )
-                material_spec = (
-                    material_data.get("materialSpecification")
-                    if material_data.get("materialSpecification")
-                    else None
-                )
-                material_color = (
-                    material_data.get("color") if material_data.get("color") else None
-                )
-                material_source = (
-                    material_data.get("materialSource")
-                    if material_data.get("materialSource") and material_data.get("materialSource") != None
-                    else 'C'
-                )
-                remark = (
-                    material_data.get("comment")
-                    if material_data.get("comment")
-                    else None
-                )
-                processing_remark = (
-                    material_data.get("processingRemark")
-                    if material_data.get("processingRemark")
-                    else None
-                )
-                department_id = (
-                    material_data.get("useDepart")
-                    if material_data.get("useDepart")
-                    else None
-                )
-                is_pre_purchase = (
-                    material_data.get("isPurchase")
-                    if material_data.get("isPurchase")
-                    else None
-                )
-                material_type = "L"
-                order_shoe_type_id = order_shoe_type_id
-                craft_name_list = material_data.get("materialCraftNameList", None)
-                if craft_name_list != [] and craft_name_list != None:
-                    craft_name = "@".join(craft_name_list)
-                else:
-                    craft_name = ""
-                craft_sheet_item = CraftSheetItem(
-                    craft_sheet_id=craft_sheet_id,
-                    material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_spec,
-                    color=material_color,
-                    remark=remark,
-                    material_source=material_source,
-                    department_id=department_id,
-                    material_type=material_type,
-                    order_shoe_type_id=order_shoe_type_id,
-                    material_second_type=material_second_type,
-                    craft_name=craft_name,
-                    after_usage_symbol=0,
-                    production_instruction_item_id = material_data.get("productionInstructionItemId")
-                )
-                db.session.add(craft_sheet_item)
         if len(data.get("hotsoleMaterialData")) > 0:
             for material_data in data.get("hotsoleMaterialData"):
-                material_id = material_data.get("materialId", None)
-                if not material_id:
-                    is_material_exist = (
-                        db.session.query(Material, Supplier)
-                        .join(
-                            Supplier, Material.material_supplier == Supplier.supplier_id
-                        )
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(
+                        Supplier, Material.material_supplier == Supplier.supplier_id
+                    )
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
                         .filter(
-                            Material.material_name == material_data.get("materialName"),
-                            Supplier.supplier_name == material_data.get("supplierName"),
+                            Supplier.supplier_name
+                            == material_data.get("supplierName")
                         )
                         .first()
                     )
-                    if is_material_exist:
-                        material_id = is_material_exist.Material.material_id
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
                     else:
-                        is_supplier_exist = (
-                            db.session.query(Supplier)
-                            .filter(
-                                Supplier.supplier_name
-                                == material_data.get("supplierName")
-                            )
-                            .first()
+                        supplier = Supplier(
+                            supplier_name=material_data.get("supplierName")
                         )
-                        if is_supplier_exist:
-                            supplier_id = is_supplier_exist.supplier_id
-                        else:
-                            supplier = Supplier(
-                                supplier_name=material_data.get("supplierName")
-                            )
-                            db.session.add(supplier)
-                            db.session.flush()
-                            supplier_id = supplier.supplier_id
-                        material_type_id = (
-                            db.session.query(MaterialType)
-                            .filter(MaterialType.material_type_name == material_data.get("materialType"))
-                            .first()
-                            .material_type_id
-                        )
-                        material = Material(
-                            material_name=material_data.get("materialName"),
-                            material_supplier=supplier_id,
-                            material_unit=material_data.get("unit"),
-                            material_creation_date=datetime.datetime.now(),
-                            material_type_id=material_type_id,
-                            material_category=1 if material_data.get("materialType") == "烫底" else 0,
-                        )
-                        db.session.add(material)
+                        db.session.add(supplier)
                         db.session.flush()
-                        material_id = material.material_id
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=1 if material_data.get("materialType") == "烫底" else 0,
+                    )
+                    db.session.add(material)
+                    db.session.flush()
+                    material_id = material.material_id
                 material_model = (
                     material_data.get("materialModel")
                     if material_data.get("materialModel")
