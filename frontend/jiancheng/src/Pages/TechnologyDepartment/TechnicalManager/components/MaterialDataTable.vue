@@ -12,6 +12,14 @@
         <el-table-column prop="materialCraftName" label="工艺名称"></el-table-column>
         <el-table-column prop="color" label="颜色">
         </el-table-column>
+        <el-table-column prop="unit" label="单位">
+        </el-table-column>
+        <el-table-column prop="pairs" label="双数">
+        </el-table-column>
+        <el-table-column prop="unitUsage" label="单位用量">
+        </el-table-column>
+        <el-table-column prop="totalUsage" label="采购数量">
+        </el-table-column>
         <el-table-column prop="comment" label="备注">
         </el-table-column>
         <el-table-column prop="processingRemark" label="加工备注">
