@@ -1,43 +1,29 @@
 <template>
-    <el-container>
-        <el-header>
+    <el-container style="height: 100vh;">
+        <el-header class="custom-header">
             <AllHeader></AllHeader>
         </el-header> <!--引用header-->
-        <el-container>
-            <el-aside width="280px"><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>多码采购入库</span>
-                        </el-menu-item>
-                        <!-- <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>材料待出库</span>
-                        </el-menu-item> -->
-                        <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>出入库记录</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>库存</span>
-                        </el-menu-item>
-                        <el-menu-item index="12" @click="handleMenuClick(12)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
-            </el-main>
-        </el-container>
+        <el-main class="custom-main">
+            <div class="userInfo"
+                style="display: flex;justify-content: end;align-items: center;right: 50px;position: relative;">
+                <em style="margin-right: 20px;color: dodgerblue;cursor: pointer;" @click="logout">退出登录</em>
+                <span>{{ userName }}</span>
+            </div>
+            <el-tabs tab-position="left" style="height: 98%">
+                <el-tab-pane label="材料入库">
+                    <InboundView />
+                </el-tab-pane>
+                <el-tab-pane label="库存查看">
+                    <InboundOutboundHistory />
+                </el-tab-pane>
+                <el-tab-pane label="历史记录">
+                    <InOutboundRecords />
+                </el-tab-pane>
+                <el-tab-pane label="个人信息">
+                    <PersonalInfo />
+                </el-tab-pane>
+            </el-tabs>
+        </el-main>
     </el-container>
 
 </template>
@@ -65,7 +51,7 @@ export default {
     data() {
         return {
             UserFilled,
-            currentComponent:'InboundView',
+            currentComponent: 'InboundView',
             userName: '',
             logout
         }
@@ -79,25 +65,17 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getcurrentstaffandcharacter`)
             this.userName = response.data.staffName + '-' + response.data.characterName
         },
-        handleMenuClick(index){
-            switch(index) {
-                case 1:
-                    this.currentComponent = 'InboundView'
-                    break
-                case 2:
-                    this.currentComponent = 'OutboundView'
-                    break
-                case 5:
-                    this.currentComponent = 'InboundOutboundHistory'
-                    break
-                case 9:
-                    this.currentComponent = 'InOutboundRecords'
-                    break
-                case 12:
-                    this.currentComponent = 'PersonalInfo'
-                    break
-            }
-        }
     }
 }
 </script>
+<style scoped>
+.custom-header {
+    height: 50px;
+    margin-bottom: 0;
+    margin-top: 0;
+}
+
+.custom-main {
+    margin-top: 10;
+}
+</style>

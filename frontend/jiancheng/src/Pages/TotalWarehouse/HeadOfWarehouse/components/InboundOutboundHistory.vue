@@ -1,9 +1,5 @@
 <template>
-    <el-row :gutter="20">
-        <el-col :span="24" :offset="0">
-            <MaterialStorage></MaterialStorage>
-        </el-col>
-    </el-row>
+    <MaterialStorage></MaterialStorage>
 </template>
 <script>
 import MaterialStorage from './MaterialStorage.vue';
