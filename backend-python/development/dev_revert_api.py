@@ -76,6 +76,25 @@ def edit_revert_production_instruction():
 
     for data in upload_data:
         shoe_color = data.get("color")
+        shoe_type_id = (
+            db.session.query(ShoeType)
+            .join(Shoe, ShoeType.shoe_id == Shoe.shoe_id)
+            .join(Color, ShoeType.color_id == Color.color_id)
+            .filter(Shoe.shoe_rid == order_shoe_rid, Color.color_name == shoe_color)
+            .first()
+            .shoe_type_id
+        )
+
+        # Get Order Shoe Type ID
+        order_shoe_type_id = (
+            db.session.query(OrderShoeType)
+            .filter(
+                OrderShoeType.order_shoe_id == order_shoe_id.order_shoe_id,
+                OrderShoeType.shoe_type_id == shoe_type_id,
+            )
+            .first()
+            .order_shoe_type_id
+        )
         for material_type, material_data in {
             "S": data.get("surfaceMaterialData", []),
             "I": data.get("insideMaterialData", []),
@@ -90,8 +109,6 @@ def edit_revert_production_instruction():
 
                 # Ensure material & supplier exist
                 material_id = _get_or_create_material(material)
-
-                # Query existing item
                 if item_id in existing_items:
                     item = existing_items[item_id]
                     item.material_id = material_id
@@ -118,6 +135,7 @@ def edit_revert_production_instruction():
                         material_type=material_type,
                         material_second_type=material.get("materialDetailType"),
                         processing_remark=material.get("processingRemark"),
+                        order_shoe_type_id=order_shoe_type_id,
                     )
                     db.session.add(new_item)
                     db.session.flush()
@@ -125,18 +143,24 @@ def edit_revert_production_instruction():
                     uploaded_item_ids.add(item_id)
 
                 # Update/Add BomItem (for both bom_type = 0 and bom_type = 1)
-                _update_or_insert_bom_item(item_id, material, material_id,  bom_type=0)
+                first_bom_item_id = _update_or_insert_bom_item(item_id, material, material_id, bom_type=0, order_shoe_type_id=order_shoe_type_id)
+                if second_bom:
+                    _update_or_insert_bom_item(item_id, material, material_id, bom_type=1, order_shoe_type_id=order_shoe_type_id)
 
                 if craft_sheet:
                     _update_or_insert_craft_sheet_item(item_id, material, material_id)
-                if second_bom:
-                    _update_or_insert_bom_item(item_id, material, material_id, bom_type=1)
+
+                # If the first BOM item exists, update/create purchase order items
+                if first_bom_item_id:
+                    _update_or_insert_purchase_order_item(
+                        item_id, material, material_id, first_bom_item_id
+                    )
 
     # Delete removed items
     for existing_id in existing_items.keys():
         if existing_id not in uploaded_item_ids:
             db.session.delete(existing_items[existing_id])
-
+    _delete_empty_purchase_divide_orders()
     db.session.commit()
     return jsonify({"message": "Production instruction updated successfully"}), 200
 
@@ -197,16 +221,28 @@ def _get_or_create_material(material):
     return material_record.material_id
 
 
-def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
-    """Update or Insert BOM Item for the specified bom_type (0 or 1)"""
-    bom_item = (
-        db.session.query(BomItem)
-        .filter(
-            BomItem.production_instruction_item_id == item_id,
-            BomItem.bom_item_add_type == str(bom_type),
-        )
-        .first()
-    )
+def _update_or_insert_bom_item(item_id, material, material_id, bom_type, order_shoe_type_id):
+    """
+    Update or Insert BOM Item for the specified bom_type (0 or 1).
+    - Uses `order_shoe_type_id` to find the correct `bom_id`.
+    """
+
+    # Find the correct BOM for this shoe type
+    bom = db.session.query(Bom).filter(
+        Bom.bom_type == bom_type,
+        Bom.order_shoe_type_id == order_shoe_type_id
+    ).first()
+
+    if not bom:
+        return  # If no BOM exists, do not create a BOM item
+
+    bom_id = bom.bom_id
+
+    # Check if a BOM item already exists
+    bom_item = db.session.query(BomItem).filter(
+        BomItem.production_instruction_item_id == item_id,
+        BomItem.bom_item_add_type == str(bom_type),
+    ).first()
 
     if bom_item:
         # Update existing BOM item (except craft_name)
@@ -215,10 +251,12 @@ def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
         bom_item.material_model = material.get("materialModel")
         bom_item.bom_item_color = material.get("color")
         bom_item.remark = material.get("comment")
+        bom_item_id = bom_item.bom_item_id  # Get existing bom_item_id
     else:
-        # Insert new BOM item
+        # Insert new BOM item with correct bom_id
         new_bom_item = BomItem(
             material_id=material_id,
+            bom_id=bom_id,  # Correct BOM ID assigned here
             material_specification=material.get("materialSpecification"),
             material_model=material.get("materialModel"),
             bom_item_color=material.get("color"),
@@ -229,6 +267,11 @@ def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
             bom_item_add_type=str(bom_type),
         )
         db.session.add(new_bom_item)
+        db.session.flush()  # Get the newly created bom_item_id
+
+        bom_item_id = new_bom_item.bom_item_id
+
+    return bom_item_id  # Return the `bom_item_id`
 
 
 def _update_or_insert_craft_sheet_item(item_id, material, material_id):
@@ -261,8 +304,129 @@ def _update_or_insert_craft_sheet_item(item_id, material, material_id):
             production_instruction_item_id=item_id,
         )
         db.session.add(new_craft_item)
+        
+def _update_or_insert_purchase_order_item(item_id, material, material_id, bom_item_id):
+    """
+    Update or Insert Purchase Order Item based on the first BOM (`bom_type=0`).
+    - Ensures the item is linked to a valid `PurchaseDivideOrder`
+    """
+    bom_id = db.session.query(BomItem.bom_id).filter(BomItem.bom_item_id == bom_item_id).scalar()
+    total_bom_id = db.session.query(TotalBom.total_bom_id).join(Bom, Bom.total_bom_id == TotalBom.total_bom_id).filter(Bom.bom_id == bom_id).scalar()
+    # Find an existing PurchaseOrder (do NOT create a new one)
+    purchase_order = db.session.query(PurchaseOrder).filter(
+        PurchaseOrder.bom_id == total_bom_id
+    ).first()
 
+    if not purchase_order:
+        # If no purchase order exists, exit without making changes.
+        return
 
+    supplier_id = _get_or_create_supplier(material.get("supplierName"))
+
+    # Get material category (0 = Normal, 1 = Special)
+    material_category = db.session.query(Material.material_category).filter(
+        Material.material_id == material_id
+    ).scalar() or 0  # Default to 0 if not found
+
+    # Find or create a valid PurchaseDivideOrder using `purchase_order_rid + supplier_id`
+    purchase_divide_order = _get_or_create_purchase_divide_order(purchase_order, supplier_id, material_category)
+
+    # Check if the purchase order item already exists
+    purchase_order_item = db.session.query(PurchaseOrderItem).filter(
+        PurchaseOrderItem.bom_item_id == bom_item_id,
+        PurchaseOrderItem.material_id == material_id
+    ).first()
+
+    craft_name_list = material.get("materialCraftNameList", [])
+    craft_name = "@".join(craft_name_list) if craft_name_list else ""
+
+    if purchase_order_item:
+        # Update existing purchase order item
+        purchase_order_item.material_id = material_id
+        purchase_order_item.inbound_material_id = material_id  # Assuming inbound material matches
+        purchase_order_item.inbound_unit = material.get("unit")
+        purchase_order_item.material_specification = material.get("materialSpecification")
+        purchase_order_item.material_model = material.get("materialModel")
+        purchase_order_item.color = material.get("color")
+        purchase_order_item.craft_name = craft_name
+        purchase_order_item.remark = material.get("comment")
+        purchase_order_item.related_selected_material_storage = json.dumps([])
+
+        # Ensure the purchase_order_item is linked to the correct purchase_divide_order
+        purchase_order_item.purchase_divide_order_id = purchase_divide_order.purchase_divide_order_id
+    else:
+        # Insert new purchase order item
+        new_purchase_order_item = PurchaseOrderItem(
+            bom_item_id=bom_item_id,
+            material_id=material_id,
+            inbound_material_id=material_id,  # Assuming inbound material matches
+            inbound_unit=material.get("unit"),
+            material_specification=material.get("materialSpecification"),
+            material_model=material.get("materialModel"),
+            color=material.get("color"),
+            craft_name=craft_name,
+            remark=material.get("comment"),
+            purchase_divide_order_id=purchase_divide_order.purchase_divide_order_id,
+            related_selected_material_storage = json.dumps([])
+        )
+        db.session.add(new_purchase_order_item)
+        
+def _get_or_create_purchase_divide_order(purchase_order, supplier_id, material_category):
+    """
+    Finds or creates a `PurchaseDivideOrder` for the given `purchase_order` and `supplier_id`.
+    - `purchase_divide_order_rid` = `purchase_order_rid + supplier_id`
+    - `purchase_divide_order_type`: "N" (General Materials) or "S" (Special Materials)
+    """
+    purchase_divide_order_rid = f"{purchase_order.purchase_order_rid}{str(supplier_id).zfill(4)}"
+    
+    # Determine the divide order type based on material category
+    purchase_divide_order_type = "N" if material_category == 0 else "S"
+
+    purchase_divide_order = db.session.query(PurchaseDivideOrder).filter(
+        PurchaseDivideOrder.purchase_order_id == purchase_order.purchase_order_id,
+        PurchaseDivideOrder.purchase_divide_order_rid == purchase_divide_order_rid
+    ).first()
+
+    if not purchase_divide_order:
+        purchase_divide_order = PurchaseDivideOrder(
+            purchase_order_id=purchase_order.purchase_order_id,
+            purchase_divide_order_rid=purchase_divide_order_rid,
+            purchase_divide_order_type=purchase_divide_order_type
+        )
+        db.session.add(purchase_divide_order)
+        db.session.flush()
+
+    return purchase_divide_order
+
+def _get_or_create_supplier(supplier_name):
+    """
+    Finds or creates a supplier and returns its `supplier_id`.
+    """
+    if not supplier_name:
+        supplier_name = "DEFAULT_SUPPLIER"
+
+    supplier = db.session.query(Supplier).filter(Supplier.supplier_name == supplier_name).first()
+    
+    if not supplier:
+        supplier = Supplier(supplier_name=supplier_name)
+        db.session.add(supplier)
+        db.session.flush()
+
+    return supplier.supplier_id
+
+def _delete_empty_purchase_divide_orders():
+    """
+    Deletes any `PurchaseDivideOrder` that no longer has associated `PurchaseOrderItem`.
+    """
+    empty_divide_orders = db.session.query(PurchaseDivideOrder).filter(
+        ~db.session.query(PurchaseOrderItem)
+        .filter(PurchaseOrderItem.purchase_divide_order_id == PurchaseDivideOrder.purchase_divide_order_id)
+        .exists()
+    ).all()
+
+    for divide_order in empty_divide_orders:
+        db.session.delete(divide_order)
+        
 def transform_standard_size_dict_to_grid(standard_size_dict):
     # Determine the maximum length of the lists in the dictionary
     max_len = (
