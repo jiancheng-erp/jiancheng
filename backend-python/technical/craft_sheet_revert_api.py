@@ -13,7 +13,7 @@ from constants import DEFAULT_SUPPLIER
 craft_sheet_revert_api = Blueprint("craft_sheet_revert_api", __name__)
 
 @craft_sheet_revert_api.route("/craftsheet/editrevertcraftsheet", methods=["POST"])
-def edit_craft_sheet():
+def edit_revert_craft_sheet():
     order_id = request.json.get("orderId")
     order_shoe_rid = request.json.get("orderShoeId")
     craft_sheet_rid = request.json.get("craftSheetId")
@@ -43,6 +43,16 @@ def edit_craft_sheet():
         return jsonify({"error": "Craft sheet not found"}), 404
 
     craft_sheet_id = craft_sheet.craft_sheet_id
+
+    # Get Second BOM (bom_type=1)
+    second_bom = (
+        db.session.query(Bom)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(Order, OrderShoe.order_id == Order.order_id)
+        .filter(Order.order_rid == order_id, Bom.bom_type == 1)
+        .first()
+    )
 
     # Update Craft Sheet Details
     craft_sheet.cut_die_staff = craft_sheet_detail.get("cutDie")
@@ -111,7 +121,7 @@ def edit_craft_sheet():
                 craft_name = "@".join(craft_name_list) if craft_name_list else ""
 
                 if item_id in existing_items:
-                    # Update Existing Item (Including `craft_name`)
+                    # Update Existing Item
                     item = existing_items[item_id]
                     item.material_id = material_id
                     item.material_model = material.get("materialModel")
@@ -137,11 +147,15 @@ def edit_craft_sheet():
                         material_type=material_type,
                         order_shoe_type_id=order_shoe_type_id,
                         material_second_type=material.get("materialDetailType"),
-                        craft_name=craft_name,  # Insert `craft_name`
+                        craft_name=craft_name,
                         after_usage_symbol=0,
                         production_instruction_item_id=item_id,
                     )
                     db.session.add(new_item)
+
+                # Update Second BOM if it exists
+                if second_bom:
+                    _update_or_insert_bom_item(item_id, material, material_id, bom_type=1)
 
     # Delete Removed Items
     for existing_id in existing_items.keys():
@@ -154,6 +168,41 @@ def edit_craft_sheet():
 
     db.session.commit()
     return jsonify({"message": "Craft sheet updated successfully"}), 200
+
+
+def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
+    """ Update or Insert BOM Item for the specified bom_type (1 for second BOM) """
+    bom_item = (
+        db.session.query(BomItem)
+        .filter(
+            BomItem.production_instruction_item_id == item_id,
+            BomItem.bom_item_add_type == str(bom_type),
+        )
+        .first()
+    )
+
+    if bom_item:
+        # Update existing BOM item (except craft_name)
+        bom_item.material_id = material_id
+        bom_item.material_specification = material.get("materialSpecification")
+        bom_item.material_model = material.get("materialModel")
+        bom_item.bom_item_color = material.get("color")
+        bom_item.remark = material.get("comment")
+    else:
+        # Insert new BOM item
+        new_bom_item = BomItem(
+            material_id=material_id,
+            material_specification=material.get("materialSpecification"),
+            material_model=material.get("materialModel"),
+            bom_item_color=material.get("color"),
+            unit_usage=material.get("unitUsage", 0),
+            total_usage=material.get("totalUsage", 0),
+            remark=material.get("comment"),
+            production_instruction_item_id=item_id,
+            bom_item_add_type=str(bom_type),
+        )
+        db.session.add(new_bom_item)
+
 
 
 def _get_or_create_material(material):
