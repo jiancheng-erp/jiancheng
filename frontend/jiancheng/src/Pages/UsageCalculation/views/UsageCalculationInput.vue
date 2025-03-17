@@ -1151,6 +1151,11 @@ export default {
                 }
             })
         },
+        handleStatusSelect() {
+            //when select status, make the revertReason to be the reason field of the selected status
+            const selectedStatus = this.revertStatusReasonOptions.find(item => item.status === this.revertForm.revertToStatus)
+            this.revertForm.revertReason = selectedStatus.reason
+        },
     }
 }
 </script>

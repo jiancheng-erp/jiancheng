@@ -10,20 +10,35 @@ from general_document.prodution_instruction import generate_instruction_excel_fi
 import json
 from constants import DEFAULT_SUPPLIER
 
-dev_revert_api = Blueprint('dev_revert_api', __name__)
+dev_revert_api = Blueprint("dev_revert_api", __name__)
 
-@dev_revert_api.route('/devproductionorder/editrevertproductioninstruction', methods=['POST'])
+
+@dev_revert_api.route(
+    "/devproductionorder/editrevertproductioninstruction", methods=["POST"]
+)
 def edit_revert_production_instruction():
     order_id = request.json.get("orderId")
     production_instruction_rid = request.json.get("productionInstructionId")
     order_shoe_rid = request.json.get("orderShoeId")
     upload_data = request.json.get("uploadData")
     production_instruction_details = request.json.get("productionInstructionDetail")
+    order_shoe_id = (
+        db.session.query(OrderShoe)
+        .join(Order, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
+        .first()
+    )
 
     # Get production instruction
-    production_instruction = db.session.query(ProductionInstruction).filter(
-        ProductionInstruction.production_instruction_rid == production_instruction_rid
-    ).first()
+    production_instruction = (
+        db.session.query(ProductionInstruction)
+        .filter(
+            ProductionInstruction.production_instruction_rid
+            == production_instruction_rid
+        )
+        .first()
+    )
 
     if not production_instruction:
         return jsonify({"error": "Production Instruction not found"}), 404
@@ -32,13 +47,33 @@ def edit_revert_production_instruction():
 
     # Get existing ProductionInstructionItems
     existing_items = {
-        item.production_instruction_item_id: item for item in db.session.query(ProductionInstructionItem).filter(
-            ProductionInstructionItem.production_instruction_id == production_instruction_id
-        ).all()
+        item.production_instruction_item_id: item
+        for item in db.session.query(ProductionInstructionItem)
+        .filter(
+            ProductionInstructionItem.production_instruction_id
+            == production_instruction_id
+        )
+        .all()
     }
 
     uploaded_item_ids = set()
-    
+    craft_sheet = (
+        db.session.query(CraftSheet)
+        .filter(CraftSheet.order_shoe_id == order_shoe_id.order_shoe_id)
+        .first()
+    )
+    second_bom = (
+        db.session.query(Bom, OrderShoeType, OrderShoe, Order)
+        .filter(
+            Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            OrderShoe.order_id == Order.order_id,
+            Order.order_rid == order_id,
+        )
+        .filter(Bom.bom_type == 1)
+        .first()
+    )
+
     for data in upload_data:
         shoe_color = data.get("color")
         for material_type, material_data in {
@@ -47,10 +82,10 @@ def edit_revert_production_instruction():
             "A": data.get("accessoryMaterialData", []),
             "O": data.get("outsoleMaterialData", []),
             "M": data.get("midsoleMaterialData", []),
-            "H": data.get("hotsoleMaterialData", [])
+            "H": data.get("hotsoleMaterialData", []),
         }.items():
             for material in material_data:
-                item_id = material.get("productionInstructionItemId")  
+                item_id = material.get("productionInstructionItemId")
                 uploaded_item_ids.add(item_id)
 
                 # Ensure material & supplier exist
@@ -82,7 +117,7 @@ def edit_revert_production_instruction():
                         is_pre_purchase=material.get("isPurchase", False),
                         material_type=material_type,
                         material_second_type=material.get("materialDetailType"),
-                        processing_remark=material.get("processingRemark")
+                        processing_remark=material.get("processingRemark"),
                     )
                     db.session.add(new_item)
                     db.session.flush()
@@ -90,11 +125,12 @@ def edit_revert_production_instruction():
                     uploaded_item_ids.add(item_id)
 
                 # Update/Add BomItem (for both bom_type = 0 and bom_type = 1)
-                _update_or_insert_bom_item(item_id, material, bom_type=0)
-                _update_or_insert_bom_item(item_id, material, bom_type=1)
+                _update_or_insert_bom_item(item_id, material, material_id,  bom_type=0)
 
-                # Update/Add CraftSheetItem (without updating craft_name)
-                _update_or_insert_craft_sheet_item(item_id, material)
+                if craft_sheet:
+                    _update_or_insert_craft_sheet_item(item_id, material, material_id)
+                if second_bom:
+                    _update_or_insert_bom_item(item_id, material, material_id, bom_type=1)
 
     # Delete removed items
     for existing_id in existing_items.keys():
@@ -106,12 +142,16 @@ def edit_revert_production_instruction():
 
 
 def _get_or_create_material(material):
-    """ Ensure the material and supplier exist, create if not found """
+    """Ensure the material and supplier exist, create if not found"""
     supplier_name = material.get("supplierName") or "DEFAULT_SUPPLIER"
     material_name = material.get("materialName")
 
     # Check if supplier exists
-    supplier = db.session.query(Supplier).filter(Supplier.supplier_name == supplier_name).first()
+    supplier = (
+        db.session.query(Supplier)
+        .filter(Supplier.supplier_name == supplier_name)
+        .first()
+    )
     if not supplier:
         supplier = Supplier(supplier_name=supplier_name)
         db.session.add(supplier)
@@ -119,15 +159,22 @@ def _get_or_create_material(material):
     supplier_id = supplier.supplier_id
 
     # Check if material exists
-    material_record = db.session.query(Material).filter(
-        Material.material_name == material_name,
-        Material.material_supplier == supplier_id
-    ).first()
+    material_record = (
+        db.session.query(Material)
+        .filter(
+            Material.material_name == material_name,
+            Material.material_supplier == supplier_id,
+        )
+        .first()
+    )
 
     if not material_record:
-        material_type_id = db.session.query(MaterialType).filter(
-            MaterialType.material_type_name == material.get("materialType")
-        ).first().material_type_id
+        material_type_id = (
+            db.session.query(MaterialType)
+            .filter(MaterialType.material_type_name == material.get("materialType"))
+            .first()
+            .material_type_id
+        )
 
         material_record = Material(
             material_name=material_name,
@@ -135,7 +182,14 @@ def _get_or_create_material(material):
             material_unit=material.get("unit"),
             material_creation_date=datetime.datetime.now(),
             material_type_id=material_type_id,
-            material_category=1 if (material.get("materialType") == "烫底" or material.get("materialType") == "底材") else 0
+            material_category=(
+                1
+                if (
+                    material.get("materialType") == "烫底"
+                    or material.get("materialType") == "底材"
+                )
+                else 0
+            ),
         )
         db.session.add(material_record)
         db.session.flush()
@@ -143,16 +197,20 @@ def _get_or_create_material(material):
     return material_record.material_id
 
 
-def _update_or_insert_bom_item(item_id, material, bom_type):
-    """ Update or Insert BOM Item for the specified bom_type (0 or 1) """
-    bom_item = db.session.query(BomItem).filter(
-        BomItem.production_instruction_item_id == item_id,
-        BomItem.bom_item_add_type == str(bom_type)
-    ).first()
+def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
+    """Update or Insert BOM Item for the specified bom_type (0 or 1)"""
+    bom_item = (
+        db.session.query(BomItem)
+        .filter(
+            BomItem.production_instruction_item_id == item_id,
+            BomItem.bom_item_add_type == str(bom_type),
+        )
+        .first()
+    )
 
     if bom_item:
         # Update existing BOM item (except craft_name)
-        bom_item.material_id = material.get("materialId")
+        bom_item.material_id = material_id
         bom_item.material_specification = material.get("materialSpecification")
         bom_item.material_model = material.get("materialModel")
         bom_item.bom_item_color = material.get("color")
@@ -160,7 +218,7 @@ def _update_or_insert_bom_item(item_id, material, bom_type):
     else:
         # Insert new BOM item
         new_bom_item = BomItem(
-            material_id=material.get("materialId"),
+            material_id=material_id,
             material_specification=material.get("materialSpecification"),
             material_model=material.get("materialModel"),
             bom_item_color=material.get("color"),
@@ -168,20 +226,22 @@ def _update_or_insert_bom_item(item_id, material, bom_type):
             total_usage=material.get("totalUsage", 0),
             remark=material.get("comment"),
             production_instruction_item_id=item_id,
-            bom_item_add_type=str(bom_type)
+            bom_item_add_type=str(bom_type),
         )
         db.session.add(new_bom_item)
 
 
-def _update_or_insert_craft_sheet_item(item_id, material):
-    """ Update or Insert Craft Sheet Item (without updating craft_name) """
-    craft_sheet_item = db.session.query(CraftSheetItem).filter(
-        CraftSheetItem.production_instruction_item_id == item_id
-    ).first()
+def _update_or_insert_craft_sheet_item(item_id, material, material_id):
+    """Update or Insert Craft Sheet Item (without updating craft_name)"""
+    craft_sheet_item = (
+        db.session.query(CraftSheetItem)
+        .filter(CraftSheetItem.production_instruction_item_id == item_id)
+        .first()
+    )
 
     if craft_sheet_item:
         # Update existing Craft Sheet item (except craft_name)
-        craft_sheet_item.material_id = material.get("materialId")
+        craft_sheet_item.material_id = material_id
         craft_sheet_item.material_specification = material.get("materialSpecification")
         craft_sheet_item.material_model = material.get("materialModel")
         craft_sheet_item.color = material.get("color")
@@ -191,18 +251,16 @@ def _update_or_insert_craft_sheet_item(item_id, material):
     else:
         # Insert new Craft Sheet item
         new_craft_item = CraftSheetItem(
-            material_id=material.get("materialId"),
+            material_id=material_id,
             material_specification=material.get("materialSpecification"),
             material_model=material.get("materialModel"),
             color=material.get("color"),
             remark=material.get("comment"),
             pairs=material.get("pairs", 0),
             total_usage=material.get("totalUsage", 0),
-            production_instruction_item_id=item_id
+            production_instruction_item_id=item_id,
         )
         db.session.add(new_craft_item)
-
-
 
 
 def transform_standard_size_dict_to_grid(standard_size_dict):
@@ -245,7 +303,7 @@ def transform_standard_size_dict_to_grid(standard_size_dict):
         "columns": columns,
         "data": data,
         "mergeCells": [
-            { "row": 4, "col": 1, "rowspan": 1, "colspan": max_len },
+            {"row": 4, "col": 1, "rowspan": 1, "colspan": max_len},
         ],
     }
     return gridOptions
