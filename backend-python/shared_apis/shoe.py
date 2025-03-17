@@ -213,8 +213,8 @@ def get_shoe_batch_logistics():
     
     return jsonify(result)
 
-@shoe_bp.route("/shoe/getshoebatchinfotypebysizetable", methods=["GET"])
-def get_shoe_batch_by_size_table():
+@shoe_bp.route("/shoe/getlastshoebatchinfotypebysizetable", methods=["GET"])
+def get_last_shoe_batch_by_size_table():
     orderId = request.args.get("orderId")
     if orderId is None:
         return jsonify("orderId is required"), 400
@@ -233,6 +233,45 @@ def get_shoe_batch_by_size_table():
             result[f'size{i}Slot'] = None
     print(result)
     return jsonify(result)
+
+@shoe_bp.route("/shoe/getshoebatchinfotypebysizetable", methods=["GET"])
+def get_shoe_batch_by_size_table():
+    orderId = request.args.get("orderId")
+    material_name = request.args.get("materialName")  # Get material name from request
+
+    if orderId is None:
+        return jsonify("orderId is required"), 400
+    if material_name is None:
+        return jsonify("materialName is required"), 400
+
+    order = db.session.query(Order).filter_by(order_id=orderId).first()
+    if not order or not order.order_size_table:
+        return jsonify("Order size table not found"), 404
+
+    # Transform order_size_table JSON to dict
+    order_size_table = json.loads(order.order_size_table)
+
+    # Determine which size table to use
+    if "中底" in material_name:
+        size_key = "中底"
+    elif "大底" in material_name:
+        size_key = "大底"
+    else:
+        size_key = "客人码"
+
+    if size_key not in order_size_table:
+        return jsonify(f"Size table '{size_key}' not found in order data"), 404
+
+    # Extract the size data
+    last_order_list = order_size_table[size_key]
+
+    # Convert the list into a response format (e.g., "size34Slot": value)
+    result = {}
+    for i in range(34, 47):
+        result[f'size{i}Slot'] = last_order_list[i - 34] if i - 34 < len(last_order_list) else None
+
+    return jsonify(result)
+
     
     
 
