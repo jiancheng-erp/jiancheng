@@ -5,7 +5,7 @@
 
 <style>
 .main-header {
-    font-size: 48px;
+    font-size: 36px;
     text-align: center;
     display: flex;
     font-family:Arial, Helvetica, sans-serif
