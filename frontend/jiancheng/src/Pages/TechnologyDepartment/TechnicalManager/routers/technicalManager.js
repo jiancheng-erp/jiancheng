@@ -1,5 +1,6 @@
 import AdjustUpload from "../views/AdjustUpload.vue";
 import BOMReview from "../views/BOMReview.vue";
+import RevertCraftSheet from "../views/RevertCraftSheet.vue";
 export default [
     {
         path: '/processsheet/orderid=:orderId',
@@ -20,6 +21,15 @@ export default [
           requiresAuth: true,
           role: 5
         }
-
+    },
+    {
+        path: '/technicalmanager/revertcraftsheet/orderid=:orderId',
+        name: 'technicalmanager-revertcraftsheet',
+        component: RevertCraftSheet,
+        props: true,
+        meta: {
+          requiresAuth: true,
+          role: 5
+        }
     }
 ]

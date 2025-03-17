@@ -5,7 +5,7 @@
         </el-header>
         <el-main style="overflow-x: hidden">
             <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">材料用量填写</el-col>
+                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">材料用量退回处理</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -24,6 +24,27 @@
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
                                 }}</el-descriptions-item>
+                            </el-descriptions>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-descriptions title="" :column="2" border>
+                                <el-descriptions-item label="退回时间" align="center">{{
+                                    revertData.revertTime
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回部门" align="center">{{
+                                    revertData.statusSource
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回原因" align="center">{{
+                                    revertData.revertReason
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回详细" align="center">{{
+                                    revertData.revertDetail
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="处理部门" align="center">{{
+                                    revertData.middleProcess
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -427,15 +448,17 @@ export default {
                 { value: '个', label: '个' },
                 { value: '双', label: '双' },
                 { value: '条', label: '条' }
-            ]
+            ],
+            revertData: {},
         }
     },
     async mounted() {
         this.$setAxiosToken()
-        this.getOrderInfo()
+        await this.getOrderInfo()
         this.getAllShoeBomInfo()
         this.getAllColorOptions()
         this.getAllDepartmentOptions()
+        this.getRevertInfo()
     },
 
     methods: {
@@ -1017,7 +1040,13 @@ export default {
                     message: '提交失败'
                 })
             }
-        }
+        },
+        async getRevertInfo() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/revertorder/getsinglerevertorder?orderId=${this.orderId}`
+            )
+            this.revertData = response.data
+        },
     }
 }
 </script>

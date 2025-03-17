@@ -50,6 +50,7 @@ def getCraftSheetInfo():
         .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
         .all()
     )
+    print(craft_sheet_items)
     
     result_dict = {}
     for row in craft_sheet_items:

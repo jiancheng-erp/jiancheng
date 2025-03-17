@@ -19,6 +19,12 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>调版分配与下发</span>
                         </el-menu-item>
+                        <el-menu-item index="4" @click="handleMenuClick(4)">
+                            <span>生产BOM用量填写审核</span>
+                        </el-menu-item>
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
+                            <span>退回任务列表</span>
+                        </el-menu-item>
                         <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>订单查询</span>
                         </el-menu-item>
@@ -32,7 +38,7 @@
                 </div>
             </el-aside>
             <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
+                <component :is="currentComponent" :departmentId="departmentId"></component>
             </el-main>
         </el-container>
     </el-container>
@@ -46,6 +52,8 @@ import Dashboard from '../components/TechnicalManagerDashboard.vue';
 import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import AdjustList from '../components/AdjustList.vue';
+import BOMReviewList from '../components/BOMReviewList.vue';
+import RevertDashboard from '@/components/RevertDashboard.vue';
 import axios from 'axios'
 export default {
     components: {
@@ -53,13 +61,16 @@ export default {
         Dashboard,
         OrderSearch,
         PersonalInfo,
-        AdjustList
+        AdjustList,
+        BOMReviewList,
+        RevertDashboard
     },
     data() {
         return {
             UserFilled,
             currentComponent: 'Dashboard',
-            userName: ''
+            userName: '',
+            departmentId: '13'
         }
     },
     mounted() {
@@ -82,6 +93,12 @@ export default {
                     break
                 case 3:
                     this.currentComponent = 'OrderSearch'
+                    break
+                case 4:
+                    this.currentComponent = 'BOMReviewList'
+                    break
+                case 5:
+                    this.currentComponent = 'RevertDashboard'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

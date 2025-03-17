@@ -20,19 +20,23 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="退回订单" align="center">
+                                    <el-button type="danger" size="default"
+                                        @click="openReturnOrderDialog">退回流程</el-button>
+                                </el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -123,16 +127,16 @@
                         <el-descriptions title="订单信息" :column="2" border>
                             <el-descriptions-item label="订单编号" align="center">{{
                                 orderData.orderId
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="订单创建时间" align="center">{{
                                 orderData.createTime
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="客户名称" align="center">{{
                                 orderData.customerName
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                             <el-descriptions-item label="订单预计截止日期" align="center">{{
                                 orderData.deadlineTime
-                            }}</el-descriptions-item>
+                                }}</el-descriptions-item>
                         </el-descriptions>
                         <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                             <el-row :gutter="20" style="margin-bottom: 20px">
@@ -174,22 +178,22 @@
                                     </el-descriptions-item>
                                     <el-descriptions-item label="型号" align="center">{{
                                         currentShoeId
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                     <el-descriptions-item label="客户号" align="center">{{
                                         orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                     <el-descriptions-item label="色号" align="center">{{
                                         orderShoeData.color
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                     <el-descriptions-item label="设计师" align="center">{{
                                         orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                     <el-descriptions-item label="调版员" align="center">{{
                                         orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                     <el-descriptions-item label="商标" align="center">{{
                                         orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                        }}</el-descriptions-item>
                                 </el-descriptions>
                             </el-col>
                         </el-row>
@@ -321,6 +325,44 @@
                 </el-col>
             </el-row>
         </el-main>
+        <el-dialog title="退回流程" v-model="isRevertDialogVisable" width="20%" :close-on-click-modal="false">
+        <span>
+            <span>退回流程</span>
+            <el-row :gutter="20">
+                <el-col :span="24" :offset="0">
+                    <el-form :model="revertForm" :rules="revertRules" ref="revertForm" label-width="100px">
+                        <el-form-item label="退回至状态" prop="revertToStatus">
+                            <el-select v-model="revertForm.revertToStatus" placeholder="请选择退回至状态" clearable
+                                @change="handleStatusSelect">
+                                <el-option v-for="item in revertStatusReasonOptions" :key="item.status"
+                                    :label="item.statusName" :value="item.status"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="需要中间流程" prop="isNeedMiddleProcess">
+                            <el-radio-group v-model="revertForm.isNeedMiddleProcess">
+                                <el-radio label="1">是</el-radio>
+                                <el-radio label="0">否</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="退回原因" prop="revertReason">
+                            <el-input v-model="revertForm.revertReason" :rows="4" placeholder="请输入退回原因"
+                                disabled></el-input>
+                        </el-form-item>
+                        <el-form-item label="退回详细原因" prop="revertDetail">
+                            <el-input v-model="revertForm.revertDetail" type="textarea" :rows="4"
+                                placeholder="请输入退回原因"></el-input>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </span>
+        <template #footer>
+            <span>
+                <el-button @click="isRevertDialogVisable = false">取消</el-button>
+                <el-button type="primary" @click="saveRevertForm">确认</el-button>
+            </span>
+        </template>
+    </el-dialog>
     </el-container>
 </template>
 
@@ -438,14 +480,23 @@ export default {
             isCraftDialogVisible: false,
             syncMaterialButtonText: '同步该材料表格至所有颜色',
             inputCrafts: [], // 手动输入的工艺列表
-            currentRow: null // 当前编辑的行,
+            currentRow: null, // 当前编辑的行,
+            revertForm: {
+                revertToStatus: '',
+                revertReason: '',
+                revertDetail: '',
+                isNeedMiddleProcess: '0'
+            },
+            revertStatusReasonOptions: [],
+            isRevertDialogVisable: false
         }
     },
-    created() {
+    async created() {
         this.$setAxiosToken()
-        this.getOrderInfo()
+        await this.getOrderInfo()
         this.getAllShoeListInfo()
         this.getAllDepartmentOptions()
+        await this.getAllRevertStatusReasonOptions()
     },
     methods: {
         async getAllDepartmentOptions() {
@@ -576,6 +627,89 @@ export default {
                 `${this.$apiBaseUrl}/craftsheet/downloadcraftsheet?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
             )
         },
+        openReturnOrderDialog() {
+            this.revertForm.revertToStatus = ''
+            this.revertForm.revertDetail = ''
+            this.revertForm.revertReason = ''
+            this.revertForm.isNeedMiddleProcess = '0'
+            this.isRevertDialogVisable = true
+        },
+        handleStatusSelect() {
+            //when select status, make the revertReason to be the reason field of the selected status
+            const selectedStatus = this.revertStatusReasonOptions.find(item => item.status === this.revertForm.revertToStatus)
+            this.revertForm.revertReason = selectedStatus.reason
+        },
+        saveRevertForm() {
+            this.$confirm(`确定退回此订单吗？退回至 ${this.revertForm.revertToStatus}, 原因是 ${this.revertForm.revertReason}`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.revertOrder()
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: '已取消退回'
+                })
+            })
+        },
+        async revertOrder() {
+            this.$refs.revertForm.validate(async (valid) => {
+                if (!valid) {
+                    return
+                }
+                const response = await axios.post(`${this.$apiBaseUrl}/revertorder/revertordersave`, {
+                    orderId: this.orderData.orderDBId,
+                    flow: 3,
+                    revertToStatus: this.revertForm.revertToStatus,
+                    revertReason: this.revertForm.revertReason,
+                    revertDetail: this.revertForm.revertDetail,
+                    isNeedMiddleProcess: this.revertForm.isNeedMiddleProcess
+                })
+                if (response.status === 200) {
+                    this.$message({
+                        type: 'success',
+                        message: '退回成功'
+                    })
+                    this.isRevertDialogVisable = false
+                    this.getAllShoeListInfo()
+                }
+                else {
+                    this.$message({
+                        type: 'error',
+                        message: '退回失败'
+                    })
+                }
+            })
+        },
+        async revertMaterialChanges() {
+            ElMessageBox.confirm('确定要还原所有材料更改吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                let params = []
+                for (let i = 0; i < this.bomTestData.length; i++) {
+                    params.push(this.bomTestData[i].bomItemId)
+                }
+                try {
+                    await axios.patch(`${this.$apiBaseUrl}/purchaseorder/reverttooriginalbomitem`, params)
+                    await this.getBOMDetails(this.currentOrderShoeRow)
+                    ElMessage.success('还原成功')
+                }
+                catch (error) {
+                    console.log(error)
+                    ElMessage.error('还原失败')
+                }
+
+            })
+        },
+        async getAllRevertStatusReasonOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderreason`,
+                { params: { orderId: this.orderData.orderDBId, flow: 3 } }
+            )
+            this.revertStatusReasonOptions = response.data
+        },  
     }
 }
 </script>
