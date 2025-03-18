@@ -40,7 +40,7 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.inProgressTaskData
             }
-            this.displayData = this.inProgressTaskData.filter(task => task.orderId.includes(this.searchOrder));
+            this.displayData = this.inProgressTaskData.filter(task => task.orderRId.includes(this.searchOrder));
         },
         handleRowClick(row) {
             let url;
