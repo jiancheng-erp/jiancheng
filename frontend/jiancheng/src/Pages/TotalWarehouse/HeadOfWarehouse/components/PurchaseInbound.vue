@@ -78,8 +78,7 @@
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }"
-                    width="150">
+                <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="scope">
                         <vxe-input v-model="scope.row.materialSpecification" clearable :disabled="scope.row.disableEdit"
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
@@ -111,19 +110,19 @@
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.unitPrice" type="amount" clearable :min="0" :disabled="inboundForm.inboundType == 1"
-                            @change="updateTotalPrice(row)"></vxe-number-input>
+                        <vxe-number-input v-model="row.unitPrice" type="amount" clearable :min="0"
+                            :disabled="inboundForm.inboundType == 1" @change="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="totalPrice" title="采购金额" width="100">
                 </vxe-column>
-                <vxe-column field="remark" title="备注" :edit-render="{ autoFocus: 'input' }" width="150">
+                <vxe-column field="remark" title="备注" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="{ row }">
                         <vxe-input v-model="row.remark" clearable></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column v-for="item in shoeSizeColumns" :field="item.prop" :title="item.label"
-                    :edit-render="{ autoFocus: 'input' }" width="150">
+                    :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row[item.prop]" type="integer" clearable
                             @change="updateTotalShoes(row)" :min="0"></vxe-number-input>
@@ -193,7 +192,7 @@
                         column.label }}
                     </th>
                     <th width="80">单价</th>
-                    <th width="80" >总价</th>
+                    <th width="80">总价</th>
                     <th>备注</th>
                 </tr>
                 <tr v-for="(item, index) in previewData" :key="index" align="center">
@@ -292,7 +291,17 @@ export default {
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ],
                 supplierName: [
-                    { required: true, message: '此项为必填项', trigger: 'change' },
+                    {
+                        required: true,
+                        validator: (rule, value, callback) => {
+                            if ((value === undefined || value === null || value.trim() === '') && this.inboundForm.inboundType != 1) {
+                                callback(new Error('此项为必填项'));
+                            } else {
+                                callback();
+                            }
+                        },
+                        trigger: 'change'
+                    },
                 ],
                 inboundType: [
                     { required: true, message: '此项为必填项', trigger: 'change' },
@@ -344,7 +353,7 @@ export default {
             if (value == 1) {
                 this.rules.supplierName = []
             } else {
-                this.rules.supplierName =  [
+                this.rules.supplierName = [
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ]
             }

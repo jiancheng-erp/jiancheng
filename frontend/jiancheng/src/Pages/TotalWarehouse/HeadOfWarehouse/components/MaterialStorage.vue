@@ -1,36 +1,19 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="6" :offset="0">
-            <el-button-group>
-                <el-button type="primary" size="default" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-                <el-button v-if="isMultipleSelection" @click="openMultipleInboundDialog">
-                    入库
-                </el-button>
-                <el-button v-if="isMultipleSelection" @click="confirmOrderShoesToOutbound">
-                    出库
-                </el-button>
-                <el-button @click="toggleSelectionMode">
-                    {{ isMultipleSelection ? "退出" : "选择材料" }}
-                </el-button>
-            </el-button-group>
+        <el-col :span="24" :offset="0">
+            <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
+            <el-button type="success" @click="confirmOrderShoesToOutbound">
+                出库
+            </el-button>
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
-            @confirm="handleSearch" />
+            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions"
+            :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
     </el-row>
-    <el-table :data="tableData" border stripe height="600" @selection-change="handleSelectionChange"
-        @sort-change="sortData">
-        <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
-        <el-table-column prop="totalPurchaseOrderCreateDate" label="采购订单日期" width="120" sortable="custom"></el-table-column>
-        <el-table-column label="采购订单号" width="100">
-            <template #default="scope">
-                <el-tooltip effect="dark" :content="scope.row.totalPurchaseOrderRId" placement="bottom">
-                    <span class="truncate-text">
-                        {{ scope.row.totalPurchaseOrderRId }}
-                    </span>
-                </el-tooltip>
-            </template>
-        </el-table-column>
+    <el-table :data="tableData" border stripe height="650px" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
+        <el-table-column prop="shoeRId" label="工厂鞋型号"></el-table-column>
         <el-table-column prop="materialType" label="材料类型"></el-table-column>
         <el-table-column prop="materialName" label="材料名称" width="100">
             <template #default="scope">
@@ -41,29 +24,17 @@
                 </el-tooltip>
             </template>
         </el-table-column>
-        <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-        <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-        <el-table-column label="材料应入库数量">
-                    <template #default="scope">
-                        {{ Number(scope.row.estimatedInboundAmount).toFixed(2) + scope.row.materialUnit }}
-                    </template>
-                </el-table-column>
-                <el-table-column label="材料实入库数量">
-                    <template #default="scope">
-                        {{ Number(scope.row.actualInboundAmount).toFixed(2) + scope.row.actualInboundUnit }}
-                    </template>
-                </el-table-column>
-        <el-table-column prop="currentAmount" label="材料库存" :formatter="formatDecimal"></el-table-column>
-        <el-table-column prop="unitPrice" label="材料单价" :formatter="formatDecimal"></el-table-column>
-        <el-table-column prop="totalPrice" label="材料总价" :formatter="formatDecimal"></el-table-column>
-        <el-table-column prop="supplierName" label="材料供应商"></el-table-column>
-        <el-table-column prop="orderRId" label="材料订单号"></el-table-column>
-        <el-table-column prop="shoeRId" label="材料鞋型号"></el-table-column>
+        <el-table-column prop="materialModel" label="型号"></el-table-column>
+        <el-table-column prop="materialSpecification" label="规格"></el-table-column>
+        <el-table-column prop="colorName" label="颜色"></el-table-column>
+        <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
+        <el-table-column prop="estimatedInboundAmount" label="应入库数量"></el-table-column>
+        <el-table-column prop="actualInboundAmount" label="实入库数量"></el-table-column>
+        <el-table-column prop="currentAmount" label="库存"></el-table-column>
+        <el-table-column prop="supplierName" label="供应商"></el-table-column>
         <el-table-column fixed="right" label="操作" width="150">
             <template #default="scope">
                 <el-button-group>
-                    <!-- <el-button type="primary" size="small" @click="openInboundDialog">入库</el-button>
-                    <el-button type="primary" size="small" @click="openOutboundDialog">出库</el-button> -->
                     <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small"
                         @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
                     <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
@@ -74,7 +45,7 @@
     <el-row :gutter="20">
         <el-col :span="12" :offset="14">
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
+                :current-page="currentPage" :page-sizes="[20, 40, 60, 100]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
@@ -154,23 +125,18 @@
         </el-table>
     </el-dialog>
 
-    <InboundDialog :visible="isMultiInboundDialogVisible" :inboundForm="inboundForm"
-        @update-visible="updateMultInboundDialogVis" @get-material-table-data="getMaterialTableData"/>
-    
     <OutboundDialog :visible="isConfirmOrderShoesDialogOpen" :outboundForm="outboundForm"
         @update-visible="updateConfirmOrderShoesDialogVis" @get-material-table-data="getMaterialTableData"
-        :selectedRows="selectedRowsCopy"/>
+        :selectedRows="selectedRowsCopy" />
 </template>
 <script>
 import axios from 'axios'
 import MaterialSearchDialog from './MaterialSearchDialog.vue';
-import InboundDialog from './InboundDialog.vue';
 import OutboundDialog from './OutboundDialog.vue';
 import { ElMessage } from 'element-plus';
 export default {
     components: {
         MaterialSearchDialog,
-        InboundDialog,
         OutboundDialog
     },
     computed: {
@@ -194,7 +160,7 @@ export default {
             },
             materialTypeOptions: [],
             materialSupplierOptions: [],
-            pageSize: 10,
+            pageSize: 20,
             currentPage: 1,
             recordData: [],
             sizeRecordData: [],
@@ -211,13 +177,6 @@ export default {
             shoeSizeColumns: [],
             selectedRows: [],
             selectedRowsCopy: [],
-            isMultipleSelection: false,
-            isMultiInboundDialogVisible: false,
-            inboundForm: {
-                date: '',
-                inboundType: 0,
-                groupedSelectedRows: []
-            },
             outboundForm: {
                 // groupedSelectedRows contains formItemTemplate,
                 // selectedOrderShoeId, selectedOrderId, selectedOrderRId, and selectedShoeId
@@ -257,9 +216,6 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
             this.materialNameOptions = response.data
         },
-        updateMultInboundDialogVis(newVal) {
-            this.isMultiInboundDialogVisible = newVal
-        },
         updateConfirmOrderShoesDialogVis(newVal) {
             this.isConfirmOrderShoesDialogOpen = newVal
         },
@@ -267,62 +223,8 @@ export default {
             this.currentSizeMaterialQuantityRow = row
             this.isOpenSizeMaterialQuantityDialogVisible = true
         },
-        toggleSelectionMode() {
-            this.isMultipleSelection = !this.isMultipleSelection;
-        },
         handleSelectionChange(selection) {
             this.selectedRows = selection;
-        },
-        async openMultipleInboundDialog() {
-            if (this.selectedRows.length == 0) {
-                ElMessage.error("未选择材料")
-                return
-            }
-            await this.groupSelectedRows()
-            this.isMultiInboundDialogVisible = true
-        },
-        async groupSelectedRows() {
-            let groupedData = []
-            for (let item of this.selectedRows) {
-                let newItem = {}
-                newItem = { ...item, inboundQuantity: 0, unitPrice: Number(item.unitPrice), remark: "", sizeMaterialInboundTable: [] };
-                let shoeSizeColumns = []
-                if (item.materialCategory == 1) {
-                    let params = { "sizeMaterialStorageId": item.materialStorageId, "orderId": item.orderId, "purchaseDivideOrderId": item.purchaseDivideOrderId }
-                    let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
-                    newItem["sizeMaterialInboundTable"] = response.data
-                    newItem["sizeMaterialInboundTable"].forEach(row => {
-                        row.inboundQuantity = 0
-                    })
-                    newItem.sizeMaterialInboundTable.forEach((element, index) => {
-                        newItem[`amount${index}`] = element.inboundQuantity
-                    })
-                    // insert shoe size columns into current row
-                    newItem.sizeMaterialInboundTable.forEach((element, index) => {
-                        // for display
-                        if (element.predictQuantity > 0) {
-                            shoeSizeColumns.push({
-                                "prop": `amount${index}`,
-                                "label": element.shoeSizeName
-                            })
-                        }
-                    })
-                }
-                const group = groupedData.find(g => g.totalPurchaseOrderRId === item.totalPurchaseOrderRId);
-                if (group) {
-                    group.items.push(newItem);
-                } else {
-                    groupedData.push({
-                        totalPurchaseOrderRId: item.totalPurchaseOrderRId,
-                        supplierName: item.supplierName,
-                        purchaseDivideOrderType: item.purchaseDivideOrderType,
-                        shoeSizeColumns: shoeSizeColumns,
-                        items: [newItem]
-                    });
-                }
-            }
-            this.inboundForm.groupedSelectedRows = groupedData;
-            console.log(this.inboundForm.groupedSelectedRows)
         },
         async confirmOrderShoesToOutbound() {
             if (this.selectedRows.length == 0) {
@@ -421,9 +323,6 @@ export default {
                 this.isRecordDialogVisible = true
             }
         },
-        async sortData({ prop, order }) {
-            await this.getMaterialTableData(prop, order)
-        }
     }
 }
 </script>
