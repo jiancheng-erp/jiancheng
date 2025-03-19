@@ -11,6 +11,7 @@ from general_document.bom import generate_excel_file
 from collections import defaultdict
 from business.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
+from sqlalchemy.sql.expression import case
 
 second_bom_bp = Blueprint("second_bom_bp", __name__)
 
@@ -235,6 +236,15 @@ def get_current_bom():
 @second_bom_bp.route("/secondbom/getcurrentbomitem", methods=["GET"])
 def get_current_bom_item():
     order_shoe_type_id = request.args.get("ordershoetypeid")
+    material_order = case(
+        (ProductionInstructionItem.material_type == "S", 1),
+        (ProductionInstructionItem.material_type == "I", 2),
+        (ProductionInstructionItem.material_type == "A", 3),
+        (ProductionInstructionItem.material_type == "O", 4),
+        (ProductionInstructionItem.material_type == "M", 5),
+        (ProductionInstructionItem.material_type == "H", 6),
+        else_=6,  # Default for any other values (if any)
+    )
     bom = (
         db.session.query(Bom, OrderShoeType)
         .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
@@ -242,12 +252,19 @@ def get_current_bom_item():
         .first()
     )
     bom_items = (
-        db.session.query(BomItem, Material, MaterialType, Department, Supplier)
+        db.session.query(BomItem, Material, MaterialType, Department, Supplier, ProductionInstructionItem)
         .join(Material, BomItem.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .outerjoin(Department, BomItem.department_id == Department.department_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .outerjoin(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+        )
         .filter(BomItem.bom_id == bom.Bom.bom_id)
+        .order_by(
+            material_order, Supplier.supplier_name, Material.material_name
+        )
         .all()
     )
     # get shoe size name
@@ -261,7 +278,7 @@ def get_current_bom_item():
     shoe_size_names = get_order_batch_type_helper(order_id)
     result = []
     for row in bom_items:
-        bom_item, material, material_type, department, supplier = row
+        bom_item, material, material_type, department, supplier, production_instruction = row
         sizeInfo = []
         first_bom_item_record = (
             db.session.query(BomItem, Bom)

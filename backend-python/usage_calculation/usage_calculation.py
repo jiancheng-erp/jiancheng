@@ -11,6 +11,7 @@ from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_P
 from api_utility import randomIdGenerater
 from collections import defaultdict
 from business.batch_info_type import get_order_batch_type_helper
+from sqlalchemy.sql.expression import case
 
 usage_calculation_bp = Blueprint("usage_calculation_bp", __name__)
 
@@ -211,13 +212,27 @@ def get_order_first_bom():
 @usage_calculation_bp.route("/usagecalculation/getshoebomitems", methods=["GET"])
 def get_shoe_bom_items():
     bom_rid = request.args.get("bomrid")
+    material_order = case(
+        (ProductionInstructionItem.material_type == "S", 1),
+        (ProductionInstructionItem.material_type == "I", 2),
+        (ProductionInstructionItem.material_type == "A", 3),
+        (ProductionInstructionItem.material_type == "O", 4),
+        (ProductionInstructionItem.material_type == "M", 5),
+        (ProductionInstructionItem.material_type == "H", 6),
+        else_=6,  # Default for any other values (if any)
+    )
     entities = (
-        db.session.query(BomItem, Material, MaterialType, Supplier)
+        db.session.query(BomItem, Material, MaterialType, Supplier, ProductionInstructionItem)
         .join(Bom, Bom.bom_id == BomItem.bom_id)
         .join(Material, Material.material_id == BomItem.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .outerjoin(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+        )
         .filter(Bom.bom_rid == bom_rid)
+        .order_by(material_order, Supplier.supplier_name, Material.material_name)
         .all()
     )
     result = []
@@ -231,7 +246,7 @@ def get_shoe_bom_items():
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
     for entity in entities:
-        bom_item, material, material_type, supplier = entity
+        bom_item, material, material_type, supplier, production_instruction = entity
         sizeInfo = []
         for i in range(len(shoe_size_names)):
             index = i + 34
