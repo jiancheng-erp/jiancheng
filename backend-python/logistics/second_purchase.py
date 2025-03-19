@@ -305,7 +305,7 @@ def get_shoe_bom_items():
             TotalBom.total_bom_rid == bom_rid,
             ProductionInstructionItem.material_type.in_(["A"]),
         )
-        .order_by(material_order)
+        .order_by(material_order, Supplier.supplier_name, Material.material_name)
         .all()
     )
 
@@ -972,7 +972,7 @@ def submit_purchase_divide_orders():
                 "material_name": material.material_name,
                 "model": purchase_order_item.material_model or "",
                 "specification": purchase_order_item.material_specification or "",
-                "approval_amount": bom_item.total_usage,  # Assuming bom_item has approval quantity
+                "approval_amount": purchase_order_item.approval_amount,  # Assuming bom_item has approval quantity
                 "purchase_amount": purchase_order_item.purchase_amount,
             }
         )
