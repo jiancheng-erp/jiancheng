@@ -1519,3 +1519,12 @@ class RevertEvent(db.Model):
     event_time = db.Column(db.DateTime, nullable=True)
     order_id = db.Column(db.BigInteger, nullable=True)
     
+class PayableTransactions(db.Model):
+    __tablename__ = "accounting_payable_transactions"
+    transaction_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    transaction_amount = db.Column(db.DECIMAL(12,3), nullable=False)
+    transaction_unit = db.Column(db.BigInteger, nullable=False)
+    transaction_date = db.Column(db.DateTime, nullable=False)
+    from_account_grade = db.Column(db.BigInteger, nullable=False)
+    from_account_id = db.Column(db.BigInteger, nullable=False)
+    to_account_id = db.Column(db.BigInteger, nullable=False)

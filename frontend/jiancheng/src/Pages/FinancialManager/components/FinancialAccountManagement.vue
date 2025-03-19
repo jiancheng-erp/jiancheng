@@ -309,7 +309,7 @@ async function boundPayableAccountEvent(){
     payableAccountConfigureDialogVis.value = false
 }
 function updateSecondGradeAccounts(){
-    displaySecondGradeAccounts.value = displayFirstGradeAccounts.value[selectedFirstGradeAccount.value].associatedSecondGradeAccounts
+    displaySecondGradeAccounts.value = displayFirstGradeAccounts.value[selectedFirstGradeAccount.value].associatedSecondGradeAccount
 }
 
 function closeAddFirstDialog(){
