@@ -590,7 +590,7 @@
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="退回流程" v-model="isRevertDialogVisable" width="20%" :close-on-click-modal="false">
+    <el-dialog title="退回流程" v-model="isRevertDialogVisable" width="50%" :close-on-click-modal="false">
         <span>
             <span>退回流程</span>
             <el-row :gutter="20">
@@ -1432,7 +1432,8 @@ export default {
             this.isRevertDialogVisable = true
         },
         saveRevertForm() {
-            this.$confirm(`确定退回此订单吗？退回至 ${this.revertForm.revertToStatus}, 原因是 ${this.revertForm.revertReason}`, '提示', {
+            let statusName = this.revertStatusReasonOptions.find(item => item.status === this.revertForm.revertToStatus).statusName
+            this.$confirm(`确定退回此订单吗？退回至 ${statusName}, 原因是 ${this.revertForm.revertReason}`, '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'

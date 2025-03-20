@@ -13,7 +13,7 @@ from constants import (
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, abort, Response
 from models import *
-from sqlalchemy import and_, asc, desc, exists, func, not_, or_, text, literal
+from sqlalchemy import and_, asc, desc, exists, func, not_, or_, text, literal, cast, JSON
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 import json
@@ -179,6 +179,7 @@ def get_all_material_info():
             MaterialStorage.material_storage_color,
             MaterialStorage.craft_name,
             MaterialStorage.composite_unit_cost,
+            cast(literal('{}'), JSON).label("shoe_size_columns"),
         )
         .join(
             Material, Material.material_id == MaterialStorage.actual_inbound_material_id
@@ -221,6 +222,7 @@ def get_all_material_info():
             SizeMaterialStorage.size_material_color,
             SizeMaterialStorage.craft_name,
             literal(0).label("composite_unit_cost"),
+            SizeMaterialStorage.shoe_size_columns,
         )
         .join(Material, Material.material_id == SizeMaterialStorage.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
@@ -236,6 +238,15 @@ def get_all_material_info():
         if value and value != "":
             query1 = query1.filter(material_filter_map[key].ilike(f"%{value}%"))
             query2 = query2.filter(size_material_filter_map[key].ilike(f"%{value}%"))
+
+    warehouse_id = request.args.get("warehouseId")
+    if warehouse_id and warehouse_id != "":
+        query1 = query1.filter(
+            MaterialType.warehouse_id == warehouse_id
+        )
+        query2 = query2.filter(
+            MaterialType.warehouse_id == warehouse_id
+        )
     union_query = query1.union(query2)
     count_result = union_query.distinct().count()
     response = union_query.distinct().limit(number).offset((page - 1) * number).all()
@@ -264,6 +275,7 @@ def get_all_material_info():
             color,
             craft_name,
             composite_unit_cost,
+            shoe_size_columns,
         ) = row
         obj = {
             "materialId": material_id,
@@ -296,6 +308,7 @@ def get_all_material_info():
                 if not composite_unit_cost
                 else round(actual_inbound_amount * composite_unit_cost, 2)
             ),
+            "shoeSizeColumns": shoe_size_columns,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -1071,6 +1084,123 @@ def inbound_material():
     return jsonify({"message": "success", "inboundRId": inbound_rid})
 
 
+def _handle_production_outbound(data, next_group_id):
+    timestamp = data.get("currentDateTime", datetime.now())
+    department = data.get("department", None)
+    remark = data.get("remark", None)
+    picker = data.get("picker", None)
+    items = data.get("items", [])
+    formatted_timestamp = (
+        timestamp.replace("-", "").replace(" ", "").replace("T", "").replace(":", "")
+    )
+    outbound_rid = "OR" + formatted_timestamp + "T0"
+    # create outbound record
+    outbound_record = OutboundRecord(
+        outbound_datetime=formatted_timestamp,
+        outbound_type=0,
+        outbound_rid=outbound_rid,
+        outbound_batch_id=next_group_id,
+        outbound_department=department,
+        picker=picker,
+        remark=remark,
+    )
+    db.session.add(outbound_record)
+    db.session.flush()
+
+    for item in items:
+        item: dict
+        material_category = item.get("materialCategory", 0)
+        storage_id = item.get("materialStorageId", None)
+        # 用户必须选材料id
+        if not storage_id:
+            abort(Response(json.dumps({"error": "没有选择材料库存"}), 400))
+        # 用户选择了材料
+        else:
+            if item["materialCategory"] == 0:
+                storage = MaterialStorage.query.get(storage_id)
+            elif item["materialCategory"] == 1:
+                storage = SizeMaterialStorage.query.get(storage_id)
+
+
+        # set outbound quantity
+        outbound_quantity = Decimal(item["outboundQuantity"])
+
+        selected_order_rid = item.get("selectedOrderRId", None)
+        order, order_shoe = _find_order_shoe(selected_order_rid)
+        order_shoe_id = order_shoe.order_shoe_id if order_shoe else None
+        record_detail = OutboundRecordDetail(
+            outbound_record_id=outbound_record.outbound_record_id,
+            outbound_amount=outbound_quantity,
+            remark=item.get("remark", None),
+            order_shoe_id=order_shoe_id,
+        )
+
+        if material_category == 0:
+            outbound_record.is_sized_material = 0
+            record_detail.material_storage_id = storage_id
+            storage.current_amount -= outbound_quantity
+        elif material_category == 1:
+            outbound_record.is_sized_material = 1
+            record_detail.size_material_storage_id = storage_id
+
+            for i, shoe_size in enumerate(SHOESIZERANGE):
+                if f"amount{i}" not in item:
+                    break
+
+                column_name = f"size_{shoe_size}_current_amount"
+                current_value = getattr(storage, column_name)
+                new_value = current_value - int(item[f"amount{i}"])
+                setattr(storage, column_name, new_value)
+                storage.total_current_amount -= int(item[f"amount{i}"])
+
+                column_name = f"size_{shoe_size}_outbound_amount"
+                setattr(record_detail, column_name, int(item[f"amount{i}"]))
+        db.session.add(record_detail)
+    return outbound_record.outbound_rid
+
+def _handle_waste_outbound(data, next_group_id):
+    pass
+
+def _handle_outsource_outbound(data, next_group_id):
+    pass
+
+def _handle_composite_outbound(data, next_group_id):
+    pass
+
+
+
+# check whether materials for order_shoe has inbounded
+@material_storage_bp.route(
+    "/warehouse/outboundmaterial", methods=["POST"]
+)
+def outbound_material():
+    data = request.get_json()
+        # Determine the next available group_id
+    next_group_id = (
+        db.session.query(
+            func.coalesce(func.max(OutboundRecord.outbound_batch_id), 0)
+        ).scalar()
+        + 1
+    )
+    outbound_type = data.get("outboundType", 0)
+    # 生产出库
+    if outbound_type == 0:
+        outbound_rid = _handle_production_outbound(data, next_group_id)
+    # 废料处理
+    elif outbound_type == 1:
+        outbound_rid = _handle_waste_outbound(data, next_group_id)
+    # 外包出库
+    elif outbound_type == 2:
+        outbound_rid = _handle_outsource_outbound(data, next_group_id)
+    # 复合出库
+    elif outbound_type == 3:
+        outbound_rid = _handle_composite_outbound(data, next_group_id)
+    else:
+        return jsonify({"message": "invalid outbound type"}), 400
+
+    db.session.commit()
+    return jsonify({"message": "success", "outboundRId": outbound_rid})
+
 # check whether materials for order_shoe has inbounded
 @material_storage_bp.route(
     "/warehouse/warehousemanager/notifyrequiredmaterialarrival", methods=["GET"]
@@ -1221,9 +1351,9 @@ def process_composite_materials(composite_material_list):
 
 
 @material_storage_bp.route(
-    "/warehouse/warehousemanager/outboundmaterial", methods=["PATCH"]
+    "/warehouse/warehousemanager/oldoutboundmaterial", methods=["PATCH"]
 )
-def outbound_material():
+def old_outbound_material():
     data = request.get_json()
     composite_material_rows = []
     record_list = []
@@ -1543,8 +1673,8 @@ def get_inbound_record_by_batch_id():
             supplier,
             order,
         ) = row
-        unit_price = round(record_detail.unit_price, 2) if record_detail.unit_price else 0.00
-        composite_unit_cost = round(record_detail.composite_unit_cost, 2) if record_detail.composite_unit_cost else 0.00
+        unit_price = round(record_detail.unit_price, 3) if record_detail.unit_price else 0.00
+        composite_unit_cost = round(record_detail.composite_unit_cost, 3) if record_detail.composite_unit_cost else 0.00
         inbound_quantity = round(record_detail.inbound_amount, 2) if record_detail.inbound_amount else 0.00
         obj = {
             "timestamp": record_meta.inbound_datetime,

@@ -574,6 +574,7 @@ def get_production_instruction():
         "craftRemark": production_instruction.craft_remark,
     }
     fin_result = {
+        "productionInstructionDbId": production_instruction_id,
         "productionInstructionId": production_instruction_rid,
         "instructionData": result,
         "productionInstructionDetail": production_instruction_detail,

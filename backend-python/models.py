@@ -1170,16 +1170,15 @@ class OutboundRecord(db.Model):
     outbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     outbound_rid = db.Column(db.String(60))
     outbound_batch_id = db.Column(db.Integer)
-    outbound_amount = db.Column(db.DECIMAL(12, 5))
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False)
     outbound_department = db.Column(db.String(1), nullable=True)
     picker = db.Column(db.String(15), nullable=True)
     outbound_address = db.Column(db.String(100), nullable=True)
     outsource_info_id = db.Column(db.Integer, nullable=True)
-    order_shoe_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
     composite_supplier_id = db.Column(db.Integer, nullable=True)
+    is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"
@@ -1212,6 +1211,7 @@ class OutboundRecordDetail(db.Model):
         nullable=True,
     )
     remark = db.Column(db.String(40), nullable=True)
+    order_shoe_id = db.Column(db.BigInteger, nullable=True)
 
     def __repr__(self):
         return f"<OutboundRecordDetail {self.id}>"

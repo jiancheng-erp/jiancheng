@@ -6,6 +6,7 @@ from blueprints import register_blueprints
 from mock_data_gen import *
 from models import *
 from event_processor import EventProcessor
+from update_db import sync_schema
 
 
 @app.route("/")
@@ -26,6 +27,7 @@ def main():
 if __name__ == "__main__":
     event_processor = EventProcessor()
     app.config['event_processor'] = event_processor
+    # sync_schema(app, db)
     # event_processor.testPaths()
     # with app.app_context():
     # db.create_all()  # This will create the database tables under the application context.

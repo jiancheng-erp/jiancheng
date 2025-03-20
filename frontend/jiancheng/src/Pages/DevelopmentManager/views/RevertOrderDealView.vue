@@ -1081,6 +1081,7 @@ export default {
             isFinalBOM: false,
             orderProduceInfo: [],
             pastShoeInfoTable: [],
+            productionInstructionDbId: '',
             newProductionInstructionId: '',
             pastShoeDescription: {
                 shoeId: '',
@@ -1538,6 +1539,7 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getproductioninstruction?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
             )
+            this.productionInstructionDbId = response.data.productionInstructionDbId
             this.newProductionInstructionId = response.data.productionInstructionId
             this.materialWholeData = response.data.instructionData
             this.productionInstructionDetail = response.data.productionInstructionDetail
@@ -1678,7 +1680,7 @@ export default {
                     `${this.$apiBaseUrl}/devproductionorder/editrevertproductioninstruction`,
                     {
                         orderId: this.orderData.orderId,
-                        productionInstructionId: this.newProductionInstructionId,
+                        productionInstructionDbId: this.productionInstructionDbId,
                         orderShoeId: this.currentShoeId,
                         uploadData: this.materialWholeData,
                         productionInstructionDetail: this.productionInstructionDetail,
