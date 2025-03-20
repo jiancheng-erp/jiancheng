@@ -284,6 +284,7 @@ def save_craft_sheet():
     craft_sheet.oily_glue = craft_sheet_detail.get("oilyGlue")
     craft_sheet.cut_die_img_path = craft_sheet_detail.get("cutDieImgPath")
     craft_sheet.pic_note_img_path = craft_sheet_detail.get("picNoteImgPath")
+    craft_sheet.reviewer = craft_sheet_detail.get("reviewer")
     db.session.flush()
     craft_sheet_items = (
         db.session.query(CraftSheetItem)
@@ -1323,6 +1324,7 @@ def edit_craft_sheet():
     craft_sheet.oily_glue = craft_sheet_detail.get("oilyGlue")
     craft_sheet.cut_die_img_path = craft_sheet_detail.get("cutDieImgPath")
     craft_sheet.pic_note_img_path = craft_sheet_detail.get("picNoteImgPath")
+    craft_sheet.reviewer = craft_sheet_detail.get("reviewer")
     db.session.flush()
     craft_sheet_items = (
         db.session.query(CraftSheetItem)

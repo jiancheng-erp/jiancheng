@@ -19,7 +19,7 @@ dev_revert_api = Blueprint("dev_revert_api", __name__)
 @dev_revert_api.route("/devproductionorder/editrevertproductioninstruction", methods=["POST"])
 def edit_revert_production_instruction():
     order_id = request.json.get("orderId")
-    production_instruction_rid = request.json.get("productionInstructionId")
+    production_instruction_id = request.json.get("productionInstructionDbId")
     order_shoe_rid = request.json.get("orderShoeId")
     upload_data = request.json.get("uploadData")
 
@@ -38,7 +38,10 @@ def edit_revert_production_instruction():
     # Get production instruction
     production_instruction = (
         db.session.query(ProductionInstruction)
-        .filter(ProductionInstruction.production_instruction_rid == production_instruction_rid)
+        .filter(
+            ProductionInstruction.production_instruction_id
+            == production_instruction_id
+        )
         .first()
     )
 
