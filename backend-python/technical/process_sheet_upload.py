@@ -1229,6 +1229,7 @@ def get_craft_sheet_info():
             material_craft_name = ""
         # Map material type to the appropriate array in the dictionary
         material_data = {
+            "craftSheetItemId": item.CraftSheetItem.craft_sheet_item_id,
             "materialId": item.CraftSheetItem.material_id,
             "materialType": material.MaterialType.material_type_name,
             "materialName": material.Material.material_name,
