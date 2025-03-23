@@ -68,7 +68,7 @@ def edit_revert_craft_sheet():
 
     # Get Existing CraftSheetItems
     existing_items = {
-        item.production_instruction_item_id: item for item in db.session.query(CraftSheetItem).filter(
+        item.craft_sheet_item_id: item for item in db.session.query(CraftSheetItem).filter(
             CraftSheetItem.craft_sheet_id == craft_sheet_id
         ).all()
     }
@@ -110,8 +110,9 @@ def edit_revert_craft_sheet():
             "L": data.get("lastMaterialData", []),
         }.items():
             for material in material_data:
+                craft_item_id = material.get("craftSheetItemId")
                 item_id = material.get("productionInstructionItemId")
-                uploaded_item_ids.add(item_id)
+                uploaded_item_ids.add(craft_item_id)
 
                 # Ensure Material & Supplier Exist
                 material_id = _get_or_create_material(material)
@@ -120,9 +121,9 @@ def edit_revert_craft_sheet():
                 craft_name_list = material.get("materialCraftNameList", [])
                 craft_name = "@".join(craft_name_list) if craft_name_list else ""
 
-                if item_id in existing_items:
+                if craft_item_id in existing_items:
                     # Update Existing Item
-                    item = existing_items[item_id]
+                    item = existing_items[craft_item_id]
                     item.material_id = material_id
                     item.material_model = material.get("materialModel")
                     item.material_specification = material.get("materialSpecification")
@@ -155,7 +156,12 @@ def edit_revert_craft_sheet():
 
                 # Update Second BOM if it exists
                 if second_bom:
-                    _update_or_insert_bom_item(item_id, material, material_id, bom_type=1)
+                    _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_id, bom_type=1)
+                if item_id:
+                    material_storage = db.session.query(MaterialStorage).filter(MaterialStorage.production_instruction_item_id == item_id).first()
+                    if material_storage:
+                        material_storage.craft_name = craft_name
+                        db.session.flush()
 
     # Delete Removed Items
     for existing_id in existing_items.keys():
@@ -164,44 +170,59 @@ def edit_revert_craft_sheet():
 
     # Update Order Shoe Status
     order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
-    order_shoe.process_sheet_upload_status = "1"
 
     db.session.commit()
     return jsonify({"message": "Craft sheet updated successfully"}), 200
 
 
-def _update_or_insert_bom_item(item_id, material, material_id, bom_type):
-    """ Update or Insert BOM Item for the specified bom_type (1 for second BOM) """
-    bom_item = (
-        db.session.query(BomItem)
-        .filter(
-            BomItem.production_instruction_item_id == item_id,
-            BomItem.bom_item_add_type == str(bom_type),
-        )
+def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_id, bom_type):
+    """
+    Update or Insert BOM Item(s) for the specified bom_type (usually 1 for second BOM).
+    If `bom_type == 1`, then multiple BOM items may be created based on the `craft_name` string.
+    """
+    bom = (
+        db.session.query(Bom)
+        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == bom_type)
         .first()
     )
+    if not bom:
+        return
 
-    if bom_item:
-        # Update existing BOM item (except craft_name)
-        bom_item.material_id = material_id
-        bom_item.material_specification = material.get("materialSpecification")
-        bom_item.material_model = material.get("materialModel")
-        bom_item.bom_item_color = material.get("color")
-        bom_item.remark = material.get("comment")
-    else:
-        # Insert new BOM item
-        new_bom_item = BomItem(
-            material_id=material_id,
-            material_specification=material.get("materialSpecification"),
-            material_model=material.get("materialModel"),
-            bom_item_color=material.get("color"),
-            unit_usage=material.get("unitUsage", 0),
-            total_usage=material.get("totalUsage", 0),
-            remark=material.get("comment"),
-            production_instruction_item_id=item_id,
-            bom_item_add_type=str(bom_type),
-        )
-        db.session.add(new_bom_item)
+    bom_id = bom.bom_id
+
+    # Key fields for identifying related bom_items
+    key_filter = (
+        BomItem.production_instruction_item_id == item_id,
+        BomItem.material_id == material_id,
+        BomItem.material_model == material.get("materialModel"),
+        BomItem.material_specification == material.get("materialSpecification"),
+        BomItem.bom_item_color == material.get("color"),
+        BomItem.bom_item_add_type == str(bom_type),
+    )
+
+    # Delete old BomItems for second BOM (generated from old craft_name)
+    if bom_type == 1:
+        old_bom_items = db.session.query(BomItem).filter(*key_filter).all()
+        for old_item in old_bom_items:
+            db.session.delete(old_item)
+
+        # Split new craft_name list and add each as separate BomItem
+        craft_name_list = material.get("materialCraftNameList", [])
+        for craft_name in craft_name_list:
+            new_bom_item = BomItem(
+                bom_id=bom_id,
+                production_instruction_item_id=item_id,
+                material_id=material_id,
+                material_model=material.get("materialModel"),
+                material_specification=material.get("materialSpecification"),
+                bom_item_color=material.get("color"),
+                unit_usage=material.get("unitUsage", 0),
+                total_usage=material.get("totalUsage", 0),
+                remark=material.get("comment"),
+                bom_item_add_type=str(bom_type),
+                craft_name=craft_name,
+            )
+            db.session.add(new_bom_item)
 
 
 
