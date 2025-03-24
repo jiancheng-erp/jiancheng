@@ -19,6 +19,7 @@ import SemifinishedWarehouse from '@/Pages/TotalWarehouse/SemifinishedWarehouse/
 import FinishedWarehouse from '@/Pages/TotalWarehouse/FinishedWarehouse/views/FinishedWarehouse.vue'
 import ProductionClerk from '@/Pages/ProductionManagementDepartment/ProductionClerk/views/ProductionClerk.vue'
 import FinancialManager from '@/Pages/FinancialManager/views/FinancialManager.vue'
+import FinancialClerk from '@/Pages/FinancialManager/views/FinancialClerk.vue'
 import WarehouseClerk from '@/Pages/TotalWarehouse/WarehouseClerk/views/WarehouseClerk.vue'
 import Administrator from '@/Pages/Administrator/views/Administrator.vue'
 
@@ -239,6 +240,15 @@ const router = createRouter({
         requiresAuth: true,
         role: 10
       }
+    },
+    {
+      path:'/financialclerk',
+      name: 'financialclerk',
+      component:FinancialClerk,
+        meta:{
+          requresAuth: true,
+          role:24
+        }
     },
     {
       path :'/warehouseclerk',

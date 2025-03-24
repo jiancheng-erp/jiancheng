@@ -121,6 +121,8 @@ const handleSubmit = () => {
                         window.location.href = 'productionclerk'
                     } else if (response.data.role === 23) {
                         window.location.href = 'warehouseclerk'
+                    } else if (response.data.role === 24) {
+                        window.location.href = 'financialclerk'
                     } else if (response.data.role === 1) {
                         window.location.href = 'administrator'
                     }
