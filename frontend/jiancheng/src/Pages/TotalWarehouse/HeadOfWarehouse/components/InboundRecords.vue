@@ -68,7 +68,7 @@
                     <th width="60">颜色</th>
                     <th width="40">单位</th>
                     <th width="100">订单号</th>
-                    <th v-if="currentRow.isSizedMaterial === 1" width="40"
+                    <th v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'" width="40"
                         v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ column.label }}</th>
                     <th v-else width="90">数量</th>
                     <th v-if="currentRow.inboundType != 2" width="60">单价</th>
@@ -83,7 +83,7 @@
                     <td>{{ item.colorName }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
-                    <td v-if="currentRow.isSizedMaterial === 1" v-for="(column, index) in filteredShoeSizeColumns"
+                    <td v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'" v-for="(column, index) in filteredShoeSizeColumns"
                         :key="index">{{ item[column.prop] }}
                     </td>
                     <td v-else>{{ item.inboundQuantity }}</td>
