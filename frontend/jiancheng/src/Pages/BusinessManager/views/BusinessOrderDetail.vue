@@ -153,6 +153,12 @@
                                     label="颜色名称"
                                     width="100"
                                 />
+                                <el-table-column>
+                                    <template #default="scope">
+                                    <el-image :src="scope.row.shoeTypeImgUrl"
+                                        style="width: 150px; height: 100px" loading="eager" />
+                                    </template>
+                                </el-table-column>
                                 <el-table-column
                                     label="客户颜色"
                                     width="100">
@@ -444,6 +450,9 @@ export default {
         console.log(this.role)
     },
     methods: {
+        getUniqueImageUrl(imageUrl) {
+            return `${imageUrl}?timestamp=${new Date().getTime()}`;
+        },
         async getOrderInfo() {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/order/getbusinessorderinfo?orderid=${this.orderId}`
