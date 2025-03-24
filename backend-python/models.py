@@ -1513,7 +1513,7 @@ class AccountingThirdGradeRecord(db.Model):
 class RevertEvent(db.Model):
     __tablename__ = "revert_event"
     revert_event_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    revert_reason = db.Column(db.String(50), nullable=True)
+    revert_reason = db.Column(db.String(255), nullable=True)
     responsible_department = db.Column(db.String(10), nullable=True)
     initialing_department = db.Column(db.String(10), nullable=True)
     event_time = db.Column(db.DateTime, nullable=True)
