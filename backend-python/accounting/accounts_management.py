@@ -223,7 +223,7 @@ def get_all_accounts():
     for sec_entity in sec_acc_to_res.values():
         sec_belongs_to = sec_entity["secondGradeAccountBelongsFg"]
         if sec_belongs_to != None:
-            fir_acc_to_res[sec_belongs_to]["associatedSecondGradeAccounts"].append(sec_entity)
+            fir_acc_to_res[sec_belongs_to]["associatedSecondGradeAccount"].append(sec_entity)
     print(fir_acc_to_res)
     return jsonify({"firstGradeAccountsMapping": fir_acc_to_res}), 200
 ## Update accounts

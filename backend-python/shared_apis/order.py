@@ -404,7 +404,7 @@ def get_order_info_business():
                 "shoeTypeColorName": entity.Color.color_name,
                 "shoeTypeColorId": entity.Color.color_id,
                 "customerColorName": entity.OrderShoeType.customer_color_name,
-                "shoeTypeImgUrl": entity.ShoeType.shoe_image_url,
+                "shoeTypeImgUrl": IMAGE_STORAGE_PATH + entity.ShoeType.shoe_image_url,
                 "shoeTypeBatchInfoList": [],
             }
             order_shoe_type_unit_price = entity.OrderShoeType.unit_price
