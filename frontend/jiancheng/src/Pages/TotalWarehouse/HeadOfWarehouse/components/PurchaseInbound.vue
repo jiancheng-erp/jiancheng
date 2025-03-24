@@ -105,7 +105,7 @@
                 <vxe-column field="inboundQuantity" title="入库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.inboundQuantity" clearable :digits="3" :step="0.001" :min="0"
-                            @change="updateTotalPrice(row)" :disabled="row.materialCategory == 1"></vxe-number-input>
+                            @change="updateTotalPrice(row)" :disabled="row.materialName === '大底'"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
@@ -187,7 +187,7 @@
                     <th width="80">颜色</th>
                     <th width="55">单位</th>
                     <th>订单号</th>
-                    <th v-if="previewData.length > 0 && previewData[0].materialCategory == 0" width="100">数量</th>
+                    <th v-if="previewData.length > 0 && previewData[0].materialName !== '大底'" width="100">数量</th>
                     <th v-else width="50" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
                         column.label }}
                     </th>
@@ -202,7 +202,7 @@
                     <td>{{ item.materialColor }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
-                    <td v-if="previewData.length > 0 && previewData[0].materialCategory == 0">{{ item.inboundQuantity }}
+                    <td v-if="previewData.length > 0 && previewData[0].materialName !== '大底'">{{ item.inboundQuantity }}
                     </td>
                     <td v-else v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
                     </td>
@@ -500,7 +500,7 @@ export default {
             this.materialTableData = [...this.materialTableData]
             let sizeColumns = []
             let tempTable = []
-            if (this.materialTableData[0].materialCategory == 1) {
+            if (this.materialTableData[0].materialName === '大底') {
                 sizeColumns = this.materialTableData[0].shoeSizeColumns
                 for (let i = 0; i < sizeColumns.length; i++) {
                     let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
@@ -513,7 +513,7 @@ export default {
                 this.materialTableData[this.currentIndex].totalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(2)
                 this.shoeSizeColumns = tempTable
             }
-            else if (this.materialTableData[0].materialCategory == 0) {
+            else {
                 this.materialTableData[this.currentIndex].inboundQuantity = this.materialTableData[this.currentIndex].estimatedInboundAmount - this.materialTableData[this.currentIndex].actualInboundAmount
                 this.materialTableData[this.currentIndex].totalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(2)
             }
