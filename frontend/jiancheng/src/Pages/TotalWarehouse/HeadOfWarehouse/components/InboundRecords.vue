@@ -6,12 +6,25 @@
                 @clear="getInboundRecordsTable" clearable>
             </el-date-picker>
         </el-col>
-        <el-col :span="6" :offset="1">
+        <el-col :span="4" :offset="1">
+            <el-input v-model="supplierNameSearch" placeholder="请输入厂家名称" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable>
+            </el-input>
+        </el-col>
+        <el-col :span="4" :offset="0">
             <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable>
             </el-input>
         </el-col>
-
+        <el-col :span="4" :offset="0">
+            <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable"
+                clearable>
+                <el-option label="全部" :value="-1"></el-option>
+                <el-option label="待审核" :value="0"></el-option>
+                <el-option label="已批准" :value="1"></el-option>
+                <el-option label="已驳回" :value="2"></el-option>
+            </el-select>
+        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
@@ -24,9 +37,19 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
+                <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
-                        <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
+                        <el-button-group>
+                            <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
+                            <el-button v-if="role == 24 && scope.row.approvalStatus === 0" type="success"
+                                @click="handleApproval(scope.row)">批准</el-button>
+                            <el-button v-if="role == 24 && scope.row.approvalStatus === 0" type="warning"
+                                @click="openRejectDialog(scope.row)">驳回</el-button>
+                            <el-button v-if="role == 23 && scope.row.approvalStatus === 2" type="warning"
+                                @click="handleEdit(scope.row)">编辑</el-button>
+                            <!-- <el-button type="danger" @click="handleDelete(scope.row)">删除</el-button> -->
+                        </el-button-group>
                     </template>
                 </el-table-column>
             </el-table>
@@ -56,7 +79,7 @@
                     <td style="padding:5px; width: 150px;" align="left">入库方式:{{
                         determineInboundName(currentRow.inboundType)
                         }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{currentRow.payMethod}}</td>
+                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{ currentRow.payMethod }}</td>
                 </tr>
             </table>
             <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
@@ -83,8 +106,8 @@
                     <td>{{ item.colorName }}</td>
                     <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
-                    <td v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'" v-for="(column, index) in filteredShoeSizeColumns"
-                        :key="index">{{ item[column.prop] }}
+                    <td v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'"
+                        v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
                     </td>
                     <td v-else>{{ item.inboundQuantity }}</td>
                     <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
@@ -99,7 +122,9 @@
                         calculateInboundTotal() }}</span></span>
                     <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
                         calculateTotalPriceSum() }}</span></span>
-                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{ currentRow.remark }}</span></span>
+                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
+                        currentRow.remark
+                            }}</span></span>
                 </div>
             </div>
         </div>
@@ -110,10 +135,106 @@
                 @click="downloadPDF(`健诚鞋业入库单${currentRow.inboundRId}`, `printView`)">下载PDF</el-button>
         </template>
     </el-dialog>
+
+    <el-dialog title="修改入库单" v-model="editDialogVisible" width="90%">
+        <el-row>
+            <el-col :span="6">
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 8px; width: 80px">供货单位:</span>
+                    <el-input v-model="currentRow.supplierName" disabled></el-input>
+                </div>
+            </el-col>
+            <el-col :span="6" :offset="1">
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 8px; width: 80px">付款方式:</span>
+                    <el-input v-model="currentRow.payMethod" disabled></el-input>
+                </div>
+            </el-col>
+            <el-col :span="6" :offset="1">
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 8px; width: 80px">入库备注:</span>
+                    <el-input v-model="currentRow.remark"></el-input>
+                </div>
+            </el-col>
+        </el-row>
+        <el-row>
+            <el-col>
+                <el-table :data="recordData.items" border stripe>
+                    <el-table-column label="材料名">
+                        <template #default="scope">
+                            <el-select v-model="scope.row.materialName" filterable clearable>
+                                <el-option v-for="(item, index) in materialNameOptions" :key="index" :label="item.label"
+                                    :value="item.value"></el-option>
+                            </el-select>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="型号">
+                        <template #default="scope">
+                            <el-input v-model="scope.row.materialModel"></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="规格">
+                        <template #default="scope">
+                            <el-input v-model="scope.row.materialSpecification"></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="颜色">
+                        <template #default="scope">
+                            <el-input v-model="scope.row.colorName"></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="单位">
+                        <template #default="scope">
+                            <el-select v-model="scope.row.actualInboundUnit" filterable clearable>
+                                <el-option v-for="item in unitOptions" :key="item.value" :value="item.value"
+                                    :label="item.label"></el-option>
+                            </el-select>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="订单号">
+                        <template #default="scope">
+                            <el-input v-model="scope.row.orderRId"></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="数量">
+                        <template #default="scope">
+                            <el-input-number v-model="scope.row.inboundQuantity" :step="0.001" :min="0" :precision="3"
+                                size="small"></el-input-number>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="单价">
+                        <template #default="scope">
+                            <el-input-number v-model="scope.row.unitPrice" :step="0.001" :min="0" :precision="3"
+                                size="small"></el-input-number>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="备注">
+                        <template #default="scope">
+                            <el-input v-model="scope.row.remark"></el-input>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-col>
+        </el-row>
+        <template #footer>
+            <el-button type="primary" @click="editDialogVisible = false">返回</el-button>
+            <el-button type="primary" @click="updateInboundRecord">提交</el-button>
+        </template>
+    </el-dialog>
+
+    <el-dialog title="驳回确认" v-model="rejectDialogVisible" width="40%">
+        <!-- Textarea with character limit -->
+        <el-input type="textarea" v-model="rejectText" :maxlength="255" show-word-limit>
+        </el-input>
+        <template #footer>
+            <el-button @click="rejectDialogVisible = false">返回</el-button>
+            <el-button type="primary" @click="handleReject()">驳回</el-button>
+        </template>
+    </el-dialog>
 </template>
 <script>
 import axios from 'axios'
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
 export default {
@@ -122,6 +243,7 @@ export default {
     },
     data() {
         return {
+            role: localStorage.getItem('role'),
             printLoading: true,
             printObj: {
                 id: 'printView', // 需要打印的区域id
@@ -147,7 +269,14 @@ export default {
             recordData: {},
             dialogVisible: false,
             dateRange: [null, null],
-            inboundRIdSearch: null
+            inboundRIdSearch: null,
+            supplierNameSearch: null,
+            editDialogVisible: false,
+            materialNameOptions: [],
+            unitOptions: [],
+            rejectDialogVisible: false,
+            rejectText: '',
+            statusSearch: 0,
         }
     },
     mounted() {
@@ -208,7 +337,9 @@ export default {
                     pageSize: this.pageSize,
                     startDate: this.dateRange[0],
                     endDate: this.dateRange[1],
-                    "inboundRId": this.inboundRIdSearch
+                    inboundRId: this.inboundRIdSearch,
+                    supplierName: this.supplierNameSearch,
+                    status: this.statusSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialinboundrecords`, { params })
                 this.tableData = response.data.result
@@ -226,13 +357,11 @@ export default {
             this.currentPage = val
             this.getInboundRecordsTable()
         },
-        async handleView(row) {
-            this.currentRow = row
+        async getInboundRecordDetail(row) {
             try {
                 let params = { "inboundBatchId": row.inboundBatchId, "isSizedMaterial": row.isSizedMaterial }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
                 this.recordData["items"] = response.data
-                console.log(this.recordData["items"])
                 // if the purchase divide order type is S, then the inbound record is for shoe size
                 if (row.isSizedMaterial == 1) {
                     let sizeColumns = []
@@ -245,22 +374,160 @@ export default {
                     }
                     this.recordData["shoeSizeColumns"] = tempTable
                 }
-                console.log(this.recordData)
-                this.dialogVisible = true
             }
             catch (error) {
                 console.log(error)
                 ElMessage.error('获取入库单详情失败')
             }
+        },
+        async handleView(row) {
+            this.currentRow = row
+            await this.getInboundRecordDetail(row)
+            this.dialogVisible = true
+        },
+        async getMaterialNameOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
+            this.materialNameOptions = response.data
+        },
+        async getUnitOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallunit`)
+            this.unitOptions = response.data
+        },
+        async handleEdit(row) {
+            if (row.inboundType != 0) {
+                ElMessage.error('只能编辑采购入库单')
+                return
+            }
+            this.currentRow = row
+            this.getInboundRecordDetail(row)
+            this.getMaterialNameOptions()
+            this.getUnitOptions()
+            this.editDialogVisible = true
+        },
+        async handleApproval() {
+            this.$confirm('是否批准该入库单？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    let params = { "inboundRecordId": this.currentRow.inboundRecordId }
+                    await axios.patch(`${this.$apiBaseUrl}/accounting/approveinboundrecord`, params)
+                    ElMessage.success('批准成功')
+                    this.getInboundRecordsTable()
+                } catch (error) {
+                    if (error.response) {
+                        // Flask returns error in JSON format
+                        this.errorMessage = error.response.data.message || "An error occurred";
+                    } else {
+                        this.errorMessage = "服务器异常";
+                    }
+                    ElMessage.error(this.errorMessage)
+                    console.error("API Error:", error);
+                }
+            }).catch(() => {
+                ElMessage.info('已取消批准')
+            })
+        },
+        async updateInboundRecord() {
+            ElMessageBox.confirm('是否提交修改？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    let params = {
+                        "inboundRecordId": this.currentRow.inboundRecordId,
+                        "supplierId": this.currentRow.supplierId,
+                        "inboundType": this.currentRow.inboundType,
+                        "remark": this.currentRow.remark,
+                        "payMethod": this.currentRow.payMethod,
+                        "isSizedMaterial": this.currentRow.isSizedMaterial,
+                        "items": this.recordData.items
+                    }
+                    await axios.patch(`${this.$apiBaseUrl}/warehouse/updateinboundrecord`, params)
+                    ElMessage.success('修改成功')
+                    this.editDialogVisible = false
+                    this.getInboundRecordsTable()
+                } catch (error) {
+                    if (error.response) {
+                        // Flask returns error in JSON format
+                        this.errorMessage = error.response.data.message || "An error occurred";
+                    } else {
+                        this.errorMessage = "服务器异常";
+                    }
+                    ElMessage.error(this.errorMessage)
+                    console.error("API Error:", error);
+                }
+            }).catch(() => {
+                ElMessage.info('已取消修改')
+            })
+
+        },
+        openRejectDialog(row) {
+            this.currentRow = row
+            this.rejectDialogVisible = true
+        },
+        handleReject() {
+            this.$confirm('是否驳回该入库单？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    let params = { "inboundRecordId": this.currentRow.inboundRecordId, "rejectReason": this.rejectText }
+                    await axios.patch(`${this.$apiBaseUrl}/accounting/rejectinboundrecord`, params)
+                    ElMessage.success('驳回成功')
+                    this.rejectDialogVisible = false
+                    this.rejectText = ''
+                    this.getInboundRecordsTable()
+                } catch (error) {
+                    if (error.response) {
+                        // Flask returns error in JSON format
+                        this.errorMessage = error.response.data.message || "An error occurred";
+                    } else {
+                        this.errorMessage = "服务器异常";
+                    }
+                    ElMessage.error(this.errorMessage)
+                    console.error("API Error:", error);
+                }
+            }).catch(() => {
+                ElMessage.info('已取消驳回')
+            })
+        },
+        handleDelete(row) {
+            this.$confirm('是否删除该入库单？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    let params = { "inboundRecordId": row.inboundRecordId }
+                    await axios.delete(`${this.$apiBaseUrl}/warehouse/deleteinboundrecord`, { params })
+                    ElMessage.success('删除成功')
+                    this.getInboundRecordsTable()
+                } catch (error) {
+                    if (error.response) {
+                        // Flask returns error in JSON format
+                        this.errorMessage = error.response.data.message || "An error occurred";
+                    } else {
+                        this.errorMessage = "服务器异常";
+                    }
+                    ElMessage.error(this.errorMessage)
+                    console.error("API Error:", error);
+                }
+            }).catch(() => {
+                ElMessage.info('已取消删除')
+            })
         }
     }
 }
 </script>
 <style>
 #printView {
-    padding-left: 20px; 
+    padding-left: 20px;
     padding-right: 20px;
-    color:black; 
+    color: black;
     font-family: SimHei;
 }
 </style>

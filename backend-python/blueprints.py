@@ -50,6 +50,7 @@ from shared_apis.revert_order import revert_order_api
 from development.dev_revert_api import dev_revert_api
 from usage_calculation.usage_revert_api import usage_revert_api
 from technical.craft_sheet_revert_api import craft_sheet_revert_api
+from accounting.audit_material_inbound import audit_material_inbound_bp
 def register_blueprints():
     app.register_blueprint(price_report_bp)
     app.register_blueprint(order_bp)
@@ -102,3 +103,4 @@ def register_blueprints():
     app.register_blueprint(dev_revert_api)
     app.register_blueprint(usage_revert_api)
     app.register_blueprint(craft_sheet_revert_api)
+    app.register_blueprint(audit_material_inbound_bp)

@@ -19,6 +19,7 @@
                 <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane>
                 <!-- <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane> -->
                 <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
+                <el-tab-pane label="入库记录"><InboundRecords /></el-tab-pane>
             </el-tabs>
         </el-main>
     </el-container>
@@ -38,6 +39,7 @@ import FinancialAccountDetail from '../components/FinancialAccountDetail.vue'
 import FinancialAccountManagement from '../components/FinancialAccountManagement.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { useRouter } from 'vue-router'
+import InboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InboundRecords.vue'
 
 let userName = ref('财务部-主管')
 const { setAxiosToken } = useSetAxiosToken()

@@ -1129,6 +1129,8 @@ class InboundRecord(db.Model):
     remark = db.Column(db.String(40), nullable=True)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
     pay_method = db.Column(db.String(10), nullable=True)
+    approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
+    reject_reason = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
         return f"<InboundRecord {self.inbound_rid}>"
