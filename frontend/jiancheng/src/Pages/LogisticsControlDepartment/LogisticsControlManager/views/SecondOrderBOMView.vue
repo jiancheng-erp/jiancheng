@@ -131,7 +131,7 @@
                         </el-table-column>
                     </el-table></el-col>
             </el-row>
-            <el-dialog :title="`二次采购订单创建 ${newPurchaseOrderId}`" v-model="createVis" width="100%"
+            <el-dialog :title="`二次采购订单创建 ${newPurchaseOrderId}`" v-model="createVis" width="100%" fullscreen
                 @close="handleGenerateClose">
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
@@ -477,7 +477,7 @@
                 <el-row :gutter="20" style="margin-top: 20px">
                     <el-col :span="24" :offset="0">
                         <div v-if="factoryFieldJudge(item.purchaseDivideOrderType)">
-                            <el-table :data="item.assetsItems" border style="width: 100%" height="500">
+                            <el-table :data="item.assetsItems" border stripe>
                                 <el-table-column type="index" label="编号" />
                                 <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                 <el-table-column prop="materialName" label="材料名称" />
@@ -493,7 +493,7 @@
                             </el-table>
                         </div>
                         <div v-else>
-                            <el-table :data="item.assetsItems" border stripe height="500">
+                            <el-table :data="item.assetsItems" border stripe>
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型"></el-table-column>
                                 <el-table-column prop="materialName" label="材料名称" />
