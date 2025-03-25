@@ -1,7 +1,7 @@
 <template>
     <el-row :gutter="0">
         <el-col :span="12" :offset="0">
-            <h1>全部处理中任务：</h1>
+            <h1>全部处理中任务：{{ inprogressAmount }}</h1>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
@@ -29,8 +29,21 @@ export default {
         return {
             Search,
             searchOrder: "",
-            displayData: this.inProgressTaskData
+            displayData: this.inProgressTaskData,
+            inprogressAmount: 0
         }
+    },
+    watch: {
+        inProgressTaskData: {
+            handler: function (val) {
+                this.displayData = val;
+                this.inprogressAmount = val.length;
+            },
+            deep: true
+        }
+    },
+    mounted() {
+        this.inprogressAmount = this.inProgressTaskData.length
     },
     methods: {
         backToAll() {
@@ -40,7 +53,7 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.inProgressTaskData
             }
-            this.displayData = this.inProgressTaskData.filter(task => task.orderRId.includes(this.searchOrder));
+            this.displayData = this.inProgressTaskData.filter(task => task.orderRId.toLowerCase().includes(this.searchOrder.toLowerCase()));
         },
         handleRowClick(row) {
             let url;
