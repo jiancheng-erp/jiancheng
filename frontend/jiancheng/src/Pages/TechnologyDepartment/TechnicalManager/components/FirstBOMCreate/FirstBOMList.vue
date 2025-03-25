@@ -1,6 +1,6 @@
 <template><el-row :gutter="0">
     <el-col :span="12" :offset="0">
-        <h1>待处理任务：</h1>
+        <h1>待处理任务：{{ pendingAmount }}</h1>
     </el-col>
 </el-row>
 <el-row :gutter="20" style="margin-top: 20px;">
@@ -23,7 +23,7 @@
     </el-row>
 <el-row :gutter="0" style="margin-top: 20px;">
     <el-col :span="12" :offset="0">
-        <h1>处理中任务：</h1>
+        <h1>处理中任务：{{ inprogressAmount }}</h1>
     </el-col>
 </el-row>
 <el-row :gutter="20" style="margin-top: 20px;">
@@ -50,6 +50,30 @@
 <script>
 export default {
     props: ['pendingTaskData', 'inProgressTaskData'],
+    data() {
+        return {
+            pendingAmount: 0,
+            inprogressAmount: 0
+        }
+    },
+    watch: {
+        pendingTaskData: {
+            handler: function (val) {
+                this.pendingAmount = val.length
+            },
+            deep: true
+        },
+        inProgressTaskData: {
+            handler: function (val) {
+                this.inprogressAmount = val.length
+            },
+            deep: true
+        }
+    },
+    mounted() {
+        this.pendingAmount = this.pendingTaskData.length
+        this.inprogressAmount = this.inProgressTaskData.length
+    },
     methods: {
         displayPending(){
             this.$emit('changeToPend')

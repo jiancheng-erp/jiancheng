@@ -2,7 +2,7 @@
 
     <el-row :gutter="0">
         <el-col :span="12" :offset="0">
-            <h1>全部待处理任务：</h1>
+            <h1>全部待处理任务：{{ pendingAmount }}</h1>
         </el-col>        
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
@@ -37,8 +37,22 @@ export default {
             Search,
             searchOrder: "",
             searchShoe: "",
-            displayData:this.pendingTaskData
+            displayData:this.pendingTaskData,
+            pendingAmount: 0
         }
+    },
+    watch: {
+        pendingTaskData: {
+            handler: function (val) {
+                this.displayData = val;
+                this.pendingAmount = val.length;
+            },
+            deep: true
+        }
+    },
+    mounted() {
+        this.displayData = this.pendingTaskData
+        this.pendingAmount = this.pendingTaskData.length
     },
     methods: {
         backToAll() {
@@ -48,7 +62,7 @@ export default {
             if (!this.searchOrder) {
                 this.displayData = this.pendingTaskData
             }
-            this.displayData = this.pendingTaskData.filter(task => task.orderRid.includes(this.searchOrder));
+            this.displayData = this.pendingTaskData.filter(task => task.orderRid.toLowerCase().includes(this.searchOrder.toLowerCase()));
         },
         filterDataByShoe() {
             if (!this.searchShoe) {
