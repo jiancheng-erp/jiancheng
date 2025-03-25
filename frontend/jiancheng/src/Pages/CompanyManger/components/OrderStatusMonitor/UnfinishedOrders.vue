@@ -80,6 +80,7 @@ const edit = defineEmits(['edit'])
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 let orderRIdSearch = ref('')
+let importantStatusFilter = ref('')
 const routeMsg = `${$api_baseUrl}/headmanager/getorderstatusinfo`
 const {
     currentPage,

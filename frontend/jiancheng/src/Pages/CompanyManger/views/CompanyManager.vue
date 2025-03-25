@@ -21,8 +21,14 @@
                         >
                             <span>成本计算与盈利分析</span>
                         </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick('OrderStatusMonitor')">
+                        <!-- <el-menu-item index="2" @click="handleMenuClick('OrderStatusMonitor')">
                             <span>订单状态监控</span>
+                        </el-menu-item> -->
+                        <el-menu-item index="2" @click="handleMenuClick('OrderImportantStatus')">
+                            <span>订单关键节点监控</span>
+                        </el-menu-item>
+                        <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse')">
+                            <span>退回情况记录统计</span>
                         </el-menu-item>
                         <el-menu-item
                             index="3"
@@ -65,10 +71,12 @@ import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import CostCalcAndProfitAnalysis from '../components/CostCalcAndProfitAnalysis/CostCalcAndProfitAnalysis.vue'
 import OrderStatusMonitor from '../components/OrderStatusMonitor/OrderStatusMonitor.vue'
+import OrderImportantStatus from '../components/OrderImortantStatus/OrderImportantStatus.vue'
 import MaterialPricesAndCostTrends from '../components/MaterialPricesAndCostTrends/MaterialPricesAndCostTrends.vue'
 import FinancialStatusAndDepartmentalInput from '../components/FinancialStatusAndDepartmentalInput/FinancialStatusAndDepartmentalInput.vue'
 import OrderConfirmation from '../components/OrderConfirmation/OrderConfirmation.vue'
 import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue'
+import RevertEventAnalyse from '../components/RevertEventAnalyse/RevertEventAnalyse.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import { useRouter } from "vue-router";
@@ -80,7 +88,9 @@ const components = {
     FinancialStatusAndDepartmentalInput,
     OrderConfirmation,
     OutboundProduct,
-    PersonalInfo
+    PersonalInfo,
+    OrderImportantStatus,
+    RevertEventAnalyse
 }
 let currentComponent = ref('CostCalcAndProfitAnalysis')
 let userName = ref('')
