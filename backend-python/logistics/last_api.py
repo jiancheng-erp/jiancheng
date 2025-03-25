@@ -549,7 +549,7 @@ def get_individual_purchase_orders():
 
     return jsonify(result)
 
-@last_api_bp.route("/logistics/submitindividualpurchaseorders", methods=["POST"])
+@last_api_bp.route("/logistics/submitlastindividualpurchaseorders", methods=["POST"])
 def submit_purchase_divide_orders():
     purchase_order_id = request.json.get("purchaseOrderId")
     order_info = (
@@ -914,11 +914,13 @@ def download_last_purchase_orders():
         order_rid,
         "楦头采购订单.zip",
     )
+    if not os.path.exists(zip_file_path):
+        return jsonify({"status": "error", "message": "File not found"}), 404
     return send_file(zip_file_path, as_attachment=True)
 
-@last_api_bp.route("/logistics/jumpoverlastpurchase", methods=["GET"])
+@last_api_bp.route("/logistics/jumpoverlastpurchase", methods=["POST"])
 def jump_over_last_purchase():
-    order_id = request.args.get("orderId")
+    order_id = request.json.get("orderId")
     order = db.session.query(Order).filter(Order.order_id == order_id).first()
     order.last_status = '2'
     db.session.commit()

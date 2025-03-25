@@ -99,6 +99,7 @@ def get_next_column_name(current_column_name):
 
 
 def generate_last_excel_file(template_path, new_file_path, order_data):
+    print("start generate_last_excel_file")
     wb, ws = load_template(template_path, new_file_path)
 
     # Insert order details

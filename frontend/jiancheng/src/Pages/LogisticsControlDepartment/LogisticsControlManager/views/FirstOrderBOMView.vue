@@ -1476,9 +1476,18 @@ export default {
             })
         },
         downloadLastZip(orderId) {
-            window.open(
-                `${this.$apiBaseUrl}/logistics/downloadlastpurchaseorders?orderId=${orderId}`
-            )
+            try {
+                window.open(
+                    `${this.$apiBaseUrl}/logistics/downloadlastpurchaseorders?orderId=${orderId}`
+                )
+            } catch (error) {
+                if (error.response.status === 404) {
+                    this.$message({
+                        type: 'error',
+                        message: '没有找到相关文件'
+                    })
+                }
+            }
         },
         downloadPackageZip(orderId) {
             window.open(

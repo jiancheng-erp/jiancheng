@@ -574,7 +574,7 @@ export default {
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             const response = await this.$axios.post(
-                `${this.$apiBaseUrl}/logistics/submitindividualpurchaseorders`,
+                `${this.$apiBaseUrl}/logistics/submitlastindividualpurchaseorders`,
                 {
                     purchaseOrderId: this.currentEditPurchaseOrderId
                 }

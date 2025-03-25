@@ -273,17 +273,17 @@ export default {
     },
     methods: {
         async getCurrentPurchaseOrder() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getcutModelpurchaseorderitems`, {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getcutmodelpurchaseorderitems`, {
                 params: {
                     orderid: this.orderid
                 }
             });
-            this.currentEditPurchaseOrderRid = response.data.purchaseOrderRid;
-            this.currentEditPurchaseOrderId = response.data.purchaseOrderId;
+            this.currentEditPurchaseOrderRid = response.data.purchaseOrderRid || '';
+            this.currentEditPurchaseOrderId = response.data.purchaseOrderId || null;
             this.assetForm.purchaseData = response.data.purchaseOrderItems;
             this.assetForm.orderId = this.orderid;
-            this.assetForm.purchaseOrderType = 'L';
-            const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutModelinfo`, {
+            this.assetForm.purchaseOrderType = 'C';
+            const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutmodelinfo`, {
                 params: {
                     orderid: this.orderid
                 }
@@ -339,7 +339,7 @@ export default {
         },
         async searchCutModel() {
             this.filteredMaterialList = [];
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/searchcutModelmaterialinfo`, {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/searchcutmodelmaterialinfo`, {
                 params: {
                     materialModel: this.cutModelNameSearch
                 }
@@ -353,7 +353,7 @@ export default {
             this.cutModelNameSearch = this.currentCutModelType;
             this.cutModelNameSearch = this.cutModelNameSearch.replace(/[^a-zA-Z0-9]/g, '');
             this.filteredMaterialList = [];
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/searchcutModelmaterialinfo`, {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/searchcutmodelmaterialinfo`, {
                 params: {
                     materialModel: this.cutModelNameSearch
                 }
@@ -407,7 +407,7 @@ export default {
         async createCutModelPurchaseOrder(orderid) {
             console.log(this.currentEditPurchaseOrderRid);
             if (this.currentEditPurchaseOrderRid !== '') {
-                const response = await axios.get(`${this.$apiBaseUrl}/logistics/getcutModelpurchaseorderitems`, {
+                const response = await axios.get(`${this.$apiBaseUrl}/logistics/getcutmodelpurchaseorderitems`, {
                     params: {
                         orderid: orderid
                     }
@@ -417,10 +417,10 @@ export default {
                 console.log(response.data.purchaseOrderItems)
                 this.assetForm.purchaseData = response.data.purchaseOrderItems;
                 this.assetForm.orderId = orderid;
-                this.assetForm.purchaseOrderType = 'L';
+                this.assetForm.purchaseOrderType = 'C';
                 console.log(this.assetForm)
                 console.log(this.currentEditPurchaseOrderRid);
-                const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutModelinfo`, {
+                const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutmodelinfo`, {
                     params: {
                         orderid: orderid
                     }
@@ -429,7 +429,7 @@ export default {
                 this.createEditSymbol = 1
             }
             else {
-                const response = await axios.get(`${this.$apiBaseUrl}/logistics/getnewcutModelpurchaseorderid`, {
+                const response = await axios.get(`${this.$apiBaseUrl}/logistics/getnewcutmodelpurchaseorderid`, {
                     params: {
                         orderid: orderid
                     }
@@ -438,9 +438,9 @@ export default {
                 this.createEditSymbol = 0;
                 this.assetForm.purchaseData = [];
                 this.assetForm.orderId = orderid;
-                this.assetForm.purchaseOrderType = 'L';
+                this.assetForm.purchaseOrderType = 'C';
                 console.log(this.currentEditPurchaseOrderRid);
-                const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutModelinfo`, {
+                const response2 = await axios.get(`${this.$apiBaseUrl}/logistics/getcutmodelinfo`, {
                     params: {
                         orderid: orderid
                     }
@@ -475,7 +475,7 @@ export default {
                         console.log(this.assetForm)
                         if (this.createEditSymbol === 1) {
                             await axios.post(
-                                `${this.$apiBaseUrl}/logistics/editsavedcutModelpurchaseorderitems`,
+                                `${this.$apiBaseUrl}/logistics/editsavedcutmodelpurchaseorderitems`,
                                 {
                                     data: this.assetForm.purchaseData,
                                     purchaseOrderRId: this.currentEditPurchaseOrderRid,
@@ -488,7 +488,7 @@ export default {
                         }
                         else {
                             await axios.post(
-                                `${this.$apiBaseUrl}/logistics/newcutModelpurchaseordersave`,
+                                `${this.$apiBaseUrl}/logistics/newcutmodelpurchaseordersave`,
                                 {
                                     data: this.assetForm.purchaseData,
                                     purchaseOrderRId: this.currentEditPurchaseOrderRid,
@@ -579,7 +579,7 @@ export default {
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             const response = await this.$axios.post(
-                `${this.$apiBaseUrl}/logistics/submitindividualpurchaseorders`,
+                `${this.$apiBaseUrl}/logistics/submitcutmodelindividualpurchaseorders`,
                 {
                     purchaseOrderId: this.currentEditPurchaseOrderId
                 }

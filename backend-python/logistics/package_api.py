@@ -503,7 +503,7 @@ def get_individual_purchase_orders():
 
     return jsonify(result)
 
-@package_api_bp.route("/logistics/submitindividualpurchaseorders", methods=["POST"])
+@package_api_bp.route("/logistics/submitpackageindividualpurchaseorders", methods=["POST"])
 def submit_purchase_divide_orders():
     purchase_order_id = request.json.get("purchaseOrderId")
     order_info = (
