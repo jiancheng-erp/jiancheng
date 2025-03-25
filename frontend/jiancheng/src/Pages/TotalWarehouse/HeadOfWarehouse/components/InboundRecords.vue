@@ -112,7 +112,7 @@
                     <td v-else>{{ item.inboundQuantity }}</td>
                     <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
                     <td v-if="currentRow.inboundType == 2">{{ item.compositeUnitCost }}</td>
-                    <td>{{ calculateTotalPrice(item) }}</td>
+                    <td>{{ item.itemTotalPrice }}</td>
                     <td>{{ item.remark }}</td>
                 </tr>
             </table>
@@ -121,7 +121,7 @@
                     <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
                         calculateInboundTotal() }}</span></span>
                     <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                        calculateTotalPriceSum() }}</span></span>
+                        currentRow.totalPrice }}</span></span>
                     <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
                         currentRow.remark
                             }}</span></span>
@@ -205,6 +205,12 @@
                     <el-table-column label="单价">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.unitPrice" :step="0.001" :min="0" :precision="3"
+                                size="small"></el-input-number>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="总价">
+                        <template #default="scope">
+                            <el-input-number v-model="scope.row.itemTotalPrice" :step="0.001" :min="0" :precision="3"
                                 size="small"></el-input-number>
                         </template>
                     </el-table-column>
@@ -296,22 +302,6 @@ export default {
                 return total + (Number(item.inboundQuantity) || 0);
             }, 0);
             return Number(number).toFixed(2);
-        },
-        calculateTotalPriceSum() {
-            // Calculate the total price
-            const total = this.recordData.items.reduce((total, item) => {
-                return total + (Number(this.calculateTotalPrice(item)) || 0);
-            }, 0);
-            return Number(total).toFixed(2);
-        },
-        calculateTotalPrice(row) {
-            let result = 0
-            if (this.currentRow.inboundType != 2) {
-                result = Number(row.inboundQuantity) * Number(row.unitPrice)
-            } else {
-                result = Number(row.inboundQuantity) * Number(row.compositeUnitCost)
-            }
-            return result.toFixed(2)
         },
         determineInboundName(type) {
             if (type == 0) {
