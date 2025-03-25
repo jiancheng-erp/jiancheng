@@ -28,6 +28,8 @@ PACKAGING_SPECS_UPLOADED = "2"
 BUSINESS_MANAGER_ROLE = 4
 # 业务部职员角色码
 BUSINESS_CLERK_ROLE = 21
+# 技术部文员
+TECHNICAL_CLERK_ROLE = 15
 
 # 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
@@ -70,9 +72,7 @@ def get_order_shoe_by_order():
 @order_bp.route("/order/getdevordershoebystatus", methods=["GET"])
 def get_dev_orders():
     # TODO hard code deparment name, should be department id
-    _, _, department = current_user_info()
-    # if current_user_role not in (DEV_DEPARTMENT_MANAGER_MAPPING.keys()):
-    #     return jsonify({"error": "not a manager"}), 401
+    _, staff, department = current_user_info()
 
     shoe_department = department.department_name
     print("department" + shoe_department)
@@ -90,28 +90,51 @@ def get_dev_orders():
     #     .filter(Shoe.shoe_department_id == shoe_department)
     #     .first()
     # )
-    entities = (
-        db.session.query(
-            Order,
-            Customer,
-            Shoe,
-            OrderShoeStatus.current_status_value,
+    if staff.staff_id == TECHNICAL_CLERK_ROLE:
+        entities = (
+            db.session.query(
+                Order,
+                Customer,
+                Shoe,
+                OrderShoeStatus.current_status_value,
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(
+                OrderShoeStatus,
+                OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+            .filter(OrderShoeStatus.current_status == status_val)
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .order_by(Order.start_date.asc())
+            .all()
         )
-        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
-        .join(
-            OrderShoeStatus,
-            OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
+    else:
+        entities = (
+            db.session.query(
+                Order,
+                Customer,
+                Shoe,
+                OrderShoeStatus.current_status_value,
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(
+                OrderShoeStatus,
+                OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+            .filter(OrderShoeStatus.current_status == status_val)
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .filter(Shoe.shoe_department_id == shoe_department)
+            .order_by(Order.start_date.asc())
+            .all()
         )
-        .join(Customer, Order.customer_id == Customer.customer_id)
-        .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
-        .filter(OrderShoeStatus.current_status == status_val)
-        .filter(OrderShoeStatus.revert_info.is_(None))
-        .filter(Shoe.shoe_department_id == shoe_department)
-        .order_by(Order.start_date.asc())
-        .all()
-    )
 
     pending_orders, in_progress_orders = [], []
     for entity in entities:

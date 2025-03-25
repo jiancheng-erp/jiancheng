@@ -19,6 +19,9 @@
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>调版分配与下发</span>
                         </el-menu-item>
+                        <el-menu-item index="6" @click="handleMenuClick(6)">
+                            <span>投产指令单创建</span>
+                        </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>退回任务列表</span>
                         </el-menu-item>
@@ -50,6 +53,7 @@ import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import AdjustList from '../../TechnicalManager/components/AdjustList.vue';
 import RevertDashboard from '@/components/RevertDashboard.vue';
+import ProductionOrderCreate from '@/Pages/DevelopmentManager/components/ProductionOrderCreate.vue'
 import axios from 'axios'
 export default {
     components: {
@@ -58,7 +62,8 @@ export default {
         OrderSearch,
         PersonalInfo,
         AdjustList,
-        RevertDashboard
+        RevertDashboard,
+        ProductionOrderCreate
     },
     data() {
         return {
@@ -94,6 +99,9 @@ export default {
                     break
                 case 5:
                     this.currentComponent = 'RevertDashboard'
+                    break
+                case 6:
+                    this.currentComponent = 'ProductionOrderCreate'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'
