@@ -836,7 +836,14 @@ def _handle_purchase_inbound(data, next_group_id):
         unit_price = Decimal(item.get("unitPrice", 0))
         storage.unit_price = unit_price
         record_detail.unit_price = unit_price
-        total_price += unit_price * inbound_quantity
+
+        item_total_price = Decimal(item.get("itemTotalPrice", 0))
+        if unit_price == 0:
+            total_price += item_total_price
+            record_detail.item_total_price = item_total_price
+        else:
+            total_price += unit_price * inbound_quantity
+            record_detail.item_total_price = unit_price * inbound_quantity
 
         if material_category == 0:
             inbound_record.is_sized_material = 0
@@ -1000,7 +1007,14 @@ def _handle_composite_inbound(data, next_group_id):
         unit_price = Decimal(item.get("unitPrice", 0))
         storage.composite_unit_cost = unit_price
         record_detail.composite_unit_cost = unit_price
-        total_price += unit_price * inbound_quantity
+
+        item_total_price = Decimal(item.get("itemTotalPrice", 0))
+        if unit_price == 0:
+            total_price += item_total_price
+            record_detail.item_total_price = item_total_price
+        else:
+            total_price += unit_price * inbound_quantity
+            record_detail.item_total_price = unit_price * inbound_quantity
 
         if material_category == 0:
             inbound_record.is_sized_material = 0
@@ -1558,6 +1572,7 @@ def get_material_inbound_records():
             "remark": inbound_record.remark,
             "approvalStatus": inbound_record.approval_status,
             "rejectReason": inbound_record.reject_reason,
+            "totalPrice": inbound_record.total_price,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -1673,6 +1688,7 @@ def get_inbound_record_by_batch_id():
         obj = {
             "inboundQuantity": inbound_quantity,
             "unitPrice": unit_price,
+            "itemTotalPrice": record_detail.item_total_price,
             "compositeUnitCost": composite_unit_cost,
             "inboundRecordDetailId": record_detail.id,
             "remark": record_detail.remark,
@@ -2286,6 +2302,13 @@ def update_inbound_record():
         remark = item.get("remark")
         unit_price = Decimal(item.get("unitPrice"))
         inbound_quantity = Decimal(item.get("inboundQuantity"))
+        input_total_price = Decimal(item.get("itemTotalPrice"))
+        
+        if unit_price == 0:
+            item_total_price = input_total_price
+        else:
+            item_total_price = unit_price * inbound_quantity
+        total_price += item_total_price
 
 
         # find order_shoe_id
@@ -2365,6 +2388,7 @@ def update_inbound_record():
                 )
                 inbound_record_detail.unit_price = unit_price
                 inbound_record_detail.inbound_amount = inbound_quantity
+                inbound_record_detail.item_total_price = item_total_price
                 inbound_record_detail.remark = remark
         else:
             old_storage: SizeMaterialStorage = SizeMaterialStorage.query.get(storage_id)
@@ -2421,6 +2445,7 @@ def update_inbound_record():
                 )
                 inbound_record_detail.unit_price = unit_price
                 inbound_record_detail.inbound_amount = inbound_quantity
+                inbound_record_detail.item_total_price = item_total_price
                 inbound_record_detail.remark = remark
 
                 for i in range(len(SHOESIZERANGE)):
@@ -2428,7 +2453,6 @@ def update_inbound_record():
                     column_name = f"size_{shoe_size}_inbound_amount"
                     inbound_value = item.get(f"amount{i}", 0)
                     setattr(inbound_record_detail, column_name, inbound_value)
-        total_price += unit_price * inbound_quantity
     # update inbound record
     inbound_record.total_price = total_price
     db.session.commit()

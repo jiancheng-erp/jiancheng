@@ -1141,6 +1141,7 @@ class InboundRecordDetail(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
+    item_total_price = db.Column(db.DECIMAL(12, 3), nullable=False, default=0.000)
     unit_price = db.Column(db.DECIMAL(12, 3), nullable=False, default=0.000)
     inbound_amount = db.Column(db.DECIMAL(12, 5), nullable=False)
     composite_unit_cost = db.Column(db.DECIMAL(12, 3), nullable=True)

@@ -114,7 +114,11 @@
                             :disabled="inboundForm.inboundType == 1" @change="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="totalPrice" title="采购金额" width="100">
+                <vxe-column field="itemTotalPrice" title="采购金额" :edit-render="{ autoFocus: 'input' }" width="120">
+                    <template #edit="{ row }">
+                        <vxe-number-input v-model="row.itemTotalPrice" type="amount" clearable :min="0" :step="0.001" :digits="3"
+                            :disabled="inboundForm.inboundType == 1"></vxe-number-input>
+                    </template>
                 </vxe-column>
                 <vxe-column field="remark" title="备注" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="{ row }">
@@ -207,7 +211,7 @@
                     <td v-else v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
                     </td>
                     <td>{{ item.unitPrice }}</td>
-                    <td>{{ item.totalPrice }}</td>
+                    <td>{{ item.itemTotalPrice }}</td>
                     <td>{{ item.remark }}</td>
                 </tr>
             </table>
@@ -337,9 +341,9 @@ export default {
         calculateTotalPriceSum() {
             // Calculate the total price
             const total = this.previewData.reduce((total, item) => {
-                return total + (Number(item.inboundQuantity) * Number(item.unitPrice) || 0);
+                return total + (Number(item.itemTotalPrice) || 0);
             }, 0);
-            return Number(total).toFixed(2);
+            return Number(total).toFixed(3);
         },
         filteredShoeSizeColumns() {
             return this.shoeSizeColumns.filter(column =>
@@ -412,7 +416,7 @@ export default {
                 total += Number(row[this.shoeSizeColumns[i].prop])
             }
             row.inboundQuantity = total
-            row.totalPrice = (total * row.unitPrice).toFixed(2)
+            row.itemTotalPrice = (total * row.unitPrice).toFixed(3)
         },
         determineInboundName(type) {
             if (type == 0) {
@@ -449,9 +453,9 @@ export default {
         },
         updateTotalPrice(row) {
             if (row.inboundQuantity && row.unitPrice) {
-                row.totalPrice = (row.inboundQuantity * row.unitPrice).toFixed(2); // Ensure two decimal places
+                row.itemTotalPrice = (row.inboundQuantity * row.unitPrice).toFixed(3); // Ensure two decimal places
             } else {
-                row.totalPrice = 0
+                row.itemTotalPrice = 0
             }
         },
         handleKeydown(event, scope) {
@@ -510,12 +514,12 @@ export default {
                     this.materialTableData[this.currentIndex]["amount" + i] = estimatedInboundAmount - actualInboundAmount
                 }
                 this.materialTableData[this.currentIndex].inboundQuantity = this.materialTableData[this.currentIndex].estimatedInboundAmount - this.materialTableData[this.currentIndex].actualInboundAmount
-                this.materialTableData[this.currentIndex].totalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(2)
+                this.materialTableData[this.currentIndex].itemTotalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(3)
                 this.shoeSizeColumns = tempTable
             }
             else {
                 this.materialTableData[this.currentIndex].inboundQuantity = this.materialTableData[this.currentIndex].estimatedInboundAmount - this.materialTableData[this.currentIndex].actualInboundAmount
-                this.materialTableData[this.currentIndex].totalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(2)
+                this.materialTableData[this.currentIndex].itemTotalPrice = (this.materialTableData[this.currentIndex].inboundQuantity * this.materialTableData[this.currentIndex].unitPrice).toFixed(3)
             }
             this.materialTableData[this.currentIndex].disableEdit = true
             this.materialSelection = {};
