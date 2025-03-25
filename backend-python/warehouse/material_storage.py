@@ -23,10 +23,6 @@ from sqlalchemy import (
     JSON,
 )
 import json
-from accounting.accounting_transaction import (
-    add_payable_entity,
-    material_inbound_accounting_event,
-)
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
@@ -621,11 +617,6 @@ def _empty_material_type():
     abort(Response(error_message, 400))
 
 
-def _payable_entity_not_exist():
-    error_message = json.dumps({"error": "应付账户不存在"})
-    abort(Response(error_message, 400))
-
-
 def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id):
     """
     处理用户手动输入的材料信息
@@ -811,6 +802,8 @@ def _handle_purchase_inbound(data, next_group_id):
         remark=remark,
         pay_method=data.get("payMethod", None),
     )
+    if inbound_record.pay_method == '现金':
+        inbound_record.approval_status = 1
     db.session.add(inbound_record)
     db.session.flush()
 
@@ -874,20 +867,6 @@ def _handle_purchase_inbound(data, next_group_id):
                 setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     inbound_record.total_price = total_price
-
-    # 财务
-    code = material_inbound_accounting_event(
-        supplier_name, total_price, inbound_record.inbound_record_id
-    )
-    # create payee if not exist
-    if code == 1:
-        payable_entity_code = add_payable_entity(supplier_name)
-        if payable_entity_code == 0:
-            material_inbound_accounting_event(
-                supplier_name, total_price, inbound_record.inbound_record_id
-            )
-    elif code == 2:
-        _payable_entity_not_exist()
     return inbound_record.inbound_rid
 
 
@@ -910,7 +889,6 @@ def _handle_production_remain_inbound(data, next_group_id):
         inbound_rid=inbound_rid,
         inbound_batch_id=next_group_id,
         remark=remark,
-        pay_method=data.get("payMethod", None),
     )
     db.session.add(inbound_record)
     db.session.flush()
@@ -988,6 +966,8 @@ def _handle_composite_inbound(data, next_group_id):
         remark=remark,
         pay_method=data.get("payMethod", None),
     )
+    if inbound_record.pay_method == '现金':
+        inbound_record.approval_status = 1
     db.session.add(inbound_record)
     db.session.flush()
 
@@ -1050,20 +1030,6 @@ def _handle_composite_inbound(data, next_group_id):
                 setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     inbound_record.total_price = total_price
-
-    # 财务
-    code = material_inbound_accounting_event(
-        supplier_name, total_price, inbound_record.inbound_record_id
-    )
-    # create payee if not exist
-    if code == 1:
-        payable_entity_code = add_payable_entity(supplier_name)
-        if payable_entity_code == 0:
-            material_inbound_accounting_event(
-                supplier_name, total_price, inbound_record.inbound_record_id
-            )
-    elif code == 2:
-        _payable_entity_not_exist()
     return inbound_record.inbound_rid
 
 
@@ -1555,6 +1521,8 @@ def get_material_inbound_records():
     page = int(request.args.get("page", 1))
     number = int(request.args.get("pageSize", 10))
     inbound_rid = request.args.get("inboundRId")
+    supplier_name = request.args.get("supplierName")
+    status = request.args.get("status", type=int)
 
     query1 = db.session.query(InboundRecord, Supplier).outerjoin(
         Supplier,
@@ -1566,6 +1534,10 @@ def get_material_inbound_records():
         query1 = query1.filter(InboundRecord.inbound_datetime <= end_date_search)
     if inbound_rid:
         query1 = query1.filter(InboundRecord.inbound_rid.ilike(f"%{inbound_rid}%"))
+    if supplier_name:
+        query1 = query1.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+    if status in [0, 1, 2]:
+        query1 = query1.filter(InboundRecord.approval_status == status)
 
     query1 = query1.order_by(desc(InboundRecord.inbound_datetime))
     count_result = query1.distinct().count()
@@ -1584,6 +1556,8 @@ def get_material_inbound_records():
             "supplierName": supplier.supplier_name if supplier else None,
             "payMethod": inbound_record.pay_method,
             "remark": inbound_record.remark,
+            "approvalStatus": inbound_record.approval_status,
+            "rejectReason": inbound_record.reject_reason,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -2287,18 +2261,19 @@ def update_inbound_record():
     items = data.get("items")
     is_sized_material = data.get("isSizedMaterial", 0)
 
-    print(inbound_record_id)
-    print(inbound_type)
-    print(remark)
-    print(is_sized_material)
-    print(items)
+    inbound_record = db.session.query(InboundRecord).filter(
+        InboundRecord.inbound_record_id == inbound_record_id
+    ).first()
+    if not inbound_record:
+        return jsonify({"message": "inbound record not found"}), 404
+    inbound_record.approval_status = 0
+    inbound_record.remark = remark
 
-    # inbound_record = db.session.query(InboundRecord).filter(
-    #     InboundRecord.inbound_record_id == inbound_record_id
-    # ).first()
-    # if not inbound_record:
-    #     return jsonify({"message": "inbound record not found"}), 404
+    #TODO: only support update purchase inbound
+    if inbound_type != 0:
+        return jsonify({"message": "only support purchase inbound"}), 400
 
+    total_price = 0
     for item in items:
         storage_id = item.get("materialStorageId")
         material_name = item.get("materialName")
@@ -2309,8 +2284,9 @@ def update_inbound_record():
         color_name = item.get("colorName")
         actual_inbound_unit = item.get("actualInboundUnit")
         remark = item.get("remark")
-        unit_price = item.get("unitPrice")
-        inbound_quantity = item.get("inboundQuantity")
+        unit_price = Decimal(item.get("unitPrice"))
+        inbound_quantity = Decimal(item.get("inboundQuantity"))
+
 
         # find order_shoe_id
         order_id, order_shoe_id = None, None
@@ -2418,19 +2394,20 @@ def update_inbound_record():
             new_storage.total_actual_inbound_amount += inbound_quantity
             new_storage.total_current_amount += inbound_quantity
 
-            for i in range(len(SHOESIZERANGE)):
-                shoe_size = SHOESIZERANGE[i]
-                column_name = f"size_{shoe_size}_actual_inbound_amount"
-                old_value = getattr(old_storage, column_name, 0)
-                new_value = getattr(new_storage, column_name, 0)
-                inbound_value = item.get(f"amount{i}", 0)
-                setattr(old_storage, column_name, old_value - inbound_value)
-                setattr(new_storage, column_name, new_value + inbound_value)
+            if actual_material.material_name == "大底":
+                for i in range(len(SHOESIZERANGE)):
+                    shoe_size = SHOESIZERANGE[i]
+                    column_name = f"size_{shoe_size}_actual_inbound_amount"
+                    old_value = getattr(old_storage, column_name, 0)
+                    new_value = getattr(new_storage, column_name, 0)
+                    inbound_value = item.get(f"amount{i}", 0)
+                    setattr(old_storage, column_name, old_value - inbound_value)
+                    setattr(new_storage, column_name, new_value + inbound_value)
 
-                column_name = f"size_{shoe_size}_current_amount"
-                old_value = getattr(old_storage, column_name, 0)
-                new_value = getattr(new_storage, column_name, 0)
-                setattr(old_storage, column_name, old_value - inbound_value)
+                    column_name = f"size_{shoe_size}_current_amount"
+                    old_value = getattr(old_storage, column_name, 0)
+                    new_value = getattr(new_storage, column_name, 0)
+                    setattr(old_storage, column_name, old_value - inbound_value)
 
             # update inbound record detail
             inbound_record_detail = (
@@ -2451,7 +2428,9 @@ def update_inbound_record():
                     column_name = f"size_{shoe_size}_inbound_amount"
                     inbound_value = item.get(f"amount{i}", 0)
                     setattr(inbound_record_detail, column_name, inbound_value)
-
+        total_price += unit_price * inbound_quantity
+    # update inbound record
+    inbound_record.total_price = total_price
     db.session.commit()
     return jsonify({"message": "success"})
 
