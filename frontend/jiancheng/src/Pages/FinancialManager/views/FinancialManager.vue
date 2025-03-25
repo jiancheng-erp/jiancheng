@@ -12,11 +12,12 @@
             </div>
             <el-tabs tab-position="left" style="height: 700px" class="demo-tabs" type="border-card">
                 <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
-                <el-tab-pane label="项目录入"><FinancialItemEntry /></el-tab-pane>
+                <!-- <el-tab-pane label="项目录入"><FinancialItemEntry /></el-tab-pane> -->
                 <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane>
-                <el-tab-pane label="项目详情查看"><FinancialAccountDetail /></el-tab-pane>
-                <el-tab-pane label="项目管理"><FinancialAccountManagement /></el-tab-pane>
-                <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane>
+                <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane>
+                <el-tab-pane label="财务科目信息"><FinancialAccountDetail /></el-tab-pane>
+                <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane>
+                <!-- <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane> -->
                 <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
             </el-tabs>
         </el-main>
@@ -28,7 +29,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
-import FinancialDetailsDisplay from '../components/FinancialDetailsDisplay.vue'
+import FinancialPayableDetail from '../components/FinancialPayableDetail.vue'
 import FinancialHistoryRecord from '../components/FinancialHistoryRecord.vue'
 import FinancialItemEntry from '../components/FinancialItemEntry.vue'
 import InventoryView from '../components/InventoryView.vue'
