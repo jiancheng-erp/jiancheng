@@ -2,7 +2,7 @@ import './assets/main.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
+import ElementPlus, { ElDialog } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import 'element-plus/dist/index.css'
 import App from './App.vue'
@@ -65,6 +65,9 @@ fetch('/frontend_config.json')
                 return Promise.reject(error) // Reject the error to allow specific handling in requests
             }
         )
+
+        ElDialog.props.top.default = '15px'
+        ElDialog.props.closeOnClickModal.default = false
 
         app.use(createPinia())
         app.use(router)
