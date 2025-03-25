@@ -27,7 +27,7 @@ def get_new_cut_model_purchase_order_id():
     department = "01"
     current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
     random_string = randomIdGenerater(6)
-    new_id = department + current_time_stamp + random_string + "L"
+    new_id = department + current_time_stamp + random_string + "C"
     return jsonify({"purchaseOrderRid": new_id})
 
 
@@ -37,12 +37,12 @@ def get_cut_model_info():
     order_shoe = (
         db.session.query(OrderShoe).filter(OrderShoe.order_id == order_id).first()
     )
-    production_instruction = (
-        db.session.query(ProductionInstruction)
-        .filter(ProductionInstruction.order_shoe_id == order_shoe.order_shoe_id)
+    craft_sheet = (
+        db.session.query(CraftSheet)
+        .filter(CraftSheet.order_shoe_id == order_shoe.order_shoe_id)
         .first()
     )
-    cut_model_type = production_instruction.cutting_model_type
+    cut_model_type = craft_sheet.cut_die_staff
     return jsonify({"cutModelType": cut_model_type})
 
 
@@ -83,7 +83,7 @@ def get_cut_model_purchase_order_items():
     purchase_order = (
         db.session.query(PurchaseOrder)
         .filter(PurchaseOrder.order_id == order_id,
-                PurchaseOrder.purchase_order_type == "L")
+                PurchaseOrder.purchase_order_type == "C")
         .first()
     )
     if not purchase_order:
@@ -452,7 +452,7 @@ def edit_saved_cut_model_purchase_order_items():
         print(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@cut_model_api_bp.route("/logistics/submitindividualpurchaseorders", methods=["POST"])
+@cut_model_api_bp.route("/logistics/submitcutmodelindividualpurchaseorders", methods=["POST"])
 def submit_purchase_divide_orders():
     purchase_order_id = request.json.get("purchaseOrderId")
     order_info = (
@@ -500,7 +500,7 @@ def submit_purchase_divide_orders():
         random_string = randomIdGenerater(6)
         supplier_id_string = str(supplier.supplier_id).zfill(4)
         total_purchase_order_rid = (
-            "T" + current_time_stamp + random_string + "L" + supplier_id_string
+            "T" + current_time_stamp + random_string + "C" + supplier_id_string
         )
         total_purchase_order = TotalPurchaseOrder(
             total_purchase_order_rid=total_purchase_order_rid,
@@ -771,7 +771,7 @@ def submit_purchase_divide_orders():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             order_rid,
-            purchase_order_id + "_楦头采购订单_" + data["供应商"] + ".xlsx",
+            purchase_order_id + "_刀模采购订单_" + data["供应商"] + ".xlsx",
         )
         generate_excel_file(template_path, new_file_path, data)
         generated_files.append(new_file_path)
@@ -780,7 +780,7 @@ def submit_purchase_divide_orders():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             order_rid,
-            purchase_order_id + "_楦头采购订单_" + data["供应商"] + ".xlsx",
+            purchase_order_id + "_刀模采购订单_" + data["供应商"] + ".xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
         generate_cut_model_excel_file(
@@ -797,7 +797,7 @@ def submit_purchase_divide_orders():
             # Extract purchase_order_id from the filename and check if it ends with 'F'
             filename = os.path.basename(file)
             purchase_order_id = filename.split("_")[0]  # Get the part before "_供应商"
-            if len(purchase_order_id) >= 5 and purchase_order_id[-5] == "L":
+            if len(purchase_order_id) >= 5 and purchase_order_id[-5] == "C":
                 zipf.write(file, filename)  # Add the file to the zip
     order = db.session.query(Order).filter(Order.order_id == order_id).first()
     order.cutting_model_status = '2'
