@@ -185,7 +185,7 @@ def create_new_order():
 	print(shoe_id_to_rid.keys())
 	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
 
-	result = jsonify({"message": "Order imported successfully"}), 200
+	result = jsonify({"message": "Order imported successfully", "newOrderId":new_order_id}), 200
 	# except Exception as e:
 	# 	result = jsonify({"message": str(e)}, 500)
 	time_t = time.time()

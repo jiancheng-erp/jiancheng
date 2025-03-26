@@ -1666,12 +1666,13 @@ export default {
                                 background: 'rgba(0, 0, 0, 0.7)'
                             })
                             loadingInstance.close()
-                            await axios.post(
+                            const res = await axios.post(
                                 `${this.$apiBaseUrl}/ordercreate/createneworder`,
                                 {
                                     orderInfo: this.newOrderForm
                                 }
                             )
+
                                 ElMessage.success('创建订单成功')
                                 loadingInstance.close()
                                 this.orderCreationSecondInfoVis = false
@@ -1694,17 +1695,20 @@ export default {
                                     salesmanId: ''
                                 }
                                 this.getAllOrders()
+                                this.openOrderDetail(res.data.newOrderId)
                             }
                             catch (error) {
                                 console.error('Upload error:', error)
                                 ElMessage.error(error.data.message)
                             }
+
                         })
                     }
                 }
             })
         },
         openOrderDetail(orderId) {
+            console.log(orderId)
             let url = ''
             if (this.userRole == 4) {
                 url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/admin`
