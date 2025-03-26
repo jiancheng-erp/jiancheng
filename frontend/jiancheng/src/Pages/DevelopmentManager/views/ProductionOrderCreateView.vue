@@ -2045,7 +2045,7 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getpastproductioninstructioninfo?shoeTypeId=${this.selectShoeTypeRow[0].shoeTypeId}`
             )
-            this.productionInstructionDetail = response.data.productionInstructionDetail
+            this.productionInstructionDetail = response.data
         },
         async addPastMaterialToCurrent() {
             console.log(this.selectShoeTypeRow[0].shoeTypeId);
