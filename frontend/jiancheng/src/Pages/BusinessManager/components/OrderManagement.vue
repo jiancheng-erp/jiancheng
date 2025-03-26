@@ -929,7 +929,6 @@ export default {
             this.newOrderForm.salesmanId = this.staffId
             this.orderCreationInfoVis = true
             this.shoeTableDisplayData = this.shoeTableData
-            console.log(this.shoeTableDisplayData)
         },
         async openPreviewDialog(row) {
             this.orderData = row
@@ -946,7 +945,6 @@ export default {
             }
         },
         openAddBatchInfoDialog(row) {
-            console.log(row)
             this.curShoeTypeId = row.shoeTypeId
             this.addBatchInfoDialogVis = true
             const idField = 'packagingInfoId'
@@ -964,7 +962,6 @@ export default {
             this.addCustomerBatchDialogVisible = true
         },
         submitAddCustomerBatchForm() {
-            console.log(this.batchForm)
             this.$confirm('确认添加客户配码信息？', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
@@ -983,7 +980,6 @@ export default {
             this.addCustomerBatchDialogVisible = false
         },
         deleteOrder(row) {
-            console.log(row)
             this.$confirm('确认删除订单?', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
@@ -1040,7 +1036,6 @@ export default {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
-            console.log(this.newOrderForm)
             this.orderCreationInfoVis = false
             this.orderCreationSecondInfoVis = true
             this.newOrderForm.orderShoeTypes.forEach((item) => {
@@ -1069,8 +1064,6 @@ export default {
                 ...this.newOrderForm.orderShoeTypes.filter((item) => item.shoeId !== shoeId),
                 ...selection.map((item) => ({ ...item, shoeId }))
             ];
-            console.log(this.selectedShoeList)
-            console.log(this.newOrderForm)
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
@@ -1793,7 +1786,6 @@ export default {
                     }
                 )
                 this.unfilteredData = response.data
-                console.log(this.unfilteredData)
                 this.displayData = this.unfilteredData
                 this.totalItems = this.unfilteredData.length
                 this.radio = 'all'
