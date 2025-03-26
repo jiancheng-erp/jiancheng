@@ -1175,7 +1175,7 @@ class OutboundRecord(db.Model):
     outbound_batch_id = db.Column(db.Integer)
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False)
-    outbound_department = db.Column(db.String(1), nullable=True)
+    outbound_department = db.Column(db.SmallInteger, nullable=True)
     picker = db.Column(db.String(15), nullable=True)
     outbound_address = db.Column(db.String(100), nullable=True)
     outsource_info_id = db.Column(db.Integer, nullable=True)

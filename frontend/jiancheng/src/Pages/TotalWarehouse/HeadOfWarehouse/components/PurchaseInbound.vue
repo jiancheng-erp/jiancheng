@@ -110,13 +110,13 @@
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.unitPrice" type="amount" clearable :min="0" :step="0.001" :digits="3"
+                        <vxe-number-input v-model="row.unitPrice" type="amount" :min="0" :step="0.001" :digits="3"
                             :disabled="inboundForm.inboundType == 1" @change="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="itemTotalPrice" title="采购金额" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.itemTotalPrice" type="amount" clearable :min="0" :step="0.001" :digits="3"
+                        <vxe-number-input v-model="row.itemTotalPrice" type="amount" :min="0" :step="0.001" :digits="3"
                             :disabled="inboundForm.inboundType == 1"></vxe-number-input>
                     </template>
                 </vxe-column>
