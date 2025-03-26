@@ -1177,6 +1177,12 @@ def get_past_shoe_info():
 )
 def get_past_material_data():
     shoe_type_id = request.args.get("shoetypeid")
+    production_instruction = db.session.query(OrderShoeType, OrderShoe, ProductionInstruction).join(
+        OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
+    ).join(ProductionInstruction, OrderShoe.order_shoe_id == ProductionInstruction.order_shoe_id).filter(
+        OrderShoeType.shoe_type_id == shoe_type_id
+    ).first()
+    production_instruction_id = production_instruction.ProductionInstruction.production_instruction_id
     bom_items = (
         db.session.query(
             OrderShoeType,
@@ -1199,6 +1205,7 @@ def get_past_material_data():
         .join(Material, BomItem.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(ProductionInstructionItem.production_instruction_id == production_instruction_id)
         .filter(ShoeType.shoe_type_id == shoe_type_id)
         .filter(Bom.bom_type == 0)
         .all()
@@ -1322,7 +1329,7 @@ def get_format_past_material_data():
 def get_past_production_instruction_info():
     shoe_type_id = request.args.get("shoeTypeId")
     order_shoe_id = db.session.query(OrderShoeType).filter(OrderShoeType.shoe_type_id == shoe_type_id).first().order_shoe_id
-    designer = db.session.query(Shoe).filter(Shoe.shoe_id == order_shoe_id).first().shoe_designer
+    designer = db.session.query(OrderShoe, Shoe).join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id).filter(OrderShoe.order_shoe_id == order_shoe_id).first().Shoe.shoe_designer
     production_instruction = (
         db.session.query(ProductionInstruction)
         .filter(ProductionInstruction.order_shoe_id == order_shoe_id)
