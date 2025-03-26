@@ -368,18 +368,18 @@ def save_production_instruction():
     )
     order_shoe_id = order_shoe.OrderShoe.order_shoe_id
     order_shoe_status = order_shoe.OrderShoeStatus
-    order_shoe.Shoe.shoe_designer = production_instruction_details.get("designer")
+    order_shoe.Shoe.shoe_designer = production_instruction_details.get("designer", None)
     db.session.flush()
     production_instruction = ProductionInstruction(
         production_instruction_rid=production_instruction_rid,
         order_shoe_id=order_shoe_id,
         production_instruction_status="1",
-        origin_size=production_instruction_details.get("originSize"),
-        size_range=production_instruction_details.get("sizeRange"),
-        last_type=production_instruction_details.get("lastType"),
-        size_difference=production_instruction_details.get("sizeDifference"),
-        burn_sole_craft=production_instruction_details.get("burnSoleCraft"),
-        craft_remark=production_instruction_details.get("craftRemark"),
+        origin_size=production_instruction_details.get("originSize", None),
+        size_range=production_instruction_details.get("sizeRange", None),
+        last_type=production_instruction_details.get("lastType", None),
+        size_difference=production_instruction_details.get("sizeDifference", None),
+        burn_sole_craft=production_instruction_details.get("burnSoleCraft", None),
+        craft_remark=production_instruction_details.get("craftRemark", None),
     )
 
     db.session.add(production_instruction)
@@ -1322,6 +1322,7 @@ def get_format_past_material_data():
 def get_past_production_instruction_info():
     shoe_type_id = request.args.get("shoeTypeId")
     order_shoe_id = db.session.query(OrderShoeType).filter(OrderShoeType.shoe_type_id == shoe_type_id).first().order_shoe_id
+    designer = db.session.query(Shoe).filter(Shoe.shoe_id == order_shoe_id).first().shoe_designer
     production_instruction = (
         db.session.query(ProductionInstruction)
         .filter(ProductionInstruction.order_shoe_id == order_shoe_id)
@@ -1336,6 +1337,7 @@ def get_past_production_instruction_info():
                 "sizeDifference": production_instruction.size_difference,
                 "burnSoleCraft": production_instruction.burn_sole_craft,
                 "craftRemark": production_instruction.craft_remark,
+                "designer": designer,
             }
         ), 200
     
