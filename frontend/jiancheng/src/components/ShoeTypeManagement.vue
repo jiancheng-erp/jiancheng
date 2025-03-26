@@ -7,6 +7,11 @@
             鞋型号搜索：
             <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes" :suffix-icon="Search"></el-input>
         </el-col>
+        <el-col :span="2" :offset="2" >
+            <el-button type="primary" @click="openShoeColorManagementDialog">
+                颜色管理
+            </el-button>
+        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
@@ -49,12 +54,36 @@
             </el-table>
         </el-col>
     </el-row>
-    <el-row :gutter="20">
-        <el-col :span="24" :offset="0">
+    <el-row :gutter="0">
+        <el-col :span="8" :offset="0">
             <el-button type="primary" @click="openAddShoeDialog">添加新鞋型</el-button>
             <el-button type="primary" icon="Edit" @click="openShoeColorDialog">添加鞋款颜色</el-button>
         </el-col>
+        <el-col :span="8" :offset="2">
+            <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
+                :current-page="currentPage" :page-sizes="[20, 40, 60, 100]" :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper" :total="totalItems" />
+          </el-col>
     </el-row>
+    <el-dialog title="鞋款颜色管理" v-model="colorManagementDialogVis" width="80%">
+        <el-row>
+            <el-col :span="1" :offset="2">
+                <el-button type="warning" @click="clearColorSelect">清除所选</el-button>
+            </el-col>
+            <el-col :span="1" :offset="1">
+                <el-button type="primary" @click="mergeSelectedColor">颜色合并</el-button>
+            </el-col>
+        </el-row>
+        <el-table :data="colorInfoList" row-key="colorId" ref="colorSelectionTable" @selection-change="handleColorSelect">
+            <el-table-column size="small" type="selection" align="center">
+            </el-table-column>
+            <el-table-column sortable prop="colorNameCN" label="颜色中文"></el-table-column>
+            <el-table-column prop="colorNameEN" label="颜色英文"></el-table-column>
+            <el-table-column prop="colorNameSP" label="颜色西语"></el-table-column>
+            <el-table-column sortable prop="colorBoundCount" label="当前颜色绑定鞋款"></el-table-column>
+        </el-table>
+
+    </el-dialog>
     <el-dialog title="添加鞋款颜色" v-model="addShoeColorDialogVis" width="50%">
         <el-form :model="colorForm" label-width="120px" :inline="false">
             <el-form-item label="颜色中文名称">
@@ -171,6 +200,9 @@ export default {
             currentShoeImageId: '',
             currentShoeColor: '',
             currentShoeColorId: 0,
+            currentPage:1,
+            pageSize:20,
+            totalItems:0,
             fileList: [],
             orderForm: {
                 shoeId: '',
@@ -190,6 +222,8 @@ export default {
             editShoeDialogVis: false,
             addShoeDialogVis: false,
             addShoeColorDialogVis: false,
+            colorManagementDialogVis:false,
+            colorInfoList: [],
             Search,
             inheritIdSearch: '',
             shoeTableData: [],
@@ -206,6 +240,7 @@ export default {
     mounted() {
         this.getAllColors()
         this.getAllShoes()
+        this.updateColorInfo()
     },
     computed: {
         uploadHeaders() {
@@ -225,15 +260,48 @@ export default {
         async getAllShoes() {
             // new api call
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
-                params: { shoerid: '', role: this.staffRole }
+                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize }
             })
-            this.shoeTableData = response.data
+            this.shoeTableData = response.data.shoeTable
+            this.totalItems = response.data.total
         },
         async getFilterShoes() {
+            this.currentPage = 1
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
-                params: { shoerid: this.inheritIdSearch, role: this.staffRole }
+                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize }
             })
-            this.shoeTableData = response.data
+            this.shoeTableData = response.data.shoeTable
+            this.totalItems = response.data.total
+        },
+        async updateColorInfo(){
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/shoecolorinfo`)
+            this.colorInfoList = response.data.colorInfo
+        },
+        openShoeColorManagementDialog(){
+            this.colorManagementDialogVis = true    
+        },
+        clearColorSelect(){
+            this.$refs.colorSelectionTable.clearSelection()
+        },
+        handleColorSelect(selection){
+            console.log(selection)
+        },
+        handleSizeChange(value){
+            this.pageSize = value
+            this.getAllShoes()
+        },
+        handlePageChange(value){
+            this.currentPage = value
+            this.getAllShoes()
+        },
+        async mergeSelectedColor(){
+            console.log(this.$refs.colorSelectionTable.getSelectionRows()) 
+            const res = await axios.post(`${this.$apiBaseUrl}/shoe/shoecolormerge`,
+                {
+                    colorList:this.$refs.colorSelectionTable.getSelectionRows()
+                }
+            )
+            await this.updateColorInfo()
         },
         openAddShoeDialog() {
             this.addShoeDialogVis = true

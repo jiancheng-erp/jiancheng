@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from app_config import app, db
+from sqlalchemy import func
 from models import *
 from file_locations import IMAGE_STORAGE_PATH
 from api_utility import to_camel, to_snake
@@ -57,105 +58,50 @@ def get_all_shoes_new():
     shoe_rid = request.args.get("shoerid")
     _, _, department = current_user_info()
     user_department = department.department_name
+    page = request.args.get("page", type=int)
+    page_size = request.args.get("pageSize", type=int)
+    if not page:
+        page = 1
+    if not page_size:
+        page_size = 20
     result_data = []
-    
+    # .outerjoin(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
+    #         .outerjoin(Color, ShoeType.color_id == Color.color_id)
     query = (
-        db.session.query(Shoe, ShoeType, Color)
-            .outerjoin(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
-            .outerjoin(Color, ShoeType.color_id == Color.color_id)
+        db.session.query(Shoe) 
     )
-    print("shoe rid is " + str(shoe_rid))
     if user_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
         query = query.filter(Shoe.shoe_department_id == user_department)
+
     if shoe_rid is not None:
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
-    response = query.all()
-    meta_data = {}
-    for row in response:
-        shoe, shoe_type, color = row
-        if shoe.shoe_id not in meta_data.keys():
-            meta_data[shoe.shoe_id] = dict()
-            for attr in SHOE_TABLE_ATTRNAMES:
-                meta_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
-            shoe_type_dict = dict()
-            if shoe_type:
-                for attr in SHOETYPE_TABLE_ATTRNAMES:
-                    shoe_type_dict[to_camel(attr)] = getattr(shoe_type, attr)
-                    shoe_type_dict['colorName'] = color.color_name
-                    shoe_type_dict['shoeRid'] = shoe.shoe_rid
-                    if shoe_type.shoe_image_url:
-                        shoe_type_dict['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
-                    else:
-                        shoe_type_dict['shoeImageUrl'] = None
-                meta_data[shoe.shoe_id]['shoeTypeData'] = [shoe_type_dict]
-        else:
-            if shoe_type:
-                shoe_type_dict = dict()
-                for attr in SHOETYPE_TABLE_ATTRNAMES:
-                    shoe_type_dict[to_camel(attr)] = getattr(shoe_type, attr)
-                    shoe_type_dict['colorName'] = color.color_name
-                    shoe_type_dict['shoeRid'] = shoe.shoe_rid
-                    if shoe_type.shoe_image_url:
-                        shoe_type_dict['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
-                    else:
-                        shoe_type_dict['shoeImageUrl'] = None
-                meta_data[shoe.shoe_id]['shoeTypeData'].append(shoe_type_dict)
-    for key in meta_data.keys():
-        result_data.append(meta_data[key])
+
+    total_count = query.distinct().count()
+    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
+    shoe_id_list = [shoe.shoe_id for shoe in response]
+    entities = (db.session.query(ShoeType, Color)
+                .join(Color, ShoeType.color_id == Color.color_id)
+                .filter(ShoeType.shoe_id.in_(shoe_id_list))).all()
+    res_data = {}
+    for shoe in response:
+        res_data[shoe.shoe_id] = dict()
+        for attr in SHOE_TABLE_ATTRNAMES:
+            res_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
+        res_data[shoe.shoe_id]['shoeTypeData'] = []
+    
+    for shoe_type, color in entities:
+        shoe_type_res = {}
+        for attr in SHOETYPE_TABLE_ATTRNAMES:
+            shoe_type_res[to_camel(attr)] = getattr(shoe_type, attr)
+        shoe_type_res['colorName'] = color.color_name
+        shoe_type_res['shoeRid'] = shoe.shoe_rid
+        shoe_type_res['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url if shoe_type.shoe_image_url else None
+        res_data[shoe_type.shoe_id]['shoeTypeData'].append(shoe_type_res)
+    result_data = list(res_data.values())
     time_t2 = time.time()
     print("get all shoes new time taken is " + " " + str(time_t2 - time_s))
-    return jsonify(result_data), 200
+    return {"shoeTable":result_data, "total":total_count}, 200
 
-    # if shoe_rid is None:
-    #     if shoe_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
-    #         shoe_entities = (
-    #             db.session.query(Shoe)
-    #             .filter(Shoe.shoe_department_id == shoe_department)
-    #             .all()
-    #         )
-    #     else:
-    #         shoe_entities = (
-    #             db.session.query(Shoe)
-    #             .all()
-    #         )
-    # else:
-    #     if shoe_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
-    #         shoe_entities = (
-    #             db.session.query(Shoe)
-    #             .filter(Shoe.shoe_department_id == shoe_department)
-    #             .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
-    #             .all()
-    #         )
-    #     else:
-    #         shoe_entities = (
-    #             db.session.query(Shoe)
-    #             .filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
-    #             .all()
-    #         )
-    # time_t1 = time.time()
-    # for shoe in shoe_entities:
-    #     shoe_response_data = dict()
-    #     for attr in SHOE_TABLE_ATTRNAMES:
-    #         shoe_response_data[to_camel(attr)] = getattr(shoe, attr)
-    #     shoe_type_entities = (db.session.query(ShoeType, Color)
-    #                           .join(Color, ShoeType.color_id == Color.color_id)
-    #                           .filter(ShoeType.shoe_id == shoe.shoe_id)
-    #                           .all())
-    #     shoe_type_list = []
-    #     for shoe_type in shoe_type_entities:
-    #         shoe_type_response_data = dict()
-    #         for attr in SHOETYPE_TABLE_ATTRNAMES:
-    #             shoe_type_response_data[to_camel(attr)] = getattr(shoe_type.ShoeType, attr)
-    #         shoe_type_response_data['colorName'] = shoe_type.Color.color_name
-    #         shoe_type_response_data['shoeRid'] = shoe.shoe_rid
-    #         if shoe_type.ShoeType.shoe_image_url:
-    #             shoe_type_response_data['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.ShoeType.shoe_image_url
-    #         else:
-    #             shoe_type_response_data['shoeImageUrl'] = None
-    #         shoe_type_list.append(shoe_type_response_data)
-    #     shoe_response_data['shoeTypeData'] = shoe_type_list
-    #     result_data.append(shoe_response_data)
-    
 
 
 @shoe_bp.route("/shoe/getshoebatchinfotype", methods=["GET"])
@@ -265,4 +211,43 @@ def get_shoe_batch_by_size_table():
 
     
     
+@shoe_bp.route("/shoe/shoecolorinfo", methods=["GET"])
+def get_shoe_color_info():
+    entities = (db.session.query(Color, func.count(ShoeType.shoe_type_id))
+                .join(ShoeType, ShoeType.color_id == Color.color_id)
+                .group_by(Color.color_id).all())
+    res_data = []
+    for color, count in entities:
+        res_data.append({"colorId":color.color_id,
+                         "colorNameCN":color.color_name,
+                         "colorNameEN":color.color_en_name,
+                         "colorNameSP":color.color_sp_name,
+                         "colorNameIT":color.color_it_name,
+                         "colorBoundCount":count})
+    
 
+    return jsonify({'colorInfo':res_data}), 200
+
+@shoe_bp.route("/shoe/shoecolormerge", methods=["POST"])
+def merge_shoe_colors():
+    data = request.get_json()
+    colors_to_merge = data.get('colorList')
+    color_name = colors_to_merge[0]['colorNameCN']
+    cur_max = colors_to_merge[0]['colorBoundCount']
+    max_color_id = colors_to_merge[0]['colorId']
+    for color in colors_to_merge:
+        if color['colorNameCN'] != color_name:
+            return jsonify({"msg":"ERROR COLOR NOT THE SAME"}), 401
+        if color['colorBoundCount'] > cur_max:
+            cur_max = color['colorBoundCount']
+            max_color_id = color['colorId']
+    # now perform the merge
+    shoe_type_entities = (db.session.query(ShoeType, Color)
+                          .join(Color, ShoeType.color_id == Color.color_id)
+                          .all())
+    color_ids = [color['colorId'] for color in colors_to_merge]
+    for shoe_type, color in shoe_type_entities:
+        if color.color_id in color_ids:
+            shoe_type.color_id = max_color_id
+    db.session.commit()
+    return jsonify({"msg":"color merged"}), 200
