@@ -1232,15 +1232,16 @@ def get_past_material_data():
     return jsonify(result_list), 200
 
 
-@dev_producion_order_bp.route(
-    "/devproductionorder/getformatpastmaterialdata", methods=["GET"]
-)
+@dev_producion_order_bp.route("/devproductionorder/getformatpastmaterialdata", methods=["GET"])
 def get_format_past_material_data():
     shoe_type_id = request.args.get("shoeTypeId")
+    order_shoe_id = db.session.query(OrderShoeType).filter(OrderShoeType.shoe_type_id == shoe_type_id).first().order_shoe_id
     bom_items = (
         db.session.query(
+            OrderShoe,
             OrderShoeType,
             ShoeType,
+            Color,
             Bom,
             BomItem,
             ProductionInstructionItem,
@@ -1248,257 +1249,96 @@ def get_format_past_material_data():
             MaterialType,
             Supplier,
         )
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
         .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
         .outerjoin(Bom, OrderShoeType.order_shoe_type_id == Bom.order_shoe_type_id)
         .outerjoin(BomItem, BomItem.bom_id == Bom.bom_id)
         .outerjoin(
             ProductionInstructionItem,
-            BomItem.production_instruction_item_id
-            == ProductionInstructionItem.production_instruction_item_id,
+            BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
         )
         .join(Material, BomItem.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .filter(ShoeType.shoe_type_id == shoe_type_id)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
         .filter(Bom.bom_type == 0)
         .all()
     )
-    result_list = {
-        "surfaceMaterialData": [],
-        "insideMaterialData": [],
-        "accessoryMaterialData": [],
-        "outsoleMaterialData": [],
-        "midsoleMaterialData": [],
-        "hotsoleMaterialData": [],
-    }
+
+    # Group materials by color name
+    grouped_by_color = {}
 
     for item in bom_items:
-        print(item)
-        if item.ProductionInstructionItem != None:
+        color_name = item.Color.color_name  # Group key
+        if color_name not in grouped_by_color:
+            grouped_by_color[color_name] = {
+                "color": color_name,
+                "surfaceMaterialData": [],
+                "insideMaterialData": [],
+                "accessoryMaterialData": [],
+                "outsoleMaterialData": [],
+                "midsoleMaterialData": [],
+                "hotsoleMaterialData": [],
+            }
 
-            if item.ProductionInstructionItem.material_type == "S":
-                result_list["surfaceMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-            elif item.ProductionInstructionItem.material_type == "I":
-                result_list["insideMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-            elif item.ProductionInstructionItem.material_type == "A":
-                result_list["accessoryMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-            elif item.ProductionInstructionItem.material_type == "O":
-                result_list["outsoleMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-            elif item.ProductionInstructionItem.material_type == "M":
-                result_list["midsoleMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-            elif item.ProductionInstructionItem.material_type == "H":
-                result_list["hotsoleMaterialData"].append(
-                    {
-                        "materialType": item.MaterialType.material_type_name,
-                        "materialId": (
-                            item.Material.material_id if item.Material else None
-                        ),
-                        "materialName": (
-                            item.Material.material_name if item.Material else None
-                        ),
-                        "supplierName": (
-                            item.Supplier.supplier_name if item.Supplier else None
-                        ),
-                        "unit": item.Material.material_unit if item.Material else None,
-                        "materialModel": (
-                            item.BomItem.material_model if item.BomItem else None
-                        ),
-                        "materialSpecification": (
-                            item.BomItem.material_specification
-                            if item.BomItem
-                            else None
-                        ),
-                        "color": item.BomItem.bom_item_color if item.BomItem else None,
-                        "comment": item.BomItem.remark if item.BomItem else None,
-                        "useDepart": (
-                            item.BomItem.department_id if item.BomItem else None
-                        ),
-                        "materialDetailType": (
-                            item.BomItem.material_second_type if item.BomItem else None
-                        ),
-                        "craftName": (
-                            item.ProductionInstructionItem.pre_craft_name
-                            if item.ProductionInstructionItem
-                            else None
-                        ),
-                    }
-                )
-    return jsonify(result_list), 200
+        if item.ProductionInstructionItem is None:
+            continue
+
+        data = {
+            "materialType": item.MaterialType.material_type_name,
+            "materialId": item.Material.material_id if item.Material else None,
+            "materialName": item.Material.material_name if item.Material else None,
+            "supplierName": item.Supplier.supplier_name if item.Supplier else None,
+            "unit": item.Material.material_unit if item.Material else None,
+            "materialModel": item.BomItem.material_model if item.BomItem else None,
+            "materialSpecification": item.BomItem.material_specification if item.BomItem else None,
+            "color": item.BomItem.bom_item_color if item.BomItem else None,
+            "comment": item.BomItem.remark if item.BomItem else None,
+            "useDepart": item.BomItem.department_id if item.BomItem else None,
+            "materialDetailType": item.BomItem.material_second_type if item.BomItem else None,
+            "craftName": item.ProductionInstructionItem.pre_craft_name if item.ProductionInstructionItem else None,
+            "processingRemark": item.ProductionInstructionItem.processing_remark if item.ProductionInstructionItem else None,
+        }
+
+        material_type = item.ProductionInstructionItem.material_type
+        if material_type == "S":
+            grouped_by_color[color_name]["surfaceMaterialData"].append(data)
+        elif material_type == "I":
+            grouped_by_color[color_name]["insideMaterialData"].append(data)
+        elif material_type == "A":
+            grouped_by_color[color_name]["accessoryMaterialData"].append(data)
+        elif material_type == "O":
+            grouped_by_color[color_name]["outsoleMaterialData"].append(data)
+        elif material_type == "M":
+            grouped_by_color[color_name]["midsoleMaterialData"].append(data)
+        elif material_type == "H":
+            grouped_by_color[color_name]["hotsoleMaterialData"].append(data)
+
+    result = list(grouped_by_color.values())
+    return jsonify(result), 200
+
+@dev_producion_order_bp.route("/devproductionorder/getpastproductioninstructioninfo", methods=["GET"])
+def get_past_production_instruction_info():
+    shoe_type_id = request.args.get("shoeTypeId")
+    order_shoe_id = db.session.query(OrderShoeType).filter(OrderShoeType.shoe_type_id == shoe_type_id).first().order_shoe_id
+    production_instruction = (
+        db.session.query(ProductionInstruction)
+        .filter(ProductionInstruction.order_shoe_id == order_shoe_id)
+        .first()
+    )
+    if production_instruction:
+        return jsonify(
+            {
+                "originSize": production_instruction.origin_size,
+                "sizeRange": production_instruction.size_range,
+                "lastType": production_instruction.last_type,
+                "sizeDifference": production_instruction.size_difference,
+                "burnSoleCraft": production_instruction.burn_sole_craft,
+                "craftRemark": production_instruction.craft_remark,
+            }
+        ), 200
+    
 
 
 @dev_producion_order_bp.route(("/devproductionorder/getsizetable"), methods=["GET"])
