@@ -841,7 +841,7 @@
                             isLoadMaterialDialogVisible = false;
                         selectShoeTypeRow = {}
                             ">取消</el-button>
-                        <el-button type="primary" @click="addPastMaterialToCurrent">确认加载</el-button>
+                        <el-button type="primary" @click="handleConfirmLoad">确认加载</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -2041,6 +2041,12 @@ export default {
                     ElMessage.info('取消复制')
                 })
         },
+        async addPastProductionInstructionInfoToCurrent() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getpastproductioninstructioninfo?shoeTypeId=${this.selectShoeTypeRow[0].shoeTypeId}`
+            )
+            this.productionInstructionDetail = response.data.productionInstructionDetail
+        },
         async addPastMaterialToCurrent() {
             console.log(this.selectShoeTypeRow[0].shoeTypeId);
 
@@ -2078,6 +2084,10 @@ export default {
             });
 
             console.log("Updated Material Data:", this.materialWholeData);
+        },
+        handleConfirmLoad() {
+            this.addPastMaterialToCurrent();
+            this.addPastProductionInstructionInfoToCurrent();
         },
         addMaterialByManual(typeSymbol) {
             const preActiveMaterialData = this.materialWholeData.find(
