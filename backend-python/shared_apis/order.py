@@ -709,6 +709,8 @@ def get_display_orders_manager():
             .order_by(Order.order_rid.asc())
             .all()
         )
+    else:
+        return jsonify({"message": "invalid user role"}), 401
     result = []
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
@@ -754,7 +756,9 @@ def get_display_orders_manager():
 def get_all_orders():
     desc_symbol = request.args.get("descSymbol", None)
     entities = (
-        db.session.query(Order, Customer, OrderStatus, OrderStatusReference)
+        db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(Customer, Order.customer_id == Customer.customer_id)
         .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
         .outerjoin(
@@ -768,7 +772,7 @@ def get_all_orders():
         entities = entities.order_by(Order.order_rid.asc()).all()
     result = []
     for entity in entities:
-        order, customer, order_status, order_status_reference = entity
+        order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
         formatted_end_date = order.end_date.strftime("%Y-%m-%d")
         order_status_message = "N/A"
@@ -791,6 +795,8 @@ def get_all_orders():
         result.append(
             {
                 "orderDbId": order.order_id,
+                "customerProductName": order_shoe.customer_product_name,
+                "shoeRId": shoe.shoe_rid,
                 "orderRid": order.order_rid,
                 "orderCid": order.order_cid,
                 "customerName": customer.customer_name,

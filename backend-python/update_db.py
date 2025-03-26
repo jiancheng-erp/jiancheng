@@ -56,9 +56,8 @@ def sync_schema(app, db):
                 # Check if column contains data before deletion
                 result = connection.execute(text(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NOT NULL")).fetchone()
                 if result and result[0] > 0:
-                    print(f"Error: Cannot remove column '{column_name}' from table '{table_name}' because it contains data. Rolling back...")
-                    db.session.rollback()
-                    return
+                    print(f"Error: Cannot remove column '{column_name}' from table '{table_name}' because it contains data. Ignore this column...")
+                    break
 
                 # Safe removal if no data exists
                 try:
