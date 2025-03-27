@@ -2265,12 +2265,8 @@ def update_inbound_record():
         remark = item.get("remark")
         unit_price = Decimal(item.get("unitPrice"))
         inbound_quantity = Decimal(item.get("inboundQuantity"))
-        input_total_price = Decimal(item.get("itemTotalPrice"))
+        item_total_price = Decimal(item.get("itemTotalPrice"))
         
-        if unit_price == 0:
-            item_total_price = input_total_price
-        else:
-            item_total_price = unit_price * inbound_quantity
         total_price += item_total_price
 
 

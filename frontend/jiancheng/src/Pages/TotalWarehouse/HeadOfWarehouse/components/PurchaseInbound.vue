@@ -104,7 +104,7 @@
                 </vxe-column>
                 <vxe-column field="inboundQuantity" title="入库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.inboundQuantity" clearable :digits="3" :step="0.001" :min="0"
+                        <vxe-number-input v-model="row.inboundQuantity" :digits="3" :step="0.001" :min="0"
                             @change="updateTotalPrice(row)" :disabled="row.materialName === '大底'"></vxe-number-input>
                     </template>
                 </vxe-column>
@@ -239,6 +239,7 @@ import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
+import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 export default {
     components: {
         MaterialSearchDialog,
@@ -452,11 +453,7 @@ export default {
             });
         },
         updateTotalPrice(row) {
-            if (row.inboundQuantity && row.unitPrice) {
-                row.itemTotalPrice = (row.inboundQuantity * row.unitPrice).toFixed(3); // Ensure two decimal places
-            } else {
-                row.itemTotalPrice = 0
-            }
+            row.itemTotalPrice = updateTotalPriceHelper(row)
         },
         handleKeydown(event, scope) {
             if (event.code === 'Enter') {
