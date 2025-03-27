@@ -36,6 +36,8 @@
                         {{ determineInboundName(scope.row.inboundType) }}
                     </template>
                 </el-table-column>
+                <el-table-column prop="warehouseName" label="仓库名称">
+                </el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
                 <el-table-column label="查看">
@@ -56,7 +58,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col :span="12" :offset="10">
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="total" />
@@ -75,10 +77,8 @@
                 style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                 <tr>
                     <td style="padding:5px; width: 150px;" align="left">供应商:{{ currentRow.supplierName }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{ currentRow.warehouseName }}</td>
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">入库方式:{{
-                        determineInboundName(currentRow.inboundType)
-                    }}</td>
                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{ currentRow.payMethod }}</td>
                 </tr>
             </table>
@@ -136,12 +136,13 @@
         </template>
     </el-dialog>
 
-    <el-dialog title="修改入库单" v-model="editDialogVisible" width="90%">
+    <el-dialog title="修改入库单" v-model="editDialogVisible" width="100%">
         <el-row>
             <el-col :span="6">
                 <div style="display: flex; align-items: center;">
                     <span style="margin-right: 8px; width: 80px">供货单位:</span>
-                    <el-input v-model="currentRow.supplierName" disabled></el-input>
+                    <el-autocomplete v-model="currentRow.newSupplierName" :fetch-suggestions="querySuppliers" clearable
+                        @select="handleSupplierSelect" />
                 </div>
             </el-col>
             <el-col :span="6" :offset="1">
@@ -219,6 +220,13 @@
                             <el-input v-model="scope.row.remark"></el-input>
                         </template>
                     </el-table-column>
+                    <el-table-column label="删除" width="80">
+                        <template #default="scope">
+                            <el-switch v-model="scope.row.toDelete" 
+                            :active-value="1" :inactive-value="0"
+                            @change="(value) => markDelete(scope.row, value)" />
+                        </template>
+                    </el-table-column>
                 </el-table>
             </el-col>
         </el-row>
@@ -247,6 +255,12 @@ import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 export default {
     directives: {
         print
+    },
+    props: {
+        materialSupplierOptions: {
+            type: Array,
+            required: true
+        }
     },
     data() {
         return {
@@ -297,6 +311,16 @@ export default {
         }
     },
     methods: {
+        querySuppliers(queryString, callback) {
+            const results = this.materialSupplierOptions
+                .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
+                .map((item) => ({ value: item }));
+
+            callback(results);
+        },
+        handleSupplierSelect(item) {
+            this.currentRow.newSupplierName = item.value;
+        },
         updateTotalPrice(row) {
             row.itemTotalPrice = updateTotalPriceHelper(row)
         },
@@ -356,6 +380,12 @@ export default {
                 let params = { "inboundBatchId": row.inboundBatchId, "isSizedMaterial": row.isSizedMaterial }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
                 this.recordData["items"] = response.data
+                // convert decimal to number
+                for (let i = 0; i < this.recordData["items"].length; i++) {
+                    this.recordData["items"][i].inboundQuantity = Number(this.recordData["items"][i].inboundQuantity)
+                    this.recordData["items"][i].unitPrice = Number(this.recordData["items"][i].unitPrice)
+                    this.recordData["items"][i].itemTotalPrice = Number(this.recordData["items"][i].itemTotalPrice)
+                }
                 // if the purchase divide order type is S, then the inbound record is for shoe size
                 if (row.isSizedMaterial == 1) {
                     let sizeColumns = []
@@ -393,6 +423,7 @@ export default {
                 return
             }
             this.currentRow = row
+            this.currentRow.newSupplierName = row.supplierName
             this.getInboundRecordDetail(row)
             this.getMaterialNameOptions()
             this.getUnitOptions()
@@ -432,7 +463,7 @@ export default {
                 try {
                     let params = {
                         "inboundRecordId": this.currentRow.inboundRecordId,
-                        "supplierId": this.currentRow.supplierId,
+                        "supplierName": this.currentRow.newSupplierName,
                         "inboundType": this.currentRow.inboundType,
                         "remark": this.currentRow.remark,
                         "payMethod": this.currentRow.payMethod,
@@ -488,6 +519,9 @@ export default {
             }).catch(() => {
                 ElMessage.info('已取消驳回')
             })
+        },
+        markDelete(row, newVal) {
+            row.toDelete = newVal
         },
         handleDelete(row) {
             this.$confirm('是否删除该入库单？', '提示', {
