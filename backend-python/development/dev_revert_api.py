@@ -117,29 +117,31 @@ def edit_revert_production_instruction():
                     # Update existing item
                     item = existing_items[item_id]
                     item.material_id = material_id
-                    item.material_model = material.get("materialModel")
-                    item.material_specification = material.get("materialSpecification")
-                    item.color = material.get("color")
-                    item.remark = material.get("comment")
-                    item.department_id = material.get("useDepart")
+                    item.material_model = material.get("materialModel", None)
+                    item.material_specification = material.get("materialSpecification", None)
+                    item.color = material.get("color", None)
+                    item.remark = material.get("comment", None)
+                    item.department_id = material.get("useDepart", None)
                     item.is_pre_purchase = material.get("isPurchase", False)
+                    item.pre_craft_name=material.get("craftName", None)
                     item.material_type = material_type
-                    item.material_second_type = material.get("materialDetailType")
-                    item.processing_remark = material.get("processingRemark")
+                    item.material_second_type = material.get("materialDetailType", None)
+                    item.processing_remark = material.get("processingRemark", None)
                 else:
                     # Insert new ProductionInstructionItem
                     new_item = ProductionInstructionItem(
                         production_instruction_id=production_instruction_id,
                         material_id=material_id,
-                        material_model=material.get("materialModel"),
-                        material_specification=material.get("materialSpecification"),
-                        color=material.get("color"),
-                        remark=material.get("comment"),
-                        department_id=material.get("useDepart"),
+                        material_model=material.get("materialModel", None),
+                        material_specification=material.get("materialSpecification", None),
+                        color=material.get("color", None),
+                        remark=material.get("comment", None),
+                        department_id=material.get("useDepart", None),
                         is_pre_purchase=material.get("isPurchase", False),
                         material_type=material_type,
-                        material_second_type=material.get("materialDetailType"),
-                        processing_remark=material.get("processingRemark"),
+                        material_second_type=material.get("materialDetailType", None),
+                        pre_craft_name=material.get("craftName", None),
+                        processing_remark=material.get("processingRemark", None),
                         order_shoe_type_id=order_shoe_type_id,
                     )
                     db.session.add(new_item)
