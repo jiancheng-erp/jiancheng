@@ -13,9 +13,6 @@ from constants import DEFAULT_SUPPLIER
 dev_revert_api = Blueprint("dev_revert_api", __name__)
 
 
-@dev_revert_api.route(
-    "/devproductionorder/editrevertproductioninstruction", methods=["POST"]
-)
 @dev_revert_api.route("/devproductionorder/editrevertproductioninstruction", methods=["POST"])
 def edit_revert_production_instruction():
     order_id = request.json.get("orderId")

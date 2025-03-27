@@ -9,6 +9,7 @@ material_page_bp = Blueprint("material_page_bp", __name__)
 
 from sqlalchemy.orm import joinedload
 
+
 @material_page_bp.route("/logistics/allmaterial", methods=["GET"])
 def get_all_materials():
     material_name = request.args.get("materialname", None)
@@ -46,7 +47,10 @@ def get_all_materials():
     # Preload ProductionInstructionItem data to avoid per-item queries
     material_ids = [material.Material.material_id for material in materials]
     instruction_items = (
-        db.session.query(ProductionInstructionItem.material_id, ProductionInstructionItem.material_model)
+        db.session.query(
+            ProductionInstructionItem.material_id,
+            ProductionInstructionItem.material_model,
+        )
         .filter(ProductionInstructionItem.material_id.in_(material_ids))
         .distinct()
         .all()
@@ -62,7 +66,10 @@ def get_all_materials():
     # Consolidate results
     consolidated_results = {}
     for material in materials:
-        key = (material.Material.material_name, material.MaterialType.material_type_name)
+        key = (
+            material.Material.material_name,
+            material.MaterialType.material_type_name,
+        )
         supplier_name = material.Supplier.supplier_name
         material_id = material.Material.material_id
         material_models = material_models_map.get(material_id, [])
@@ -104,8 +111,25 @@ def get_all_materials():
     return jsonify(fin_result)
 
 
-
-
+@material_page_bp.route("/logistics/getwarehousebymaterialtypeid", methods=["GET"])
+def get_warehouse_by_material_type_id():
+    material_type_id = request.args.get("materialTypeId", None)
+    warehouse = (
+        db.session.query(MaterialWarehouse)
+        .join(
+            MaterialType,
+            MaterialWarehouse.material_warehouse_id == MaterialType.warehouse_id,
+        )
+        .filter(MaterialType.material_type_id == material_type_id)
+        .first()
+    )
+    if not warehouse:
+        return jsonify({"message": "Warehouse not found"}), 404
+    result = {
+        "warehouseId": warehouse.material_warehouse_id,
+        "warehouseName": warehouse.material_warehouse_name,
+    }
+    return jsonify(result)
 
 
 @material_page_bp.route("/logistics/allwarehousenames", methods=["GET"])
@@ -129,7 +153,7 @@ def get_all_material_types():
         db.session.query(
             MaterialType.material_type_name,
             Material.material_category,
-            MaterialWarehouse.material_warehouse_name
+            MaterialWarehouse.material_warehouse_name,
         )
         .join(
             MaterialWarehouse,
@@ -158,7 +182,6 @@ def get_all_material_types():
 def create_material_type():
     material_type = request.json.get("materialType", None)
     warehouse_name = request.json.get("warehouseName", None)
-    print(material_type, warehouse_name, material_category)
     # Get the warehouse based on the warehouse name
     warehouse = (
         db.session.query(MaterialWarehouse)
@@ -286,7 +309,10 @@ def create_material():
         existing_material = (
             db.session.query(Material, Supplier)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-            .filter(Material.material_name == material_name, Supplier.supplier_name == factory_name)
+            .filter(
+                Material.material_name == material_name,
+                Supplier.supplier_name == factory_name,
+            )
             .first()
         )
 
@@ -376,7 +402,9 @@ def get_all_material_storage():
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
         )
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .outerjoin(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+        .outerjoin(
+            OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id
+        )
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
     )
@@ -389,9 +417,13 @@ def get_all_material_storage():
     if material_name:
         query = query.filter(Material.material_name.like(f"%{material_name}%"))
     if material_spec:
-        query = query.filter(text("specification LIKE :spec")).params(spec=f"%{material_spec}%")
+        query = query.filter(text("specification LIKE :spec")).params(
+            spec=f"%{material_spec}%"
+        )
     if warehouse_name:
-        query = query.filter(MaterialWarehouse.material_warehouse_name.like(f"%{warehouse_name}%"))
+        query = query.filter(
+            MaterialWarehouse.material_warehouse_name.like(f"%{warehouse_name}%")
+        )
     if factory_name:
         query = query.filter(Supplier.supplier_name.like(f"%{factory_name}%"))
     if order_id:
@@ -400,7 +432,6 @@ def get_all_material_storage():
         query = query.filter(Shoe.shoe_rid.like(f"%{order_shoe_id}%"))
 
     material_storages = query.all()
-
 
     result = []
     for material_storage in material_storages:
@@ -413,8 +444,11 @@ def get_all_material_storage():
                 "warehouseName": material_storage.material_warehouse_name,
                 "unit": material_storage.material_unit,
                 "amountRemain": round(material_storage.material_storage_amount, 3),
-                "valueRemain": round(material_storage.material_storage_amount
-                * material_storage.unit_price, 3),
+                "valueRemain": round(
+                    material_storage.material_storage_amount
+                    * material_storage.unit_price,
+                    3,
+                ),
                 "unitPrice": round(material_storage.unit_price, 3),
                 "factoryName": material_storage.supplier_name,
                 "inheritId": material_storage.shoe_rid,
