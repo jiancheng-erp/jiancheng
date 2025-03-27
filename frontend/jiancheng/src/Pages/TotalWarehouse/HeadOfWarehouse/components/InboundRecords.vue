@@ -78,7 +78,7 @@
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
                     <td style="padding:5px; width: 150px;" align="left">入库方式:{{
                         determineInboundName(currentRow.inboundType)
-                        }}</td>
+                    }}</td>
                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{ currentRow.payMethod }}</td>
                 </tr>
             </table>
@@ -199,13 +199,13 @@
                     <el-table-column label="数量">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.inboundQuantity" :step="0.001" :min="0" :precision="3"
-                                size="small"></el-input-number>
+                                size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
                         </template>
                     </el-table-column>
                     <el-table-column label="单价">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.unitPrice" :step="0.001" :min="0" :precision="3"
-                                size="small"></el-input-number>
+                                size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
                         </template>
                     </el-table-column>
                     <el-table-column label="总价">
@@ -243,6 +243,7 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
+import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 export default {
     directives: {
         print
@@ -296,6 +297,9 @@ export default {
         }
     },
     methods: {
+        updateTotalPrice(row) {
+            row.itemTotalPrice = updateTotalPriceHelper(row)
+        },
         calculateInboundTotal() {
             // Calculate the total inbound quantity
             const number = this.recordData.items.reduce((total, item) => {
