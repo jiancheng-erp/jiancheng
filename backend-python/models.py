@@ -1546,3 +1546,28 @@ class RevertEvent(db.Model):
     event_time = db.Column(db.DateTime, nullable=True)
     order_id = db.Column(db.BigInteger, nullable=True)
     
+class DefaultBom(db.Model):
+    __tablename__ = "default_bom"
+    default_bom_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    bom_type = db.Column(db.SmallInteger, nullable=False)
+    shoe_type_id = db.Column(db.BigInteger, nullable=False)
+    bom_status = db.Column(db.String(1), nullable=False)
+    bom_id = db.Column(db.BigInteger, nullable=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('shoe_type_id', name='unq_default_bom'),
+    )
+    
+class DefaultCraftSheet(db.Model):
+    __tablename__ = "default_craft_sheet"
+    default_craft_sheet_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    shoe_id = db.Column(db.Integer, nullable=False)
+    craft_sheet_id = db.Column(db.BigInteger, nullable=True)
+    
+    __table_args__ = (
+        db.UniqueConstraint('shoe_id', name='unq_default_craft_sheet'),
+    )
+    
+    
+    
+    

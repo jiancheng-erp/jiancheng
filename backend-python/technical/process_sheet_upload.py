@@ -2169,6 +2169,36 @@ def issue_production_order():
             )
             db.session.add(second_bom)
             db.session.flush()
+            # find and update default bom
+            shoe_type_id = order_shoe_type.shoe_type_id
+            exist_default_second_bom = db.session.query(DefaultBom).filter(
+                DefaultBom.shoe_type_id == shoe_type_id, DefaultBom.bom_type == 1
+            ).first()
+            if exist_default_second_bom:
+                exist_default_second_bom.bom_id = second_bom.bom_id
+                exist_default_second_bom.bom_status = 2
+            else:
+                default_second_bom = DefaultBom(
+                    shoe_type_id=shoe_type_id,
+                    bom_id=second_bom.bom_id,
+                    bom_type=1,
+                    bom_status=2,
+                )
+                db.session.add(default_second_bom)
+            db.session.flush()
+            # find and update default craft sheet
+            shoe_id = order_shoe.Shoe.shoe_id
+            exist_default_craft_sheet = db.session.query(DefaultCraftSheet).filter(
+                DefaultCraftSheet.shoe_id == shoe_id
+            ).first()
+            if exist_default_craft_sheet:
+                exist_default_craft_sheet.craft_sheet_id = craft_sheet.craft_sheet_id
+            else:
+                default_craft_sheet = DefaultCraftSheet(
+                    shoe_id=shoe_id, craft_sheet_id=craft_sheet.craft_sheet_id
+                )
+                db.session.add(default_craft_sheet)
+            
             second_bom_id = second_bom.bom_id
             for item in craft_sheet_items:
                 production_instruction_item = (
@@ -2183,6 +2213,7 @@ def issue_production_order():
                     production_instruction_item.material_specification = item.material_specification
                     production_instruction_item.craft_name = item.craft_name
                     db.session.flush()
+                material_type = production_instruction_item.material_type
                 first_bom_item = (
                     db.session.query(BomItem)
                     .filter(
@@ -2197,21 +2228,39 @@ def issue_production_order():
                     db.session.flush()
                 material_storage = (
                     db.session.query(MaterialStorage).filter(
-                        MaterialStorage.order_shoe_id == order_shoe_id,
-                        MaterialStorage.material_id == item.material_id,
-                        MaterialStorage.material_model == item.material_model,
-                        MaterialStorage.material_specification == item.material_specification,
+                        MaterialStorage.production_instruction_item_id == item.production_instruction_item_id
                     ).first()
                 )
                 if material_storage:
-                    material_storage.craft_name = item.craft_name
+                #find the hotsole craft name and combined to the craft name
+                    if material_type == "I":
+                        similiar_hotsole = (
+                            db.session.query(ProductionInstructionItem)
+                            .filter(
+                                ProductionInstructionItem.material_id == item.material_id,
+                                ProductionInstructionItem.material_model == item.material_model,
+                                ProductionInstructionItem.material_specification == item.material_specification,
+                                ProductionInstructionItem.color == item.color,
+                                ProductionInstructionItem.order_shoe_type_id == item.order_shoe_type_id,
+                                ProductionInstructionItem.material_type == "H",
+                            )
+                            .first()
+                        )
+                        hotsole_craft_name = similiar_hotsole.craft_name if similiar_hotsole else None
+                        if hotsole_craft_name:
+                            if item.craft_name:
+                                new_hotsole_craft_name = item.craft_name + "@" + hotsole_craft_name
+                            else:
+                                new_hotsole_craft_name = hotsole_craft_name
+                            material_storage.craft_name = new_hotsole_craft_name
+                        else:
+                            material_storage.craft_name = item.craft_name
+                    else:
+                        material_storage.craft_name = item.craft_name
                     db.session.flush()
                 size_material_storage =(
                     db.session.query(SizeMaterialStorage).filter(
-                        SizeMaterialStorage.order_shoe_id == order_shoe_id,
-                        SizeMaterialStorage.material_id == item.material_id,
-                        SizeMaterialStorage.size_material_model == item.material_model,
-                        SizeMaterialStorage.size_material_specification == item.material_specification,
+                        SizeMaterialStorage.production_instruction_item_id == item.production_instruction_item_id
                     ).first()
                 )
                 if size_material_storage:
@@ -2508,3 +2557,123 @@ def download_pic_notes():
     file_path = os.path.join(folder_path, "投产指令单备注图片.jpg")
     new_name = order_id + "-" + order_shoe_rid + "_投产指令单备注图片.jpg"
     return send_file(file_path, as_attachment=True, download_name=new_name)
+
+@process_sheet_upload_bp.route("/craftsheet/pastcraftsheetexist", methods=["GET"])
+def check_past_craft_sheet_exist():
+    order_id = request.args.get("orderId")
+    order_shoe = db.session.query(OrderShoe).filter(OrderShoe.order_id == order_id).first()
+    shoe_id = db.session.query(OrderShoe).filter(OrderShoe.order_id == order_id).first().shoe_id
+    default_craft_sheet = db.session.query(DefaultCraftSheet).filter(DefaultCraftSheet.shoe_id == shoe_id).first()
+    if default_craft_sheet:
+        return jsonify({"exist": True}), 200
+    else:
+        return jsonify({"exist": False}), 200
+
+@process_sheet_upload_bp.route("/craftsheet/getpastcraftsheet", methods=["GET"])
+def get_past_craft_sheet_material():
+    order_id = request.args.get("orderId")
+    shoe_id = db.session.query(OrderShoe).filter(OrderShoe.order_id == order_id).first().shoe_id
+    default_craft_sheet = db.session.query(DefaultCraftSheet).filter(DefaultCraftSheet.shoe_id == shoe_id).first()
+    if default_craft_sheet:
+        craft_sheet_id = default_craft_sheet.craft_sheet_id
+        craft_sheet = db.session.query(CraftSheet).filter(CraftSheet.craft_sheet_id == craft_sheet_id).first()
+        past_order_shoe = db.session.query(OrderShoe).filter(OrderShoe.order_shoe_id == craft_sheet.order_shoe_id).first()
+        craft_sheet_items = db.session.query(CraftSheetItem, OrderShoeType, ShoeType, Color).join(
+            OrderShoeType, CraftSheetItem.order_shoe_type_id == OrderShoeType.order_shoe_type_id
+        ).join(
+            ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id
+        ).join(
+            Color, ShoeType.color_id == Color.color_id
+        ).filter(
+            CraftSheetItem.craft_sheet_id == craft_sheet_id
+        ).all()
+        print(craft_sheet_items)
+        result_dict = {}
+        for item in craft_sheet_items:
+            color_name = item.Color.color_name
+            if color_name not in result_dict:
+                result_dict[color_name] = {
+                    "color": color_name,
+                    "surfaceMaterialData": [],
+                    "insideMaterialData": [],
+                    "accessoryMaterialData": [],
+                    "outsoleMaterialData": [],
+                    "midsoleMaterialData": [],
+                    "lastMaterialData": [],
+                    "hotsoleMaterialData": [],
+                }
+            material = (
+                db.session.query(Material, MaterialType, Supplier)
+                .join(
+                    MaterialType, Material.material_type_id == MaterialType.material_type_id
+                )
+                .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                .filter(Material.material_id == item.CraftSheetItem.material_id)
+                .first()
+            )
+            if item.CraftSheetItem.craft_name != None:
+                material_craft_list = item.CraftSheetItem.craft_name.split("@")
+                material_craft_name = ",".join(material_craft_list)
+            else:
+                material_craft_list = []
+                material_craft_name = ""
+            # Map material type to the appropriate array in the dictionary
+            material_data = {
+                "craftSheetItemId": item.CraftSheetItem.craft_sheet_item_id,
+                "materialId": item.CraftSheetItem.material_id,
+                "materialType": material.MaterialType.material_type_name,
+                "materialName": material.Material.material_name,
+                "materialModel": item.CraftSheetItem.material_model,
+                "materialSpecification": item.CraftSheetItem.material_specification,
+                "color": item.CraftSheetItem.color,
+                "unit": material.Material.material_unit,
+                "supplierName": material.Supplier.supplier_name,
+                "comment": item.CraftSheetItem.remark,
+                "useDepart": item.CraftSheetItem.department_id,
+                "pairs": item.CraftSheetItem.pairs,
+                "unitUsage": item.CraftSheetItem.unit_usage,
+                "materialCraftName": material_craft_name,
+                "materialCraftNameList": material_craft_list,
+                "materialDetailType": item.CraftSheetItem.material_second_type,
+                "materialSource": item.CraftSheetItem.material_source,
+                "productionInstructionItemId": item.CraftSheetItem.production_instruction_item_id,
+                "processingRemark": item.CraftSheetItem.processing_remark
+            }
+
+            if item.CraftSheetItem.material_type == "S":
+                result_dict[color_name]["surfaceMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "I":
+                result_dict[color_name]["insideMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "A":
+                result_dict[color_name]["accessoryMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "O":
+                result_dict[color_name]["outsoleMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "M":
+                result_dict[color_name]["midsoleMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "L":
+                result_dict[color_name]["lastMaterialData"].append(material_data)
+            elif item.CraftSheetItem.material_type == "H":
+                result_dict[color_name]["hotsoleMaterialData"].append(material_data)
+        
+        result = list(result_dict.values())
+        craft_sheet_detail = {
+            "adjuster": past_order_shoe.adjust_staff,
+            "reviewer": craft_sheet.reviewer,
+            "cutDie": craft_sheet.cut_die_staff,
+            "productionRemark": craft_sheet.production_remark,
+            "cuttingSpecialCraft": craft_sheet.cutting_special_process,
+            "sewingSpecialCraft": craft_sheet.sewing_special_process,
+            "moldingSpecialCraft": craft_sheet.molding_special_process,
+            "postProcessing": craft_sheet.post_processing_comment,
+            "oilyGlue": craft_sheet.oily_glue,
+            "cutDieImgPath": craft_sheet.cut_die_img_path,
+            "picNoteImgPath": craft_sheet.pic_note_img_path,
+           
+        }
+        fin_result = {
+            "uploadData": result,
+            "craftSheetDetail": craft_sheet_detail,
+        }
+        return jsonify(fin_result)
+
+    
