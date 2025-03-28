@@ -51,7 +51,7 @@
                             </el-descriptions>
                         </el-col>
                     </el-row>
-                    
+
                 </el-col>
             </el-row>
             <el-row :gutter="20" style="margin-top: 10px">
@@ -1230,10 +1230,22 @@ export default {
             this.newProductionInstructionId = response.data.productionInstructionId
         },
         async getPastMaterialData(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`
-            )
-            this.pastMaterialData = response.data
+            try {
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`
+                )
+                this.pastMaterialData = response.data
+            }
+            catch (error) {
+                console.error("Error fetching past material data:", error);
+                if (error.response) {
+                    ElMessage.error(error.response.data.message)
+                }
+                else {
+                    ElMessage.error('获取历史材料数据失败')
+                }
+            }
+
         },
         syncAllMaterials() {
             ElMessageBox.alert('确认复制所有材料至所有颜色吗', '警告', {
@@ -1340,23 +1352,34 @@ export default {
                 })
         },
         async addPastMaterialToCurrent() {
-            console.log(this.selectShoeTypeRow[0].shoeTypeId)
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
-                {
-                    params: {
-                        shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
+            try {
+                console.log(this.selectShoeTypeRow[0].shoeTypeId)
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
+                    {
+                        params: {
+                            shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
+                        }
                     }
+                )
+                const pastMaterialData = response.data
+                console.log(this.materialWholeData)
+                this.materialWholeData[0].surfaceMaterialData = pastMaterialData.surfaceMaterialData
+                this.materialWholeData[0].insideMaterialData = pastMaterialData.insideMaterialData
+                this.materialWholeData[0].accessoryMaterialData = pastMaterialData.accessoryMaterialData
+                this.materialWholeData[0].outsoleMaterialData = pastMaterialData.outsoleMaterialData
+                this.materialWholeData[0].midsoleMaterialData = pastMaterialData.midsoleMaterialData
+                this.materialWholeData[0].hotsoleMaterialData = pastMaterialData.hotsoleMaterialData
+            }
+            catch (error) {
+                console.error("Error fetching past material data:", error);
+                if (error.response) {
+                    ElMessage.error(error.response.data.message)
                 }
-            )
-            const pastMaterialData = response.data
-            console.log(this.materialWholeData)
-            this.materialWholeData[0].surfaceMaterialData = pastMaterialData.surfaceMaterialData
-            this.materialWholeData[0].insideMaterialData = pastMaterialData.insideMaterialData
-            this.materialWholeData[0].accessoryMaterialData = pastMaterialData.accessoryMaterialData
-            this.materialWholeData[0].outsoleMaterialData = pastMaterialData.outsoleMaterialData
-            this.materialWholeData[0].midsoleMaterialData = pastMaterialData.midsoleMaterialData
-            this.materialWholeData[0].hotsoleMaterialData = pastMaterialData.hotsoleMaterialData
+                else {
+                    ElMessage.error('获取历史材料数据失败')
+                }
+            }
         },
         addMaterialByManual(typeSymbol) {
             const preActiveMaterialData = this.materialWholeData.find(

@@ -1182,6 +1182,8 @@ def get_past_material_data():
     ).join(ProductionInstruction, OrderShoe.order_shoe_id == ProductionInstruction.order_shoe_id).filter(
         OrderShoeType.shoe_type_id == shoe_type_id
     ).first()
+    if production_instruction is None:
+        return jsonify({"message": "该鞋型无过往投产指令单"}), 404
     production_instruction_id = production_instruction.ProductionInstruction.production_instruction_id
     bom_items = (
         db.session.query(
@@ -1248,6 +1250,8 @@ def get_format_past_material_data():
     ).join(ProductionInstruction, OrderShoe.order_shoe_id == ProductionInstruction.order_shoe_id).filter(
         OrderShoeType.shoe_type_id == shoe_type_id
     ).first()
+    if production_instruction is None:
+        return jsonify({"message": "该鞋型无过往投产指令单"}), 404
     production_instruction_id = production_instruction.ProductionInstruction.production_instruction_id
     bom_items = (
         db.session.query(

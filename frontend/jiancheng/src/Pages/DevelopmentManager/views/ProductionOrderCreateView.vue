@@ -1932,10 +1932,21 @@ export default {
             this.newProductionInstructionId = response.data.productionInstructionId
         },
         async getPastMaterialData(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`
-            )
-            this.pastMaterialData = response.data
+            try {
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`
+                )
+                this.pastMaterialData = response.data
+            }
+            catch (error) {
+                console.error("Error fetching past material data:", error);
+                if (error.response) {
+                    ElMessage.error(error.response.data.message)
+                }
+                else {
+                    ElMessage.error('获取历史材料数据失败')
+                }
+            }
         },
         syncAllMaterials() {
             ElMessageBox.alert('确认复制所有材料至所有颜色吗', '警告', {
@@ -2048,42 +2059,53 @@ export default {
             this.productionInstructionDetail = response.data
         },
         async addPastMaterialToCurrent() {
-            console.log(this.selectShoeTypeRow[0].shoeTypeId);
+            try {
+                console.log(this.selectShoeTypeRow[0].shoeTypeId);
 
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
-                {
-                    params: {
-                        shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
+                const response = await axios.get(
+                    `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
+                    {
+                        params: {
+                            shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
+                        }
                     }
+                );
+
+                const pastMaterialData = response.data;
+                console.log("Past Material Data:", pastMaterialData);
+                console.log("Current Material Data Before Update:", this.materialWholeData);
+
+                // Create a map for quick lookup of past material data by color
+                const pastMaterialMap = new Map();
+                pastMaterialData.forEach(item => {
+                    pastMaterialMap.set(item.color, item);
+                });
+
+                // Update matching colors in materialWholeData
+                this.materialWholeData.forEach(material => {
+                    const pastMaterial = pastMaterialMap.get(material.color);
+                    if (pastMaterial) {
+                        // If color matches, update the material data
+                        material.surfaceMaterialData = pastMaterial.surfaceMaterialData;
+                        material.insideMaterialData = pastMaterial.insideMaterialData;
+                        material.accessoryMaterialData = pastMaterial.accessoryMaterialData;
+                        material.outsoleMaterialData = pastMaterial.outsoleMaterialData;
+                        material.midsoleMaterialData = pastMaterial.midsoleMaterialData;
+                        material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData;
+                    }
+                });
+
+                console.log("Updated Material Data:", this.materialWholeData);
+            }
+            catch (error) {
+                console.error("Error fetching past material data:", error);
+                if (error.response) {
+                    ElMessage.error(error.response.data.message)
                 }
-            );
-
-            const pastMaterialData = response.data;
-            console.log("Past Material Data:", pastMaterialData);
-            console.log("Current Material Data Before Update:", this.materialWholeData);
-
-            // Create a map for quick lookup of past material data by color
-            const pastMaterialMap = new Map();
-            pastMaterialData.forEach(item => {
-                pastMaterialMap.set(item.color, item);
-            });
-
-            // Update matching colors in materialWholeData
-            this.materialWholeData.forEach(material => {
-                const pastMaterial = pastMaterialMap.get(material.color);
-                if (pastMaterial) {
-                    // If color matches, update the material data
-                    material.surfaceMaterialData = pastMaterial.surfaceMaterialData;
-                    material.insideMaterialData = pastMaterial.insideMaterialData;
-                    material.accessoryMaterialData = pastMaterial.accessoryMaterialData;
-                    material.outsoleMaterialData = pastMaterial.outsoleMaterialData;
-                    material.midsoleMaterialData = pastMaterial.midsoleMaterialData;
-                    material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData;
+                else {
+                    ElMessage.error('获取历史材料数据失败')
                 }
-            });
-
-            console.log("Updated Material Data:", this.materialWholeData);
+            }
         },
         handleConfirmLoad() {
             this.addPastMaterialToCurrent();
