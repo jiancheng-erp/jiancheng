@@ -11,15 +11,16 @@
                 <el-avatar :icon="UserFilled" :size="30" />
             </div>
             <el-tabs tab-position="left" style="height: 700px" class="demo-tabs" type="border-card">
-                <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
+                <!-- <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane> -->
                 <!-- <el-tab-pane label="项目录入"><FinancialItemEntry /></el-tab-pane> -->
-                <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane>
+                <!-- <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane> -->
                 <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane>
-                <el-tab-pane label="财务科目信息"><FinancialAccountDetail /></el-tab-pane>
-                <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane>
+                <!-- <el-tab-pane label="财务科目信息"><FinancialAccountDetail /></el-tab-pane>
+                <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane> -->
                 <!-- <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane> -->
-                <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
-                <el-tab-pane label="入库记录"><InboundRecords /></el-tab-pane>
+                <el-tab-pane label="仓库入库记录"><FinancialWarehouseDetail/></el-tab-pane>
+                <!-- <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
+                <el-tab-pane label="入库记录"><InboundRecords /></el-tab-pane> -->
             </el-tabs>
         </el-main>
     </el-container>
@@ -37,6 +38,7 @@ import InventoryView from '../components/InventoryView.vue'
 import OrderStatusConfirm from '../components/OrderStatusConfirm.vue'
 import FinancialAccountDetail from '../components/FinancialAccountDetail.vue'
 import FinancialAccountManagement from '../components/FinancialAccountManagement.vue'
+import FinancialWarehouseDetail from '../components/FinancialWarehouseDetail.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { useRouter } from 'vue-router'
 import InboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InboundRecords.vue'

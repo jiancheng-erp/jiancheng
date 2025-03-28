@@ -161,6 +161,15 @@ def outsource_status_strtoint(status_str):
         status = 7
     return status
 
+def accounting_audit_status_converter(status_val):
+    result = ""
+    if status_val == 0:
+        result = "待审核"
+    elif status_val == 1:
+        result = "已审核"
+    elif status_val == 2:
+        result = "已驳回"
+    return result    
 
 def to_snake(request_attr_name):
     return ''.join(['_'+c.lower() if c.isupper() else c for c in request_attr_name]).lstrip('_')
@@ -171,3 +180,24 @@ def to_camel(db_attr_name):
         [split_list[0]] + [db_attr.capitalize() for db_attr in split_list[1:]]
     )
     return result
+def db_obj_to_res(db_entity, db_model,attr_name_offset=0, attr_name_list=[], initial_res=None):
+    if initial_res:
+        res = initial_res
+    else:
+        res = {}
+    if attr_name_list == []:
+        attr_name_list = db_model.__table__.columns.keys()
+    else:
+        if not set(db_model.__table__.columns.keys()).issuperset(set(attr_name_list)):
+            print("ERROR attr name wrong")
+            return res
+    if attr_name_offset == 0:
+        for attr in attr_name_list:
+            res[to_camel(attr)] = getattr(db_entity, attr)
+    else:
+        for attr in attr_name_list:
+            print(attr[attr_name_offset:])
+            print(to_camel(attr[attr_name_offset:]))
+            res[to_camel(attr[attr_name_offset:])] = getattr(db_entity, attr)
+
+    return res

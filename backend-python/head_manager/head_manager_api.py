@@ -266,7 +266,8 @@ def get_order_status_info():
             customer_name = customers.get(o.customer_id, "")
             order_shoe_list = []
 
-            for os, shoe in shoes_by_order[o.order_id]:
+            if len(shoes_by_order[o.order_id]) == 1:
+                os, shoe = shoes_by_order[o.order_id][0]
                 sid = os.order_shoe_id
                 is_arrived_string = "已到料" if production_infos.get(sid) else "未到料"
 
@@ -281,23 +282,57 @@ def get_order_status_info():
                     outbound_status = "未完全出库"
                 else:
                     outbound_status = "已出库"
-
                 order_shoe_list.append({
-                    "orderShoeId": sid,
+                        "orderShoeId": sid,
+                        "shoeRId": shoe.shoe_rid,
+                        "shoeName": os.customer_product_name,
+                        "isMaterialArrived": is_arrived_string,
+                        "orderShoeStatus": order_shoe_status_string,
+                        "outboundStatus": outbound_status,
+                    })
+                order_status_info.append({
+                    "orderId": o.order_id,
+                    "customerName": customer_name,
                     "shoeRId": shoe.shoe_rid,
                     "shoeName": os.customer_product_name,
-                    "isMaterialArrived": is_arrived_string,
-                    "orderShoeStatus": order_shoe_status_string,
-                    "outboundStatus": outbound_status,
+                    "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
+                    "orderRid": o.order_rid,
+                    "orderShoes": order_shoe_list,
                 })
 
-            order_status_info.append({
-                "orderId": o.order_id,
-                "customerName": customer_name,
-                "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
-                "orderRid": o.order_rid,
-                "orderShoes": order_shoe_list,
-            })
+            else:
+                for os, shoe in shoes_by_order[o.order_id]:
+                    sid = os.order_shoe_id
+                    is_arrived_string = "已到料" if production_infos.get(sid) else "未到料"
+
+                    # Status string
+                    order_shoe_status_string = " ".join(status_by_shoe.get(sid, []))
+
+                    # Outbound status
+                    f_status_list = finished_statuses.get(sid, [])
+                    if not f_status_list:
+                        outbound_status = "未入库"
+                    elif any(s in (0, 1) for s in f_status_list):
+                        outbound_status = "未完全出库"
+                    else:
+                        outbound_status = "已出库"
+
+                    order_shoe_list.append({
+                        "orderShoeId": sid,
+                        "shoeRId": shoe.shoe_rid,
+                        "shoeName": os.customer_product_name,
+                        "isMaterialArrived": is_arrived_string,
+                        "orderShoeStatus": order_shoe_status_string,
+                        "outboundStatus": outbound_status,
+                    })
+
+                order_status_info.append({
+                    "orderId": o.order_id,
+                    "customerName": customer_name,
+                    "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
+                    "orderRid": o.order_rid,
+                    "orderShoes": order_shoe_list,
+                })
 
         print("time taken for get order status info is", time.time() - time_s)
         return jsonify(order_status_info)
