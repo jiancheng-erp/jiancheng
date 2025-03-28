@@ -590,7 +590,7 @@
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="退回流程" v-model="isRevertDialogVisable" width="20%" :close-on-click-modal="false">
+    <el-dialog title="退回流程" v-model="isRevertDialogVisible" width="50%" :close-on-click-modal="false">
         <span>
             <span>退回流程</span>
             <el-row :gutter="20">
@@ -623,7 +623,7 @@
         </span>
         <template #footer>
             <span>
-                <el-button @click="isRevertDialogVisable = false">取消</el-button>
+                <el-button @click="isRevertDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="saveRevertForm">确认</el-button>
             </span>
         </template>
@@ -699,7 +699,7 @@ export default {
                 isNeedMiddleProcess: '0'
             },
             revertStatusReasonOptions: [],
-            isRevertDialogVisable: false
+            isRevertDialogVisible: false
         }
     },
     async mounted() {
@@ -1130,16 +1130,6 @@ export default {
         },
         async saveEditUsagePurchase() {
             console.log(this.bomTestData)
-            // Validate that all existing rows have non-empty fields
-            for (const row of this.bomTestData) {
-                if (!row.purchaseAmount) {
-                    this.$message({
-                        type: 'warning',
-                        message: '请填写所有字段'
-                    })
-                    return
-                }
-            }
             const loadingInstance = this.$loading({
                 lock: true,
                 text: '等待中，请稍后...',
@@ -1190,16 +1180,6 @@ export default {
             this.purchaseOrderCreateVis = true
         },
         async saveUsagePurchase() {
-            // Validate that all existing rows have non-empty fields
-            for (const row of this.bomTestData) {
-                if (!row.purchaseAmount) {
-                    this.$message({
-                        type: 'warning',
-                        message: '请填写所有字段'
-                    })
-                    return
-                }
-            }
             const loadingInstance = this.$loading({
                 lock: true,
                 text: '等待中，请稍后...',
@@ -1417,7 +1397,7 @@ export default {
             this.revertForm.revertDetail = ''
             this.revertForm.revertReason = ''
             this.revertForm.isNeedMiddleProcess = '0'
-            this.isRevertDialogVisable = true
+            this.isRevertDialogVisible = true
         },
         handleStatusSelect() {
             //when select status, make the revertReason to be the reason field of the selected status
@@ -1456,7 +1436,7 @@ export default {
                         type: 'success',
                         message: '退回成功'
                     })
-                    this.isRevertDialogVisable = false
+                    this.isRevertDialogVisible = false
                     this.getAllShoeListInfo()
                 }
                 else {
