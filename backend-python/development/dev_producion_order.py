@@ -819,6 +819,23 @@ def issue_production_order():
             db.session.add(first_bom)
             db.session.flush()
             first_bom_id = first_bom.bom_id
+            # find and update default bom
+            shoe_type_id = order_shoe_type.shoe_type_id
+            exist_default_first_bom = db.session.query(DefaultBom).filter(
+                DefaultBom.shoe_type_id == shoe_type_id, DefaultBom.bom_type == 0
+            ).first()
+            if exist_default_first_bom:
+                exist_default_first_bom.bom_id = first_bom.bom_id
+                exist_default_first_bom.bom_status = 2
+            else:
+                default_first_bom = DefaultBom(
+                    shoe_type_id=shoe_type_id,
+                    bom_id=first_bom.bom_id,
+                    bom_type=0,
+                    bom_status=2,
+                )
+                db.session.add(default_first_bom)
+            db.session.flush()
             craft_sheet_id = craft_sheet.craft_sheet_id
             for item in production_instruction_items:
                 if item.order_shoe_type_id == order_shoe_type.order_shoe_type_id:
