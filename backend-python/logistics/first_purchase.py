@@ -484,12 +484,12 @@ def save_purchase():
     )
     total_bom_id = total_bom.total_bom_id
     order_shoe_id = total_bom.order_shoe_id
-    order_id = (
+    order_shoe = (
         db.session.query(OrderShoe)
         .filter(OrderShoe.order_shoe_id == order_shoe_id)
         .first()
-        .order_id
     )
+    order_id = order_shoe.order_id
     purchase_order = PurchaseOrder(
         purchase_order_rid=purchase_order_rid,
         bom_id=total_bom_id,
@@ -624,6 +624,15 @@ def save_purchase():
                         )
                         size_material_storage.total_current_amount -= storage_amount
                 db.session.flush()
+    # set the order shoe status to 1
+    order_shoe_status = (
+        db.session.query(OrderShoeStatus)
+        .filter(OrderShoeStatus.order_shoe_id == order_shoe_id, OrderShoeStatus.current_status == 6)
+        .first()
+    )
+    if not order_shoe_status:
+        return jsonify({"message": "Order shoe status not found"}), 404
+    order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -987,6 +996,9 @@ def submit_purchase_divide_orders():
             craft_name = purchase_order_item.craft_name
         else:
             craft_name = ""
+        # don't create material storage if the quantity is 0
+        if material_quantity == 0:
+            continue
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 order_id=order_id,

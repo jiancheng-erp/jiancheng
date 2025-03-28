@@ -22,6 +22,7 @@ def get_task():
             OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
         )
         .filter(OrderShoeStatus.current_status_value == task_status)
+        .order_by(Order.start_date)
     )
 
     if shoe_status != "all":
