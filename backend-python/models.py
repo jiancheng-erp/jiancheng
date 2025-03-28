@@ -1123,6 +1123,7 @@ class InboundRecord(db.Model):
     inbound_rid = db.Column(db.String(50), nullable=True)
     inbound_batch_id = db.Column(db.Integer, nullable=True)
     supplier_id = db.Column(db.Integer, nullable=True)
+    warehouse_id = db.Column(db.Integer, nullable=False)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
     inbound_type = db.Column(db.SmallInteger, nullable=False)
     total_price = db.Column(db.DECIMAL(12, 3), nullable=True)

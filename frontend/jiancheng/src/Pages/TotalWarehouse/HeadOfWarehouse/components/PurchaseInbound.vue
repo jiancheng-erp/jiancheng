@@ -174,11 +174,9 @@
                     <!-- <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ inboundForm.totalPurchaseOrderRId }}
                     </td> -->
                     <td style="padding:5px; width: 150px;" align="left">供应商:{{ previewInboundForm.supplierName }}</td>
+                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{ previewInboundForm.warehouseName }}</td>
                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{ previewInboundForm.currentDateTime }}
                     </td>
-                    <td style="padding:5px; width: 150px;" align="left">入库方式:{{
-                        determineInboundName(previewInboundForm.inboundType)
-                    }}</td>
                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{ previewInboundForm.payMethod }}</td>
                 </tr>
             </table>
@@ -196,7 +194,7 @@
                         column.label }}
                     </th>
                     <th width="80">单价</th>
-                    <th width="80">总价</th>
+                    <th width="80">金额</th>
                     <th>备注</th>
                 </tr>
                 <tr v-for="(item, index) in previewData" :key="index" align="center">
@@ -272,6 +270,8 @@ export default {
                 remark: '',
                 shoeSize: null,
                 payMethod: '',
+                warehouseName: null,
+                warehouseId: null,
             },
             rowTemplate: {
                 materialName: '',
@@ -364,11 +364,15 @@ export default {
             }
         },
         async getMaterialNameOptions() {
-            const params = {
+            let params = {
                 materialTypeId: this.inboundForm.materialTypeId,
             }
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
+            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
             this.materialNameOptions = response.data
+
+            response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
+            this.inboundForm.warehouseName = response.data.warehouseName
+            this.inboundForm.warehouseId = response.data.warehouseId
         },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
@@ -528,6 +532,7 @@ export default {
                 inboundType: this.inboundForm.inboundType,
                 currentDateTime: this.inboundForm.currentDateTime,
                 supplierName: this.inboundForm.supplierName,
+                warehouseId: this.inboundForm.warehouseId,
                 remark: this.inboundForm.remark,
                 items: this.materialTableData,
                 batchInfoTypeId: this.inboundForm.shoeSize,
