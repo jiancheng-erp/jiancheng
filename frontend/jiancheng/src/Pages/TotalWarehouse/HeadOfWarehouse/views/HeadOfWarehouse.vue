@@ -12,19 +12,22 @@
                     {{ userName }}
                 </div>
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
+                    <el-menu default-active="10" class="el-menu-vertical-demo">
                         <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>二次（总仓）采购订单创建</span>
+                        </el-menu-item>
+                        <el-menu-item index="13" @click="handleMenuClick(13)">
+                            <span>订单查询</span>
                         </el-menu-item>
                         <!-- <el-menu-item index="11" @click="handleMenuClick(11)">
                             <span>批量采购订单生成及下发</span>
                         </el-menu-item> -->
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
+                        <!-- <el-menu-item index="1" @click="handleMenuClick(1)">
                             <span>多码采购入库</span>
                         </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
                             <span>材料待出库</span>
-                        </el-menu-item>
+                        </el-menu-item> -->
                         <el-menu-item index="9" @click="handleMenuClick(9)">
                             <span>出入库记录</span>
                         </el-menu-item>
@@ -37,9 +40,9 @@
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>文件下载</span>
                         </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
+                        <!-- <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>独立采购</span>
-                        </el-menu-item>
+                        </el-menu-item> -->
                         <el-menu-item index="7" @click="handleMenuClick(7)">
                             <span>码段管理</span>
                         </el-menu-item>
@@ -78,6 +81,7 @@ import SecondPurchaseListView from '@/Pages/LogisticsControlDepartment/Logistics
 import InOutboundRecords from '../components/InOutboundRecords.vue'
 import MultiPurchaseIssue from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MultiPurchaseIssue.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import OrderSearch from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/OrderSearch.vue'
 
 export default {
     components: {
@@ -94,12 +98,13 @@ export default {
         SecondPurchaseListView,
         InOutboundRecords,
         MultiPurchaseIssue,
-        PersonalInfo
+        PersonalInfo,
+        OrderSearch
     },
     data() {
         return {
             UserFilled,
-            currentComponent:'InboundView',
+            currentComponent:'SecondPurchaseListView',
             userName: '',
             logout
         }
@@ -147,6 +152,9 @@ export default {
                     break
                 case 12:
                     this.currentComponent = 'PersonalInfo'
+                    break
+                case 13:
+                    this.currentComponent = 'OrderSearch'
                     break
             }
         }

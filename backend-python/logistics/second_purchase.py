@@ -111,6 +111,8 @@ def get_order_shoe_list():
                 current_status = "已保存"
             elif purchase_order.purchase_order_status == "2":
                 current_status = "已提交"
+            else:
+                return jsonify({"message": "采购单状态错误"}), 400
         else:
             current_status = "未填写"
         # Grouping by shoe_rid (inheritId) to avoid duplicate shoes
@@ -483,12 +485,12 @@ def save_purchase():
     )
     total_bom_id = total_bom.total_bom_id
     order_shoe_id = total_bom.order_shoe_id
-    order_id = (
+    order_shoe = (
         db.session.query(OrderShoe)
         .filter(OrderShoe.order_shoe_id == order_shoe_id)
         .first()
-        .order_id
     )
+    order_id = order_shoe.order_id
     purchase_order = PurchaseOrder(
         purchase_order_rid=purchase_order_rid,
         bom_id=total_bom_id,
@@ -623,6 +625,16 @@ def save_purchase():
                         )
                         size_material_storage.total_current_amount -= storage_amount
                 db.session.flush()
+
+    # set the order shoe status to 1
+    order_shoe_status = (
+        db.session.query(OrderShoeStatus)
+        .filter(OrderShoeStatus.order_shoe_id == order_shoe_id, OrderShoeStatus.current_status == 7)
+        .first()
+    )
+    if not order_shoe_status:
+        return jsonify({"message": "Order shoe status not found"}), 404
+    order_shoe_status.current_status_value = 1
     db.session.commit()
     return jsonify({"status": "success"})
 
@@ -990,6 +1002,9 @@ def submit_purchase_divide_orders():
             craft_name = craft_sheet_item.craft_name
         else:
             craft_name = bom_item.craft_name
+        # don't create material storage if the quantity is 0
+        if material_quantity == 0:
+            continue
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 order_id=order_id,
@@ -1344,7 +1359,7 @@ def submit_purchase_divide_orders():
     processor: EventProcessor = current_app.config["event_processor"]
     try:
         event_arr = []
-        for operation_id in [50, 51]:
+        for operation_id in [52, 53]:
             event = Event(
                 staff_id=3,
                 handle_time=datetime.datetime.now(),
