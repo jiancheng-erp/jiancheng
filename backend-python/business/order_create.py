@@ -12,7 +12,7 @@ from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from api_utility import format_date
 
 
-from app_config import app, db
+from app_config import db
 
 from flask import current_app
 from event_processor import EventProcessor

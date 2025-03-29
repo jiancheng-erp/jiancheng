@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, send_file
 import datetime
-from app_config import app, db
+from app_config import db
 from models import *
 from constants import SHOESIZERANGE
 from api_utility import randomIdGenerater

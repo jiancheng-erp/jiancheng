@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from app_config import app, db
+from app_config import db
 from sqlalchemy import func
 from models import *
 from file_locations import IMAGE_STORAGE_PATH

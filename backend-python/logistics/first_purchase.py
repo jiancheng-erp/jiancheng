@@ -8,7 +8,7 @@ import json
 from decimal import Decimal
 
 from api_utility import randomIdGenerater
-from app_config import app, db
+from app_config import db
 from business.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
 from event_processor import EventProcessor

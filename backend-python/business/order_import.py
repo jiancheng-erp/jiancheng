@@ -10,7 +10,7 @@ import shutil
 from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 
-from app_config import app, db
+from app_config import db
 
 order_import_bp = Blueprint("order_import_bp", __name__)
 

@@ -1,7 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt, jwt_required, get_jwt_identity, decode_token
-from app_config import app, db, redis_client, jwt
-from app_config import app, db
+from app_config import db
 from models import *
 from login.login import decrypt_password
 import hashlib
@@ -36,6 +35,7 @@ def get_all_staffs():
 
 @user_bp.route("/general/getcurrentstaffandcharacter", methods=["GET"])
 def get_current_staff_and_character():
+    redis_client = current_app.redis_client
     token = request.headers.get("Authorization")[7:]
     decoded_token = decode_token(token)  # Decode the created token
     jti = decoded_token["jti"]  # Extract the `jti` from the token payload

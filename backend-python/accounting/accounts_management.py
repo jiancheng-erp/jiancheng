@@ -3,7 +3,7 @@ from models import *
 from api_utility import to_camel, to_snake
 
 import time
-from app_config import app, db
+from app_config import db
 from sqlalchemy import func
 from constants import PAYABLE_EVENT_TO_TEXT, PAYABLE_EVENT_INBOUND,PAYABLE_EVENT_COMPOSITE_INBOUND,PAYABLE_EVENT_MISC_INBOUND,ACCOUNT_TYPE_CASH,ACCOUNT_TYPE_PAYABLE,ACCOUNT_TYPE_RECIEVABLE
 

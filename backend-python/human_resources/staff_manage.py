@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 import os
-from app_config import app, db
+from app_config import db
 from models import *
 from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from Crypto.Cipher import AES
