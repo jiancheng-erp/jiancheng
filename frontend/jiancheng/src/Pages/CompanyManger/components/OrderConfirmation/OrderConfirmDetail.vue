@@ -181,6 +181,7 @@
 
                 <span>
                     <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7 || role == 1">保存数据</el-button>
+                    <!--<el-button type="warning" @click="rejectOrder" v-if="orderData.orderStatus === 7">订单退回</el-button> -->
                     <el-button type="primary" @click="showMessage" v-if="orderData.orderStatus === 7">完成审批</el-button>
                 </span>
             </el-main>
@@ -281,6 +282,9 @@ async function getOrderInfo() {
                 orderShoeType.shoeTypeBatchData.currencyType
         })
     )
+}
+async function rejectOrder(){
+    
 }
 function tableHeaderStyle({ row, rowIndex }) {
     return 'background: #ccc; color: #000; font-weight: bolder;'
