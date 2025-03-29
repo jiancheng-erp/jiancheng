@@ -13,6 +13,8 @@ shoe_bp = Blueprint("shoe_bp", __name__)
 
 SHOE_TABLE_ATTRNAMES = Shoe.__table__.columns.keys()
 SHOETYPE_TABLE_ATTRNAMES = ShoeType.__table__.columns.keys()
+
+
 @shoe_bp.route("/shoe/getallshoes", methods=["GET"])
 def get_all_shoes():
     shoe_rid = request.args.get("shoerid")
@@ -67,46 +69,53 @@ def get_all_shoes_new():
     result_data = []
     # .outerjoin(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
     #         .outerjoin(Color, ShoeType.color_id == Color.color_id)
-    query = (
-        db.session.query(Shoe) 
-    )
+    query = db.session.query(Shoe)
     if user_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
         query = query.filter(Shoe.shoe_department_id == user_department)
 
-    if shoe_rid is not None:
+    if shoe_rid is not None and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
 
     total_count = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     shoe_id_list = [shoe.shoe_id for shoe in response]
-    entities = (db.session.query(ShoeType, Color)
-                .join(Color, ShoeType.color_id == Color.color_id)
-                .filter(ShoeType.shoe_id.in_(shoe_id_list))).all()
+    entities = (
+        db.session.query(Shoe, ShoeType, Color)
+        .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
+        .filter(ShoeType.shoe_id.in_(shoe_id_list))
+        .all()
+    )
     res_data = {}
     for shoe in response:
         res_data[shoe.shoe_id] = dict()
         for attr in SHOE_TABLE_ATTRNAMES:
             res_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
-        res_data[shoe.shoe_id]['shoeTypeData'] = []
-    
-    for shoe_type, color in entities:
+        res_data[shoe.shoe_id]["shoeTypeData"] = []
+
+    for shoe, shoe_type, color in entities:
         shoe_type_res = {}
         for attr in SHOETYPE_TABLE_ATTRNAMES:
             shoe_type_res[to_camel(attr)] = getattr(shoe_type, attr)
-        shoe_type_res['colorName'] = color.color_name
-        shoe_type_res['shoeRid'] = shoe.shoe_rid
-        shoe_type_res['shoeImageUrl'] = IMAGE_STORAGE_PATH + shoe_type.shoe_image_url if shoe_type.shoe_image_url else None
-        res_data[shoe_type.shoe_id]['shoeTypeData'].append(shoe_type_res)
+        shoe_type_res["colorName"] = color.color_name
+        shoe_type_res["shoeRid"] = shoe.shoe_rid
+        shoe_type_res["shoeImageUrl"] = (
+            IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+            if shoe_type.shoe_image_url
+            else None
+        )
+        res_data[shoe_type.shoe_id]["shoeTypeData"].append(shoe_type_res)
     result_data = list(res_data.values())
     time_t2 = time.time()
     print("get all shoes new time taken is " + " " + str(time_t2 - time_s))
-    return {"shoeTable":result_data, "total":total_count}, 200
-
+    return {"shoeTable": result_data, "total": total_count}, 200
 
 
 @shoe_bp.route("/shoe/getshoebatchinfotype", methods=["GET"])
 def get_shoe_batch():
-    batch_info_types = db.session.query(BatchInfoType).filter_by(batch_info_type_usage = 0).all()
+    batch_info_types = (
+        db.session.query(BatchInfoType).filter_by(batch_info_type_usage=0).all()
+    )
     result = []
     for batch_info_type in batch_info_types:
         result.append(
@@ -125,16 +134,18 @@ def get_shoe_batch():
                 "size43Slot": batch_info_type.size_43_name,
                 "size44Slot": batch_info_type.size_44_name,
                 "size45Slot": batch_info_type.size_45_name,
-                "size46Slot": batch_info_type.size_46_name 
+                "size46Slot": batch_info_type.size_46_name,
             }
         )
-    
+
     return jsonify(result)
 
 
 @shoe_bp.route("/shoe/getshoebatchinfotypelogistics", methods=["GET"])
 def get_shoe_batch_logistics():
-    batch_info_types = db.session.query(BatchInfoType).filter_by(batch_info_type_usage = 1).all()
+    batch_info_types = (
+        db.session.query(BatchInfoType).filter_by(batch_info_type_usage=1).all()
+    )
     result = []
     for batch_info_type in batch_info_types:
         result.append(
@@ -153,32 +164,36 @@ def get_shoe_batch_logistics():
                 "size43Slot": batch_info_type.size_43_name,
                 "size44Slot": batch_info_type.size_44_name,
                 "size45Slot": batch_info_type.size_45_name,
-                "size46Slot": batch_info_type.size_46_name 
+                "size46Slot": batch_info_type.size_46_name,
             }
         )
-    
+
     return jsonify(result)
+
 
 @shoe_bp.route("/shoe/getlastshoebatchinfotypebysizetable", methods=["GET"])
 def get_last_shoe_batch_by_size_table():
     orderId = request.args.get("orderId")
     if orderId is None:
         return jsonify("orderId is required"), 400
-    order_size_table = db.session.query(Order).filter_by(order_id = orderId).first().order_size_table
-    #transform order_size_table json to dict
+    order_size_table = (
+        db.session.query(Order).filter_by(order_id=orderId).first().order_size_table
+    )
+    # transform order_size_table json to dict
     order_size_table = json.loads(order_size_table)
     print(order_size_table)
-    last_order_list = order_size_table['楦头']
-    #trans the list to result like "size34Slot": last_order_list['楦头'][0], max to size47slot, if last_order_list is not enough, fill with None
-    #use index to get the value
+    last_order_list = order_size_table["楦头"]
+    # trans the list to result like "size34Slot": last_order_list['楦头'][0], max to size47slot, if last_order_list is not enough, fill with None
+    # use index to get the value
     result = {}
     for i in range(34, 47):
         if i - 34 < len(last_order_list):
-            result[f'size{i}Slot'] = last_order_list[i-34]
+            result[f"size{i}Slot"] = last_order_list[i - 34]
         else:
-            result[f'size{i}Slot'] = None
+            result[f"size{i}Slot"] = None
     print(result)
     return jsonify(result)
+
 
 @shoe_bp.route("/shoe/getshoebatchinfotypebysizetable", methods=["GET"])
 def get_shoe_batch_by_size_table():
@@ -205,49 +220,59 @@ def get_shoe_batch_by_size_table():
     # Convert the list into a response format (e.g., "size34Slot": value)
     result = {}
     for i in range(34, 47):
-        result[f'size{i}Slot'] = last_order_list[i - 34] if i - 34 < len(last_order_list) else None
+        result[f"size{i}Slot"] = (
+            last_order_list[i - 34] if i - 34 < len(last_order_list) else None
+        )
 
     return jsonify(result)
 
-    
-    
+
 @shoe_bp.route("/shoe/shoecolorinfo", methods=["GET"])
 def get_shoe_color_info():
-    entities = (db.session.query(Color, func.count(ShoeType.shoe_type_id))
-                .join(ShoeType, ShoeType.color_id == Color.color_id)
-                .group_by(Color.color_id).all())
+    entities = (
+        db.session.query(Color, func.count(ShoeType.shoe_type_id))
+        .join(ShoeType, ShoeType.color_id == Color.color_id)
+        .group_by(Color.color_id)
+        .all()
+    )
     res_data = []
     for color, count in entities:
-        res_data.append({"colorId":color.color_id,
-                         "colorNameCN":color.color_name,
-                         "colorNameEN":color.color_en_name,
-                         "colorNameSP":color.color_sp_name,
-                         "colorNameIT":color.color_it_name,
-                         "colorBoundCount":count})
-    
+        res_data.append(
+            {
+                "colorId": color.color_id,
+                "colorNameCN": color.color_name,
+                "colorNameEN": color.color_en_name,
+                "colorNameSP": color.color_sp_name,
+                "colorNameIT": color.color_it_name,
+                "colorBoundCount": count,
+            }
+        )
 
-    return jsonify({'colorInfo':res_data}), 200
+    return jsonify({"colorInfo": res_data}), 200
+
 
 @shoe_bp.route("/shoe/shoecolormerge", methods=["POST"])
 def merge_shoe_colors():
     data = request.get_json()
-    colors_to_merge = data.get('colorList')
-    color_name = colors_to_merge[0]['colorNameCN']
-    cur_max = colors_to_merge[0]['colorBoundCount']
-    max_color_id = colors_to_merge[0]['colorId']
+    colors_to_merge = data.get("colorList")
+    color_name = colors_to_merge[0]["colorNameCN"]
+    cur_max = colors_to_merge[0]["colorBoundCount"]
+    max_color_id = colors_to_merge[0]["colorId"]
     for color in colors_to_merge:
-        if color['colorNameCN'] != color_name:
-            return jsonify({"msg":"ERROR COLOR NOT THE SAME"}), 401
-        if color['colorBoundCount'] > cur_max:
-            cur_max = color['colorBoundCount']
-            max_color_id = color['colorId']
+        if color["colorNameCN"] != color_name:
+            return jsonify({"msg": "ERROR COLOR NOT THE SAME"}), 401
+        if color["colorBoundCount"] > cur_max:
+            cur_max = color["colorBoundCount"]
+            max_color_id = color["colorId"]
     # now perform the merge
-    shoe_type_entities = (db.session.query(ShoeType, Color)
-                          .join(Color, ShoeType.color_id == Color.color_id)
-                          .all())
-    color_ids = [color['colorId'] for color in colors_to_merge]
+    shoe_type_entities = (
+        db.session.query(ShoeType, Color)
+        .join(Color, ShoeType.color_id == Color.color_id)
+        .all()
+    )
+    color_ids = [color["colorId"] for color in colors_to_merge]
     for shoe_type, color in shoe_type_entities:
         if color.color_id in color_ids:
             shoe_type.color_id = max_color_id
     db.session.commit()
-    return jsonify({"msg":"color merged"}), 200
+    return jsonify({"msg": "color merged"}), 200

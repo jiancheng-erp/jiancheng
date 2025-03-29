@@ -75,7 +75,7 @@
                     <el-button @click="isSizeComparisonDialogVisible = false">Cancel</el-button>
                     <el-button type="primary" @click="">OK</el-button>
                 </span>
-            </template>
+            </template> 
         </el-dialog>
         <el-dialog title="刀模库存信息查询" v-model="isCutModelSearchDialogVisable" width="80%">
             <span>

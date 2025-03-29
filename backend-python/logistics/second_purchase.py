@@ -1005,6 +1005,7 @@ def submit_purchase_divide_orders():
         # don't create material storage if the quantity is 0
         if material_quantity == 0:
             continue
+            
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 order_id=order_id,
