@@ -425,7 +425,7 @@ def get_shoe_bom_items():
                     else combined_items[key]["bomItemId"]
                 )
             combined_items[key]["approvalUsage"] += (
-                bom_item.total_usage if bom_item.total_usage else 0.00
+                bom_item.total_usage if bom_item.total_usage else Decimal(0.00)
             )
             combined_items[key]["purchaseAmount"] += (
                 purchase_order_item.purchase_amount
