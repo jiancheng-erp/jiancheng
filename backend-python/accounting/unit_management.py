@@ -3,7 +3,7 @@ from models import *
 from api_utility import to_camel, to_snake
 
 import time
-from app_config import app, db
+from app_config import db
 
 units_management_bp = Blueprint("units_management", __name__)
 

@@ -6,8 +6,8 @@ from datetime import timedelta
 import hashlib
 
 from models import *
-from flask import Blueprint, jsonify, request
-from app_config import app, db, redis_client ,jwt
+from flask import Blueprint, jsonify, request, current_app
+from app_config import db
 
 login_bp = Blueprint("login_bp", __name__)
 
@@ -30,6 +30,7 @@ def decrypt_password(encrypted_password, iv, secret_key):
 
 @login_bp.route('/login', methods=['POST'])
 def login():
+    redis_client = current_app.redis_client
     data = request.json
     username = data.get("username")
     encrypted_password = data.get("password")
@@ -70,6 +71,7 @@ def login():
 @login_bp.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
+    redis_client = current_app.redis_client
     # Get the current token's jti from the JWT payload
     jti = get_jwt()["jti"]
     username = get_jwt_identity()

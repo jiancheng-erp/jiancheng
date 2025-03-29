@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, send_file
 from sqlalchemy.dialects.mysql import insert
 import datetime
-from app_config import app, db
+from app_config import db
 from models import *
 from api_utility import randomIdGenerater
 from event_processor import EventProcessor

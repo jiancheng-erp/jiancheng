@@ -3,7 +3,7 @@ from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res, format_datetime, accounting_audit_status_converter
 
 
-from app_config import app, db
+from app_config import db
 
 
 accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)

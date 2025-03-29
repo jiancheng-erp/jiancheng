@@ -4,7 +4,7 @@ from models import *
 from api_utility import to_camel, to_snake, format_datetime
 from constants import DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE, DEFAULT_TRANSACTION_UNIT
 import time
-from app_config import app, db
+from app_config import db
 from sqlalchemy import func
 
 payable_management_bp = Blueprint("payable_management", __name__)

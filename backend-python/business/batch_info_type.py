@@ -3,7 +3,7 @@ from models import *
 from api_utility import to_camel, to_snake
 
 
-from app_config import app, db
+from app_config import db
 
 batch_type_bp = Blueprint("batch_type_bp", __name__)
 TABLE_ATTRNAMES = BatchInfoType.__table__.columns.keys()

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from app_config import app, db
+from app_config import db
 from models import *
 
 outsource_factory_bp = Blueprint("outsource_factory_bp", __name__)

@@ -867,7 +867,7 @@ class Supplier(db.Model):
     __tablename__ = "supplier"
     supplier_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     supplier_name = db.Column(db.String(50), nullable=False)
-    supplier_type = db.Column(db.String(1), nullable=False)
+    supplier_type = db.Column(db.String(1), nullable=True)
 
     def __repr__(self):
         return f"<Supplier(supplier_id={self.supplier_id})>"
@@ -1033,7 +1033,7 @@ class MaterialWarehouse(db.Model):
     __tablename__ = "material_warehouse"
     material_warehouse_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     material_warehouse_name = db.Column(db.String(20), nullable=False)
-    material_warehouse_creation_date = db.Column(db.Date, nullable=False)
+    material_warehouse_creation_date = db.Column(db.Date, nullable=True)
 
     def __repr__(self):
         return f"<Warehouse(material_warehouse_id={self.material_warehouse_id})>"

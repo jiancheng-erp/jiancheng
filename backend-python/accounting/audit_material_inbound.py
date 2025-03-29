@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, abort, Response
 import json
 from models import *
 from api_utility import to_camel, to_snake
-from app_config import app, db
+from app_config import db
 from accounting.accounting_transaction import (
     add_payable_entity,
     material_inbound_accounting_event,
