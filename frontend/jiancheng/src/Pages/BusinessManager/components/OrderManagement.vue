@@ -1067,17 +1067,9 @@ export default {
                 out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
         handleSelectionShoeType(selection, shoeId) {
-            // check if the selected shoe type is already in the selectedShoeList
-            // if it is, remove it from the list
-            // if it is not, add it to the list
-            this.selectedShoeList = [
-                ...this.selectedShoeList.filter((item) => item.shoeId !== shoeId),
-                ...selection.map((item) => ({ ...item, shoeId }))
-            ];
-            this.newOrderForm.orderShoeTypes = [
-                ...this.newOrderForm.orderShoeTypes.filter((item) => item.shoeId !== shoeId),
-                ...selection.map((item) => ({ ...item, shoeId }))
-            ];
+            // only allow one shoe to be selected
+            this.selectedShoeList = [...selection.map((item) => ({ ...item, shoeId }))]
+            this.newOrderForm.orderShoeTypes = [...selection.map((item) => ({ ...item, shoeId }))];
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
