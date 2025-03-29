@@ -227,19 +227,19 @@
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
-                        <el-row>
+                        <!-- <el-row>
                             <el-col :push="21">
                                 <el-button type="success" @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
                             </el-col>
-                        </el-row>
+                        </el-row> -->
                         <el-row :gutter="20">
                             <el-col :span="22" :offset="0">
                                 <span>面料：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(0)">手动添加面料</el-button>
-                                <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -336,8 +336,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(1)">手动添加里料</el-button>
-                                <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -438,8 +438,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(2)">手动添加辅料</el-button>
-                                <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -537,8 +537,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(3)">手动添加大底</el-button>
-                                <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -635,8 +635,8 @@
                                 <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(4)">手动添加中底</el-button>
-                                <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -734,8 +734,8 @@
                                     @click="addMaterialByManual(6)">添加成品烫底</el-button>
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
-                                <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
-                                }}</el-button>
+                                <!-- <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
+                                }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
