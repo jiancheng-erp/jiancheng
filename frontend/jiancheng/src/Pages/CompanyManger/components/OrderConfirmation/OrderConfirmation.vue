@@ -33,6 +33,8 @@
             <el-table :data="displayData" stripe height="650">
                 <el-table-column type="index" width="50" />
                 <el-table-column prop="orderRid" label="订单号" />
+                <el-table-column prop="orderSalesman" label="操作员"/>
+                <el-table-column prop="orderSupervisor" label="责任人"/>
                 <el-table-column prop="customerName" label="客户名" />
                 <el-table-column prop="orderCid" label="客户订单号" />
                 <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
