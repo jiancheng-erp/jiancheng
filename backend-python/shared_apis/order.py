@@ -771,6 +771,11 @@ def get_all_orders():
     else:
         entities = entities.order_by(Order.order_rid.asc()).all()
     result = []
+    staff_entities = (db.session.query(Staff).all())
+    staff_id_to_name_mapping = {}
+    for staff in staff_entities:
+        staff_id_to_name_mapping[staff.staff_id] = staff.staff_name
+    print(staff_id_to_name_mapping)
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
@@ -799,6 +804,8 @@ def get_all_orders():
                 "shoeRId": shoe.shoe_rid,
                 "orderRid": order.order_rid,
                 "orderCid": order.order_cid,
+                "orderSalesman": staff_id_to_name_mapping[order.salesman_id] if order.salesman_id in staff_id_to_name_mapping.keys() else '',
+                "orderSupervisor": staff_id_to_name_mapping[order.supervisor_id] if order.supervisor_id in staff_id_to_name_mapping.keys() else '',
                 "customerName": customer.customer_name,
                 "customerBrand": customer.customer_brand,
                 "orderStartDate": formatted_start_date,
