@@ -5,13 +5,22 @@
                 进行中订单号筛选：
                 <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable />
             </el-col>
-            <el-col :span="4" :offset="4" style="white-space: nowrap">
+            <el-col :span="4" :offset="2" style="white-space: nowrap">
                 关键节点筛选:
                 <el-select v-model="orderShoeStatus" placeholder="请选择" style="width: 100%">
                     <el-option v-for="item in orderStatusOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
             </el-col>
+            <el-col :span="4" :offset="2" style="white-space: nowrap">
+                工厂型号筛选:
+                <el-input v-model="shoeRidSearch" placeholder="请输入工厂型号" size="normal" clearable/>
+            </el-col>
+            <el-col :span="4" :offset="2" style="white-space: nowrap">
+                客户型号筛选:
+                <el-input v-model="shoeNameSearch" placeholder="请输入客户型号" size="normal" clearable/>
+            </el-col>
+            
 
         </el-row>
         <el-table :data="pagedTableData" style="width: 100%; margin-bottom: 20px; height: 540px" border>
@@ -20,8 +29,7 @@
                     <template #default="props">
                         <el-table :data="props.row.orderShoes"
                             style="width: calc(100% - 48px); margin-bottom: 5px; margin-left: 48px">
-                            <el-table-column prop="shoeRId" label="工厂鞋型编号" sortable />
-                            <el-table-column prop="shoeName" label="客户鞋型编号" sortable />
+                            
                             <el-table-column prop="isMaterialArrived" label="当前材料物流状态" sortable />
                             <el-table-column prop="orderShoeStatus" label="生产状态" sortable />
                             <el-table-column prop="outboundStatus" label="发货状态" sortable />
@@ -30,6 +38,8 @@
                 </el-table-column>
                 <el-table-column prop="orderRid" label="订单编号" sortable />
                 <el-table-column prop="customerName" label="客户名称" />
+                <el-table-column prop="shoeRId" label="工厂型号"/>
+                <el-table-column prop="shoeName" label="客户型号"/>
                 <el-table-column prop="orderStartDate" label="订单开始日期" />
                 <el-table-column label="操作">
                     <template #default="scope">
@@ -57,6 +67,8 @@ export default {
     data() {
         return {
             orderRIdSearch: '',
+            shoeRidSearch: '',
+            shoeNameSearch:'',
             currentPage: 1,
             currentPageSize: 10,
             currentTotalRows: 0,
@@ -76,13 +88,18 @@ export default {
         filteredTableData() {
             return this.currentTableData.filter(order => {
                 const matchOrderRid = this.orderRIdSearch
-                    ? order.orderRid?.includes(this.orderRIdSearch)
+                    ? order.orderRid?.toLowerCase().includes(this.orderRIdSearch.toLowerCase())
                     : true
                 const matchOrderShoeStatus = this.orderShoeStatus !== '全部'
                     ? order.orderShoes?.some(shoe => shoe.orderShoeStatus?.includes(this.orderShoeStatus))
                     : true
-
-                return matchOrderRid && matchOrderShoeStatus
+                const matchShoeRid = this.shoeRidSearch
+                    ? order.shoeRId?.toLowerCase().includes(this.shoeRidSearch.toLowerCase())
+                    :true
+                const matchShoeName = this.shoeNameSearch
+                    ? order.shoeName?.toLowerCase().includes(this.shoeNameSearch.toLowerCase())
+                    :true
+                return matchOrderRid && matchOrderShoeStatus && matchShoeRid && matchShoeName
             })
         },
         pagedTableData() {

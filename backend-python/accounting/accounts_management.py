@@ -6,7 +6,10 @@ import time
 from app_config import app, db
 from sqlalchemy import func
 from constants import PAYABLE_EVENT_TO_TEXT, PAYABLE_EVENT_INBOUND,PAYABLE_EVENT_COMPOSITE_INBOUND,PAYABLE_EVENT_MISC_INBOUND,ACCOUNT_TYPE_CASH,ACCOUNT_TYPE_PAYABLE,ACCOUNT_TYPE_RECIEVABLE
- 
+
+
+DELETE_OK_MSG = {"msg":"DELETE OK"}
+DELETE_NOT_FOUND = {"msg":"ENTITY NOT FOUND"}
 
 accounts_management_bp = Blueprint("accounts_management", __name__)
 
@@ -324,6 +327,39 @@ def performance_testing():
 # only deletes when no second/third account associated with the account
 @accounts_management_bp.route("/accountsmanagement/firstgrade/deleteaccount", methods=["DELETE"])
 def delete_first_grade_account():
-    return
+    account_id = request.args.get("accountId")
+    entity_to_delete = db.session.query(FirstGradeAccount).filter_by(account_id = account_id).first()
+    if entity_to_delete:
+        # second_grade_entities_attached = db.session.query(SecondGradeAccount).filter_by(account_belongs_fg = account_id).all()
+        # if entities_attached:
+        #     for entity in entities_attached:
+        #         db.session.delete(entity)
+        db.session.delete(entity_to_delete)
+        db.session.commit()
+    else:
+        return jsonify({"msg":"Account Not Found"}), 401
+    return jsonify({"msg":"DELETE OK"}), 200
 
+@accounts_management_bp.route("/accountsmanagement/secondgrade/deleteaccount", methods=["DELETE"])
+def delete_second_grade_account():
+    account_id = request.args.get("accountId")
+    entity_to_delete = db.session.query(SecondGradeAccount).filter_by(account_id=account_id).first()
+    if entity_to_delete:
+        db.session.delete(entity_to_delete)
+        db.session.commit()
+    else:
+        return jsonify(DELETE_NOT_FOUND), 401
+    return jsonify(DELETE_OK_MSG), 200
+
+
+@accounts_management_bp.route("/accountsmanagement/thirdgrade/deleteaccount", methods=["DELETE"])
+def delete_third_grade_account():
+    account_id = request.args.get("accountId")
+    entity_to_delete = db.session.query(ThirdGradeAccount).filter_by(account_id=account_id).first()
+    if entity_to_delete:
+        db.session.delete(entity_to_delete)
+        db.session.commit()
+    else:
+        return jsonify(DELETE_NOT_FOUND), 401
+    return jsonify(DELETE_OK_MSG), 200
 
