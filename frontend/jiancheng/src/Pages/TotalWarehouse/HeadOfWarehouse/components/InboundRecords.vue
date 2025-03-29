@@ -39,6 +39,7 @@
                 <el-table-column prop="warehouseName" label="仓库名称">
                 </el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
+                <el-table-column prop="payMethod" label="付款方式"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
@@ -148,7 +149,10 @@
             <el-col :span="6" :offset="1">
                 <div style="display: flex; align-items: center;">
                     <span style="margin-right: 8px; width: 80px">付款方式:</span>
-                    <el-input v-model="currentRow.payMethod" disabled></el-input>
+                    <el-select v-model="currentRow.newPayMethod" filterable>
+                        <el-option label="应付账款" value="应付账款"></el-option>
+                        <el-option label="现金" value="现金"></el-option>
+                    </el-select>
                 </div>
             </el-col>
             <el-col :span="6" :offset="1">
@@ -386,8 +390,8 @@ export default {
                     this.recordData["items"][i].unitPrice = Number(this.recordData["items"][i].unitPrice)
                     this.recordData["items"][i].itemTotalPrice = Number(this.recordData["items"][i].itemTotalPrice)
                 }
-                // if the purchase divide order type is S, then the inbound record is for shoe size
-                if (row.isSizedMaterial == 1) {
+                // if the material name is "大底", then get the shoe size columns
+                if (this.recordData["items"].length > 0 && this.recordData["items"][0].materialName === '大底') {
                     let sizeColumns = []
                     let tempTable = []
                     let firstItem = this.recordData["items"][0]
@@ -424,19 +428,20 @@ export default {
             }
             this.currentRow = row
             this.currentRow.newSupplierName = row.supplierName
+            this.currentRow.newPayMethod = row.payMethod
             this.getInboundRecordDetail(row)
             this.getMaterialNameOptions()
             this.getUnitOptions()
             this.editDialogVisible = true
         },
-        async handleApproval() {
+        async handleApproval(row) {
             this.$confirm('是否批准该入库单？', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(async () => {
                 try {
-                    let params = { "inboundRecordId": this.currentRow.inboundRecordId }
+                    let params = { "inboundRecordId": row.inboundRecordId }
                     await axios.patch(`${this.$apiBaseUrl}/accounting/approveinboundrecord`, params)
                     ElMessage.success('批准成功')
                     this.getInboundRecordsTable()
@@ -466,7 +471,7 @@ export default {
                         "supplierName": this.currentRow.newSupplierName,
                         "inboundType": this.currentRow.inboundType,
                         "remark": this.currentRow.remark,
-                        "payMethod": this.currentRow.payMethod,
+                        "payMethod": this.currentRow.newPayMethod,
                         "isSizedMaterial": this.currentRow.isSizedMaterial,
                         "items": this.recordData.items
                     }

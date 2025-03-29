@@ -804,8 +804,6 @@ def _handle_purchase_inbound(data, next_group_id):
         remark=remark,
         pay_method=data.get("payMethod", None),
     )
-    if inbound_record.pay_method == "现金":
-        inbound_record.approval_status = 1
     db.session.add(inbound_record)
     db.session.flush()
 
@@ -975,8 +973,6 @@ def _handle_composite_inbound(data, next_group_id):
         pay_method=data.get("payMethod", None),
         warehouse_id=warehouse_id,
     )
-    if inbound_record.pay_method == "现金":
-        inbound_record.approval_status = 1
     db.session.add(inbound_record)
     db.session.flush()
 
@@ -2275,6 +2271,7 @@ def update_inbound_record():
     remark = data.get("remark")
     items = data.get("items")
     is_sized_material = data.get("isSizedMaterial", 0)
+    pay_method = data.get("payMethod")
 
     inbound_record = (
         db.session.query(InboundRecord)
@@ -2285,6 +2282,7 @@ def update_inbound_record():
         return jsonify({"message": "inbound record not found"}), 404
     inbound_record.approval_status = 0
     inbound_record.remark = remark
+    inbound_record.pay_method = pay_method
 
     # TODO: only support update purchase inbound
     if inbound_type != 0:
