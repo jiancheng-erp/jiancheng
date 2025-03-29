@@ -83,7 +83,7 @@ ORDERSHOESTATUSGRAPH = {
     4: {"outgoing": [5], "incoming": [3]},
     5: {"outgoing": [6, 7], "incoming": [4]},
     6: {"outgoing": [8], "incoming": [5]},
-    7: {"outgoing": [8], "incoming": [5]},
+    7: {"outgoing": [15], "incoming": [5]},
     8: {"outgoing": [16], "incoming": [6, 7]},
     9: {"outgoing": [10], "incoming": [1]},
     10: {"outgoing": [11], "incoming": [9]},
