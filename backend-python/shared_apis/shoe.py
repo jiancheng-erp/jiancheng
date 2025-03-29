@@ -73,7 +73,7 @@ def get_all_shoes_new():
     if user_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
         query = query.filter(Shoe.shoe_department_id == user_department)
 
-    if shoe_rid is not None:
+    if shoe_rid is not None and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
 
     total_count = query.distinct().count()

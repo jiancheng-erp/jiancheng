@@ -140,7 +140,7 @@
                     <el-button-group>
                         <el-button
                         type="primary"
-                        size="medium"
+                        size="default"
                         @click="openOrderDetail(scope.row.orderDbId)"
                         >查看订单详情</el-button
                     >
@@ -343,14 +343,15 @@
                         placeholder="鞋型号搜索"
                         size="default"
                         :suffix-icon="'el-icon-search'"
-                        :input="filterByShoeRid()"
+                        @change="getAllShoes()"
+                        @clear="getAllShoes()"
                         clearable
                     >
                     </el-input>
                 </el-col>
             </el-row>
             <el-table
-                :data="shoeTableDisplayData"
+                :data="shoeTableData"
                 style="width: 100%"
                 stripe
                 border
@@ -382,6 +383,14 @@
                 </el-table-column>
                 <el-table-column prop="shoeRid" label="鞋型编号"></el-table-column>
             </el-table>
+            <el-pagination
+                :current-page="currentOrderCreatePage"
+                :page-size="orderCreatePageSize"
+                :total="totalItems"
+                @current-change="handleOrderCreatePageChange"
+                layout="total, prev, pager, next, jumper"
+                style="margin-top: 20px"
+            ></el-pagination>
         </el-form>
 
         <template #footer>
@@ -735,7 +744,6 @@ export default {
             updatekey: 0,
             tempFileName: '',
             shoeTableData: [],
-            shoeTableDisplayData: [],
             shoeTableTemp: [],
             shoeRidFilter: '',
             checkgroup: [],
@@ -835,7 +843,10 @@ export default {
             radio: 'all',
             sortRadio: 'asc',
             buttonText: '查看所有订单',
-            buttonFlag: true
+            buttonFlag: true,
+            totalItems: 0,
+            currentOrderCreatePage: 1,
+            orderCreatePageSize: 20,
         }
     },
     computed: {
@@ -866,6 +877,10 @@ export default {
         this.getAllBatchTypes()
     },
     methods: {
+        handleOrderCreatePageChange(newPage) {
+            this.currentOrderCreatePage = newPage
+            this.getAllShoes()
+        },
         async userInfo() {
             const response = await axios.get(`${this.$apiBaseUrl}/order/onmount`)
             this.userName = response.data.staffName
@@ -928,7 +943,6 @@ export default {
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
             this.orderCreationInfoVis = true
-            this.shoeTableDisplayData = this.shoeTableData
         },
         async openPreviewDialog(row) {
             this.orderData = row
@@ -1217,8 +1231,14 @@ export default {
             this.orderShoePreviewData = response.data
         },
         async getAllShoes() {
-            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`)
-            this.shoeTableData = response.data
+            let params = {
+                page: this.currentOrderCreatePage,
+                pageSize: this.orderCreatePageSize,
+                shoerid: this.shoeRidFilter,
+            }
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {params})
+            this.shoeTableData = response.data.shoeTable
+            this.totalItems = response.data.total
         },
         async getOrderDocInfo(orderRid) {
             const response = await axios.get(`${this.$apiBaseUrl}/order/getorderdocinfo`, {
@@ -1388,56 +1408,6 @@ export default {
                 return filterMatch
             })
             this.displayData = this.filterData
-        },
-        filterByShoeRid() {
-            if (!this.shoeRidFilter) {
-                this.shoeTableDisplayData = this.shoeTableData
-            } else {
-                this.shoeTableTemp = this.shoeTableData.filter((task) => {
-                    const filterMatch = task.shoeRid
-                        .toLowerCase()
-                        .includes(this.shoeRidFilter.toLowerCase())
-                    return filterMatch
-                })
-
-                this.shoeTableDisplayData = this.shoeTableTemp
-            }
-        },
-        filterByShoeRidWithSelection() {
-            console.log(this.shoeRidFilter)
-            const selectedShoeTypeIds = this.selectedShoeList.map((row) => row.shoeTypeId)
-            if (!this.shoeRidFilter) {
-                this.shoeTableDisplayData = Array.from(
-                    new Set([...this.selectedShoeList.concat(this.shoeTableData)])
-                )
-            } else {
-                this.shoeTableTemp = this.shoeTableData.filter((task) => {
-                    const filterMatch = task.shoeRid.includes(this.shoeRidFilter)
-                    return filterMatch
-                })
-                this.shoeTableDisplayData = Array.from(
-                    new Set([...this.selectedShoeList.concat(this.shoeTableTemp)])
-                )
-            }
-            const rowsToToggle = this.shoeTableDisplayData.filter((row) =>
-                selectedShoeTypeIds.includes(row.shoeTypeId)
-            )
-
-            const fieldName = 'shoeTypeId'
-            this.reselectSelected(
-                this.$refs.shoeSelectionTable,
-                rowsToToggle,
-                this.shoeTableDisplayData,
-                fieldName
-            )
-            // this.$nextTick(()=>{
-            //         selectedShoeTypeIds.forEach(item =>
-            //         {
-            //         this.$refs.shoeSelectionTable.toggleRowSelection(this.shoeTableDisplayData.find(row => {
-            //             return row.shoeTypeId == item
-            //         }),true)
-            //         })
-            //     })
         },
         handleUploadSuccess(response, file) {
             // Handle the successful response
