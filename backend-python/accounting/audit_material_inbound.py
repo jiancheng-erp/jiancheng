@@ -39,9 +39,6 @@ def approve_inbound_record():
     )
     if not inbound_record:
         return jsonify({"message": "找不到入库单"}), 404
-
-    if inbound_record.pay_method != '应付账款':
-        return jsonify({"message": "只有支付方式为应付账款的入库单可以审核通过"}), 400
     
     supplier_name = (
         db.session.query(Supplier)
@@ -50,7 +47,8 @@ def approve_inbound_record():
         .supplier_name
     )
     total_price = inbound_record.total_price
-    _update_financial_record(supplier_name, total_price, inbound_record_id)
+    if inbound_record.pay_method == '应付账款':
+        _update_financial_record(supplier_name, total_price, inbound_record_id)
     inbound_record.approval_status = 1
     inbound_record.reject_reason = None
     db.session.commit()
