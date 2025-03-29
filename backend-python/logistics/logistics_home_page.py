@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy.dialects.mysql import insert
 
-from app_config import app, db
+from app_config import db
 from models import *
 
 logistics_home_page_bp = Blueprint("logistics_home_page_bp", __name__)

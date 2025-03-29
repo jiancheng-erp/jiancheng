@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime
-from app_config import app, db
+from app_config import db
 from models import *
 
 warehouse_page_bp = Blueprint("warehouse_page_bp", __name__)

@@ -3,7 +3,7 @@ from models import *
 from api_utility import to_camel, to_snake
 
 
-from app_config import app, db
+from app_config import db
 
 #TODO ADD RESTRAINTS
 

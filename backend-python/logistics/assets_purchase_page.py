@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, send_file
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
-from app_config import app, db
+from app_config import db
 from api_utility import randomIdGenerater
 import datetime
 from itertools import groupby

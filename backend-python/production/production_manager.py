@@ -1,6 +1,5 @@
 import traceback
 from datetime import datetime, timedelta, date
-from app_config import app
 from api_utility import format_date, format_line_group, status_converter, to_camel
 from app_config import db
 from constants import *

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 
-from app_config import app, db
+from app_config import db
 from models import *
 from api_utility import to_camel, to_snake
 color_bp = Blueprint("color_bp", __name__)
