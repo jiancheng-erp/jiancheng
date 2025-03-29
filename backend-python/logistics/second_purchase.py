@@ -928,6 +928,7 @@ def submit_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
+            CraftSheetItem,
             Material,
             MaterialType,
             Supplier,
@@ -953,6 +954,7 @@ def submit_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
+        craft_sheet_item,
         material,
         material_type,
         supplier,
@@ -997,12 +999,13 @@ def submit_purchase_divide_orders():
         remark = purchase_order_item.remark
         size_type = purchase_order_item.size_type
         if is_craft_existed:
-            craft_name = purchase_order_item.craft_name
+            craft_name = craft_sheet_item.craft_name
         else:
-            craft_name = ""
+            craft_name = bom_item.craft_name
         # don't create material storage if the quantity is 0
         if material_quantity == 0:
             continue
+            
         if purchase_divide_order.purchase_divide_order_type == "N":
             material_storage = MaterialStorage(
                 order_id=order_id,

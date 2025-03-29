@@ -20,19 +20,19 @@
                             <el-descriptions title="" :column="2" border>
                                 <el-descriptions-item label="订单编号" align="center">{{
                                     orderData.orderId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="订单创建时间" align="center">{{
                                     orderData.createTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{
                                     orderData.customerName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{
                                     orderData.deadlineTime
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="退回订单" align="center">
                                     <el-button type="danger" size="default"
                                         @click="openReturnOrderDialog">退回流程</el-button>
@@ -123,16 +123,16 @@
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="客户名称" align="center">{{
                         orderData.customerName
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单预计截止日期" align="center">{{
                         orderData.deadlineTime
-                    }}</el-descriptions-item>
+                        }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
@@ -165,6 +165,7 @@
             </el-dialog>
             <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%"
                 :close-on-click-modal="false">
+                <el-button type="primary" size="default" @click="confirmloadPastCraftSheet">加载过往工艺单信息</el-button>
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
@@ -238,7 +239,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(0)">手动添加面料</el-button>
                                 <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -336,7 +337,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(1)">手动添加里料</el-button>
                                 <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -438,7 +439,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(2)">手动添加辅料</el-button>
                                 <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -537,7 +538,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(3)">手动添加大底</el-button>
                                 <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -635,7 +636,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(4)">手动添加中底</el-button>
                                 <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -734,7 +735,7 @@
                                 <el-button type="primary" size="default"
                                     @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                                 <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
-                                    }}</el-button>
+                                }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -928,22 +929,22 @@
                                 </el-descriptions-item>
                                 <el-descriptions-item label="型号" align="center">{{
                                     currentShoeId
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="客户号" align="center">{{
                                     orderShoeData.customerProductName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="色号" align="center">{{
                                     orderShoeData.color
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="设计师" align="center">{{
                                     orderShoeData.shoeDesigner
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="调版员" align="center">{{
                                     orderShoeData.shoeAdjuster
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{
                                     orderShoeData.brandName
-                                }}</el-descriptions-item>
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -2334,6 +2335,103 @@ export default {
                 { params: { orderId: this.orderData.orderDBId, flow: 3 } }
             )
             this.revertStatusReasonOptions = response.data
+        },
+        confirmloadPastCraftSheet() {
+            this.$confirm('确定加载历史工艺单吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.getPastCraftSheet()
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: '已取消加载'
+                })
+            })
+        },
+        async getPastCraftSheet() {
+            try {
+                console.log(this.materialWholeData)
+                const response = await axios.get(`${this.$apiBaseUrl}/craftsheet/pastcraftsheetexist`, {
+                    params: {
+                        orderId: this.orderData.orderDBId,
+                    }
+                })
+                if (response.data.exist == true) {
+                    const pastCraftSheetResponse = await axios.get(`${this.$apiBaseUrl}/craftsheet/getpastcraftsheet`, {
+                        params: {
+                            orderId: this.orderData.orderDBId,
+                        }
+                    })
+                    this.craftSheetDetail = pastCraftSheetResponse.data.craftSheetDetail
+                    console.log(this.materialWholeData)
+                    // match the response data with the current color, and do not change the origin field "productionInstructionItemId"
+
+                    // 替换每条数据中的 productionInstructionItemId
+                    const pastMaterialWholeData = pastCraftSheetResponse.data.uploadData;
+
+                    const typeKeys = [
+                        "surfaceMaterialData",
+                        "insideMaterialData",
+                        "accessoryMaterialData",
+                        "outsoleMaterialData",
+                        "midsoleMaterialData",
+                        "lastMaterialData",
+                        "hotsoleMaterialData",
+                    ];
+
+                    for (const pastColorBlock of pastMaterialWholeData) {
+                        // ✅ 只处理已有颜色
+                        const currentColorBlock = this.materialWholeData.find(c => c.color === pastColorBlock.color);
+                        if (!currentColorBlock) continue;
+
+                        for (const key of typeKeys) {
+                            for (const pastItem of pastColorBlock[key]) {
+                                const matchIndex = currentColorBlock[key].findIndex(originItem =>
+                                    originItem.materialId === pastItem.materialId &&
+                                    originItem.materialModel === pastItem.materialModel &&
+                                    originItem.materialSpecification === pastItem.materialSpecification &&
+                                    originItem.color === pastItem.color
+                                );
+
+                                if (matchIndex !== -1) {
+                                    // ✅ 找到匹配项：用历史数据覆盖，但保留 productionInstructionItemId（若非 null）
+                                    const originalItem = currentColorBlock[key][matchIndex];
+                                    const mergedProductionId = originalItem.productionInstructionItemId != null
+                                        ? originalItem.productionInstructionItemId
+                                        : pastItem.productionInstructionItemId;
+
+                                    currentColorBlock[key][matchIndex] = {
+                                        ...pastItem,
+                                        productionInstructionItemId: mergedProductionId,
+                                    };
+                                } else {
+                                    if (pastItem.productionInstructionItemId === null) {
+                                        currentColorBlock[key].push({
+                                            ...pastItem,
+                                            productionInstructionItemId: null,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
+                    this.$message({
+                        type: 'success',
+                        message: '加载历史工艺单成功'
+                    })
+                } else {
+                    this.$message({
+                        type: 'info',
+                        message: '没有历史工艺单可供选择'
+                    })
+                }
+            } catch (error) {
+                console.error('Error loading past craft sheet:', error)
+            }
         },
     }
 }

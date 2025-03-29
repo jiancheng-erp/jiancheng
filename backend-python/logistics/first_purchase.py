@@ -924,6 +924,8 @@ def submit_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
+            ProductionInstructionItem,
+            CraftSheetItem,
             Material,
             MaterialType,
             Supplier,
@@ -938,6 +940,15 @@ def submit_purchase_divide_orders():
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
+        )
+        .outerjoin(
+            CraftSheetItem,
+            ProductionInstructionItem.production_instruction_item_id == CraftSheetItem.production_instruction_item_id,
+        )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
@@ -949,6 +960,8 @@ def submit_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
+        production_instruction_item,
+        craft_sheet_item,
         material,
         material_type,
         supplier,
@@ -993,9 +1006,44 @@ def submit_purchase_divide_orders():
         remark = purchase_order_item.remark
         size_type = purchase_order_item.size_type
         if is_craft_existed:
-            craft_name = purchase_order_item.craft_name
+            #find the craft name from craft sheet item.if not exist, use the craft name from bom item. if material type is "I",find the hotsole craft name and combine with the original craft name
+            craft_sheet_item = (
+                db.session.query(CraftSheetItem)
+                .filter(
+                    CraftSheetItem.production_instruction_item_id
+                    == bom_item.production_instruction_item_id
+                )
+                .first()
+            )
+            if production_instruction_item.material_type == "I":
+                similiar_hotsole = (
+                    db.session.query(ProductionInstructionItem)
+                    .filter(
+                        ProductionInstructionItem.material_id
+                        == production_instruction_item.material_id,
+                        ProductionInstructionItem.material_model
+                        == production_instruction_item.material_model,
+                        ProductionInstructionItem.material_specification
+                        == production_instruction_item.material_specification,
+                        ProductionInstructionItem.color
+                        == production_instruction_item.color,
+                        ProductionInstructionItem.order_shoe_type_id
+                        == production_instruction_item.order_shoe_type_id,
+                        ProductionInstructionItem.material_type == "H",
+                    )
+                    .first()
+                )
+                hotsole_craft_name = similiar_hotsole.pre_craft_name if similiar_hotsole else None
+                if hotsole_craft_name:
+                    craft_name = (
+                        craft_sheet_item.craft_name + "@" + hotsole_craft_name
+                    )
+                else:
+                    craft_name = craft_sheet_item.craft_name
+            else:
+                craft_name = craft_sheet_item.craft_name
         else:
-            craft_name = ""
+            craft_name = bom_item.craft_name
         # don't create material storage if the quantity is 0
         if material_quantity == 0:
             continue

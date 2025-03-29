@@ -7,6 +7,9 @@ from mock_data_gen import *
 from models import *
 from event_processor import EventProcessor
 from update_db import sync_schema
+from script.refresh_craft_name import refresh_storage_craft_match_craft_sheet
+from script.refresh_default_craft_sheet import refresh_default_craft_sheet
+from script.refresh_default_bom import refresh_default_bom
 
 
 @app.route("/")
@@ -28,6 +31,9 @@ if __name__ == "__main__":
     event_processor = EventProcessor()
     app.config['event_processor'] = event_processor
     # sync_schema(app, db)
+    # refresh_storage_craft_match_craft_sheet(app, db)
+    # refresh_default_craft_sheet(app, db)
+    refresh_default_bom(app, db)
     # event_processor.testPaths()
     # with app.app_context():
     # db.create_all()  # This will create the database tables under the application context.
