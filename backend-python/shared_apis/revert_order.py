@@ -18,9 +18,9 @@ from general_document.order_export import (
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
 
-DEPARTMENT_STATUS_DICT = {"3": ["6"], "7": ["0"], "14": ["4", "11"], "13": ["9", "13"]}
+DEPARTMENT_STATUS_DICT = {"3": ["6"], "7": ["0"], "14": ["4", "11"], "13": ["9", "13"], "11": ["7"]}
 
-DEPARTMENT_DICT = {"3": "物控部", "7": "开发部", "14": "用量填写", "13": "技术部"}
+DEPARTMENT_DICT = {"3": "物控部", "7": "开发部", "14": "用量填写", "13": "技术部", "11": "总仓"}
 
 STATUS_REVERT_DICT = {
     "0": "材料名称，型号，规格等信息错误/缺失",
@@ -150,6 +150,7 @@ def get_revert_order_reason():
         )
         .first()
     )
+
 
     result = []
     for status, reason in STATUS_REVERT_DICT.items():
