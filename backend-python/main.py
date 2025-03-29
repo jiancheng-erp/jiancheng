@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # sync_schema(app, db)
     # refresh_storage_craft_match_craft_sheet(app, db)
     # refresh_default_craft_sheet(app, db)
-    refresh_default_bom(app, db)
+    # refresh_default_bom(app, db)
     # event_processor.testPaths()
     # with app.app_context():
     # db.create_all()  # This will create the database tables under the application context.
