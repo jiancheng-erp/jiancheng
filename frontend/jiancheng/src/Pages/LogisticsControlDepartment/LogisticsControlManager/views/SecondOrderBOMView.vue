@@ -711,7 +711,7 @@ export default {
         await this.getOrderInfo()
         this.getAllShoeListInfo()
         await this.getAllPurchaseUnit()
-        await this.getRevertStatusReason()
+        await this.getAllRevertStatusReasonOptions()
 
     },
     computed: {

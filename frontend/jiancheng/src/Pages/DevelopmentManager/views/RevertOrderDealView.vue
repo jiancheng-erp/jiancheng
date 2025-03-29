@@ -185,16 +185,11 @@
                 </el-table>
                 <template #footer>
                     <span>
-                        <el-button
-                            @click="
-                                isLoadMaterialDialogVisible = false;
-                                selectShoeTypeRow = {}
-                            "
-                            >取消</el-button
-                        >
-                        <el-button type="primary" @click="addPastMaterialToCurrent"
-                            >确认加载</el-button
-                        >
+                        <el-button @click="
+                            isLoadMaterialDialogVisible = false;
+                        selectShoeTypeRow = {}
+                            ">取消</el-button>
+                        <el-button type="primary" @click="handleConfirmLoad">确认加载</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -1906,9 +1901,20 @@ export default {
                     ElMessage.info('取消复制')
                 })
         },
+        handleConfirmLoad() {
+            this.addPastMaterialToCurrent();
+            this.addPastProductionInstructionInfoToCurrent();
+        },
+        async addPastProductionInstructionInfoToCurrent() {
+            const response = await axios.get(
+                `${this.$apiBaseUrl}/devproductionorder/getpastproductioninstructioninfo?shoeTypeId=${this.selectShoeTypeRow[0].shoeTypeId}`
+            )
+            this.productionInstructionDetail = response.data
+        },
         async addPastMaterialToCurrent() {
             try {
-                console.log(this.selectShoeTypeRow[0].shoeTypeId)
+                console.log(this.selectShoeTypeRow[0].shoeTypeId);
+
                 const response = await axios.get(
                     `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
                     {
@@ -1916,18 +1922,36 @@ export default {
                             shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
                         }
                     }
-                )
-                const pastMaterialData = response.data
-                console.log(this.materialWholeData)
-                this.materialWholeData[0].surfaceMaterialData = pastMaterialData.surfaceMaterialData
-                this.materialWholeData[0].insideMaterialData = pastMaterialData.insideMaterialData
-                this.materialWholeData[0].accessoryMaterialData =
-                    pastMaterialData.accessoryMaterialData
-                this.materialWholeData[0].outsoleMaterialData = pastMaterialData.outsoleMaterialData
-                this.materialWholeData[0].midsoleMaterialData = pastMaterialData.midsoleMaterialData
-                this.materialWholeData[0].hotsoleMaterialData = pastMaterialData.hotsoleMaterialData
-            } catch (error) {
-                console.error('Error fetching past material data:', error)
+                );
+
+                const pastMaterialData = response.data;
+                console.log("Past Material Data:", pastMaterialData);
+                console.log("Current Material Data Before Update:", this.materialWholeData);
+
+                // Create a map for quick lookup of past material data by color
+                const pastMaterialMap = new Map();
+                pastMaterialData.forEach(item => {
+                    pastMaterialMap.set(item.color, item);
+                });
+
+                // Update matching colors in materialWholeData
+                this.materialWholeData.forEach(material => {
+                    const pastMaterial = pastMaterialMap.get(material.color);
+                    if (pastMaterial) {
+                        // If color matches, update the material data
+                        material.surfaceMaterialData = pastMaterial.surfaceMaterialData;
+                        material.insideMaterialData = pastMaterial.insideMaterialData;
+                        material.accessoryMaterialData = pastMaterial.accessoryMaterialData;
+                        material.outsoleMaterialData = pastMaterial.outsoleMaterialData;
+                        material.midsoleMaterialData = pastMaterial.midsoleMaterialData;
+                        material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData;
+                    }
+                });
+
+                console.log("Updated Material Data:", this.materialWholeData);
+            }
+            catch (error) {
+                console.error("Error fetching past material data:", error);
                 if (error.response) {
                     ElMessage.error(error.response.data.message)
                 } else {

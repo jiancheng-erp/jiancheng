@@ -1036,7 +1036,7 @@ def submit_purchase_divide_orders():
                 hotsole_craft_name = similiar_hotsole.pre_craft_name if similiar_hotsole else None
                 if hotsole_craft_name:
                     craft_name = (
-                        craft_sheet_item.craft_name + "@" + hotsole_craft_name
+                        craft_sheet_item.craft_name if craft_sheet_item.craft_name else '' + "@" + hotsole_craft_name
                     )
                 else:
                     craft_name = craft_sheet_item.craft_name
