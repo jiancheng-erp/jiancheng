@@ -2209,11 +2209,12 @@ def issue_production_order():
                     )
                     .first()
                 )
+                material_type = ""
                 if production_instruction_item:
                     production_instruction_item.material_specification = item.material_specification
-                    production_instruction_item.craft_name = item.craft_name
+                    material_type = production_instruction_item.material_type
                     db.session.flush()
-                material_type = production_instruction_item.material_type
+                
                 first_bom_item = (
                     db.session.query(BomItem)
                     .filter(
@@ -2246,7 +2247,7 @@ def issue_production_order():
                             )
                             .first()
                         )
-                        hotsole_craft_name = similiar_hotsole.craft_name if similiar_hotsole else None
+                        hotsole_craft_name = similiar_hotsole.pre_craft_name if similiar_hotsole else None
                         if hotsole_craft_name:
                             if item.craft_name:
                                 new_hotsole_craft_name = item.craft_name + "@" + hotsole_craft_name

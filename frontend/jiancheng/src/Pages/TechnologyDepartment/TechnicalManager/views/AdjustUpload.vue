@@ -1059,6 +1059,7 @@
             </el-dialog>
             <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%"
                 :close-on-click-modal="false">
+                <el-button type="primary" size="default" @click="confirmloadPastCraftSheet">加载过往工艺单信息</el-button>
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
                         <el-input v-model="craftSheetDetail.adjuster" size="default"></el-input>
