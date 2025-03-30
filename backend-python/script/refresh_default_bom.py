@@ -28,6 +28,7 @@ def refresh_default_bom(app, db):
                     .filter(
                         OrderShoeType.shoe_type_id == shoe_type.shoe_type_id,
                         Bom.bom_type == 0,
+                        Bom.bom_status == "6"
                     )
                     .first()
                 )
@@ -64,7 +65,7 @@ def refresh_default_bom(app, db):
                         shoe_type_id=shoe_type.shoe_type_id,
                         bom_id=second_bom.Bom.bom_id,
                         bom_type=1,
-                        bom_status="2"
+                        bom_status="3"
                     )
                     db.session.add(default_second_bom)
                     db.session.flush()
