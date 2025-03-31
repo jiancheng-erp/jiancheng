@@ -68,8 +68,9 @@ export default {
     },
     methods: {
         async getRevertData() {
+            const staffId = localStorage.getItem('staffid')
             const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderlist`, {
-                params: { departmentId: this.departmentId }
+                params: { departmentId: this.departmentId, staffId: staffId }
             })
             this.revertData = response.data
             this.filteredData = response.data
@@ -98,13 +99,16 @@ export default {
                 if (row.currentStatus === 4) {
                     window.open(`${window.location.origin}/usagecalculation/revertusagecalculation/orderid=${row.orderId}`)
                 }
-                else if (row.currentStatus === 11) {
+                else if (row.currentStatus === "11") {
                     window.open(`${window.location.origin}/usagecalculation/revertsecondusagecalculation/orderid=${row.orderId}`)
                 }
             }
             else if (this.departmentId === "13") {
                 if (row.currentStatus === 9) {
                     window.open(`${window.location.origin}/technicalmanager/revertcraftsheet/orderid=${row.orderId}`)
+                }
+                if (row.currentStatus === 0) {
+                    window.open(`${window.location.origin}/developmentmanager/revertproductionorder/orderid=${row.orderId}`)
                 }
 
             }

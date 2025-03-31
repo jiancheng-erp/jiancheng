@@ -18,7 +18,7 @@ from general_document.order_export import (
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
 
-DEPARTMENT_STATUS_DICT = {"3": ["6"], "7": ["0"], "14": ["4", "11"], "13": ["9", "13"], "11": ["7"]}
+DEPARTMENT_STATUS_DICT = {"3": ["6"], "7": ["0"], "14": ["4", "11"], "13": ["9", "13", "0"], "11": ["7"]}
 
 DEPARTMENT_DICT = {"3": "物控部", "7": "开发部", "14": "用量填写", "13": "技术部", "11": "总仓"}
 
@@ -39,8 +39,19 @@ revert_order_api = Blueprint("revert_order_api", __name__)
 
 @revert_order_api.route("/revertorder/getrevertorderlist", methods=["GET"])
 def get_revert_order_list():
+    import re
+
+    def extract_rid_number(order_rid):
+        """Extract the base number from order_rid like 'K25-001(2)' -> 1"""
+        match = re.search(r"[KW]\d{2}-(\d{3})", order_rid)
+        if match:
+            return int(match.group(1))
+        return None
+
     department_id = request.args.get("departmentId")
+    staff_id = request.args.get("staffId")
     order_status = DEPARTMENT_STATUS_DICT.get(department_id)
+
     orders = (
         db.session.query(Order, OrderShoe, Shoe, OrderShoeStatus, Customer)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -53,9 +64,39 @@ def get_revert_order_list():
         )
         .all()
     )
-    print(orders)
+
     result = []
     for order, order_shoe, shoe, order_shoe_status, customer in orders:
+        if order_shoe_status.current_status == 0:
+            rid_number = extract_rid_number(order.order_rid)
+            prefix = order.order_rid[0] if order.order_rid else ""
+
+            if staff_id == "15":
+                # show order_rid after k25-200, w25-200
+                if prefix in ("K", "W") and rid_number is not None and rid_number < 200:
+                    continue
+
+            if staff_id == "7":
+                # show order_rid before/equal to 200 and only 开发一部
+                if prefix in ("K", "W") and rid_number is not None and rid_number > 200:
+                    continue
+                if shoe.shoe_department_id != "开发一部":
+                    continue
+
+            if staff_id == "31":
+                # show order_rid before/equal to 200 and only 开发二部
+                if prefix in ("K", "W") and rid_number is not None and rid_number > 200:
+                    continue
+                if shoe.shoe_department_id != "开发二部":
+                    continue
+
+            if staff_id == "32":
+                # show order_rid before/equal to 200 and only 开发三部
+                if prefix in ("K", "W") and rid_number is not None and rid_number > 200:
+                    continue
+                if shoe.shoe_department_id != "开发三部":
+                    continue
+
         revert_info = json.loads(order_shoe_status.revert_info)
         source_status = revert_info.get("source_status", "")
         desti_status = revert_info.get("desti_status", "")
@@ -72,11 +113,14 @@ def get_revert_order_list():
                 "currentStatus": current_status,
                 "customerName": customer.customer_name,
                 "statusSource": revert_depart,
+                "statusDesti": desti_status,
                 "revertTime": revert_time,
                 "revertReason": revert_reason,
             }
         )
+
     return jsonify(result)
+
 
 
 @revert_order_api.route("/revertorder/getsinglerevertorder", methods=["GET"])
