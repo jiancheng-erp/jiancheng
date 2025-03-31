@@ -1,5 +1,6 @@
 import datetime
 
+from html import entities
 import os
 import shutil
 from app_config import db
@@ -222,14 +223,17 @@ def get_shoe_bom_items():
         else_=6,  # Default for any other values (if any)
     )
     entities = (
-        db.session.query(BomItem, Material, MaterialType, Supplier, ProductionInstructionItem)
+        db.session.query(
+            BomItem, Material, MaterialType, Supplier, ProductionInstructionItem
+        )
         .join(Bom, Bom.bom_id == BomItem.bom_id)
         .join(Material, Material.material_id == BomItem.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
         .outerjoin(
             ProductionInstructionItem,
-            BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
         )
         .filter(Bom.bom_rid == bom_rid)
         .order_by(material_order, Supplier.supplier_name, Material.material_name)
@@ -242,7 +246,9 @@ def get_shoe_bom_items():
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Bom, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Bom.bom_rid == bom_rid).first().order_id
+        .filter(Bom.bom_rid == bom_rid)
+        .first()
+        .order_id
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
     for entity in entities:
@@ -300,7 +306,11 @@ def save_bom_usage():
         )
         for i in range(len(bom_item["sizeInfo"])):
             name = i + 34
-            setattr(entity, f"size_{name}_total_usage", bom_item["sizeInfo"][i]["approvalAmount"])
+            setattr(
+                entity,
+                f"size_{name}_total_usage",
+                bom_item["sizeInfo"][i]["approvalAmount"],
+            )
             entity.total_usage = bom_item["approvalUsage"]
             entity.unit_usage = bom_item["unitUsage"]
             entity.remark = bom_item["remark"]
@@ -545,9 +555,7 @@ def copy_usage_to_all_check():
         .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 0)
         .first()
     )
-    bom_items = (
-        db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
-    )
+    bom_items = db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
     same_order_shoe_types = (
         db.session.query(OrderShoeType)
         .filter(OrderShoeType.order_shoe_id == order_shoe_id)
@@ -573,14 +581,17 @@ def copy_usage_to_all_check():
             color_name = (
                 db.session.query(Color)
                 .join(ShoeType, ShoeType.color_id == Color.color_id)
-                .join(OrderShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
-                .filter(OrderShoeType.order_shoe_type_id == same_order_shoe_type.order_shoe_type_id)
+                .join(
+                    OrderShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id
+                )
+                .filter(
+                    OrderShoeType.order_shoe_type_id
+                    == same_order_shoe_type.order_shoe_type_id
+                )
                 .first()
                 .color_name
             )
-            different_order_shoe_type_list.append(
-                color_name
-            )
+            different_order_shoe_type_list.append(color_name)
             continue
     if len(different_order_shoe_type_list) == 0:
         result = {
@@ -591,11 +602,14 @@ def copy_usage_to_all_check():
     else:
         result = {
             "checkResult": 1,
-            "reason": "颜色为" + "、".join(different_order_shoe_type_list) + "的材料数量不一致，请核对后再确认！",
+            "reason": "颜色为"
+            + "、".join(different_order_shoe_type_list)
+            + "的材料数量不一致，请核对后再确认！",
         }
         return jsonify(result)
-        
+
     return 200
+
 
 @usage_calculation_bp.route("/usagecalculation/copyusagetoall", methods=["POST"])
 def copy_usage_to_all():
@@ -611,9 +625,7 @@ def copy_usage_to_all():
         .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 0)
         .first()
     )
-    bom_items = (
-        db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
-    )
+    bom_items = db.session.query(BomItem).filter(BomItem.bom_id == bom.bom_id).all()
     same_order_shoe_types = (
         db.session.query(OrderShoeType)
         .filter(OrderShoeType.order_shoe_id == order_shoe_id)
@@ -681,21 +693,89 @@ def copy_usage_to_all():
                     break
         same_bom.bom_status = "4"
         db.session.flush()
-                    
-                
-                
+
     db.session.commit()
     return jsonify({"status": "success"})
 
 
+@usage_calculation_bp.route("/usagecalculation/loadpastusage", methods=["GET"])
+def load_past_usage():
+    current_bom_rid = request.args.get("currentBomRid")
+    current_shoe_type_id = (
+        db.session.query(Bom, OrderShoeType, ShoeType)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .filter(
+            Bom.bom_rid == current_bom_rid,
+        )
+        .first()
+    )
+    if current_shoe_type_id is None:
+        return jsonify({"status": "failed", "message": "No previous BOM found."})
+    default_bom = (
+        db.session.query(DefaultBom)
+        .filter(DefaultBom.shoe_type_id == current_shoe_type_id.ShoeType.shoe_type_id, DefaultBom.bom_type == 0)
+        .first()
+    )
+    if default_bom is None:
+        return jsonify({"status": "failed", "message": "No previous BOM found."})
+    past_bom_id = default_bom.bom_id
+    entities = (
+        db.session.query(BomItem, Material, MaterialType, Supplier, Department)
+        .join(Material, Material.material_id == BomItem.material_id)
+        .join(
+            MaterialType,
+            MaterialType.material_type_id == Material.material_type_id,
+        )
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .outerjoin(Department, Department.department_id == BomItem.department_id)
+        .filter(BomItem.bom_id == past_bom_id)
+        .all()
+    )
+    result = []
+    for entity in entities:
+        bom_item, material, material_type, supplier, department = entity
+        sizeInfo = []
+        for i in range(34, 47):
+            index = i + 1
+            obj = {
+                "size": index,
+                "approvalAmount": (
+                    getattr(bom_item, f"size_{i}_total_usage")
+                    if getattr(bom_item, f"size_{i}_total_usage")
+                    else 0.00
+                ),
+            }
+            sizeInfo.append(obj)
 
-
-
-
-
+        result.append(
+            {
+                "bomItemId": bom_item.bom_item_id,
+                "materialDetailType": bom_item.material_second_type,
+                "materialType": material_type.material_type_name,
+                "materialName": material.material_name,
+                "materialModel": bom_item.material_model,
+                "materialSpecification": bom_item.material_specification,
+                "color": bom_item.bom_item_color,
+                "unit": material.material_unit,
+                "unitUsage": (
+                    bom_item.unit_usage
+                    if bom_item.unit_usage
+                    else 0.00 if material.material_category == 0 else None
+                ),
+                "approvalUsage": bom_item.total_usage if bom_item.total_usage else 0.00,
+                "useDepart": department.department_name if department else "",
+                "supplierName": supplier.supplier_name,
+                "materialCategory": material.material_category,
+                "remark": bom_item.remark,
+                "sizeInfo": sizeInfo,
+            }
+        )
+    return jsonify({"status": "success", "data": result})
 
 
 import re
+
 
 def are_material_models_similar(model1, model2):
     """
@@ -706,16 +786,18 @@ def are_material_models_similar(model1, model2):
     """
     # Pattern for detecting prefix before the last hyphen
     pattern = r"^(.*?)-\d+$"
-    
+
     match1 = re.match(pattern, model1)
     match2 = re.match(pattern, model2)
 
     if match1 and match2:
         return match1.group(1) == match2.group(1)  # Compare prefixes if hyphen exists
-    
+
     # If no hyphen, check numeric similarity
     if model1.isdigit() and model2.isdigit() and len(model1) == len(model2):
-        return model1[:-1] == model2[:-1] or model1[:-2] == model2[:-2]  # Allow last 1-2 digit differences
+        return (
+            model1[:-1] == model2[:-1] or model1[:-2] == model2[:-2]
+        )  # Allow last 1-2 digit differences
 
     # General similarity check for mixed alphanumeric models
     prefix1 = re.match(r"^\D*(\d+)", model1)  # Extract leading numbers
