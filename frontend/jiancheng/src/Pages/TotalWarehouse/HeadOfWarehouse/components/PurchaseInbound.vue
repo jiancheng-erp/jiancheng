@@ -91,12 +91,12 @@
                             :disabled="scope.row.disableEdit"></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="materialUnit" title="计量单位" :edit-render="{ autoFocus: 'input' }" width="120">
+                <vxe-column field="actualInboundUnit" title="计量单位" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #default="{ row }">
-                        <span>{{ row.materialUnit }}</span>
+                        <span>{{ row.actualInboundUnit }}</span>
                     </template>
                     <template #edit="scope">
-                        <el-select v-model="scope.row.materialUnit" filterable clearable
+                        <el-select v-model="scope.row.actualInboundUnit" filterable clearable
                             :disabled="scope.row.disableEdit">
                             <el-option v-for="item in unitOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
@@ -153,7 +153,7 @@
             <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
             <el-table-column prop="materialColor" label="颜色"></el-table-column>
             <el-table-column prop="unitPrice" label="单价"></el-table-column>
-            <el-table-column prop="materialUnit" label="计量单位"></el-table-column>
+            <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
             <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
             <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
@@ -203,7 +203,7 @@
                     <td>{{ item.materialModel }}</td>
                     <td>{{ item.materialSpecification }}</td>
                     <td>{{ item.materialColor }}</td>
-                    <td>{{ item.materialUnit }}</td>
+                    <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
                     <td>{{ item.inboundQuantity }}</td>
                     <td>{{ item.unitPrice }}</td>
@@ -230,7 +230,7 @@
                     <td>{{ item.materialModel }}</td>
                     <td>{{ item.materialSpecification }}</td>
                     <td>{{ item.materialColor }}</td>
-                    <td>{{ item.materialUnit }}</td>
+                    <td>{{ item.actualInboundUnit }}</td>
                     <td>{{ item.orderRId }}</td>
                     <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}</td>
                     <td>{{ item.unitPrice }}</td>
@@ -597,7 +597,7 @@ export default {
             const response = await axios.get(
                 `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
             )
-            row.materialUnit = response.data.unit
+            row.actualInboundUnit = response.data.unit
             row.materialCategory = response.data.materialCategory
         },
         async submitInboundForm() {

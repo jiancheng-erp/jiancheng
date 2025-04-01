@@ -13,7 +13,7 @@
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                 <el-table-column prop="materialColor" label="颜色"></el-table-column>
-                <el-table-column prop="materialUnit" label="计量单位"></el-table-column>
+                <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
             </el-table>
         </div>
         <div v-else-if="selectionPage == 1">
@@ -22,7 +22,7 @@
                 <el-descriptions-item label="型号">{{ materialSelection.materialModel }}</el-descriptions-item>
                 <el-descriptions-item label="规格">{{ materialSelection.materialSpecification }}</el-descriptions-item>
                 <el-descriptions-item label="颜色">{{ materialSelection.materialColor }}</el-descriptions-item>
-                <el-descriptions-item label="单位">{{ materialSelection.materialUnit }}</el-descriptions-item>
+                <el-descriptions-item label="单位">{{ materialSelection.actualInboundUnit }}</el-descriptions-item>
             </el-descriptions>
             <el-row :gutter="20" style="margin-bottom: 20px;">
                 <el-col :span="6">
@@ -264,7 +264,7 @@ export default {
                     "materialModel": this.materialSelection.materialModel,
                     "materialColor": this.materialSelection.materialColor,
                     "supplierName": this.materialSelection.supplierName,
-                    "unit": this.materialSelection.materialUnit,
+                    "unit": this.materialSelection.actualInboundUnit,
                     "materialCategory": this.materialSelection.materialCategory,
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbymaterialinfo`, { params })

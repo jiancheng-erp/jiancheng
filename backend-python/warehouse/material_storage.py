@@ -358,7 +358,7 @@ def get_size_materials():
             "materialModel": storage.size_material_model,
             "materialSpecification": storage.size_material_specification,
             "materialColor": storage.size_material_color,
-            "materialUnit": material.material_unit,
+            "actualInboundUnit": material.material_unit,
             "materialCategory": material.material_category,
             "supplierName": supplier.supplier_name,
             "orderId": order.order_id,
@@ -489,7 +489,7 @@ def get_materials():
             "materialModel": material_model,
             "materialSpecification": material_specification,
             "materialColor": color,
-            "materialUnit": unit,
+            "actualInboundUnit": unit,
             "materialCategory": material_category,
             "supplierName": supplier_name,
         }
