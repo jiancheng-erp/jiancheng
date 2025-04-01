@@ -670,27 +670,47 @@ def get_order_shoe_sizes_info():
 # 如果用户非业务经理,显示当前用户添加的订单
 @order_bp.route("/order/getbusinessdisplayorderbyuser", methods=["GET"])
 def get_display_orders_manager():
+    filter_status = request.args.get("filterStatus", None)
     character, staff, _ = current_user_info()
     current_staff_id = staff.staff_id
     current_user_role = character.character_id
     if current_user_role == BUSINESS_MANAGER_ROLE:
-        entities = (
-            db.session.query(
-                Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+        if filter_status == "0":
+            entities = (
+                db.session.query(
+                    Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+                )
+                .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+                .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+                .join(Customer, Order.customer_id == Customer.customer_id)
+                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+                .outerjoin(
+                    OrderStatusReference,
+                    OrderStatus.order_current_status
+                    == OrderStatusReference.order_status_id,
+                )
+                .filter(Order.supervisor_id == current_staff_id)
+                .order_by(Order.order_rid.asc())
+                .all()
             )
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .outerjoin(
-                OrderStatusReference,
-                OrderStatus.order_current_status
-                == OrderStatusReference.order_status_id,
+        else:
+            entities = (
+                db.session.query(
+                    Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+                )
+                .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+                .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+                .join(Customer, Order.customer_id == Customer.customer_id)
+                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+                .outerjoin(
+                    OrderStatusReference,
+                    OrderStatus.order_current_status
+                    == OrderStatusReference.order_status_id,
+                )
+                .filter(Order.salesman_id == current_staff_id)
+                .order_by(Order.order_rid.asc())
+                .all()
             )
-            .filter(Order.supervisor_id == current_staff_id)
-            .order_by(Order.order_rid.asc())
-            .all()
-        )
     elif current_user_role == BUSINESS_CLERK_ROLE:
         entities = (
             db.session.query(
@@ -724,12 +744,12 @@ def get_display_orders_manager():
                     order_status.order_status_value != None
                     and order_status.order_status_value == 0
                 ):
-                    order_status_message += " \n未填写财务信息"
+                    order_status_message += " \n待提交"
                 elif (
                     order_status.order_status_value != None
                     and order_status.order_status_value == 1
                 ):
-                    order_status_message += " \n已填写 待下发"
+                    order_status_message += " \n待审核下发"
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
 
