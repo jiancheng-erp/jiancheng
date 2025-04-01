@@ -13,18 +13,19 @@
                             }}</el-descriptions-item>
                             <el-descriptions-item label="客户订单" align="center">
                                 <el-input
-                                    style="width: 100px"
+                                    style="width: 200px"
                                     v-model="orderData.orderCid"
-                                    :disabled="customerOrderEditDisabled"
+                                    :disabled="editOrderInfoDisabled"
                                 >
                                 </el-input>
-                                <el-button
+                                
+                                <!-- <el-button
                                     v-if="isShowBtn(orderData.orderCid)"
                                     type="primary"
                                     @click="updateCustomInfo('customOrderId', orderData.orderCid)"
                                     style="margin-left: 15px"
                                     >{{customerOrderBtn}}</el-button
-                                >
+                                > -->
                             </el-descriptions-item>
                             <el-descriptions-item label="客户信息" align="center">{{
                                 orderData.customerInfo
@@ -49,7 +50,10 @@
                             }}</el-descriptions-item>
                             <el-descriptions-item label="包装资料上传状态" align="center"
                                 >{{ orderData.wrapRequirementUploadStatus }}
-                                <el-button type="primary" size="default" @click="openSubmitDialog()"
+                                <el-button
+                                    v-if=" allowEditInfo
+                                    " 
+                                type="primary" size="default" @click="openSubmitDialog()"
                                     >上传</el-button
                                 >
                                 <el-button
@@ -65,9 +69,21 @@
                             <el-descriptions-item label="订单业务员" align="center">
                                 {{ orderData.orderStaffName }}
                             </el-descriptions-item>
-                            <el-descriptions-item label="财务信息操作" align="center">
+                            <el-descriptions-item label="信息操作" align="center">
+                                
 
-                                <el-button
+                                <el-button v-if="allowEditInfo" @click="toggleEditInfo" type="warning">
+                                    修改信息
+                                </el-button>
+
+                                <el-button v-if="allowEditInfo" @click="submitOrderInfo" type="primary">
+                                    提交信息
+                                </el-button>
+
+                                <el-button v-if="orderClerkEditable" @click="proceedOrder" type="primary">
+                                    提交订单下发
+                                </el-button>
+                                <!-- <el-button
                                     v-if="customerColorBtnVis"
                                     @click="submitCustomerColorForm"
                                     type="primary"
@@ -85,15 +101,25 @@
                                 >
                                 <el-button v-if="this.role == 4" @click="toggleFinInfoChange">
                                     财务信息修改权限
-                                </el-button>
+                                </el-button> -->
                                 <el-button
-                                    v-if="this.allowNext"
+                                    v-if="this.userIsManager && this.readyPending"
                                     type="warning"
                                     @click="sendOrderNext"
                                     :disabled="this.role == 21 ? true : false"
                                 >
                                     下发
                                 </el-button>
+
+                                <el-button
+                                    v-if="this.userIsManager && this.orderManagerEditable"
+                                    type="warning"
+                                    @click="sendOrderPrevious"
+                                    :disabled="this.role == 21 ? true : false"
+                                >
+                                    退回
+                                </el-button>
+
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
@@ -167,7 +193,7 @@
                                         size="small"
                                         controls-position="right"
                                         v-model="this.orderShoeTypeCustomerColorForm[scope.row.orderShoeTypeId]"
-                                        :disabled="!this.customerColorAccessMapping[scope.row.orderShoeTypeId]"
+                                        :disabled="editOrderInfoDisabled"
                                     >
                                     </el-input>
                                 </template>
@@ -197,11 +223,7 @@
                                             controls-position="right"
                                             @change="updateValue(scope.row)"
                                             v-model="scope.row.shoeTypeBatchData.unitPrice"
-                                            :disabled="
-                                                !this.unitPriceAccessMapping[
-                                                    scope.row.orderShoeTypeId
-                                                ]
-                                            "
+                                            :disabled="editOrderInfoDisabled"
                                         >
                                         </el-input>
                                     </template>
@@ -213,11 +235,7 @@
                                             controls-position="right"
                                             @change="updateCurrencyUnit(scope.row)"
                                             v-model="this.orderCurrencyUnit"
-                                            :disabled="
-                                                !this.currencyTypeAccessMapping[
-                                                    scope.row.orderShoeTypeId
-                                                ]
-                                            "
+                                            :disabled="editOrderInfoDisabled"
                                         >
                                         </el-input>
                                     </template>
@@ -235,16 +253,16 @@
                             <el-input
                                 style="width: 100px"
                                 v-model="scope.row.shoeCid"
-                                :disabled="customerShoeIdEditDisabled"
+                                :disabled="editOrderInfoDisabled"
                             >
                             </el-input>
-                            <el-button
+                            <!-- <el-button
                                 v-if="isShowBtn2(scope.row.shoeCid)"
                                 type="primary"
                                 @click="updateCustomInfo('customShoeId', scope.row)"
                                 style="margin-left: 15px"
                                 >{{customerShoeBtn}}</el-button
-                            >
+                            > -->
                         </template>
                     </el-table-column>
                     <el-table-column prop="currentStatus" label="鞋型状态" />
@@ -274,13 +292,6 @@
                             </el-button>
                         </template>
                     </el-table-column>
-                    <<!-- el-table-column label = "添加客户鞋型编号">
-            <template #default="scope">
-                    <el-input size="default" v-model = "this.orderShoeData.customerShoeName[scope.row.shoeRId]"
-                        ></el-input
-                    >
-            </template>
-            </el-table-column> -->
                 </el-table>
             </el-main>
         </el-container>
@@ -358,7 +369,25 @@ export default {
                 Authorization: `Bearer ${this.token}`
             }
         },
-        allowNext() {
+        orderManagerEditable() {
+            return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
+        },
+        userIsManager() {
+            return this.role == 4
+        },
+        orderClerkEditable(){
+            return this.orderCurStatus == 6 && this.orderCurStatusVal == 0
+        },
+        orderEditable(){
+            return this.orderCurStatus == 6
+        },
+        allowInput() {
+            this.orderCurStatus == 6
+        },
+        allowEditInfo(){
+            return (this.orderClerkEditable || this.userIsManager) && this.orderEditable
+        },
+        readyPending(){
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
         // allowChangeUnitPrice: function(row)
@@ -397,6 +426,7 @@ export default {
             remarkDialogVis: false,
             priceChangeNotAllowed: false,
             unitChangeNotAllowed: false,
+            editOrderInfoDisabled:true,
             remarkForm: {
                 orderShoeId: '',
                 technicalRemark: '',
@@ -474,47 +504,130 @@ export default {
                         orderShoeType.customerColorName
                     // bad fix TODO
                     this.orderCurrencyUnit = orderShoeType.shoeTypeBatchData.currencyType
-                    this.unitPriceAccessMapping[orderShoeType.orderShoeTypeId] =
-                        orderShoeType.shoeTypeBatchData.unitPrice == 0
-                    this.currencyTypeAccessMapping[orderShoeType.orderShoeTypeId] =
-                        orderShoeType.shoeTypeBatchData.currencyType == ''
-                    this.customerColorAccessMapping[orderShoeType.orderShoeTypeId] =
-                        orderShoeType.customerColorName == ''
                 })
             )
-            console.log(this.unitPriceAccessMapping)
-            console.log(this.currencyTypeAccessMapping)
         },
         updateStatus() {
             return
         },
-        toggleFinInfoChange() {
-            Object.keys(this.unitPriceAccessMapping).forEach(
-                (key) => (this.unitPriceAccessMapping[key] = !this.unitPriceAccessMapping[key])
-            )
-            Object.keys(this.currencyTypeAccessMapping).forEach(
-                (key) =>
-                    (this.currencyTypeAccessMapping[key] = !this.currencyTypeAccessMapping[key])
-            )
+        toggleEditInfo(){
+            console.log(this.editOrderInfoDisabled)
+            this.editOrderInfoDisabled = !this.editOrderInfoDisabled;
+            console.log(this.editOrderInfoDisabled)
+            console.log(this.orderCurStatus)
+            console.log(this.orderCurStatus == 6)
         },
+        async submitOrderInfo(){
+
+            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordercid`, {
+                                orderId: this.orderId,
+                                orderCid: this.orderData.orderCid
+                            })
+            
+            
+            const updateOrderShoeid = this.orderData.orderShoeAllData[0].orderShoeId
+            const updateOrderShoeCid = this.orderData.orderShoeAllData[0].shoeCid
+            
+            const response2 = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordershoecustomername`, {
+                orderShoeId: updateOrderShoeid,
+                shoeCid: updateOrderShoeCid
+            })
+
+            this.submitCustomerColorForm()
+            this.submitPriceForm()
+            // this.submitCustomerColorForm()
+            this.editOrderInfoDisabled = true
+        },
+        async proceedOrder(){
+            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/proceedevent`,{
+                orderId: this.orderDBId,
+                staffId: this.staffId
+            })
+            console.log(response)
+            if (response.status === 200){
+                ElMessage.success('提交订单至业务经理成功')
+                this.getOrderInfo()
+            }
+            else {
+                ElMessage.error('提交失败 金额信息或包材未上传')
+            }
+        },
+        async submitCustomerColorForm()
+        {
+            console.log(this.orderShoeTypeCustomerColorForm)
+            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updatecustomercolorname`, {
+                orderShoeTypeCustomerColorForm : this.orderShoeTypeCustomerColorForm
+            })
+            if (response.status === 200) {
+                ElMessage.success('客户颜色添加成功')
+                this.getOrderInfo()
+            } else {
+                ElMessage.error('客户颜色添加失败')
+            }
+        },
+        async submitPriceForm() {
+            console.log(this.orderShoeTypeIdToCurrencyType)
+            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateprice`, {
+                unitPriceForm: this.orderShoeTypeIdToUnitPrice,
+                currencyTypeForm: this.orderShoeTypeIdToCurrencyType,
+                orderId: this.orderDBId,
+                staffId: this.staffId
+            })
+            if (response.status === 200) {
+                ElMessage.success('变更成功')
+                this.getOrderInfo()
+            } else {
+                ElMessage.error('备注变更失败')
+            }
+            return
+        },
+
+        showMessage (key, value) {
+            ElMessageBox.alert('是否确认更新数据', '', {
+                confirmButtonText: '确认',
+                showCancelButton: true,
+                callback: async (action) => {
+                    if (action === 'confirm') {
+                        if (key === 'customOrderId') {
+                            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordercid`, {
+                                orderId: this.orderId,
+                                orderCid: value
+                            })
+                            if (response.status === 200) {
+                                ElMessage.success('更新成功，正在重新加载数据')
+                                setTimeout(()=>{
+                                    location.reload(location.href)
+                                }, 500)
+                            } else {
+                                ElMessage.error('更新失败')
+                            }
+                        }
+                        if (key === 'customShoeId') {
+                            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordershoecustomername`, {
+                                orderShoeId: value.orderShoeId,
+                                shoeCid: value.shoeCid
+                            })
+                            if (response.status === 200) {
+                                ElMessage.success('更新成功，正在重新加载数据')
+                                setTimeout(()=>{
+                                    location.reload(location.href)
+                                }, 500)
+                            } else {
+                                ElMessage.error('更新失败')
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+        ,
         changeCustomerColorMgt(){
-            console.log(this.customerColorAccessMapping)
             Object.keys(this.customerColorAccessMapping).forEach(
                 (key) => (this.customerColorAccessMapping[key] = true)
             )
         },
-        setfinInfoAccess() {},
-        allowChangeCurrencyType(row) {
-            return this.currencyTypeAccessMapping[row.orderShoeTypeId]
-        },
-        allowChangeUnitPrice(row) {
-            return this.unitPriceAccessMapping[row.orderShoeTypeId]
-        },
-        setFinInfoNotAllowed() {
-            this.priceChangeNotAllowed = true
-            this.unitChangeNotAllowed = true
-            this.priceUpdateButtonVis = false
-        },
+
         openRemarkDialog(row) {
             console.log(row.orderShoeId)
             this.remarkForm.orderShoeId = row.orderShoeId
@@ -525,6 +638,24 @@ export default {
             this.remarkForm.technicalRemark = row.orderShoeTechnicalRemark
             this.remarkForm.materialRemark = row.orderShoeMaterialRemark
             this.remarkDialogVis = true
+        },
+        async sendOrderPrevious(){
+            const response = await axios.post(
+                `${this.$apiBaseUrl}/ordercreate/sendprevious`,
+                {
+                    orderId: this.orderDBId,
+                    staffId: this.staffId
+                }
+            )
+            if (response.status === 200)
+            {
+                ElMessage.success('退回成功')
+            }
+            else{
+                ElMessage.error('退回错误')
+            }
+            this.getOrderInfo()
+            // #!TODO
         },
         sendOrderNext() {
             if (this.orderData.wrapRequirementUploadStatus === '已上传包装文件') {
@@ -571,7 +702,6 @@ export default {
             // row.batchQuantityMapping = row.orderShoeTypeBatchInfo.map((batchInfo) => { return batchInfo.packagingInfoId:batchInfo.unitQuantityInPair})Id})
         },
         updateValue(row) {
-            console.log(row)
             let result = row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
             row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2));
             this.orderShoeTypeIdToUnitPrice[row.orderShoeTypeId] = row.shoeTypeBatchData.unitPrice
@@ -583,37 +713,7 @@ export default {
                         orderShoeType.shoeTypeBatchData.currencyType = this.orderCurrencyUnit
                 }))
         },
-        async submitCustomerColorForm()
-        {
-            console.log(this.orderShoeTypeCustomerColorForm)
-            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updatecustomercolorname`, {
-                orderShoeTypeCustomerColorForm : this.orderShoeTypeCustomerColorForm
-            })
-            if (response.status === 200) {
-                ElMessage.success('客户颜色添加成功')
-                this.getOrderInfo()
-            } else {
-                ElMessage.error('客户颜色添加失败')
-            }
-            console.log(this.orderShoeTypeCustomerColorForm)
-        },
-        async submitPriceForm() {
-            console.log(this.orderShoeTypeIdToCurrencyType)
-            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateprice`, {
-                unitPriceForm: this.orderShoeTypeIdToUnitPrice,
-                currencyTypeForm: this.orderShoeTypeIdToCurrencyType,
-                orderId: this.orderDBId,
-                staffId: this.staffId
-            })
-            if (response.status === 200) {
-                ElMessage.success('变更成功')
-                this.getOrderInfo()
-            } else {
-                ElMessage.error('备注变更失败')
-            }
-            console.log(this.orderShoeTypeIdToUnitPrice)
-            return
-        },
+        
         async submitRemarkForm() {
             console.log(this.remarkForm)
             const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateremark`, {
@@ -666,103 +766,13 @@ export default {
                 ElMessage.error('上传失败')
             }
         },
-        checkdata() {
-            console.log(this.orderData)
-            console.log(this.orderShoePreviewData)
-            console.log(this.orderDocData)
-        },
-        openSubmitDocDialog() {},
-        downloadDoc() {},
+
         handleDialogClose() {
             console.log('TODO handle dialog close in OrderManagement.Vue')
         },
-        updateCustomInfo(key, value) {
-            if (key === 'customOrderId') {
-                this.customerOrderEditDisabled = false
-                if (this.customerOrderBtn === '提交数据') {
-                    this.showMessage(key, value)
-                }
-                this.customerOrderBtn = '提交数据'
-            }
-            if (key === 'customShoeId') {
-                this.customerShoeIdEditDisabled = false 
-                if (this.customerShoeBtn === '提交数据') {
-                    this.showMessage(key, value)
-                }
-                this.customerShoeBtn = '提交数据'
-            }
-        },
-        isEmpty(value) {
-            if (value === '') {
-                return false
-            } else {
-                if (this.role == 21) {
-                    return true
-                } else {
-                    return false
-                }
-            }
-        },
-        isShowBtn(value) {
-            if (value === '') {
-                return true
-            } else {
-                if (this.role == 21 && this.customerOrderEditDisabled) {
-                    return false
-                } else {
-                    return true
-                }
-            }
-        },
-        isShowBtn2(value) {
-            if (value === '') {
-                return true
-            } else {
-                if (this.role == 21 && this.customerShoeIdEditDisabled) {
-                    return false
-                } else {
-                    return true
-                }
-            }
-        },
-        showMessage (key, value) {
-            ElMessageBox.alert('是否确认更新数据', '', {
-                confirmButtonText: '确认',
-                showCancelButton: true,
-                callback: async (action) => {
-                    if (action === 'confirm') {
-                        if (key === 'customOrderId') {
-                            const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordercid`, {
-                                orderId: this.orderId,
-                                orderCid: value
-                            })
-                            if (response.status === 200) {
-                                ElMessage.success('更新成功，正在重新加载数据')
-                                setTimeout(()=>{
-                                    location.reload(location.href)
-                                }, 500)
-                            } else {
-                                ElMessage.error('更新失败')
-                            }
-                        }
-                        if (key === 'customShoeId') {
-                            const response = await axios.post(`${this.$apiBaseUrl}//ordercreate/updateordershoecustomername`, {
-                                orderShoeId: value.orderShoeId,
-                                shoeCid: value.shoeCid
-                            })
-                            if (response.status === 200) {
-                                ElMessage.success('更新成功，正在重新加载数据')
-                                setTimeout(()=>{
-                                    location.reload(location.href)
-                                }, 500)
-                            } else {
-                                ElMessage.error('更新失败')
-                            }
-                        }
-                    }
-                }
-            })
-        }
+
+
+        
     }
 }
 </script>

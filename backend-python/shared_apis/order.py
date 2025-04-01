@@ -724,12 +724,12 @@ def get_display_orders_manager():
                     order_status.order_status_value != None
                     and order_status.order_status_value == 0
                 ):
-                    order_status_message += " \n未填写财务信息"
+                    order_status_message += " \n待提交"
                 elif (
                     order_status.order_status_value != None
                     and order_status.order_status_value == 1
                 ):
-                    order_status_message += " \n已填写 待下发"
+                    order_status_message += " \n待审核下发"
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
 
