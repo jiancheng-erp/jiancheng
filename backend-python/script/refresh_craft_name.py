@@ -1,3 +1,4 @@
+from ast import IsNot
 from models import *
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -8,6 +9,10 @@ def refresh_storage_craft_match_craft_sheet(app, db):
     with app.app_context():
         material_storage = db.session.query(MaterialStorage).all()
         for storage in material_storage:
+            if storage.production_instruction_item_id is None:
+                storage.craft_name = None  # Set to None if no production instruction item ID
+                continue  # skip invalid entry
+
             craft_item = (
                 db.session.query(CraftSheetItem, ProductionInstructionItem)
                 .join(
@@ -15,7 +20,7 @@ def refresh_storage_craft_match_craft_sheet(app, db):
                     ProductionInstructionItem.production_instruction_item_id == CraftSheetItem.production_instruction_item_id,
                 )
                 .filter(
-                    ProductionInstructionItem.production_instruction_item_id == storage.production_instruction_item_id
+                    ProductionInstructionItem.production_instruction_item_id == storage.production_instruction_item_id,
                 )
                 .first()
             )
@@ -54,10 +59,14 @@ def refresh_storage_craft_match_craft_sheet(app, db):
 
         size_material_storage = db.session.query(SizeMaterialStorage).all()
         for storage in size_material_storage:
+            if storage.production_instruction_item_id is None:
+                storage.craft_name = None  # Set to None if no production instruction item ID
+                continue
+
             craft_item = (
                 db.session.query(CraftSheetItem)
                 .filter(
-                    CraftSheetItem.production_instruction_item_id == storage.production_instruction_item_id
+                    CraftSheetItem.production_instruction_item_id == storage.production_instruction_item_id,
                 )
                 .first()
             )
