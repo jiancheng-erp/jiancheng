@@ -6,58 +6,64 @@ from sqlalchemy.exc import SQLAlchemyError
 
 def refresh_storage_craft_match_craft_sheet(app, db):
     with app.app_context():
-        connection = db.engine.connect()
-        inspector = inspect(db.engine)
         material_storage = db.session.query(MaterialStorage).all()
         for storage in material_storage:
             craft_item = (
                 db.session.query(CraftSheetItem, ProductionInstructionItem)
                 .join(
                     ProductionInstructionItem,
-                    ProductionInstructionItem.production_instruction_item_id
-                    == CraftSheetItem.production_instruction_item_id,
+                    ProductionInstructionItem.production_instruction_item_id == CraftSheetItem.production_instruction_item_id,
                 )
                 .filter(
                     ProductionInstructionItem.production_instruction_item_id == storage.production_instruction_item_id
                 )
                 .first()
             )
+
             if craft_item:
-                if craft_item.ProductionInstructionItem.material_type == "I":
-                    # find similiar hotsole
-                    similiar_hotsole = (
+                craft_sheet, prod_item = craft_item
+                original_crafts = set(filter(None, (craft_sheet.craft_name or "").split("@")))
+                
+                if prod_item.material_type == "I":
+                    # Find all similar hotsole entries
+                    similiar_hotsoles = (
                         db.session.query(ProductionInstructionItem)
                         .filter(
-                            ProductionInstructionItem.material_id == craft_item.ProductionInstructionItem.material_id,
-                            ProductionInstructionItem.material_model == craft_item.ProductionInstructionItem.material_model,
-                            ProductionInstructionItem.material_specification == craft_item.ProductionInstructionItem.material_specification,
-                            ProductionInstructionItem.color == craft_item.ProductionInstructionItem.color,
-                            ProductionInstructionItem.order_shoe_type_id == craft_item.ProductionInstructionItem.order_shoe_type_id,
+                            ProductionInstructionItem.material_id == prod_item.material_id,
+                            ProductionInstructionItem.material_model == prod_item.material_model,
+                            ProductionInstructionItem.material_specification == prod_item.material_specification,
+                            ProductionInstructionItem.color == prod_item.color,
+                            ProductionInstructionItem.order_shoe_type_id == prod_item.order_shoe_type_id,
                             ProductionInstructionItem.material_type == "H"
-                            )
-                        .first()
+                        )
+                        .all()
                     )
-                    hotsole_craft_name = similiar_hotsole.pre_craft_name if similiar_hotsole else None
-                    if hotsole_craft_name:
-                        if craft_item.CraftSheetItem.craft_name:
-                            new_hotsole_craft_name = craft_item.CraftSheetItem.craft_name + "@" + hotsole_craft_name
-                        else:
-                            new_hotsole_craft_name = hotsole_craft_name
-                        storage.craft_name = new_hotsole_craft_name
-                    else:
-                        storage.craft_name = craft_item.CraftSheetItem.craft_name
-                    db.session.flush()
+
+                    hotsole_craft_names = set()
+                    for hotsole in similiar_hotsoles:
+                        if hotsole.pre_craft_name:
+                            hotsole_craft_names.update(hotsole.pre_craft_name.split("@"))
+
+                    # Combine and avoid duplicates
+                    combined_crafts = original_crafts.union(hotsole_craft_names)
+                    storage.craft_name = "@".join(sorted(combined_crafts))
+                else:
+                    storage.craft_name = craft_sheet.craft_name or None
+
+                db.session.flush()
+
         size_material_storage = db.session.query(SizeMaterialStorage).all()
         for storage in size_material_storage:
             craft_item = (
                 db.session.query(CraftSheetItem)
                 .filter(
-                    CraftSheetItem.production_instruction_item_id
-                    == storage.production_instruction_item_id
+                    CraftSheetItem.production_instruction_item_id == storage.production_instruction_item_id
                 )
                 .first()
             )
             if craft_item:
                 storage.craft_name = craft_item.craft_name
                 db.session.flush()
+
         db.session.commit()
+
