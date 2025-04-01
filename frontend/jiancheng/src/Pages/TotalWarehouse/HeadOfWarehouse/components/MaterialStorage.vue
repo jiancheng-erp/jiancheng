@@ -2,7 +2,7 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <el-button type="success" @click="confirmOrderShoesToOutbound">
+            <el-button type="success" @click="confirmOrderShoesToOutbound" disabled>
                 出库
             </el-button>
         </el-col>
@@ -10,7 +10,49 @@
             :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions"
             :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
     </el-row>
-    <el-table :data="tableData" border stripe height="650px" @selection-change="handleSelectionChange">
+    <el-row :gutter="20">
+        <el-col>
+            <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
+                <el-form-item prop="currentDateTime" label="日期">
+                    <el-date-picker v-model="outboundForm.currentDateTime" type="datetime"
+                        value-format="YYYY-MM-DD HH:mm:ss" clearable />
+                </el-form-item>
+                <el-form-item prop="outboundType" label="出库类型">
+                    <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
+                        <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
+                            :label="item.label"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item v-if="outboundForm.outboundType == 0" prop="departmentId" label="部门">
+                    <el-select v-model="outboundForm.departmentId" filterable clearable>
+                        <el-option v-for="item in departmentOptions" :label="item.label"
+                            :value="item.value"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType)" prop="supplierName" label="出库厂家">
+                    <el-autocomplete v-model="outboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
+                        @select="handleSupplierSelect" />
+                </el-form-item>
+                <el-form-item prop="remark" label="备注">
+                    <el-input v-model="outboundForm.remark"></el-input>
+                </el-form-item>
+                <el-form-item prop="orderRId" label="生产订单号">
+                    <el-input v-model="outboundForm.orderRId" clearable @change="getMaterialTableData"></el-input>
+                </el-form-item>
+                <el-form-item prop="shoeRId" label="工厂鞋型">
+                    <el-input v-model="outboundForm.shoeRId" clearable @change="getMaterialTableData"></el-input>
+                </el-form-item>
+                <el-form-item prop="warehouseId" label="仓库">
+                    <el-select v-model="outboundForm.warehouseId" filterable clearable @change="getMaterialTableData">
+                        <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :value="item.warehouseId"
+                            :label="item.warehouseName"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+        </el-col>
+
+    </el-row>
+    <el-table :data="tableData" border stripe height="550px" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂鞋型号"></el-table-column>
@@ -28,7 +70,8 @@
         <el-table-column prop="materialSpecification" label="规格"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-        <el-table-column prop="estimatedInboundAmount" label="应入库数量"></el-table-column>
+        <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺" min-width="200"></el-table-column>
+        <el-table-column prop="estimatedInboundAmount" label="采购单数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="实入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
         <el-table-column prop="supplierName" label="供应商"></el-table-column>
@@ -37,7 +80,7 @@
                 <el-button-group>
                     <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small"
                         @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
-                    <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
+                    <el-button type="primary" size="small" @click="viewRecords(scope.row)" disabled>入/出库记录</el-button>
                 </el-button-group>
             </template>
         </el-table-column>
@@ -127,7 +170,7 @@
 
     <OutboundDialog :visible="isConfirmOrderShoesDialogOpen" :outboundForm="outboundForm"
         @update-visible="updateConfirmOrderShoesDialogVis" @get-material-table-data="getMaterialTableData"
-        :selectedRows="selectedRowsCopy" />
+        :selectedRows="selectedRowsCopy" :outboundOptions="outboundOptions" :departmentOptions="departmentOptions" />
 </template>
 <script>
 import axios from 'axios'
@@ -154,12 +197,17 @@ export default {
                 shoeNumberSearch: '',
                 materialTypeSearch: '',
                 materialNameSearch: '',
+                materialModelSearch: '',
+                materialColorSearch: '',
                 materialSpecificationSearch: '',
                 materialSupplierSearch: '',
                 totalPurchaseOrderRIdSearch: '',
+                craftNameSearch: 0,
             },
             materialTypeOptions: [],
             materialSupplierOptions: [],
+            warehouseOptions: [],
+            departmentOptions: [],
             pageSize: 20,
             currentPage: 1,
             recordData: [],
@@ -177,19 +225,12 @@ export default {
             shoeSizeColumns: [],
             selectedRows: [],
             selectedRowsCopy: [],
-            outboundForm: {
-                // groupedSelectedRows contains formItemTemplate,
-                // selectedOrderShoeId, selectedOrderId, selectedOrderRId, and selectedShoeId
-                // because some materials don't have orderId or orderShoeId
-                groupedSelectedRows: [],
-                assetRows: [],
-                outsourceInfo: [],
-            },
+            outboundForm: {},
             formItemTemplate: {
-                timestamp: null,
-                outboundType: null,
+                currentDateTime: new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' '),
+                outboundType: 0,
                 outboundQuantity: 0,
-                section: null,
+                departmentId: null,
                 receiver: null,
                 outboundAddress: null,
                 deadlineDate: null,
@@ -197,11 +238,28 @@ export default {
                 outsourceInfo: [],
                 selectedOutsourceId: '',
                 selectedOutsourceFactory: '',
-                materials: [],
+                items: [],
                 selectedCompositeSupplier: null,
+                // groupedSelectedRows contains formItemTemplate,
+                // selectedOrderShoeId, selectedOrderId, selectedOrderRId, and selectedShoeId
+                // because some materials don't have orderId or orderShoeId
+                outsourceInfo: [],
+                warehouseId: null,
             },
             isConfirmOrderShoesDialogOpen: false,
             materialNameOptions: [],
+            outboundOptions: [
+                { label: '工厂使用', value: 0 },
+                { label: '废料处理', value: 1 },
+                { label: '外包发货', value: 2 },
+                { label: '外发复合', value: 3 },
+            ],
+            rules: {
+                currentDateTime: [{ required: true, message: '请选择日期', trigger: 'blur' }],
+                outboundType: [{ required: true, message: '请选择出库类型', trigger: 'blur' }],
+                supplierName: [{ required: true, message: '请输入出库厂家', trigger: 'blur' }],
+                departmentId: [{ required: true, message: '请选择部门', trigger: 'blur' }],
+            },
         }
     },
     mounted() {
@@ -209,8 +267,36 @@ export default {
         this.getAllSuppliers()
         this.getMaterialNameOptions()
         this.getMaterialTableData()
+        this.getWarehouseOptions()
+        this.getDepartmentOptions()
+        this.outboundForm = { ...this.formItemTemplate }
     },
     methods: {
+        querySuppliers(queryString, callback) {
+            const results = this.materialSupplierOptions
+                .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
+                .map((item) => ({ value: item }));
+
+            callback(results);
+        },
+        handleSupplierSelect(item) {
+            this.outboundForm.supplierName = item.value;
+        },
+        async handleOutboundType(value) {
+            this.outboundForm.outboundType = value
+            if (value == 3) {
+                this.searchForm.craftNameSearch = 1
+                await this.getMaterialTableData()
+            }
+            else {
+                this.searchForm.craftNameSearch = 0
+                await this.getMaterialTableData()
+            }
+        },
+        async getWarehouseOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allwarehouses`)
+            this.warehouseOptions = response.data
+        },
         async getMaterialNameOptions() {
             const params = { department: 0 }
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
@@ -227,19 +313,27 @@ export default {
             this.selectedRows = selection;
         },
         async confirmOrderShoesToOutbound() {
-            if (this.selectedRows.length == 0) {
-                ElMessage.error("未选择材料")
-                return
-            }
-            this.selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
-            // collect all orderShoeId that are null
-            this.selectedRowsCopy.forEach(row => {
-                row["selectedOrderShoeId"] = row.orderShoeId
-                row["selectedOrderId"] = row.orderId
-                row["selectedShoeRId"] = row.shoeRId
-                row["selectedOrderRId"] = row.orderRId
+            this.$refs.outboundForm.validate(async (valid) => {
+                if (valid) {
+                    if (this.selectedRows.length == 0) {
+                        ElMessage.error("未选择材料")
+                        return
+                    }
+                    this.selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
+                    // collect all orderShoeId that are null
+                    this.selectedRowsCopy.forEach(row => {
+                        row["selectedOrderShoeId"] = row.orderShoeId
+                        row["selectedOrderId"] = row.orderId
+                        row["selectedShoeRId"] = row.shoeRId
+                        row["selectedOrderRId"] = row.orderRId
+                    })
+                    this.isConfirmOrderShoesDialogOpen = true
+                }
+                else {
+                    ElMessage.error("请检查表单")
+                    return
+                }
             })
-            this.isConfirmOrderShoesDialogOpen = true
         },
         async viewSizeMaterialStock(row) {
             let params = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
@@ -254,6 +348,10 @@ export default {
             this.searchForm = { ...values }
             this.getMaterialTableData()
         },
+        async getDepartmentOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
+            this.departmentOptions = response.data
+        },
         async getAllMaterialTypes() {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialtypes`)
             this.materialTypeOptions = response.data
@@ -262,19 +360,21 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallsuppliernames`)
             this.materialSupplierOptions = response.data
         },
-        async getMaterialTableData(sortColumn, sortOrder) {
+        async getMaterialTableData() {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
                 "materialType": this.searchForm.materialTypeSearch,
                 "materialName": this.searchForm.materialNameSearch,
+                "materialModel": this.searchForm.materialModelSearch,
                 "materialSpec": this.searchForm.materialSpecificationSearch,
+                "materialColor": this.searchForm.materialColorSearch,
                 "supplier": this.searchForm.materialSupplierSearch,
+                "craftName": this.searchForm.craftNameSearch,
                 "orderRId": this.searchForm.orderNumberSearch,
                 "shoeRId": this.searchForm.shoeNumberSearch,
                 "purchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
-                "sortColumn": sortColumn,
-                "sortOrder": sortOrder
+                "warehouseId": this.outboundForm.warehouseId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
             this.tableData = response.data.result
