@@ -25,6 +25,7 @@ NEW_ORDER_STEP_OP = 12
 NEW_ORDER_NEXT_STEP_OP = 13
 NEW_ORDER_SHOE_OP = 2
 
+department_name = "业务部"
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
 
@@ -198,8 +199,6 @@ def order_price_update():
 	time_s = time.time()
 	unit_price_form = request.json.get('unitPriceForm')
 	currency_type_form = request.json.get('currencyTypeForm')
-	order_id = request.json.get('orderId')
-	staff_id = request.json.get('staffId')
 	
 	for order_shoe_type_id in unit_price_form.keys():
 		unit_price = float(unit_price_form[order_shoe_type_id])
@@ -209,14 +208,7 @@ def order_price_update():
 			  .first())
 		entity.unit_price = unit_price
 		entity.currency_type = currency_type
-	if 0 not in unit_price_form.values() and '' not in currency_type_form.values():
-		cur_time = format_date(datetime.datetime.now())
-		new_event = Event(staff_id = staff_id, handle_time = cur_time, operation_id = NEW_ORDER_STEP_OP, event_order_id = order_id)
-		processor: EventProcessor = current_app.config["event_processor"]
-		processor.processEvent(new_event)
-		db.session.add(new_event)
 	db.session.commit()
-
 	# find all orderShoeTypes belong to this order
 	# db.session.query(OrderShoeType)
 	# .filter(OrderShoeType.order_shoe_type_id == )
@@ -225,6 +217,33 @@ def order_price_update():
 	print("time taken is update price is" + str(time_t - time_s))
 	return jsonify({'msg':"ok"}), 200
 
+@order_create_bp.route("/ordercreate/proceedevent", methods=["POST"])
+def order_event_proceed():
+	print("PROCEED")
+	order_id = request.json.get('orderId')
+	staff_id = request.json.get('staffId')
+	price_all_filled = True
+	print(order_id, staff_id)
+	order_shoe_type_entities = (db.session.query(Order,OrderShoe,OrderShoeType)
+							 .filter_by(order_id = order_id)
+							 .join(OrderShoe,Order.order_id == OrderShoe.order_id)
+							 .join(OrderShoeType,OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id )
+							 .all())
+	for _, _, order_shoe_type_entity in order_shoe_type_entities:
+		if order_shoe_type_entity.unit_price == 0 or order_shoe_type_entity.currency_type == None:
+			price_all_filled = False
+	order_entity = db.session.query(Order).filter_by(order_id = order_id).first()
+	if order_entity != None and int(order_entity.production_list_upload_status) == 2 and price_all_filled:
+		cur_time = format_date(datetime.datetime.now())
+		new_event = Event(staff_id = staff_id, handle_time = cur_time, operation_id = NEW_ORDER_STEP_OP, event_order_id = order_id)
+		processor: EventProcessor = current_app.config["event_processor"]
+		processor.processEvent(new_event)
+		db.session.add(new_event)
+		db.session.commit()
+		return jsonify({'msg':"OK"}), 200	
+
+	else:
+		return jsonify({"error":"order_shoe_type_id not found"}), 201
 
 # def sync_order_shoe_status(order_shoe_type_id_list):
 # 	time_s = time.time()
@@ -269,7 +288,33 @@ def order_price_update():
 # 	time_t = time.time()
 # 	print("time taken for syncing order status is " + str(time_t - time_s))
 # 	return 
-
+@order_create_bp.route("/ordercreate/sendprevious", methods=['POST'])
+def order_send_previous():
+	order_id = request.json.get("orderId")
+	staff_id = request.json.get("staffId")
+	staff_entity = (db.session.query(Staff).filter_by(staff_id = staff_id).first())
+	if staff_entity:
+		staff_name = staff_entity.staff_name
+	else:
+		return jsonify({"msg":"operator not found"}), 404
+	entity = (db.session.query(Order,OrderStatus)
+		   .filter_by(order_id = order_id)
+		   .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+		   .first())
+	if entity:
+		_, status_entity = entity
+		if status_entity.order_current_status == 6:
+			status_entity.order_status_value = 0
+			cur_time = format_date(datetime.datetime.now())
+			revert_event = RevertEvent(revert_reason="业务部退回", responsible_department=department_name,
+								initialing_department=department_name + staff_name, event_time = cur_time, order_id = order_id)
+			db.session.add(revert_event)
+			db.session.commit()
+			return jsonify({"msg":"revert order"}), 200
+		else:
+			return jsonify({"error":"wrong status value for order"}), 400
+	else:
+		return jsonify({"error":"order not found"}), 404
 
 @order_create_bp.route("/ordercreate/sendnext", methods=['POST'])
 def order_next_step():
@@ -322,7 +367,7 @@ def order_rid_update():
 	.filter(Order.order_id == order_id)
 	.first())
 	if order_entity:
-		order_entity.order_rid = order_new_id
+		order_entity.order_rid = order_new_rid
 		db.session.commit()
 		return jsonify({'msg':"update OK"}), 200
 	else:

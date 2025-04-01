@@ -9,13 +9,20 @@
             <el-button size="default" type="primary" @click="openCreateOrderDialog"
                 >创建订单</el-button
             >
-            <el-button
-                size="default"
-                type="primary"
-                @click="displayContent"
-                v-if="this.userRole == 21 ? false : true"
-                >{{ buttonText }}</el-button
+            <el-select
+            v-model="selectedOrderStatus"
+            placeholder="请选择订单类型"
+            size="default"
+            @change="handleOrderStatusChange"
+            style="width: 200px;width: 150px;"
             >
+            <el-option
+                v-for="item in orderStatusOption"
+                :key="item"
+                :label="item"
+                :value="item"
+            />
+            </el-select>
         </el-col>
         <el-col :span="4" :offset="1"
             ><el-input
@@ -847,6 +854,8 @@ export default {
             totalItems: 0,
             currentOrderCreatePage: 1,
             orderCreatePageSize: 20,
+            orderStatusOption: ["全部订单", "需审批订单", "我发起的订单"],
+            selectedOrderStatus: "全部订单", // default selection
         }
     },
     computed: {
@@ -1734,30 +1743,33 @@ export default {
                 }
             }
         },
-        async displayContent() {
-            if (this.buttonFlag) {
-                this.buttonText = '需我审批订单'
-                const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-                this.unfilteredData = response.data
-                this.displayData = this.unfilteredData
-                this.totalItems = this.unfilteredData.length
-                this.radio = 'all'
-                this.sortRadio = 'asc'
-            } else {
-                this.buttonText = '查看所有订单'
-                const response = await axios.get(
-                    `${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
-                    {
-                        currentStaffId: this.staffId
-                    }
-                )
-                this.unfilteredData = response.data
-                this.displayData = this.unfilteredData
-                this.totalItems = this.unfilteredData.length
-                this.radio = 'all'
-                this.sortRadio = 'asc'
+        async handleOrderStatusChange(value) {
+            let response
+            if (value === "全部订单") {
+            response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
+            } else if (value === "需审批订单") {
+            response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                params: {
+                currentStaffId: this.staffId,
+                filterStatus: 0,
+                }
+            })
+            } else if (value === "我发起的订单") {
+                response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                params: {
+                currentStaffId: this.staffId,
+                filterStatus: 1,
+                }
+            })
             }
-            this.buttonFlag = !this.buttonFlag
+
+            if (response && response.data) {
+            this.unfilteredData = response.data
+            this.displayData = response.data
+            this.totalItems = response.data.length
+            this.radio = "all"
+            this.sortRadio = "asc"
+            }
         }
     },
     watch: {
