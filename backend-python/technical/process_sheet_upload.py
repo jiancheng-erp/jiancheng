@@ -2233,9 +2233,9 @@ def issue_production_order():
                     ).first()
                 )
                 if material_storage:
-                #find the hotsole craft name and combined to the craft name
                     if material_type == "I":
-                        similiar_hotsole = (
+                        # Find all similar hotsole entries
+                        similiar_hotsoles = (
                             db.session.query(ProductionInstructionItem)
                             .filter(
                                 ProductionInstructionItem.material_id == item.material_id,
@@ -2245,19 +2245,24 @@ def issue_production_order():
                                 ProductionInstructionItem.order_shoe_type_id == item.order_shoe_type_id,
                                 ProductionInstructionItem.material_type == "H",
                             )
-                            .first()
+                            .all()
                         )
-                        hotsole_craft_name = similiar_hotsole.pre_craft_name if similiar_hotsole else None
-                        if hotsole_craft_name:
-                            if item.craft_name:
-                                new_hotsole_craft_name = item.craft_name + "@" + hotsole_craft_name
-                            else:
-                                new_hotsole_craft_name = hotsole_craft_name
-                            material_storage.craft_name = new_hotsole_craft_name
-                        else:
-                            material_storage.craft_name = item.craft_name
+
+                        # Extract hotsole craft names
+                        hotsole_craft_names = set()
+                        for hotsole in similiar_hotsoles:
+                            if hotsole.pre_craft_name:
+                                hotsole_craft_names.update(hotsole.pre_craft_name.split("@"))
+
+                        # Extract original craft names from item
+                        original_crafts = set(filter(None, (item.craft_name or "").split("@")))
+
+                        # Combine and assign
+                        combined_crafts = original_crafts.union(hotsole_craft_names)
+                        material_storage.craft_name = "@".join(sorted(combined_crafts)) if combined_crafts else None
                     else:
                         material_storage.craft_name = item.craft_name
+
                     db.session.flush()
                 size_material_storage =(
                     db.session.query(SizeMaterialStorage).filter(
@@ -2280,6 +2285,7 @@ def issue_production_order():
                             department_id=item.department_id,
                             size_type="E",
                             bom_item_add_type="1",
+                            unit_usage=0.0,
                             total_usage=0,
                             material_second_type=item.material_second_type,
                             craft_name=craft,
@@ -2287,123 +2293,6 @@ def issue_production_order():
                         )
                         db.session.add(bom_item)
         db.session.flush()
-        # create excel file
-        # insert_data = []
-        # transdict = {
-        #     "S": "面料",
-        #     "I": "里料",
-        #     "A": "辅料",
-        #     "O": "底材",
-        #     "M": "中底",
-        #     "L": "楦头",
-        #     "H": "复合",
-        # }
-        # order_rid = order_rid
-        # order_shoe_rid = order_shoe_rid
-        # customer_shoe_name = order_shoe.OrderShoe.customer_product_name
-        # last_type = production_instruction.last_type
-        # size_range = production_instruction.size_range
-        # size_difference = production_instruction.size_difference
-        # origin_size = production_instruction.origin_size
-        # designer = order_shoe.Shoe.shoe_designer
-        # brand = (
-        #     db.session.query(Customer)
-        #     .filter(Customer.customer_id == order_shoe.Order.customer_id)
-        #     .first()
-        #     .customer_brand
-        # )
-        # colors = []
-        # for item in production_instruction_items:
-        #     order_shoe_type_id = item.order_shoe_type_id
-        #     shoe_color = (
-        #         db.session.query(OrderShoeType, ShoeType, Color)
-        #         .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
-        #         .join(Color, ShoeType.color_id == Color.color_id)
-        #         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
-        #         .first()
-        #     )
-        #     if shoe_color.Color.color_name not in colors:
-        #         colors.append(shoe_color.Color.color_name)
-        #     color_name = shoe_color.Color.color_name
-        #     material_type = transdict[item.material_type]
-        #     material_second_type = item.material_second_type
-        #     material = (
-        #         db.session.query(Material, Supplier)
-        #         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        #         .filter(Material.material_id == item.material_id)
-        #         .first()
-        #     )
-        #     material_name = material.Material.material_name
-        #     unit = material.Material.material_unit
-        #     material_model = item.material_model
-        #     material_specification = item.material_specification
-        #     color = item.color
-        #     remark = item.remark
-        #     supplier_name = material.Supplier.supplier_name
-        #     insert_data.append(
-        #         {
-        #             "鞋型颜色": color_name,
-        #             "材料类型": material_type,
-        #             "材料二级类型": material_second_type,
-        #             "材料名称": material_name,
-        #             "单位": unit,
-        #             "材料型号": material_model,
-        #             "材料规格": material_specification,
-        #             "颜色": color,
-        #             "备注": remark,
-        #             "厂家名称": supplier_name,
-        #         }
-        #     )
-        # color_string = "、".join(colors)
-        # image_save_path = os.path.join(
-        #     FILE_STORAGE_PATH, order_rid, order_shoe_rid, "shoe_image.jpg"
-        # )
-        # shoe_directory = os.path.join(IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid)
-
-        # # Get the list of folders inside the directory
-        # folders = os.listdir(shoe_directory)
-
-        # # Filter out any non-folder entries (just in case)
-        # folders = [f for f in folders if os.path.isdir(os.path.join(shoe_directory, f))]
-
-        # # Get the first folder in the directory
-        # if folders:
-        #     first_folder = folders[0]
-        #     image_path = os.path.join(
-        #         IMAGE_UPLOAD_PATH,
-        #         "shoe",
-        #         order_shoe_rid,
-        #         first_folder,
-        #         "shoe_image.jpg",
-        #     )
-        # else:
-        #     image_path = os.path.join(
-        #         IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid, "shoe_image.jpg"
-        #     )
-        # try:
-        #     generate_instruction_excel_file(
-        #         os.path.join(FILE_STORAGE_PATH, "投产指令单模版.xlsx"),
-        #         os.path.join(
-        #             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "投产指令单.xlsx"
-        #         ),
-        #         {
-        #             "order_id": order_rid,
-        #             "inherit_id": order_shoe_rid,
-        #             "customer_id": customer_shoe_name,
-        #             "last_type": last_type,
-        #             "size_range": size_range,
-        #             "size_difference": size_difference,
-        #             "origin_size": origin_size,
-        #             "designer": designer,
-        #             "brand": brand,
-        #             "colors": color_string,
-        #         },
-        #         insert_data,
-        #         image_path,
-        #         image_save_path,
-        #     )
-        # except Exception:
-        #     return jsonify({"error": "Failed to issue production order"}), 500
         event_arr = []
         processor: EventProcessor = current_app.config["event_processor"]
         try:

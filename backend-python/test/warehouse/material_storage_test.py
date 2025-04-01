@@ -1,38 +1,36 @@
 import sys
 import os
-
-# Add the parent directory (two levels up) to the system path.
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-
-import pytest
-from test_app_config import create_app
-from app_config import db
-from models import *
-from flask.testing import FlaskClient
 from datetime import datetime
-import requests
+from unittest.mock import patch
+import pytest
+from flask.testing import FlaskClient
+
+
+# Add the parent directory to the path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from app_config import db
+from test_app_config import create_app
 from blueprints import register_blueprints
-
-
+from models import *
+from event_processor import EventProcessor
+# --- Flask App Fixture ---
 @pytest.fixture
 def test_app():
-    # Configure the app for testing with an in-memory SQLite database.
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-            "secret_key": "EC63AF9BA57B9F20",  # Provide a test secret key
-            "JWT_SECRET_KEY": "EC63AF9BA57B9F20",  # Provide a test JWT secret key if needed
-        }
-    )
+    app = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": "mysql+pymysql://jiancheng_mgt:123456Ab@localhost:3306/jiancheng_local_test",
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SECRET_KEY": "EC63AF9BA57B9F20",
+        "JWT_SECRET_KEY": "EC63AF9BA57B9F20"
+    })
+    app.config['event_processor'] = EventProcessor()
     register_blueprints(app)
     db.init_app(app)
     with app.app_context():
-        db.create_all()  # Create tables
+        db.create_all()
         yield app
         db.session.remove()
-        db.drop_all()  # Clean up after tests
-
+        db.drop_all()
 
 @pytest.fixture
 def client(test_app):

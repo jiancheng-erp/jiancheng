@@ -677,7 +677,7 @@ class PurchaseDivideOrder(db.Model):
         db.BigInteger,
     )
     purchase_divide_order_rid = db.Column(
-        db.Integer,
+        db.String(50), nullable=False, unique=True
     )
     purchase_divide_order_type = db.Column(db.String(1), nullable=False)
     purchase_order_remark = db.Column(db.String(100), nullable=True)
