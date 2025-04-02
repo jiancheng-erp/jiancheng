@@ -68,96 +68,136 @@
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="90%">
         <div id="printView">
-            <div style="position: relative; padding: 5px;">
-                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
-                <span
-                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
-                    单据编号:{{ currentRow.inboundRId }}
-                </span>
-            </div>
-            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
-                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <td style="padding:5px; width: 150px;" align="left">供应商:{{ currentRow.supplierName }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{ currentRow.warehouseName }}</td>
-                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{ currentRow.payMethod }}</td>
-                </tr>
+            <table style="width:100%; border-collapse: collapse;">
+                <!-- Header repeated on each page -->
+                <thead>
+                    <tr>
+                        <td>
+                            <div style="position: relative; padding: 5px;">
+                                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
+                                <span
+                                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
+                                    单据编号: {{ currentRow.inboundRId }}
+                                </span>
+                            </div>
+                            <table class="table" border="0" cellspacing="0" align="left" width="100%"
+                                style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <tr>
+                                    <td style="padding:5px; width: 150px;" align="left">供应商: {{
+                                        currentRow.supplierName
+                                        }}</td>
+                                    <td style="padding:5px; width: 150px;" align="left">仓库名称: {{
+                                        currentRow.warehouseName }}</td>
+                                    <td style="padding:5px; width: 300px;" align="left">入库时间: {{
+                                        currentRow.timestamp }}
+                                    </td>
+                                    <td style="padding:5px; width: 150px;" align="left">结算方式: {{
+                                        currentRow.payMethod }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </thead>
+
+                <!-- Main body content -->
+                <tbody>
+                    <tr>
+                        <td>
+                            <table v-if="recordData.items.length > 0 && recordData.items[0].materialName !== '大底'"
+                                class="yk-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="height:360px; size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <thead>
+                                    <tr>
+                                        <th width="100">材料名</th>
+                                        <th width="100">型号</th>
+                                        <th width="200">规格</th>
+                                        <th width="80">颜色</th>
+                                        <th width="55">单位</th>
+                                        <th width="110">订单号</th>
+                                        <th width="100">数量</th>
+                                        <th v-if="currentRow.inboundType != 2" width="110">单价</th>
+                                        <th v-if="currentRow.inboundType == 2" width="110">复合单价</th>
+                                        <th width="110">金额</th>
+                                        <th>备注</th>
+                                    </tr>
+                                </thead>
+
+                                <tr v-for="(item, index) in recordData.items" :key="index" align="center">
+                                    <td>{{ item.materialName }}</td>
+                                    <td>{{ item.materialModel }}</td>
+                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.colorName }}</td>
+                                    <td>{{ item.actualInboundUnit }}</td>
+                                    <td>{{ item.orderRId }}</td>
+                                    <td v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'"
+                                        v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
+                                            item[column.prop] }}
+                                    </td>
+                                    <td v-else>{{ item.inboundQuantity }}</td>
+                                    <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
+                                    <td v-if="currentRow.inboundType == 2">{{ item.compositeUnitCost }}</td>
+                                    <td>{{ item.itemTotalPrice }}</td>
+                                    <td>{{ item.remark }}</td>
+                                </tr>
+                            </table>
+                            <table v-else class="yk-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="font-size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <tr>
+                                    <th width="100">材料名</th>
+                                    <th width="100">型号</th>
+                                    <th width="200">规格</th>
+                                    <th width="80">颜色</th>
+                                    <th width="55">单位</th>
+                                    <th width="110">订单号</th>
+                                    <th width="40" v-for="(column, index) in filteredShoeSizeColumns" :key="index">
+                                        {{
+                                            column.label }}</th>
+                                    <th width="100">数量</th>
+                                    <th v-if="currentRow.inboundType != 2" width="110">单价</th>
+                                    <th v-if="currentRow.inboundType == 2" width="110">复合单价</th>
+                                    <th width="110">金额</th>
+                                    <th>备注</th>
+                                </tr>
+                                <tr v-for="(item, index) in recordData.items" :key="index" align="center">
+                                    <td>{{ item.materialName }}</td>
+                                    <td>{{ item.materialModel }}</td>
+                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.colorName }}</td>
+                                    <td>{{ item.actualInboundUnit }}</td>
+                                    <td>{{ item.orderRId }}</td>
+                                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
+                                        item[column.prop] }}</td>
+                                    <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
+                                    <td v-if="currentRow.inboundType == 2">{{ item.compositeUnitCost }}</td>
+                                    <td>{{ item.itemTotalPrice }}</td>
+                                    <td>{{ item.remark }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+
+                <!-- Footer repeated on each page -->
+                <tfoot>
+                    <tr>
+                        <td>
+                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold; display: flex;">
+                                <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
+                                    calculateInboundTotal()
+                                }}</span></span>
+                                <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
+                                    currentRow.totalPrice
+                                }}</span></span>
+                                <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
+                                    currentRow.remark }}</span></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
-            <table v-if="recordData.items.length > 0 && recordData.items[0].materialName !== '大底'" class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <th width="100">材料名</th>
-                    <th width="100">型号</th>
-                    <th width="200">规格</th>
-                    <th width="80">颜色</th>
-                    <th width="55">单位</th>
-                    <th width="110">订单号</th>
-                    <th width="100">数量</th>
-                    <th v-if="currentRow.inboundType != 2" width="110">单价</th>
-                    <th v-if="currentRow.inboundType == 2" width="110">复合单价</th>
-                    <th width="110">金额</th>
-                    <th>备注</th>
-                </tr>
-                <tr v-for="(item, index) in recordData.items" :key="index" align="center">
-                    <td>{{ item.materialName }}</td>
-                    <td>{{ item.materialModel }}</td>
-                    <td>{{ item.materialSpecification }}</td>
-                    <td>{{ item.colorName }}</td>
-                    <td>{{ item.actualInboundUnit }}</td>
-                    <td>{{ item.orderRId }}</td>
-                    <td v-if="recordData.items.length > 0 && recordData.items[0].materialName === '大底'"
-                        v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
-                    </td>
-                    <td v-else>{{ item.inboundQuantity }}</td>
-                    <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
-                    <td v-if="currentRow.inboundType == 2">{{ item.compositeUnitCost }}</td>
-                    <td>{{ item.itemTotalPrice }}</td>
-                    <td>{{ item.remark }}</td>
-                </tr>
-            </table>
-            <table v-else class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <th width="100">材料名</th>
-                    <th width="100">型号</th>
-                    <th width="200">规格</th>
-                    <th width="80">颜色</th>
-                    <th width="55">单位</th>
-                    <th width="110">订单号</th>
-                    <th width="40" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ column.label }}</th>
-                    <th width="100">数量</th>
-                    <th v-if="currentRow.inboundType != 2" width="110">单价</th>
-                    <th v-if="currentRow.inboundType == 2" width="110">复合单价</th>
-                    <th width="110">金额</th>
-                    <th>备注</th>
-                </tr>
-                <tr v-for="(item, index) in recordData.items" :key="index" align="center">
-                    <td>{{ item.materialName }}</td>
-                    <td>{{ item.materialModel }}</td>
-                    <td>{{ item.materialSpecification }}</td>
-                    <td>{{ item.colorName }}</td>
-                    <td>{{ item.actualInboundUnit }}</td>
-                    <td>{{ item.orderRId }}</td>
-                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}</td>
-                    <td v-if="currentRow.inboundType != 2">{{ item.unitPrice }}</td>
-                    <td v-if="currentRow.inboundType == 2">{{ item.compositeUnitCost }}</td>
-                    <td>{{ item.itemTotalPrice }}</td>
-                    <td>{{ item.remark }}</td>
-                </tr>
-            </table>
-            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
-                <div style="display: flex;">
-                    <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                        calculateInboundTotal() }}</span></span>
-                    <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                        currentRow.totalPrice }}</span></span>
-                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
-                        currentRow.remark
-                            }}</span></span>
-                </div>
-            </div>
         </div>
+
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
             <el-button type="primary" v-print="'#printView'">打印</el-button>
@@ -255,9 +295,8 @@
                     </el-table-column>
                     <el-table-column label="删除" width="80">
                         <template #default="scope">
-                            <el-switch v-model="scope.row.toDelete" 
-                            :active-value="1" :inactive-value="0"
-                            @change="(value) => markDelete(scope.row, value)" />
+                            <el-switch v-model="scope.row.toDelete" :active-value="1" :inactive-value="0"
+                                @change="(value) => markDelete(scope.row, value)" />
                         </template>
                     </el-table-column>
                 </el-table>
@@ -591,5 +630,26 @@ export default {
     padding-right: 20px;
     color: black;
     font-family: SimHei;
+}
+
+/* 确保表头固定和分页逻辑 */
+/* Print styles */
+@media print {
+    @page {
+        margin: 20mm;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
+    }
+
+    /* Optional: Avoid breaking inside rows */
+    tr {
+        page-break-inside: avoid;
+    }
 }
 </style>

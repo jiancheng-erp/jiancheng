@@ -165,89 +165,117 @@
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false"
         @closed="closePreviewDialog">
         <div id="printView">
-            <div style="position: relative; padding: 5px;">
-                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
-                <span
-                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
-                    单据编号:{{ previewInboundForm.inboundRId }}
-                </span>
-            </div>
-            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
-                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <!-- <td style="padding:5px; width: 300px;" align="left">采购订单号:{{ inboundForm.totalPurchaseOrderRId }}
-                    </td> -->
-                    <td style="padding:5px; width: 150px;" align="left">供应商:{{ previewInboundForm.supplierName }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{ previewInboundForm.warehouseName }}</td>
-                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{ previewInboundForm.currentDateTime }}
-                    </td>
-                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{ previewInboundForm.payMethod }}</td>
-                </tr>
+            <table style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <td>
+                            <div style="position: relative; padding: 5px;">
+                                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
+                                <span
+                                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
+                                    单据编号:{{ previewInboundForm.inboundRId }}
+                                </span>
+                            </div>
+                            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
+                                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <tr>
+                                    <td style="padding:5px; width: 150px;" align="left">供应商:{{
+                                        previewInboundForm.supplierName }}</td>
+                                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{
+                                        previewInboundForm.warehouseName }}</td>
+                                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{
+                                        previewInboundForm.currentDateTime }}
+                                    </td>
+                                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{
+                                        previewInboundForm.payMethod
+                                    }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <td>
+                            <table v-if="previewData.length > 0 && previewData[0].materialName !== '大底'"
+                                class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
+                                style="height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <tr>
+                                    <th width="100">材料名</th>
+                                    <th width="100">型号</th>
+                                    <th width="200">规格</th>
+                                    <th width="80">颜色</th>
+                                    <th width="55">单位</th>
+                                    <th width="110">订单号</th>
+                                    <th width="100">数量</th>
+                                    <th width="110">单价</th>
+                                    <th width="110">金额</th>
+                                    <th>备注</th>
+                                </tr>
+                                <tr v-for="(item, index) in previewData" :key="index" align="center">
+                                    <td>{{ item.materialName }}</td>
+                                    <td>{{ item.materialModel }}</td>
+                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.materialColor }}</td>
+                                    <td>{{ item.actualInboundUnit }}</td>
+                                    <td>{{ item.orderRId }}</td>
+                                    <td>{{ item.inboundQuantity }}</td>
+                                    <td>{{ item.unitPrice }}</td>
+                                    <td>{{ item.itemTotalPrice }}</td>
+                                    <td>{{ item.remark }}</td>
+                                </tr>
+                            </table>
+                            <table v-else class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
+                                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <tr>
+                                    <th width="100">材料名</th>
+                                    <th width="100">型号</th>
+                                    <th width="200">规格</th>
+                                    <th width="80">颜色</th>
+                                    <th width="55">单位</th>
+                                    <th width="110">订单号</th>
+                                    <th width="40" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
+                                        column.label }}
+                                    </th>
+                                    <th width="110">单价</th>
+                                    <th width="110">金额</th>
+                                    <th>备注</th>
+                                </tr>
+                                <tr v-for="(item, index) in previewData" :key="index" align="center">
+                                    <td>{{ item.materialName }}</td>
+                                    <td>{{ item.materialModel }}</td>
+                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.materialColor }}</td>
+                                    <td>{{ item.actualInboundUnit }}</td>
+                                    <td>{{ item.orderRId }}</td>
+                                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
+                                        item[column.prop]
+                                        }}
+                                    </td>
+                                    <td>{{ item.unitPrice }}</td>
+                                    <td>{{ item.itemTotalPrice }}</td>
+                                    <td>{{ item.remark }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>
+                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;display: flex;">
+                                <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
+                                    calculateInboundTotal }}</span></span>
+                                <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
+                                    calculateTotalPriceSum }}</span></span>
+                                <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
+                                    previewInboundForm.remark }}</span></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
-            <table v-if="previewData.length > 0 && previewData[0].materialName !== '大底'" class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <th width="100">材料名</th>
-                    <th width="100">型号</th>
-                    <th width="200">规格</th>
-                    <th width="80">颜色</th>
-                    <th width="55">单位</th>
-                    <th width="110">订单号</th>
-                    <th width="100">数量</th>
-                    <th width="110">单价</th>
-                    <th width="110">金额</th>
-                    <th>备注</th>
-                </tr>
-                <tr v-for="(item, index) in previewData" :key="index" align="center">
-                    <td>{{ item.materialName }}</td>
-                    <td>{{ item.materialModel }}</td>
-                    <td>{{ item.materialSpecification }}</td>
-                    <td>{{ item.materialColor }}</td>
-                    <td>{{ item.actualInboundUnit }}</td>
-                    <td>{{ item.orderRId }}</td>
-                    <td>{{ item.inboundQuantity }}</td>
-                    <td>{{ item.unitPrice }}</td>
-                    <td>{{ item.itemTotalPrice }}</td>
-                    <td>{{ item.remark }}</td>
-                </tr>
-            </table>
-            <table v-else class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                <tr>
-                    <th width="100">材料名</th>
-                    <th width="100">型号</th>
-                    <th width="200">规格</th>
-                    <th width="80">颜色</th>
-                    <th width="55">单位</th>
-                    <th width="110">订单号</th>
-                    <th width="40" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ column.label }}</th>
-                    <th width="110">单价</th>
-                    <th width="110">金额</th>
-                    <th>备注</th>
-                </tr>
-                <tr v-for="(item, index) in previewData" :key="index" align="center">
-                    <td>{{ item.materialName }}</td>
-                    <td>{{ item.materialModel }}</td>
-                    <td>{{ item.materialSpecification }}</td>
-                    <td>{{ item.materialColor }}</td>
-                    <td>{{ item.actualInboundUnit }}</td>
-                    <td>{{ item.orderRId }}</td>
-                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}</td>
-                    <td>{{ item.unitPrice }}</td>
-                    <td>{{ item.itemTotalPrice }}</td>
-                    <td>{{ item.remark }}</td>
-                </tr>
-            </table>
-            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
-                <div style="display: flex;">
-                    <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                        calculateInboundTotal }}</span></span>
-                    <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                        calculateTotalPriceSum }}</span></span>
-                    <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
-                        previewInboundForm.remark }}</span></span>
-                </div>
-            </div>
         </div>
         <template #footer>
             <el-button type="primary" v-print="'#printView'">打印</el-button>
@@ -694,19 +722,26 @@ export default {
 }
 </style>
 
-<style media="print">
-@page {
-    size: 241mm 93mm;
-    margin: 3mm;
-}
+<style>
+/* 确保表头固定和分页逻辑 */
+/* Print styles */
+@media print {
+    @page {
+        margin: 20mm;
+    }
 
-html {
-    background-color: #ffffff;
-    margin: 0px;
-}
+    thead {
+        display: table-header-group;
+    }
 
-body {
-    border: solid 1px #ffffff;
+    tfoot {
+        display: table-footer-group;
+    }
+
+    /* Optional: Avoid breaking inside rows */
+    tr {
+        page-break-inside: avoid;
+    }
 }
 </style>
 
