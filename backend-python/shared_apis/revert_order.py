@@ -214,6 +214,8 @@ def get_revert_order_reason():
         )
         .first()
     )
+    if not order_shoe_status:
+        return []
 
     result = []
     for status, reason in STATUS_REVERT_DICT.items():
