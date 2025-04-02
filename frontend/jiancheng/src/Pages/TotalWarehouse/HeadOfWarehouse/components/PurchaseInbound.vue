@@ -188,7 +188,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -200,19 +200,21 @@
                         <td>
                             <table v-if="previewData.length > 0 && previewData[0].materialName !== '大底'"
                                 class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                                style="height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                                <tr>
-                                    <th width="100">材料名</th>
-                                    <th width="100">型号</th>
-                                    <th width="200">规格</th>
-                                    <th width="80">颜色</th>
-                                    <th width="55">单位</th>
-                                    <th width="110">订单号</th>
-                                    <th width="100">数量</th>
-                                    <th width="110">单价</th>
-                                    <th width="110">金额</th>
-                                    <th>备注</th>
-                                </tr>
+                                style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <thead>
+                                    <tr>
+                                        <th width="100">材料名</th>
+                                        <th width="100">型号</th>
+                                        <th width="200">规格</th>
+                                        <th width="80">颜色</th>
+                                        <th width="55">单位</th>
+                                        <th width="110">订单号</th>
+                                        <th width="100">数量</th>
+                                        <th width="110">单价</th>
+                                        <th width="110">金额</th>
+                                        <th>备注</th>
+                                    </tr>
+                                </thead>
                                 <tr v-for="(item, index) in previewData" :key="index" align="center">
                                     <td>{{ item.materialName }}</td>
                                     <td>{{ item.materialModel }}</td>
@@ -251,7 +253,7 @@
                                     <td>{{ item.orderRId }}</td>
                                     <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
                                         item[column.prop]
-                                        }}
+                                    }}
                                     </td>
                                     <td>{{ item.unitPrice }}</td>
                                     <td>{{ item.itemTotalPrice }}</td>
