@@ -1,4 +1,3 @@
-from torch import res
 import constants
 import time
 from app_config import db
