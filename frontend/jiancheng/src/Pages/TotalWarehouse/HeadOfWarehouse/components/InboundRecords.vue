@@ -106,7 +106,7 @@
                         <td>
                             <table v-if="recordData.items.length > 0 && recordData.items[0].materialName !== '大底'"
                                 class="yk-table" border="1" cellspacing="0" align="center" width="100%"
-                                style="height:360px; size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                style="max-height:360px; size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
