@@ -402,77 +402,27 @@ def get_materials():
         "supplier": Supplier.supplier_name,
         # "order_rid": Order.order_rid,
     }
-    size_material_filter_map = {
-        "material_name": Material.material_name,
-        "material_spec": SizeMaterialStorage.size_material_specification,
-        "material_model": SizeMaterialStorage.size_material_model,
-        "material_color": SizeMaterialStorage.size_material_color,
-        "supplier": Supplier.supplier_name,
-        # "order_rid": Order.order_rid,
-    }
-
-    # find out material is sized or not
-    material_query = db.session.query(Material, Supplier).join(
-        Supplier, Material.material_supplier == Supplier.supplier_id
+    query = (
+        db.session.query(
+            MaterialStorage.material_model,
+            MaterialStorage.material_specification,
+            MaterialStorage.material_storage_color,
+            MaterialStorage.actual_inbound_unit,
+            Material.material_name,
+            Material.material_category,
+            Supplier.supplier_name,
+        )
+        .join(
+            Material,
+            MaterialStorage.actual_inbound_material_id == Material.material_id,
+        )
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .distinct()
     )
-    if filters["material_name"] and filters["material_name"] != "":
-        material_query = material_query.filter(
-            Material.material_name.ilike(f"%{filters['material_name']}%")
-        )
-    if filters["supplier"] and filters["supplier"] != "":
-        material_query = material_query.filter(
-            Supplier.supplier_name.ilike(f"%{filters['supplier']}%")
-        )
-    entities = material_query.first()
-
-    if not entities:
-        return jsonify({"message": "没有该材料"}), 404
-
-    db_material, db_supplier = entities
-    if db_material.material_category == 0:
-        query = (
-            db.session.query(
-                MaterialStorage.material_model,
-                MaterialStorage.material_specification,
-                MaterialStorage.material_storage_color,
-                MaterialStorage.actual_inbound_unit,
-                Material.material_name,
-                Material.material_category,
-                Supplier.supplier_name,
-            )
-            .join(
-                Material,
-                MaterialStorage.actual_inbound_material_id == Material.material_id,
-            )
-            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-            .distinct()
-        )
-        for key, value in filters.items():
-            if value and value != "":
-                query = query.filter(material_filter_map[key].ilike(f"%{value}%"))
-        response = query.all()
-    else:
-        query = (
-            db.session.query(
-                SizeMaterialStorage.size_material_model,
-                SizeMaterialStorage.size_material_specification,
-                SizeMaterialStorage.size_material_color,
-                Material.material_unit,
-                Material.material_name,
-                Material.material_category,
-                Supplier.supplier_name,
-            )
-            .join(
-                Material,
-                SizeMaterialStorage.material_id == Material.material_id,
-            )
-            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-            .distinct()
-        )
-        for key, value in filters.items():
-            if value and value != "":
-                query = query.filter(size_material_filter_map[key].ilike(f"%{value}%"))
-        response = query.all()
+    for key, value in filters.items():
+        if value and value != "":
+            query = query.filter(material_filter_map[key].ilike(f"%{value}%"))
+    response = query.all()
     result = []
     for row in response:
         (
@@ -1199,6 +1149,29 @@ def inbound_material():
         + 1
     )
     inbound_type = data.get("inboundType", 0)
+
+    # 查重数据
+    items = data.get("items", [])
+    seen = set()
+    for item in items:
+        material_name = item.get("materialName", None)
+        material_model = item.get("materialModel", None)
+        material_specification = item.get("materialSpecification", None)
+        material_color = item.get("materialColor", None)
+        unit = item.get("actualInboundUnit", None)
+        order_rid = item.get("orderRId", None)
+        obj = (
+            material_name,
+            material_model,
+            material_specification,
+            material_color,
+            unit,
+            order_rid,
+        )
+        if obj in seen:
+            error_message = json.dumps({"message": "材料信息重复"})
+            abort(Response(error_message, 400))
+        seen.add(obj)
 
     # 采购入库
     if inbound_type == 0:
