@@ -359,7 +359,7 @@
         <template #footer>
             <span>
                 <el-button @click="isRevertDialogVisable = false">取消</el-button>
-                <el-button type="primary" @click="saveRevertForm">确认</el-button>
+                <el-button type="primary" :disabled="revertForm.revertToStatus === ''"  @click="saveRevertForm">确认</el-button>
             </span>
         </template>
     </el-dialog>
