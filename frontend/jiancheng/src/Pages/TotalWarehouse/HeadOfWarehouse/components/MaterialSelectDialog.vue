@@ -56,7 +56,7 @@
                     <el-table-column label="操作">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.inboundQuantity" :min="0" size="small" :precision="5"
-                                :step="0.0001" @change="update"></el-input-number>
+                                :step="0.0001"></el-input-number>
                         </template>
                     </el-table-column>
                 </el-table>

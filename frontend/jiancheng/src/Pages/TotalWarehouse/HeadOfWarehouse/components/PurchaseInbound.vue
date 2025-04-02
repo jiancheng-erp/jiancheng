@@ -413,10 +413,24 @@ export default {
     },
     methods: {
         updateMaterialTableData(value) {
-            this.materialTableData = [...this.materialTableData, ...value]
-            this.materialTableData.splice(this.currentIndex, 1)
-            this.currentIndex = null
             this.searchedMaterials = []
+            let seen = new Set()
+            let temp = [...this.materialTableData, ...value]
+            temp.splice(this.currentIndex, 1)
+            for (const obj of temp) {
+                // create tuple of name, spec, model, color, and orderRId
+                let tuple = `${obj.materialName}-${obj.materialSpecification}-${obj.materialModel}-${obj.materialColor}-${obj.orderRId}`
+                if (seen.has(tuple)) {
+                    ElMessage.error("入库单不能有重复数据")
+                    // 去掉新创建行
+                    this.searchedMaterials.splice(this.currrentIndex, 1)
+                    this.currentIndex = null
+                    return
+                }
+                seen.add(tuple)
+            }
+            this.materialTableData = temp
+            this.currentIndex = null
         },
         updateDialogVisible(value) {
             this.isMaterialSelectDialogVis = value
