@@ -26,9 +26,15 @@
                             <el-descriptions-item label="订单业务员" align="center">
                                 {{ orderData.orderStaffName }}
                             </el-descriptions-item>
+                            <el-descriptions-item label="退回订单" align="center">
+                                <el-button type="danger " size="default" @click="openRevertDialog"
+                                    >退回订单</el-button
+                                >
+                            </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
+
                 <el-table
                     :data="orderShoeData"
                     border
@@ -58,7 +64,10 @@
                             >
                                 <el-table-column type="expand">
                                     <template #default="scope">
-                                        <el-table :data="scope.row.shoeTypeBatchInfoList" :header-row-style="tableHeaderStyle">
+                                        <el-table
+                                            :data="scope.row.shoeTypeBatchInfoList"
+                                            :header-row-style="tableHeaderStyle"
+                                        >
                                             <el-table-column type="index"></el-table-column>
                                             <el-table-column
                                                 prop="packagingInfoName"
@@ -78,10 +87,7 @@
                                                 label="对/件"
                                                 width="240"
                                             />
-                                            <el-table-column
-                                                prop="unitPerRatio"
-                                                label="件数"
-                                            />
+                                            <el-table-column prop="unitPerRatio" label="件数" />
                                         </el-table>
                                     </template>
                                 </el-table-column>
@@ -163,15 +169,17 @@
                                 >添加备注
                             </el-button>
 
-                            <el-text v-if="scope.row.orderShoeRemarkExist"  style="display: inline-block;">{{
-                                scope.row.orderShoeRemarkRep
-                            }}</el-text>
+                            <el-text
+                                v-if="scope.row.orderShoeRemarkExist"
+                                style="display: inline-block"
+                                >{{ scope.row.orderShoeRemarkRep }}</el-text
+                            >
                             <el-button
                                 v-if="scope.row.orderShoeRemarkExist"
                                 type="warning"
                                 size="default"
                                 @click="openEditRemarkDialog(scope.row)"
-                                style="margin-left: 20px; margin-top: -20px;"
+                                style="margin-left: 20px; margin-top: -20px"
                             >
                                 编辑备注
                             </el-button>
@@ -180,9 +188,19 @@
                 </el-table>
 
                 <span>
-                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7 || role == 1">保存数据</el-button>
+                    <el-button
+                        type="primary"
+                        @click="saveFormData"
+                        v-if="orderData.orderStatus === 7 || role == 1"
+                        >保存数据</el-button
+                    >
                     <!--<el-button type="warning" @click="rejectOrder" v-if="orderData.orderStatus === 7">订单退回</el-button> -->
-                    <el-button type="primary" @click="showMessage" v-if="orderData.orderStatus === 7">完成审批</el-button>
+                    <el-button
+                        type="primary"
+                        @click="showMessage"
+                        v-if="orderData.orderStatus === 7"
+                        >完成审批</el-button
+                    >
                 </span>
             </el-main>
         </el-container>
@@ -190,11 +208,21 @@
     <el-dialog title="鞋型备注" v-model="remarkDialogVis" width="50%">
         <el-form>
             <el-form-item label="工艺备注">
-                <el-input type="textarea" :rows="2" v-model="remarkForm.technicalRemark" :maxlength="255"></el-input>
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    v-model="remarkForm.technicalRemark"
+                    :maxlength="255"
+                ></el-input>
             </el-form-item>
 
             <el-form-item label="材料备注">
-                <el-input type="textarea" :rows="2" v-model="remarkForm.materialRemark" :maxlength="255"></el-input>
+                <el-input
+                    type="textarea"
+                    :rows="2"
+                    v-model="remarkForm.materialRemark"
+                    :maxlength="255"
+                ></el-input>
             </el-form-item>
         </el-form>
 
@@ -206,12 +234,71 @@
             </span>
         </template>
     </el-dialog>
+    <el-dialog
+        title="退回流程"
+        v-model="isRevertDialogVisable"
+        width="20%"
+        :close-on-click-modal="false"
+    >
+        <span>
+            <span>退回流程</span>
+            <el-row :gutter="20">
+                <el-col :span="24" :offset="0">
+                    <el-form>
+                        <el-form-item label="退回至状态" prop="revertToStatus">
+                            <el-select
+                                v-model="revertForm.revertToStatus"
+                                placeholder="请选择退回至状态"
+                                clearable
+                                @change="handleStatusSelect"
+                            >
+                                <el-option
+                                    v-for="item in revertStatusReasonOptions"
+                                    :key="item.status"
+                                    :label="item.statusName"
+                                    :value="item.status"
+                                ></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="需要中间流程" prop="isNeedMiddleProcess">
+                            <el-radio-group v-model="revertForm.isNeedMiddleProcess">
+                                <el-radio label="1">是</el-radio>
+                                <el-radio label="0">否</el-radio>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="退回原因" prop="revertReason">
+                            <el-input
+                                v-model="revertForm.revertReason"
+                                :rows="4"
+                                placeholder="请输入退回原因"
+                                disabled
+                            ></el-input>
+                        </el-form-item>
+                        <el-form-item label="退回详细原因" prop="revertDetail">
+                            <el-input
+                                v-model="revertForm.revertDetail"
+                                type="textarea"
+                                :rows="4"
+                                placeholder="请输入退回原因"
+                            ></el-input>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-row>
+        </span>
+        <template #footer>
+            <span>
+                <el-button @click="isRevertDialogVisable = false">取消</el-button>
+                <el-button type="primary" @click="saveRevertForm">确认</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script setup>
 import AllHeader from '@/components/AllHeader.vue'
 import axios from 'axios'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -226,6 +313,14 @@ let remarkDialogVis = ref(false)
 let orderShoeTypeIdToUnitPrice = reactive({})
 let orderShoeTypeIdToCurrencyType = reactive({})
 let batchInfoType = reactive({})
+let isRevertDialogVisable = ref(false)
+let revertStatusReasonOptions = ref([])
+let revertForm = reactive({
+    revertToStatus: '',
+    revertReason: '',
+    revertDetail: '',
+    isNeedMiddleProcess: '0'
+})
 let attrMappingToRatio = reactive({
     size34Name: 'size34Ratio',
     size35Name: 'size35Ratio',
@@ -264,6 +359,7 @@ let remarkForm = reactive({
 
 onMounted(() => {
     getOrderInfo()
+    getAllRevertStatusReasonOptions()
 })
 
 async function getOrderInfo() {
@@ -283,9 +379,6 @@ async function getOrderInfo() {
         })
     )
 }
-async function rejectOrder(){
-    
-}
 function tableHeaderStyle({ row, rowIndex }) {
     return 'background: #ccc; color: #000; font-weight: bolder;'
 }
@@ -296,7 +389,7 @@ function imagerUrl(url) {
 }
 function updateValue(row) {
     let result = row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
-    row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2));
+    row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2))
     orderShoeTypeIdToUnitPrice[row.orderShoeTypeId] = row.shoeTypeBatchData.unitPrice
 }
 function updateCurrencyValue(row) {
@@ -357,6 +450,65 @@ async function submitRemarkForm() {
         remarkDialogVis.value = false
     } else {
         ElMessage.error('信息变更失败')
+    }
+}
+function handleStatusSelect(value) {
+    revertForm.revertReason = revertStatusReasonOptions.value.find(
+        (item) => item.status === value
+    ).reason
+}
+function openRevertDialog() {
+    isRevertDialogVisable.value = true
+    revertForm.revertToStatus = ''
+    revertForm.revertReason = ''
+    revertForm.revertDetail = ''
+    revertForm.isNeedMiddleProcess = '0'
+}
+async function getAllRevertStatusReasonOptions() {
+    const response = await axios.get(`${$api_baseUrl}/revertorder/getrevertorderreasonfororder`, {
+        params: {
+            orderId: orderId,
+            flow: '1'
+        }
+    })
+    if (response.status === 200) {
+        revertStatusReasonOptions.value = response.data
+    } else {
+        ElMessage.error('获取退回状态失败')
+    }
+}
+function saveRevertForm() {
+    ElMessageBox.confirm(
+        `确定退回此订单吗？退回至 ${revertForm.revertToStatus}, 原因是 ${revertForm.revertReason}`,
+        '提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+        }
+    )
+        .then(() => {
+            revertOrder()
+        })
+        .catch(() => {
+            ElMessage.info('已取消退回')
+        })
+}
+async function revertOrder() {
+    const response = await axios.post(`${$api_baseUrl}/revertorder/revertordersavefororder`, {
+        orderId: orderId,
+        flow: 1,
+        revertToStatus: revertForm.revertToStatus,
+        revertReason: revertForm.revertReason,
+        revertDetail: revertForm.revertDetail,
+        isNeedMiddleProcess: revertForm.isNeedMiddleProcess
+    })
+    if (response.status === 200) {
+        ElMessage.success('退回成功')
+        getOrderInfo()
+        isRevertDialogVisable.value = false
+    } else {
+        ElMessage.error('退回失败')
     }
 }
 </script>
