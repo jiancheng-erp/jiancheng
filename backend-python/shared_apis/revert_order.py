@@ -1,3 +1,4 @@
+from torch import res
 import constants
 import time
 from app_config import db
@@ -17,10 +18,26 @@ from general_document.order_export import (
 )
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
+from shared_apis import order
 
-DEPARTMENT_STATUS_DICT = {"3": ["6"], "7": ["0"], "14": ["4", "11"], "13": ["9", "13", "0"], "11": ["7"]}
+DEPARTMENT_STATUS_DICT = {
+    "3": ["6"],
+    "7": ["0"],
+    "14": ["4", "11"],
+    "13": ["9", "13", "0"],
+    "11": ["7"],
+}
+DEPARTMENT_ORDER_STATUS_DICT = {"4": ["6"], "2": ["7"]}
 
-DEPARTMENT_DICT = {"3": "物控部", "7": "开发部", "14": "用量填写", "13": "技术部", "11": "总仓"}
+DEPARTMENT_DICT = {
+    "3": "物控部",
+    "7": "开发部",
+    "14": "用量填写",
+    "13": "技术部",
+    "11": "总仓",
+    "2": "总经理",
+    "4": "业务部经理",
+}
 
 STATUS_REVERT_DICT = {
     "0": "材料名称，型号，规格等信息错误/缺失",
@@ -30,9 +47,14 @@ STATUS_REVERT_DICT = {
     "9": "工艺单错误/缺失",
     "11": "生产用量错误/缺失",
 }
+
+ORDER_STATUS_REVERT_DICT = {"6": "订单信息有误/缺失"}
+
 FIRST_LOGISTICS_FLOW = [0, 4, 6]
 SECOND_LOGISTICS_FLOW = [0, 4, 7]
 CRAFT_SHEET_FLOW = [0, 9, 11, 13]
+
+ORDER_ISSUE_FLOW = [6, 7]
 
 revert_order_api = Blueprint("revert_order_api", __name__)
 
@@ -122,7 +144,6 @@ def get_revert_order_list():
     return jsonify(result)
 
 
-
 @revert_order_api.route("/revertorder/getsinglerevertorder", methods=["GET"])
 def get_single_revert_order():
     order_id = request.args.get("orderId")
@@ -195,7 +216,6 @@ def get_revert_order_reason():
         .first()
     )
 
-
     result = []
     for status, reason in STATUS_REVERT_DICT.items():
         order_shoe_status_reference = OrderShoeStatusReference.query.filter_by(
@@ -216,6 +236,121 @@ def get_revert_order_reason():
                 }
             )
     return jsonify(result)
+
+
+@revert_order_api.route("/revertorder/getrevertorderreasonfororder", methods=["GET"])
+def get_revert_order_reason_for_order():
+    order_id = request.args.get("orderId")
+    flow = request.args.get("flow")
+    if flow == "1":
+        flow_list = ORDER_ISSUE_FLOW
+    order_status = (
+        db.session.query(Order, OrderStatus)
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .filter(
+            Order.order_id == order_id, OrderStatus.order_current_status.in_(flow_list)
+        )
+        .first()
+    )
+
+    result = []
+    for status, reason in ORDER_STATUS_REVERT_DICT.items():
+        order_status_reference = OrderStatusReference.query.filter_by(
+            order_status_id=status
+        ).first()
+        # if status in flow_list and not current status and index before current_status
+        if (
+            int(status) in flow_list
+            and int(status) != order_status[1].order_current_status
+            and flow_list.index(int(status))
+            < flow_list.index(order_status[1].order_current_status)
+        ):
+            result.append(
+                {
+                    "statusName": order_status_reference.order_status_name,
+                    "status": status,
+                    "reason": reason,
+                }
+            )
+
+    return jsonify(result)
+
+
+@revert_order_api.route("/revertorder/revertordersavefororder", methods=["POST"])
+def revert_order_save_for_order():
+    order_id = request.json.get("orderId")
+    flow = request.json.get("flow")
+    revert_to_status = int(request.json.get("revertToStatus"))
+    revert_reason = request.json.get("revertReason")
+    revert_detail = request.json.get("revertDetail")
+    is_need_middle_process = request.json.get("isNeedMiddleProcess")
+    revert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if flow == 1:
+        flow_list = ORDER_ISSUE_FLOW
+    order_current_status_db = (
+        db.session.query(Order, OrderStatus)
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .filter(
+            Order.order_id == order_id, OrderStatus.order_current_status.in_(flow_list)
+        )
+        .first()
+    )
+    order_current_status = order_current_status_db[1].order_current_status
+    middle_process_list = []
+    if is_need_middle_process == "1":
+        middle_process_list = flow_list[
+            flow_list.index(revert_to_status) : flow_list.index(order_current_status)
+        ]
+    elif is_need_middle_process == "0":
+        middle_process_list = [revert_to_status]
+    # use status(value) to get the department (key), and use DEPARTMENT_DICT to get the department name
+    revert_depart = DEPARTMENT_DICT.get(
+        next(
+            (
+                key
+                for key, value in DEPARTMENT_ORDER_STATUS_DICT.items()
+                if str(revert_to_status) in value
+            ),
+            None,
+        ),
+        "Unknown Department",
+    )
+    initialing_department = DEPARTMENT_DICT.get(
+        next(
+            (
+                key
+                for key, value in DEPARTMENT_ORDER_STATUS_DICT.items()
+                if str(order_current_status) in value
+            ),
+            None,
+        ),
+        "Unknown Department",
+    )
+    revert_dict = {
+        "source_status": order_current_status,
+        "desti_status": revert_to_status,
+        "revert_time": revert_time,
+        "revert_depart": initialing_department,
+        "revert_reason": revert_reason,
+        "revert_detail": revert_detail,
+        "middle_process": middle_process_list,
+    }
+    order_current_status_db[1].order_current_status = revert_to_status
+    if flow == 1:
+        order_current_status_db[1].order_status_value = 1
+    db.session.flush()
+    revert_event = RevertEvent(
+        order_id=order_id,
+        revert_reason=revert_reason,
+        responsible_department=revert_depart,
+        initialing_department=initialing_department,
+        event_time=revert_time,
+    )
+    db.session.add(revert_event)
+    db.session.flush()
+    db.session.commit()
+
+    return jsonify({"message": "success"})
 
 
 @revert_order_api.route("/revertorder/revertordersave", methods=["POST"])
