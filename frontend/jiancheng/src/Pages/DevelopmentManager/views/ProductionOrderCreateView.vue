@@ -18,21 +18,11 @@
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
                             <el-descriptions title="" :column="2" border>
-                                <el-descriptions-item label="订单编号" align="center">{{
-                                    orderData.orderId
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单创建时间" align="center">{{
-                                    orderData.createTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="客户名称" align="center">{{
-                                    orderData.customerName
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单预计截止日期" align="center">{{
-                                    orderData.deadlineTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="商标" align="center">{{
-                                    orderData.customerBrand
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                                <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                                <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                                <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
+                                <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -41,8 +31,7 @@
             <el-row :gutter="20" style="margin-top: 10px">
                 <el-col :span="4" :offset="0">
                     <div style="display: flex; align-items: center; white-space: nowrap">
-                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default"
-                            :suffix-icon="SearchIcon" clearable @input="tableWholeFilter"></el-input>
+                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="SearchIcon" clearable @input="tableWholeFilter"></el-input>
                     </div>
                 </el-col>
             </el-row>
@@ -56,8 +45,7 @@
                                     <el-table-column prop="color" label="颜色"></el-table-column>
                                     <el-table-column label="鞋图" align="center">
                                         <template #default="scope">
-                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image"
-                                                fit="contain" />
+                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image" fit="contain" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="firstBomId" label="一次BOM表"></el-table-column>
@@ -77,37 +65,42 @@
                                     <el-button type="primary" @click="openEditDialog(scope.row)">编辑投产指令单</el-button>
                                 </div>
                                 <div v-else>
-                                    <el-button v-if="scope.row.status === '未上传'" type="primary"
-                                        @click="openUploadDialog(scope.row)">上传投产指令单</el-button>
+                                    <el-button v-if="scope.row.status === '未上传'" type="primary" @click="openUploadDialog(scope.row)">上传投产指令单</el-button>
                                     <div v-else-if="scope.row.status === '已下发'">
                                         <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
-                                        <el-button type="success"
-                                            @click="downloadProductionInstruction(scope.row)">下载投产指令单EXCEL</el-button>
-                                        <el-button type="warning"
-                                            @click="downloadProductionInstructionImage(scope.row)">下载备注图片</el-button>
+                                        <el-button type="success" @click="downloadProductionInstruction(scope.row)">下载投产指令单EXCEL</el-button>
+                                        <el-button type="warning" @click="downloadProductionInstructionImage(scope.row)">下载备注图片</el-button>
                                     </div>
 
                                     <div v-else-if="scope.row.status === '已上传'">
                                         <el-button type="primary" @click="openEditDialog(scope.row)">编辑投产指令单</el-button>
-                                        <el-button type="success"
-                                            @click="openPreviewDialog(scope.row)">预览投产指令单</el-button>
+                                        <el-button type="success" @click="openPreviewDialog(scope.row)">预览投产指令单</el-button>
                                         <el-button type="warning" @click="uploadNoteImage(scope.row)">上传图片备注</el-button>
                                     </div>
                                 </div>
-                            </template></el-table-column>
-                    </el-table></el-col>
+                            </template></el-table-column
+                        >
+                    </el-table></el-col
+                >
             </el-row>
             <el-row :gutter="22" style="margin-top: 10px">
-                <el-col :span="6" :offset="20"><el-button type="primary" size="default"
-                        @click="openIssueDialog">下发投产指令单</el-button>
-                </el-col>
+                <el-col :span="6" :offset="20"><el-button type="primary" size="default" @click="openIssueDialog">下发投产指令单</el-button> </el-col>
             </el-row>
             <el-dialog v-model="isUploadImageDialogVisible" title="上传投产指令单备注图片">
-                <el-upload ref="uploadImage" class="upload-image"
-                    :action="`${this.$apiBaseUrl}/devproductionorder/uploadpicnotes`" :on-success="handleUploadSuccess"
-                    :on-error="handleUploadError" :headers="uploadHeaders" :before-upload="beforeUpload"
-                    :file-list="fileList" list-type="picture-card" accept="image/*" :auto-upload="false"
-                    :data="{ orderId: orderData.orderId, orderShoeRId: currentShoeId }">
+                <el-upload
+                    ref="uploadImage"
+                    class="upload-image"
+                    :action="`${this.$apiBaseUrl}/devproductionorder/uploadpicnotes`"
+                    :on-success="handleUploadSuccess"
+                    :on-error="handleUploadError"
+                    :headers="uploadHeaders"
+                    :before-upload="beforeUpload"
+                    :file-list="fileList"
+                    list-type="picture-card"
+                    accept="image/*"
+                    :auto-upload="false"
+                    :data="{ orderId: orderData.orderId, orderShoeRId: currentShoeId }"
+                >
                 </el-upload>
                 <el-button size="small" type="primary" @click="submitUpload">点击上传</el-button>
                 <div slot="tip" class="el-upload__tip">只能上传图片文件</div>
@@ -115,35 +108,23 @@
 
             <el-dialog title="正式投产指令单下发页面" v-model="isFinalBOM" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
-                            <el-table :data="unIssueBOMData" border style="height: 400px"
-                                @selection-change="handleShoeSelectionChange">
+                            <el-table :data="unIssueBOMData" border style="height: 400px" @selection-change="handleShoeSelectionChange">
                                 <el-table-column type="selection" width="55"></el-table-column>
-                                <el-table-column prop="inheritId" label="工厂型号" align="center"
-                                    width="100"></el-table-column>
-                                <el-table-column prop="customerProductName" label="客户型号"
-                                    align="center"></el-table-column>
+                                <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
+                                <el-table-column prop="customerProductName" label="客户型号" align="center"></el-table-column>
                                 <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                                 <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
                                 <el-table-column label="操作" align="center">
                                     <template #default="scope">
-                                        <el-button type="primary" size="default"
-                                            @click="openPreviewDialog(scope.row)">查看投产指令单</el-button>
+                                        <el-button type="primary" size="default" @click="openPreviewDialog(scope.row)">查看投产指令单</el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -157,23 +138,23 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`投产指令单创建 ${newProductionInstructionId}`" v-model="isProductionOrderCreateDialogVisible"
-                width="90%" :close-on-click-modal="false" fullscreen style="overflow-y: scroll">
+            <el-dialog
+                :title="`投产指令单创建 ${newProductionInstructionId}`"
+                v-model="isProductionOrderCreateDialogVisible"
+                width="90%"
+                :close-on-click-modal="false"
+                fullscreen
+                style="overflow-y: scroll"
+            >
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
                             <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                 <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                             </el-descriptions-item>
-                            <el-descriptions-item label="工厂型号" align="center">{{
-                                currentShoeId
-                                }}</el-descriptions-item>
-                            <el-descriptions-item label="客户号" align="center">{{
-                                currentOrderShoeRow.customerProductName
-                                }}</el-descriptions-item>
-                            <el-descriptions-item label="商标" align="center">{{
-                                orderData.customerBrand
-                                }}</el-descriptions-item>
+                            <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
+                            <el-descriptions-item label="客户号" align="center">{{ currentOrderShoeRow.customerProductName }}</el-descriptions-item>
+                            <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -187,8 +168,7 @@
                                 <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="码差">
-                                <el-input v-model="productionInstructionDetail.sizeDifference"
-                                    size="default"></el-input>
+                                <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="设计师">
                                 <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
@@ -197,24 +177,20 @@
                                 <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="工艺备注">
-                                <el-input type="textarea" autosize maxlength="150" show-word-limit
-                                    v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
+                                <el-input type="textarea" autosize maxlength="150" show-word-limit v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"><el-button type="primary" size="default"
-                            @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
+                    <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
                 <el-row justify="center" align="middle">
                     <h3>码数对照表</h3>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
-                        <vxe-grid v-bind="sizeGridOptions">
-
-                        </vxe-grid>
+                        <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
                     </el-col>
                 </el-row>
                 <el-row>
@@ -241,84 +217,99 @@
                             <el-col :span="2" :offset="0"> 面料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(0)">手动添加面料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(0)">手动添加面料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(0)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(0)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('surfaceMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [1]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @change="handleMaterialNameSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialName')">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                size="default"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                size="default"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 0)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 0)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -329,32 +320,22 @@
                             <el-col :span="2" :offset="0"> 里料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(1)">手动添加里料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(1)">手动添加里料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(1)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(1)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('insideMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [2]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -365,53 +346,78 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                type="textarea"
+                                                autosize
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" :maxlength="wordLengths.COLOR_LENGTH" @blur="validateColor(scope.row)" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                size="default"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                size="default"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 1)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 1)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -421,32 +427,22 @@
                             <el-col :span="2" :offset="0"> 辅料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(2)">手动添加辅料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(2)">手动添加辅料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(2)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(2)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('accessoryMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [3, 5]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @change="handleMaterialNameSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialName')">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -457,53 +453,78 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 2)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -513,32 +534,22 @@
                             <el-col :span="2" :offset="0"> 大底： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(3)">手动添加大底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(3)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('outsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [7]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -549,53 +560,78 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 3)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 3)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -605,32 +641,22 @@
                             <el-col :span="2" :offset="0"> 中底： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(4)">手动添加中底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(4)">手动添加中底</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(4)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(4)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('midsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [7]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -641,52 +667,77 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 4)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 4)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -695,41 +746,26 @@
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
                             <el-col :span="6" :offset="0">
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(6)">添加成品烫底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(6)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(6)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
                                                 <div v-if="scope.row.materialType === '里料'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [2]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                                 <div v-else-if="scope.row.materialType === '烫底'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [16]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                             </el-select>
                                         </template>
@@ -741,60 +777,92 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="craftName" label="复合工艺">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.craftName"
-                                                size="default" :disabled="scope.row.materialType === '烫底'"
-                                                :maxlength="wordLengths.CRAFT_NAME_LENGTH" show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.craftName"
+                                                @blur="trimInput(scope.row, 'craftName')"
+                                                size="default"
+                                                :disabled="scope.row.materialType === '烫底'"
+                                                :maxlength="wordLengths.CRAFT_NAME_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 6)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 6)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -814,8 +882,7 @@
                 <el-table :data="pastShoeInfoTable" border>
                     <el-table-column type="expand">
                         <template #default="scope">
-                            <el-table ref="orderShoeTypeTable" :data="scope.row.shoeColors" border
-                                @selection-change="handleShoeTypeSelectionChange">
+                            <el-table ref="orderShoeTypeTable" :data="scope.row.shoeColors" border @selection-change="handleShoeTypeSelectionChange">
                                 <el-table-column type="selection"></el-table-column>
                                 <el-table-column prop="color" label="颜色"></el-table-column>
                                 <el-table-column label="鞋图">
@@ -825,8 +892,7 @@
                                 </el-table-column>
                                 <el-table-column label="操作">
                                     <template #default="scope">
-                                        <el-button type="primary" size="default"
-                                            @click="openLoadMaterialDialogByColor(scope.row)">查看材料</el-button>
+                                        <el-button type="primary" size="default" @click="openLoadMaterialDialogByColor(scope.row)">查看材料</el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -837,10 +903,13 @@
                 </el-table>
                 <template #footer>
                     <span>
-                        <el-button @click="
-                            isLoadMaterialDialogVisible = false;
-                        selectShoeTypeRow = {}
-                            ">取消</el-button>
+                        <el-button
+                            @click="
+                                isLoadMaterialDialogVisible = false;
+                                selectShoeTypeRow = {}
+                            "
+                            >取消</el-button
+                        >
                         <el-button type="primary" @click="handleConfirmLoad">确认加载</el-button>
                     </span>
                 </template>
@@ -850,12 +919,8 @@
                     <el-descriptions-item label="鞋图" rowspan="2" align="center">
                         <el-image style="width: 150px; height: 75px" :src="pastShoeDescription.shoeImageUrl" />
                     </el-descriptions-item>
-                    <el-descriptions-item label="工厂型号" align="center">{{
-                        pastShoeDescription.shoeId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="颜色" align="center">{{
-                        pastShoeDescription.color
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="工厂型号" align="center">{{ pastShoeDescription.shoeId }}</el-descriptions-item>
+                    <el-descriptions-item label="颜色" align="center">{{ pastShoeDescription.color }}</el-descriptions-item>
                 </el-descriptions>
                 <el-table :data="pastMaterialData" border>
                     <el-table-column prop="materialType" label="材料类型"></el-table-column>
@@ -879,29 +944,42 @@
                 <el-row :gutter="20">
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料类型查询：<el-input v-model="materialTypeSearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料类型查询：<el-input
+                                v-model="materialTypeSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料名称查询：<el-input v-model="materialSearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料名称查询：<el-input
+                                v-model="materialSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            工厂名查询：<el-input v-model="factorySearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            工厂名查询：<el-input
+                                v-model="factorySearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                 </el-row>
-                <el-table :data="assetFilterTable" border ref="materialSelectTable"
-                    @selection-change="handleMaterialSelectionChange" style="height: 400px"
-                    v-loading="materialAddfinished">
+                <el-table :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" style="height: 400px" v-loading="materialAddfinished">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="materialType" label="材料类型" />
                     <el-table-column prop="materialName" label="材料名称" />
@@ -921,29 +999,16 @@
                 <div style="height: 650px; overflow-y: scroll">
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
-                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4"
-                                style="margin-top: 20px">
+                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                     <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                                 </el-descriptions-item>
-                                <el-descriptions-item label="工厂型号" align="center">{{
-                                    currentShoeId
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="客户号" align="center">{{
-                                    orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="色号" align="center">{{
-                                    orderShoeData.color
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="设计师" align="center">{{
-                                    orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="调版员" align="center">{{
-                                    orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="商标" align="center">{{
-                                    orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
+                                <el-descriptions-item label="客户号" align="center">{{ orderShoeData.customerProductName }}</el-descriptions-item>
+                                <el-descriptions-item label="色号" align="center">{{ orderShoeData.color }}</el-descriptions-item>
+                                <el-descriptions-item label="设计师" align="center">{{ orderShoeData.shoeDesigner }}</el-descriptions-item>
+                                <el-descriptions-item label="调版员" align="center">{{ orderShoeData.shoeAdjuster }}</el-descriptions-item>
+                                <el-descriptions-item label="商标" align="center">{{ orderShoeData.brandName }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -976,16 +1041,13 @@
                     </el-row>
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
-                            <vxe-grid v-bind="sizeGridOptions">
-
-                            </vxe-grid>
+                            <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
                         </el-col>
                     </el-row>
 
                     <el-tabs v-model="activeTab">
                         <!-- Generate tabs from backend-provided tabcolor array -->
-                        <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color"
-                            style="overflow-y: scroll">
+                        <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color" style="overflow-y: scroll">
                             <el-row :gutter="20">
                                 <el-col :span="2" :offset="0"> 面料： </el-col>
                             </el-row>
@@ -1044,23 +1106,16 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible"
-                :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
+            <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
                             <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                 <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                             </el-descriptions-item>
-                            <el-descriptions-item label="工厂型号" align="center">{{
-                                currentShoeId
-                                }}</el-descriptions-item>
-                            <el-descriptions-item label="客户号" align="center">{{
-                                currentOrderShoeRow.customerProductName
-                                }}</el-descriptions-item>
-                            <el-descriptions-item label="商标" align="center">{{
-                                orderData.customerBrand
-                                }}</el-descriptions-item>
+                            <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
+                            <el-descriptions-item label="客户号" align="center">{{ currentOrderShoeRow.customerProductName }}</el-descriptions-item>
+                            <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -1074,8 +1129,7 @@
                                 <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="码差">
-                                <el-input v-model="productionInstructionDetail.sizeDifference"
-                                    size="default"></el-input>
+                                <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="设计师">
                                 <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
@@ -1084,24 +1138,20 @@
                                 <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="工艺备注">
-                                <el-input type="textarea" autosize maxlength="150" show-word-limit
-                                    v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
+                                <el-input type="textarea" autosize maxlength="150" show-word-limit v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"><el-button type="primary" size="default"
-                            @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
+                    <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
                 </el-row>
                 <el-row justify="center" align="middle">
                     <h3>码数对照表</h3>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
-                        <vxe-grid v-bind="sizeGridOptions">
-
-                        </vxe-grid>
+                        <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
                     </el-col>
                 </el-row>
                 <el-row>
@@ -1128,32 +1178,22 @@
                             <el-col :span="2" :offset="0"> 面料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(0)">手动添加面料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(0)">手动添加面料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(0)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(0)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('surfaceMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [1]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1164,55 +1204,79 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
-
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 0)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 0)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1223,32 +1287,22 @@
                             <el-col :span="2" :offset="0"> 里料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(1)">手动添加里料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(1)">手动添加里料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(1)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(1)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('insideMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [2]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1259,54 +1313,79 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 1)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 1)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1316,32 +1395,22 @@
                             <el-col :span="2" :offset="0"> 辅料： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(2)">手动添加辅料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(2)">手动添加辅料</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(2)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(2)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('accessoryMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [3, 5]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1352,54 +1421,79 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 2)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1409,31 +1503,21 @@
                             <el-col :span="2" :offset="0"> 大底： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(3)">手动添加大底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(3)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('outsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [7]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1444,56 +1528,80 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
-
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 3)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 3)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1503,31 +1611,21 @@
                             <el-col :span="2" :offset="0"> 中底： </el-col>
                             <el-col :span="4" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(4)">手动添加中底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(4)">手动添加中底</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(4)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(4)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('midsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
-                                                <el-option v-for="item in filterByTypes(
-                                                    materialNameOptions,
-                                                    [7]
-                                                )" :key="item.value" :value="item.value" :label="item.label">
-                                                </el-option>
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -1538,56 +1636,80 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
 
-
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 4)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 4)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1596,41 +1718,26 @@
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
                             <el-col :span="6" :offset="0">
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(6)">添加成品烫底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(6)">{{
-                                    this.syncMaterialButtonText
-                                    }}</el-button>
+                                <el-button @click="syncMaterials(6)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border
-                                    style="width: 100%">
+                                <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @change="
-                                                handleMaterialNameSelect(scope.row, $event)
-                                                ">
+                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
                                                 <div v-if="scope.row.materialType === '里料'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [2]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                                 <div v-else-if="scope.row.materialType === '烫底'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [16]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                             </el-select>
                                         </template>
@@ -1642,61 +1749,93 @@
                                                     :value="item.supplierName" :label="item.supplierName">
                                                 </el-option>
                                             </el-select> -->
-                                            <el-autocomplete v-model="scope.row.supplierName"
+                                            <el-autocomplete
+                                                v-model="scope.row.supplierName"
                                                 :fetch-suggestions="(queryString, cb) => querySearchSupplier(queryString, cb)"
-                                                placeholder="请输入厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
-                                                show-word-limit />
+                                                @blur="trimInput(scope.row, 'supplierName')"
+                                                placeholder="请输入厂家"
+                                                :maxlength="wordLengths.SUPPLIER_NAME_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column prop="materialModel" label="材料型号">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialModel"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialModel"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                placeholder="" :maxlength="wordLengths.MODEL_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialModel')"
+                                                placeholder=""
+                                                :maxlength="wordLengths.MODEL_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="materialSpecification" label="材料规格">
                                         <template #default="scope">
-                                            <el-autocomplete v-model="scope.row.materialSpecification"
+                                            <el-autocomplete
+                                                v-model="scope.row.materialSpecification"
                                                 :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                type="textarea" autosize placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH" show-word-limit />
+                                                @blur="trimInput(scope.row, 'materialSpecification')"
+                                                type="textarea"
+                                                autosize
+                                                placeholder=""
+                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                                show-word-limit
+                                            />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="craftName" label="复合工艺">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.craftName"
-                                                size="default" :disabled="scope.row.materialType === '烫底'"
-                                                :maxlength="wordLengths.CRAFT_NAME_LENGTH" show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.craftName"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'craftName')"
+                                                :disabled="scope.row.materialType === '烫底'"
+                                                :maxlength="wordLengths.CRAFT_NAME_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="color" label="颜色">
                                         <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default"
-                                                :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="comment" label="备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.comment"
-                                                size="default" :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit></el-input>
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.comment"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'comment')"
+                                                :maxlength="wordLengths.COMMENT_LENGTH"
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="processingRemark" label="加工备注">
                                         <template #default="scope">
-                                            <el-input type="textarea" autosize v-model="scope.row.processingRemark"
-                                                size="default" placeholder="例：烫钻，电绣"
+                                            <el-input
+                                                type="textarea"
+                                                autosize
+                                                v-model="scope.row.processingRemark"
+                                                size="default"
+                                                @blur="trimInput(scope.row, 'processingRemark')"
+                                                placeholder="例：烫钻，电绣"
                                                 :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit></el-input>
+                                                show-word-limit
+                                            ></el-input>
                                         </template>
                                     </el-table-column>
 
                                     <el-table-column label="操作">
                                         <template #default="scope">
-                                            <el-button type="danger" size="small"
-                                                @click="deleteMaterial(scope.$index, 6)">删除</el-button>
+                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 6)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
@@ -1809,7 +1948,7 @@ export default {
                 unit: '',
                 supplierName: '',
                 comment: '',
-                isPurchase: false,
+                isPurchase: false
             },
             productionInstructionDetail: {
                 sizeRange: '',
@@ -1872,8 +2011,8 @@ export default {
             return Search
         },
         getShoeImageUrl() {
-            const index = this.currentOrderShoeRow.typeInfos.findIndex((item) => item.color === this.activeTab);
-            return index !== -1 ? this.currentOrderShoeRow.typeInfos[index].image : '';
+            const index = this.currentOrderShoeRow.typeInfos.findIndex((item) => item.color === this.activeTab)
+            return index !== -1 ? this.currentOrderShoeRow.typeInfos[index].image : ''
         }
     },
     methods: {
@@ -1881,9 +2020,7 @@ export default {
             return options.filter((option) => types.includes(option.type))
         },
         async querySupplierNames() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/allsuppliers`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allsuppliers`)
             this.supplierNameOptions = response.data
         },
         async getAllDepartmentOptions() {
@@ -1905,45 +2042,33 @@ export default {
             this.materialNameOptions = response.data
         },
         async getOrderInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`)
             this.orderData = response.data
             console.log(this.orderData)
             this.updateArrowKey += 1
         },
         async getAllShoeListInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getordershoelist?orderid=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getordershoelist?orderid=${this.orderId}`)
             this.testTableData = response.data
             this.tableWholeFilter()
         },
         async getOrderShoeInfo(orderShoeId) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getordershoeinfo?orderid=${this.orderId}&ordershoeid=${orderShoeId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getordershoeinfo?orderid=${this.orderId}&ordershoeid=${orderShoeId}`)
             this.orderShoeData = response.data
         },
         async getNewProductionInstructionId() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getnewproductioninstructionid`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getnewproductioninstructionid`)
             this.newProductionInstructionId = response.data.productionInstructionId
         },
         async getPastMaterialData(row) {
             try {
-                const response = await axios.get(
-                    `${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`
-                )
+                const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getpastmaterialdata?shoetypeid=${row.shoeTypeId}`)
                 this.pastMaterialData = response.data
-            }
-            catch (error) {
-                console.error("Error fetching past material data:", error);
+            } catch (error) {
+                console.error('Error fetching past material data:', error)
                 if (error.response) {
                     ElMessage.error(error.response.data.message)
-                }
-                else {
+                } else {
                     ElMessage.error('获取历史材料数据失败')
                 }
             }
@@ -1975,9 +2100,7 @@ export default {
                     let surfaceMaterialData = this.getMaterialDataByType('surfaceMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.surfaceMaterialData = JSON.parse(
-                                JSON.stringify(surfaceMaterialData)
-                            )
+                            shoeTypeData.surfaceMaterialData = JSON.parse(JSON.stringify(surfaceMaterialData))
                         }
                     })
                     break
@@ -1985,9 +2108,7 @@ export default {
                     let insideMaterialData = this.getMaterialDataByType('insideMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.insideMaterialData = JSON.parse(
-                                JSON.stringify(insideMaterialData)
-                            )
+                            shoeTypeData.insideMaterialData = JSON.parse(JSON.stringify(insideMaterialData))
                         }
                     })
                     break
@@ -1995,9 +2116,7 @@ export default {
                     let accessoryMaterialData = this.getMaterialDataByType('accessoryMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.accessoryMaterialData = JSON.parse(
-                                JSON.stringify(accessoryMaterialData)
-                            )
+                            shoeTypeData.accessoryMaterialData = JSON.parse(JSON.stringify(accessoryMaterialData))
                         }
                     })
                     break
@@ -2005,9 +2124,7 @@ export default {
                     let outsoleMaterialData = this.getMaterialDataByType('outsoleMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.outsoleMaterialData = JSON.parse(
-                                JSON.stringify(outsoleMaterialData)
-                            )
+                            shoeTypeData.outsoleMaterialData = JSON.parse(JSON.stringify(outsoleMaterialData))
                         }
                     })
                     break
@@ -2015,9 +2132,7 @@ export default {
                     let midsoleMaterialData = this.getMaterialDataByType('midsoleMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.midsoleMaterialData = JSON.parse(
-                                JSON.stringify(midsoleMaterialData)
-                            )
+                            shoeTypeData.midsoleMaterialData = JSON.parse(JSON.stringify(midsoleMaterialData))
                         }
                     })
                     break
@@ -2025,9 +2140,7 @@ export default {
                     let hotsoleMaterialData = this.getMaterialDataByType('hotsoleMaterialData')
                     this.materialWholeData.forEach((shoeTypeData) => {
                         if (shoeTypeData.color !== this.activeTab) {
-                            shoeTypeData.hotsoleMaterialData = JSON.parse(
-                                JSON.stringify(hotsoleMaterialData)
-                            )
+                            shoeTypeData.hotsoleMaterialData = JSON.parse(JSON.stringify(hotsoleMaterialData))
                         }
                     })
                     break
@@ -2053,68 +2166,59 @@ export default {
                 })
         },
         async addPastProductionInstructionInfoToCurrent() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getpastproductioninstructioninfo?shoeTypeId=${this.selectShoeTypeRow[0].shoeTypeId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getpastproductioninstructioninfo?shoeTypeId=${this.selectShoeTypeRow[0].shoeTypeId}`)
             this.productionInstructionDetail = response.data
         },
         async addPastMaterialToCurrent() {
             try {
-                console.log(this.selectShoeTypeRow[0].shoeTypeId);
+                console.log(this.selectShoeTypeRow[0].shoeTypeId)
 
-                const response = await axios.get(
-                    `${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`,
-                    {
-                        params: {
-                            shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
-                        }
+                const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getformatpastmaterialdata`, {
+                    params: {
+                        shoeTypeId: this.selectShoeTypeRow[0].shoeTypeId
                     }
-                );
+                })
 
-                const pastMaterialData = response.data;
-                console.log("Past Material Data:", pastMaterialData);
-                console.log("Current Material Data Before Update:", this.materialWholeData);
+                const pastMaterialData = response.data
+                console.log('Past Material Data:', pastMaterialData)
+                console.log('Current Material Data Before Update:', this.materialWholeData)
 
                 // Create a map for quick lookup of past material data by color
-                const pastMaterialMap = new Map();
-                pastMaterialData.forEach(item => {
-                    pastMaterialMap.set(item.color, item);
-                });
+                const pastMaterialMap = new Map()
+                pastMaterialData.forEach((item) => {
+                    pastMaterialMap.set(item.color, item)
+                })
 
                 // Update matching colors in materialWholeData
-                this.materialWholeData.forEach(material => {
-                    const pastMaterial = pastMaterialMap.get(material.color);
+                this.materialWholeData.forEach((material) => {
+                    const pastMaterial = pastMaterialMap.get(material.color)
                     if (pastMaterial) {
                         // If color matches, update the material data
-                        material.surfaceMaterialData = pastMaterial.surfaceMaterialData;
-                        material.insideMaterialData = pastMaterial.insideMaterialData;
-                        material.accessoryMaterialData = pastMaterial.accessoryMaterialData;
-                        material.outsoleMaterialData = pastMaterial.outsoleMaterialData;
-                        material.midsoleMaterialData = pastMaterial.midsoleMaterialData;
-                        material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData;
+                        material.surfaceMaterialData = pastMaterial.surfaceMaterialData
+                        material.insideMaterialData = pastMaterial.insideMaterialData
+                        material.accessoryMaterialData = pastMaterial.accessoryMaterialData
+                        material.outsoleMaterialData = pastMaterial.outsoleMaterialData
+                        material.midsoleMaterialData = pastMaterial.midsoleMaterialData
+                        material.hotsoleMaterialData = pastMaterial.hotsoleMaterialData
                     }
-                });
+                })
 
-                console.log("Updated Material Data:", this.materialWholeData);
-            }
-            catch (error) {
-                console.error("Error fetching past material data:", error);
+                console.log('Updated Material Data:', this.materialWholeData)
+            } catch (error) {
+                console.error('Error fetching past material data:', error)
                 if (error.response) {
                     ElMessage.error(error.response.data.message)
-                }
-                else {
+                } else {
                     ElMessage.error('获取历史材料数据失败')
                 }
             }
         },
         handleConfirmLoad() {
-            this.addPastMaterialToCurrent();
-            this.addPastProductionInstructionInfoToCurrent();
+            this.addPastMaterialToCurrent()
+            this.addPastProductionInstructionInfoToCurrent()
         },
         addMaterialByManual(typeSymbol) {
-            const preActiveMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const preActiveMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
             if (!preActiveMaterialData) {
                 this.materialWholeData.push({
                     color: this.activeTab,
@@ -2127,9 +2231,7 @@ export default {
                     hotsoleMaterialData: []
                 })
             }
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
             let newEntry = {
                 materialType: '',
                 materialDetailType: '',
@@ -2140,7 +2242,7 @@ export default {
                 unit: '',
                 supplierName: '',
                 comment: '',
-                isPurchase: false,
+                isPurchase: false
             }
             switch (typeSymbol) {
                 case 0:
@@ -2224,9 +2326,7 @@ export default {
             this.newMaterialVis = false
 
             // Find the data for the current active tab
-            const preActiveMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const preActiveMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
             console.log(this.materialWholeData)
             console.log(this.activeTab)
 
@@ -2242,9 +2342,7 @@ export default {
                     hotsoleMaterialData: []
                 })
             }
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
 
             // Determine the correct array to push into based on typeSymbol
             switch (typeSymbol) {
@@ -2275,31 +2373,24 @@ export default {
         },
         async getMaterialFilterData() {
             this.materialAddfinished = true
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/getmaterialtypeandname`,
-                {
-                    params: {
-                        materialtype: this.materialTypeSearch,
-                        materialname: this.materialSearch,
-                        suppliername: this.factorySearch
-                    }
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getmaterialtypeandname`, {
+                params: {
+                    materialtype: this.materialTypeSearch,
+                    materialname: this.materialSearch,
+                    suppliername: this.factorySearch
                 }
-            )
+            })
             this.assetFilterTable = response.data
             this.materialAddfinished = false
         },
         async getInstructionData(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getproductioninstruction?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getproductioninstruction?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`)
             this.newProductionInstructionId = response.data.productionInstructionId
             this.materialWholeData = response.data.instructionData
             this.productionInstructionDetail = response.data.productionInstructionDetail
         },
         async getSizeTableData() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getsizetable?orderId=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getsizetable?orderId=${this.orderId}`)
 
             this.sizeGridOptions = response.data
             console.log(this.sizeGridOptions)
@@ -2381,9 +2472,7 @@ export default {
             this.isLoadMaterialDialogVisible = true
         },
         async getPastOrderShoeData() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getpastshoeinfo?ordershoeid=${this.currentShoeId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getpastshoeinfo?ordershoeid=${this.currentShoeId}`)
             this.pastShoeInfoTable = response.data
             console.log(this.pastShoeInfoTable)
         },
@@ -2403,14 +2492,7 @@ export default {
         },
         async editProductionInstrucion() {
             for (const materialData of this.materialWholeData) {
-                for (const materialType of [
-                    'surfaceMaterialData',
-                    'insideMaterialData',
-                    'accessoryMaterialData',
-                    'outsoleMaterialData',
-                    'midsoleMaterialData',
-                    'hotsoleMaterialData'
-                ]) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
                     for (const item of materialData[materialType]) {
                         if (!item.materialName) {
                             this.$message({
@@ -2428,17 +2510,14 @@ export default {
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             try {
-                const response = await axios.post(
-                    `${this.$apiBaseUrl}/devproductionorder/editproductioninstruction`,
-                    {
-                        orderId: this.orderData.orderId,
-                        productionInstructionId: this.newProductionInstructionId,
-                        orderShoeId: this.currentShoeId,
-                        uploadData: this.materialWholeData,
-                        productionInstructionDetail: this.productionInstructionDetail,
-                        sizeTable: this.sizeGridOptions
-                    }
-                )
+                const response = await axios.post(`${this.$apiBaseUrl}/devproductionorder/editproductioninstruction`, {
+                    orderId: this.orderData.orderId,
+                    productionInstructionId: this.newProductionInstructionId,
+                    orderShoeId: this.currentShoeId,
+                    uploadData: this.materialWholeData,
+                    productionInstructionDetail: this.productionInstructionDetail,
+                    sizeTable: this.sizeGridOptions
+                })
 
                 if (response.status !== 200) {
                     this.$message({
@@ -2466,14 +2545,7 @@ export default {
         async saveProductionInstruction() {
             // Check if all items have non-null supplierName and materialName
             for (const materialData of this.materialWholeData) {
-                for (const materialType of [
-                    'surfaceMaterialData',
-                    'insideMaterialData',
-                    'accessoryMaterialData',
-                    'outsoleMaterialData',
-                    'midsoleMaterialData',
-                    'hotsoleMaterialData'
-                ]) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
                     for (const item of materialData[materialType]) {
                         if (!item.materialName) {
                             this.$message({
@@ -2491,17 +2563,14 @@ export default {
                 background: 'rgba(0, 0, 0, 0.7)'
             })
             try {
-                const response = await axios.post(
-                    `${this.$apiBaseUrl}/devproductionorder/saveproductioninstruction`,
-                    {
-                        orderId: this.orderData.orderId,
-                        productionInstructionId: this.newProductionInstructionId,
-                        orderShoeId: this.currentShoeId,
-                        uploadData: this.materialWholeData,
-                        productionInstructionDetail: this.productionInstructionDetail,
-                        sizeTable: this.sizeGridOptions
-                    }
-                )
+                const response = await axios.post(`${this.$apiBaseUrl}/devproductionorder/saveproductioninstruction`, {
+                    orderId: this.orderData.orderId,
+                    productionInstructionId: this.newProductionInstructionId,
+                    orderShoeId: this.currentShoeId,
+                    uploadData: this.materialWholeData,
+                    productionInstructionDetail: this.productionInstructionDetail,
+                    sizeTable: this.sizeGridOptions
+                })
 
                 if (response.status !== 200) {
                     this.$message({
@@ -2625,10 +2694,7 @@ export default {
             if (selection.length > 1) {
                 // Ensure only one row is selected
                 this.$refs.orderShoeTypeTable.clearSelection()
-                this.$refs.orderShoeTypeTable.toggleRowSelection(
-                    selection[selection.length - 1],
-                    true
-                )
+                this.$refs.orderShoeTypeTable.toggleRowSelection(selection[selection.length - 1], true)
             } else {
                 this.selectShoeTypeRow = selection
                 console.log(this.selectShoeTypeRow)
@@ -2638,10 +2704,7 @@ export default {
             if (selection.length > 1) {
                 // Ensure only one row is selected
                 this.$refs.materialSelectTable.clearSelection()
-                this.$refs.materialSelectTable.toggleRowSelection(
-                    selection[selection.length - 1],
-                    true
-                )
+                this.$refs.materialSelectTable.toggleRowSelection(selection[selection.length - 1], true)
             } else {
                 this.materialSelectRow = selection[0]
             }
@@ -2653,9 +2716,7 @@ export default {
         },
         deleteMaterial(index, typeSymbol) {
             // Find the material data for the currently active color
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
 
             if (!activeMaterialData) return
 
@@ -2693,9 +2754,7 @@ export default {
         async queryMaterialNames(queryString, callback) {
             if (queryString.trim()) {
                 await axios
-                    .get(
-                        `${this.$apiBaseUrl}/devproductionorder/getautofinishedmaterialname?materialName=${queryString}`
-                    )
+                    .get(`${this.$apiBaseUrl}/devproductionorder/getautofinishedmaterialname?materialName=${queryString}`)
                     .then((response) => {
                         const suggestions = response.data.map((item) => ({
                             value: item.name
@@ -2711,22 +2770,17 @@ export default {
         },
         async searchRecords(materialName, materialSupplier, materialModel, materialSpecification, searchType) {
             if (searchType === 0) {
-                const response = await axios.get(
-                    `${this.$apiBaseUrl}/devproductionorder/getautocompeletedata`,
-                    {
-                        params: {
-                            searchType: searchType,
-                            materialName: materialName,
-                            materialSupplier: materialSupplier,
-                            materialModel: materialModel,
-                        }
+                const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getautocompeletedata`, {
+                    params: {
+                        searchType: searchType,
+                        materialName: materialName,
+                        materialSupplier: materialSupplier,
+                        materialModel: materialModel
                     }
-
-                );
-                return response.data;
+                })
+                return response.data
             } else if (searchType === 1) {
-                const response = await axios.get(
-                    `${this.$apiBaseUrl}/devproductionorder/getautocompeletedata`, {
+                const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getautocompeletedata`, {
                     params: {
                         searchType: searchType,
                         materialName: materialName,
@@ -2734,24 +2788,21 @@ export default {
                         materialModel: materialModel,
                         materialSpecification: materialSpecification
                     }
-                }
-                )
-                return response.data;
+                })
+                return response.data
             }
         },
         querySearchSupplier(queryString, cb) {
             if (queryString.trim()) {
-                const suppliers = this.supplierNameOptions;
+                const suppliers = this.supplierNameOptions
                 // Filter suppliers using both sides in lower case
-                const results = suppliers.filter(supplier =>
-                    supplier.supplierName.toLowerCase().includes(queryString.toLowerCase())
-                );
+                const results = suppliers.filter((supplier) => supplier.supplierName.toLowerCase().includes(queryString.toLowerCase()))
                 // Map to objects with a "value" property
-                const supplierNameResults = results.map(item => ({ value: item.supplierName }));
-                console.log(supplierNameResults);
-                cb(supplierNameResults);
+                const supplierNameResults = results.map((item) => ({ value: item.supplierName }))
+                console.log(supplierNameResults)
+                cb(supplierNameResults)
             } else {
-                cb([]);
+                cb([])
             }
         },
 
@@ -2760,33 +2811,29 @@ export default {
             if (searchType === 0) {
                 // Call searchRecords with the row's materialName and the current query as materialModel
                 this.searchRecords(row.materialName, row.supplierName, queryString, null, 0)
-                    .then(results => {
+                    .then((results) => {
                         // Format the results as an array of objects with a "value" property (if needed)
-                        callback(results.map(item => ({ value: item })));
+                        callback(results.map((item) => ({ value: item })))
                     })
-                    .catch(error => {
-                        console.error("Error fetching suggestions:", error);
-                        callback([]);
-                    });
-            }
-            else if (searchType === 1) {
+                    .catch((error) => {
+                        console.error('Error fetching suggestions:', error)
+                        callback([])
+                    })
+            } else if (searchType === 1) {
                 // Call searchRecords with the row's materialName and the current query as materialModel
                 this.searchRecords(row.materialName, row.supplierName, row.materialModel, queryString, 1)
-                    .then(results => {
+                    .then((results) => {
                         // Format the results as an array of objects with a "value" property (if needed)
-                        callback(results.map(item => ({ value: item })));
+                        callback(results.map((item) => ({ value: item })))
                     })
-                    .catch(error => {
-                        console.error("Error fetching suggestions:", error);
-                        callback([]);
-                    });
+                    .catch((error) => {
+                        console.error('Error fetching suggestions:', error)
+                        callback([])
+                    })
             }
-
         },
         async handleMaterialNameSelect(row, selectedItem) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`)
             row.materialId = response.data.materialId
             row.unit = response.data.unit
             row.materialType = response.data.materialType
@@ -2795,14 +2842,22 @@ export default {
             row.supplierName = selectedItem.value
         },
         downloadProductionInstruction(row) {
-            window.open(
-                `${this.$apiBaseUrl}/devproductionorder/downloadproductioninstruction?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`
-            )
+            window.open(`${this.$apiBaseUrl}/devproductionorder/downloadproductioninstruction?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`)
         },
         downloadProductionInstructionImage(row) {
-            window.open(
-                `${this.$apiBaseUrl}/devproductionorder/downloadpicnotes?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`
-            )
+            window.open(`${this.$apiBaseUrl}/devproductionorder/downloadpicnotes?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`)
+        },
+        trimInput(row, field) {
+            if (row[field]) {
+                row[field] = row[field].trim()
+            }
+        },
+        validateColor(row) {
+            this.trimInput(row, 'color')
+            if (row.color && row.color.endsWith('色')) {
+                this.$message.warning('颜色不能以“色”结尾')
+                row.color = row.color.slice(0, -1) // Remove the last character
+            }
         }
     }
 }
