@@ -757,13 +757,22 @@
                             <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="materialType" label="材料类型">
+                                        <template #default="scope">
+                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='烫底'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
+                                                <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </el-select>
+                                        </template>
+                                        </el-table-column>
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
                                                 <div v-if="scope.row.materialType === '里料'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
+                                                <div v-else-if="scope.row.materialType === '面料'">
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                                </div>                                                
                                                 <div v-else-if="scope.row.materialType === '烫底'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
@@ -821,7 +830,6 @@
                                                 v-model="scope.row.craftName"
                                                 @blur="trimInput(scope.row, 'craftName')"
                                                 size="default"
-                                                :disabled="scope.row.materialType === '烫底'"
                                                 :maxlength="wordLengths.CRAFT_NAME_LENGTH"
                                                 show-word-limit
                                             ></el-input>
@@ -1729,13 +1737,22 @@
                             <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="materialType" label="材料类型">
+                                        <template #default="scope">
+                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='烫底'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
+                                                <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </el-select>
+                                        </template>
+                                        </el-table-column>
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
                                                 <div v-if="scope.row.materialType === '里料'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
+                                                <div v-else-if="scope.row.materialType === '面料'">
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                                </div>                                                
                                                 <div v-else-if="scope.row.materialType === '烫底'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
@@ -1794,7 +1811,6 @@
                                                 v-model="scope.row.craftName"
                                                 size="default"
                                                 @blur="trimInput(scope.row, 'craftName')"
-                                                :disabled="scope.row.materialType === '烫底'"
                                                 :maxlength="wordLengths.CRAFT_NAME_LENGTH"
                                                 show-word-limit
                                             ></el-input>
@@ -1989,7 +2005,11 @@ export default {
                 PROCESSING_REMARK_LENGTH: constants.PROCESSING_REMARK_LENGTH,
                 SUPPLIER_NAME_LENGTH: constants.SUPPLIER_NAME_LENGTH
             },
-            currentOrderShoeRow: {}
+            currentOrderShoeRow: {},
+            materialTypeOptions: [
+                { value: '面料', label: '面料' },
+                { value: '里料', label: '里料' },
+            ],
         }
     },
     async mounted() {
