@@ -253,6 +253,8 @@ def get_revert_order_reason_for_order():
         )
         .first()
     )
+    if not order_status:
+        return []
 
     result = []
     for status, reason in ORDER_STATUS_REVERT_DICT.items():
