@@ -41,7 +41,7 @@
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="payMethod" label="付款方式"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
-                <el-table-column label="查看">
+                <el-table-column label="查看" width="280">
                     <template #default="scope">
                         <el-button-group>
                             <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
@@ -51,7 +51,8 @@
                                 @click="openRejectDialog(scope.row)">驳回</el-button>
                             <el-button v-if="role == 23 && scope.row.approvalStatus === 2" type="warning"
                                 @click="handleEdit(scope.row)">编辑</el-button>
-                            <!-- <el-button type="danger" @click="handleDelete(scope.row)">删除</el-button> -->
+                            <el-button v-if="role == 24 && scope.row.approvalStatus !== 1" type="danger"
+                                @click="handleDelete(scope.row)">删除</el-button>
                         </el-button-group>
                     </template>
                 </el-table-column>
@@ -74,7 +75,7 @@
                     <tr>
                         <td>
                             <div style="position: relative; padding: 5px;">
-                                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
+                                <h1 style="margin: 0; text-align: center;">健诚鞋业入库单</h1>
                                 <span
                                     style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
                                     单据编号: {{ currentRow.inboundRId }}
@@ -105,20 +106,20 @@
                     <tr>
                         <td>
                             <table class="yk-table" border="1" cellspacing="0" align="center" width="100%"
-                                style="max-height:360px; size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                style="max-height:360px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
                                         <th width="100">型号</th>
-                                        <th width="200">规格</th>
+                                        <th width="180">规格</th>
                                         <th width="80">颜色</th>
                                         <th width="55">单位</th>
-                                        <th width="110">订单号</th>
-                                        <th width="110">工厂鞋型</th>
+                                        <th width="100">订单号</th>
+                                        <th width="100">工厂鞋型</th>
                                         <th width="100">数量</th>
-                                        <th v-if="currentRow.inboundType != 2" width="110">单价</th>
-                                        <th v-if="currentRow.inboundType == 2" width="110">复合单价</th>
-                                        <th width="110">金额</th>
+                                        <th v-if="currentRow.inboundType != 2" width="100">单价</th>
+                                        <th v-if="currentRow.inboundType == 2" width="100">复合单价</th>
+                                        <th width="100">金额</th>
                                         <th>备注</th>
                                     </tr>
                                 </thead>

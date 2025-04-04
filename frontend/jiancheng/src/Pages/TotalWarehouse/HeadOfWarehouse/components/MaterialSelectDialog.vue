@@ -1,13 +1,8 @@
 <template>
     <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose">
         <div v-if="selectionPage == 0">
-            <el-table :data="searchedMaterials" border stripe height="600">
-                <el-table-column label="选择" align="center" width="65">
-                    <template #default="scope">
-                        <el-radio :label="scope.$index" v-model="selectionIndex"
-                            @change="handleSelectMaterials(scope.row)" class="radio-class"></el-radio>
-                    </template>
-                </el-table-column>
+            <el-table :data="searchedMaterials" border stripe height="600" @selection-change="handleSelectMaterials">
+                <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
@@ -17,13 +12,6 @@
             </el-table>
         </div>
         <div v-else-if="selectionPage == 1">
-            <el-descriptions border style="margin-bottom: 20px;">
-                <el-descriptions-item label="名称">{{ materialSelection.materialName }}</el-descriptions-item>
-                <el-descriptions-item label="型号">{{ materialSelection.materialModel }}</el-descriptions-item>
-                <el-descriptions-item label="规格">{{ materialSelection.materialSpecification }}</el-descriptions-item>
-                <el-descriptions-item label="颜色">{{ materialSelection.materialColor }}</el-descriptions-item>
-                <el-descriptions-item label="单位">{{ materialSelection.actualInboundUnit }}</el-descriptions-item>
-            </el-descriptions>
             <el-row :gutter="20" style="margin-bottom: 20px;">
                 <el-col :span="6">
                     <span>到货数量：</span>
@@ -130,7 +118,7 @@ export default {
     data() {
         return {
             localVisible: this.visible,
-            materialSelection: {},
+            materialSelection: [],
             orderSelection: {},
             currentIndex: -1,
             selectionIndex: null,
@@ -240,9 +228,8 @@ export default {
             this.downSelected = [];
             this.updateSelectedInboundQuantity();
         },
-        handleSelectMaterials(row) {
-            console.log(row)
-            this.materialSelection = row;
+        handleSelectMaterials(selection) {
+            this.materialSelection = selection;
         },
         previousPage() {
             this.selectionPage = 0
@@ -254,20 +241,14 @@ export default {
             this.totalInboundQuantity = 0
         },
         async nextPage() {
-            if (this.selectionIndex == null) {
+            if (this.materialSelection.length === 0) {
                 ElMessage.warning('请先选择一行材料')
                 return
             }
             try {
                 console.log(this.materialSelection)
                 let params = {
-                    "materialName": this.materialSelection.materialName,
-                    "materialSpec": this.materialSelection.materialSpecification,
-                    "materialModel": this.materialSelection.materialModel,
-                    "materialColor": this.materialSelection.materialColor,
-                    "supplierName": this.materialSelection.supplierName,
-                    "unit": this.materialSelection.actualInboundUnit,
-                    "materialCategory": this.materialSelection.materialCategory,
+                    "data": JSON.stringify(this.materialSelection),
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbymaterialinfo`, { params })
                 this.originTableData = response.data
@@ -286,7 +267,7 @@ export default {
             }
         },
         resetVariables() {
-            this.materialSelection = {}
+            this.materialSelection = []
             this.orderSelection = {}
             this.currentIndex = -1
             this.selectionIndex = null
@@ -309,14 +290,11 @@ export default {
             for (let i = 0; i < this.topTableData.length; i++) {
                 this.topTableData[i] = {
                     ...this.topTableData[i],
-                    ...this.materialSelection,
                     disableEdit: true,
                     unitPrice: this.unitPrice,
                     inboundQuantity: this.topTableData[i].inboundQuantity,
                     itemTotalPrice: (this.topTableData[i].inboundQuantity * this.unitPrice).toFixed(3),
                 }
-                this.topTableData[i].inboundModel = this.materialSelection.materialModel
-                this.topTableData[i].inboundSpecification = this.materialSelection.materialSpecification
                 console.log(this.topTableData[i])
             }
             let remainTotalQuantity = this.totalInboundQuantity - this.selectedInboundQuantity

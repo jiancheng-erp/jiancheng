@@ -456,65 +456,73 @@ def get_orders_by_material_info():
     """
     根据材料信息查找买这个材料的订单号
     """
-    material_name = request.args.get("materialName", None)
-    material_specification = request.args.get("materialSpec", None)
-    material_model = request.args.get("materialModel", None)
-    material_color = request.args.get("materialColor", None)
-    supplier_name = request.args.get("supplierName", None)
-    material_category = request.args.get("materialCategory", 0, type=int)
-    unit = request.args.get("unit", None)
-
-    target_material = (
-        db.session.query(Material)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .filter(
-            Material.material_name == material_name,
-            Supplier.supplier_name == supplier_name,
-        )
-        .first()
-    )
-
-    if not target_material:
-        return jsonify({"message": "没有该材料"}), 404
-
-    material_storages = (
-        db.session.query(MaterialStorage, Order, Shoe)
-        .outerjoin(Order, Order.order_id == MaterialStorage.order_id)
-        .outerjoin(
-            OrderShoe, OrderShoe.order_shoe_id == MaterialStorage.order_shoe_id
-        )
-        .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-        .filter(
-            MaterialStorage.actual_inbound_material_id
-            == target_material.material_id,
-            MaterialStorage.material_specification == material_specification,
-            MaterialStorage.material_model == material_model,
-            MaterialStorage.material_storage_color == material_color,
-            MaterialStorage.actual_inbound_unit == unit,
-            or_(
-                OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER,
-                OrderStatus.order_current_status == None,
-            ),
-        )
-        .all()
-    )
-
+    data = request.args.get("data", None)
+    data_list = json.loads(data)
     result = []
-    for row in material_storages:
-        storage, order, shoe = row
-        obj = {
-            "materialStorageId": storage.material_storage_id,
-            "orderId": storage.order_id,
-            "orderRId": order.order_rid if order else None,
-            "startDate": format_date(order.start_date) if order else None,
-            "endDate": format_date(order.end_date) if order else None,
-            "shoeRId": shoe.shoe_rid if shoe else None,
-            "estimatedInboundAmount": storage.estimated_inbound_amount,
-            "actualInboundAmount": storage.actual_inbound_amount,
-            "currentAmount": storage.current_amount,
-        }
-        result.append(obj)
+    for input_row in data_list:
+        material_name = input_row.get("materialName", None)
+        material_specification = input_row.get("materialSpecification", None)
+        material_model = input_row.get("materialModel", None)
+        material_color = input_row.get("materialColor", None)
+        supplier_name = input_row.get("supplierName", None)
+        material_category = input_row.get("materialCategory", 0)
+        unit = input_row.get("actualInboundUnit", None)
+
+        target_material = (
+            db.session.query(Material)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                Material.material_name == material_name,
+                Supplier.supplier_name == supplier_name,
+            )
+            .first()
+        )
+
+        if not target_material:
+            return jsonify({"message": "没有该材料"}), 404
+
+        material_storages = (
+            db.session.query(MaterialStorage, Order, Shoe)
+            .outerjoin(Order, Order.order_id == MaterialStorage.order_id)
+            .outerjoin(
+                OrderShoe, OrderShoe.order_shoe_id == MaterialStorage.order_shoe_id
+            )
+            .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(
+                MaterialStorage.actual_inbound_material_id
+                == target_material.material_id,
+                MaterialStorage.material_specification == material_specification,
+                MaterialStorage.material_model == material_model,
+                MaterialStorage.material_storage_color == material_color,
+                MaterialStorage.actual_inbound_unit == unit,
+                or_(
+                    OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER,
+                    OrderStatus.order_current_status == None,
+                ),
+            )
+            .all()
+        )
+        for row in material_storages:
+            storage, order, shoe = row
+            obj = {
+                "materialStorageId": storage.material_storage_id,
+                "materialName": target_material.material_name,
+                "materialModel": storage.material_model,
+                "materialSpecification": storage.material_specification,
+                "materialColor": storage.material_storage_color,
+                "actualInboundUnit": storage.actual_inbound_unit,
+                "inboundModel": storage.inbound_model,
+                "inboundSpecification": storage.inbound_specification,
+                "orderId": storage.order_id,
+                "orderRId": order.order_rid if order else None,
+                "shoeRId": shoe.shoe_rid if shoe else None,
+                "estimatedInboundAmount": storage.estimated_inbound_amount,
+                "actualInboundAmount": storage.actual_inbound_amount,
+                "currentAmount": storage.current_amount,
+                "materialCategory": material_category,
+            }
+            result.append(obj)
     return result
 
 
@@ -2595,31 +2603,13 @@ def update_inbound_record():
 @material_storage_bp.route("/warehouse/deleteinboundrecord", methods=["DELETE"])
 def delete_inbound_record():
     inbound_record_id = request.args.get("inboundRecordId")
-    financial_record = (
-        db.session.query(
-            InboundRecord, AccountingForeignAccountEvent, AccountingPayableAccount
-        )
-        .join(
-            AccountingForeignAccountEvent,
-            InboundRecord.inbound_record_id
-            == AccountingForeignAccountEvent.inbound_record_id,
-        )
-        .join(
-            AccountingPayableAccount,
-            AccountingForeignAccountEvent.payable_payee_account_id
-            == AccountingPayableAccount.account_id,
-        )
+    inbound_record = (
+        db.session.query(InboundRecord)
         .filter(InboundRecord.inbound_record_id == inbound_record_id)
         .first()
     )
-
-    inbound_record, accounting_event, accounting_payable_account = financial_record
-    transaction_amount = accounting_event.transaction_amount
-    accounting_payable_account.account_payable_balance -= transaction_amount
-    accounting_tg_account = ThirdGradeAccount.query.get(MATERIAL_PURCHASE_PAYABLE_ID)
-    accounting_tg_account.account_balance -= transaction_amount
-
-    db.session.delete(accounting_event)
+    if not inbound_record:
+        return jsonify({"message": "inbound record not found"}), 404
 
     is_sized_material = inbound_record.is_sized_material
     if is_sized_material == 0:
