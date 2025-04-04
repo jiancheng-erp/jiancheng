@@ -930,7 +930,7 @@
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='烫底'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
+                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='加工'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
                                                 <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
@@ -944,8 +944,8 @@
                                                 <div v-else-if="scope.row.materialType === '面料'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>                                                
-                                                <div v-else-if="scope.row.materialType === '烫底'">
-                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                                <div v-else-if="scope.row.materialType === '加工'">
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [10])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                             </el-select>
                                         </template>
@@ -1465,7 +1465,7 @@ export default {
                     this.defaultManuallyAddedMaterial = newEntry
                     break
                 case 6:
-                    this.defaultManuallyAddedMaterial.materialType = '烫底'
+                    this.defaultManuallyAddedMaterial.materialType = '加工'
                     activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
                     this.defaultManuallyAddedMaterial = newEntry
                     break
