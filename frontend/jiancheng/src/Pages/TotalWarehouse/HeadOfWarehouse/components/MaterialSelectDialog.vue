@@ -48,6 +48,7 @@
                     @selection-change="handleBottomSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                    <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
                     <el-table-column prop="startDate" label="开始日期"></el-table-column>
                     <el-table-column prop="endDate" label="结束日期"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
@@ -86,6 +87,7 @@
                     @selection-change="handleTopSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                    <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
                     <el-table-column prop="startDate" label="开始日期"></el-table-column>
                     <el-table-column prop="endDate" label="结束日期"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
@@ -310,18 +312,25 @@ export default {
                     ...this.materialSelection,
                     disableEdit: true,
                     unitPrice: this.unitPrice,
+                    inboundQuantity: this.topTableData[i].inboundQuantity,
                     itemTotalPrice: (this.topTableData[i].inboundQuantity * this.unitPrice).toFixed(3),
                 }
+                this.topTableData[i].inboundModel = this.materialSelection.materialModel
+                this.topTableData[i].inboundSpecification = this.materialSelection.materialSpecification
+                console.log(this.topTableData[i])
             }
             let remainTotalQuantity = this.totalInboundQuantity - this.selectedInboundQuantity
             if (remainTotalQuantity > 0) {
                 this.topTableData.push({
                     orderRId: null,
+                    shoeRId: null,
                     inboundQuantity: remainTotalQuantity,
                     ...this.materialSelection,
                     disableEdit: true,
                     unitPrice: this.unitPrice,
                     itemTotalPrice: (remainTotalQuantity * this.unitPrice).toFixed(3),
+                    inboundModel: this.materialSelection.materialModel,
+                    inboundSpecification: this.materialSelection.materialSpecification,
                 })
             }
             this.$emit("confirm", this.topTableData);
