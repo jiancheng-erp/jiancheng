@@ -36,7 +36,6 @@ import { ref, onMounted, getCurrentInstance } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox ,TabPaneName} from 'element-plus'
 import { ITEM_RENDER_EVT } from 'element-plus/es/components/virtual-list/src/defaults'
-import { a } from 'vitest/dist/suite-IbNSsUWN'
 let firstGradeAccounts = ref([])
 let secondGradeAccounts = ref([])
 let thirdGradeAccounts = ref([])
