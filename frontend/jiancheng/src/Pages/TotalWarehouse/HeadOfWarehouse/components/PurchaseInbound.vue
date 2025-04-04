@@ -33,13 +33,13 @@
                 <el-form-item prop="remark" label="备注">
                     <el-input v-model="inboundForm.remark"></el-input>
                 </el-form-item>
-                <el-form-item prop="shoeSize" label="码段">
+                <!-- <el-form-item prop="shoeSize" label="码段">
                     <el-select v-model="inboundForm.shoeSize" filterable clearable @change="insertShoeSizeColumns">
                         <el-option v-for="item in logisticsShoeSizes" :key="item.batchInfoTypeId"
                             :value="item.batchInfoTypeId" :label="item.batchInfoTypeName">
                         </el-option>
                     </el-select>
-                </el-form-item>
+                </el-form-item> -->
                 <el-form-item prop="payMethod" label="结算方式">
                     <el-select v-model="inboundForm.payMethod" filterable clearable>
                         <el-option v-for="item in ['应付账款', '现金']" :key="item" :value="item" :label="item"></el-option>
@@ -223,8 +223,8 @@
                                 </thead>
                                 <tr v-for="(item, index) in previewData" :key="index" align="center">
                                     <td>{{ item.materialName }}</td>
-                                    <td>{{ item.materialModel }}</td>
-                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.inboundModel }}</td>
+                                    <td>{{ item.inboundSpecification }}</td>
                                     <td>{{ item.materialColor }}</td>
                                     <td>{{ item.actualInboundUnit }}</td>
                                     <td>{{ item.orderRId }}</td>
@@ -546,8 +546,8 @@ export default {
         async fetchMaterialData() {
             const params = {
                 "materialName": this.currentKeyDownRow.materialName,
-                "materialSpec": this.currentKeyDownRow.materialSpecification,
-                "materialModel": this.currentKeyDownRow.materialModel,
+                "materialSpec": this.currentKeyDownRow.inboundSpecification,
+                "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
             }
@@ -564,8 +564,8 @@ export default {
         async fetchSizeMaterialData() {
             const params = {
                 "materialName": this.currentKeyDownRow.materialName,
-                "materialSpec": this.currentKeyDownRow.materialSpecification,
-                "materialModel": this.currentKeyDownRow.materialModel,
+                "materialSpec": this.currentKeyDownRow.inboundSpecification,
+                "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
                 "orderRId": this.currentKeyDownRow.orderRId,
@@ -645,7 +645,7 @@ export default {
             } catch (error) {
                 if (error.response) {
                     // Flask returns error in JSON format
-                    this.errorMessage = error.response.data.error || "An error occurred";
+                    this.errorMessage = error.response.data.message || "An error occurred";
                 } else {
                     this.errorMessage = "服务器异常";
                 }

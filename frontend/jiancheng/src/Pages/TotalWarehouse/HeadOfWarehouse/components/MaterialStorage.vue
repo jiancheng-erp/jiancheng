@@ -2,7 +2,7 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <el-button type="success" @click="confirmOrderShoesToOutbound" disabled>
+            <el-button type="success" @click="confirmOrderShoesToOutbound">
                 出库
             </el-button>
         </el-col>
@@ -52,12 +52,56 @@
         </el-col>
 
     </el-row>
-    <el-table :data="tableData" border stripe height="550px" @selection-change="handleSelectionChange">
+    <div class="transfer-tables">
+        <!-- Top Table -->
+        <el-table ref="topTableData" :data="topTableData" style="width: 100%; margin-bottom: 20px;"
+            @selection-change="handleTopSelectionChange" border stripe height="40vh">
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="orderRId" label="订单号"></el-table-column>
+            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
+            <el-table-column prop="materialType" label="类型"></el-table-column>
+            <el-table-column prop="materialName" label="名称" width="100">
+                <template #default="scope">
+                    <el-tooltip effect="dark" :content="scope.row.materialName" placement="bottom">
+                        <span class="truncate-text">
+                            {{ scope.row.materialName }}
+                        </span>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column prop="materialModel" label="型号"></el-table-column>
+            <el-table-column prop="materialSpecification" label="规格"></el-table-column>
+            <el-table-column prop="colorName" label="颜色"></el-table-column>
+            <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
+            <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺"
+                min-width="200"></el-table-column>
+            <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
+            <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
+            <el-table-column prop="currentAmount" label="库存"></el-table-column>
+            <el-table-column prop="supplierName" label="供应商"></el-table-column>
+        </el-table>
+
+        <!-- Control Buttons -->
+        <div class="transfer-buttons" style="text-align: center; margin-bottom: 20px;">
+            <el-button type="primary" @click="moveUp" :disabled="bottomSelected.length === 0">
+                选择 <el-icon>
+                    <Top />
+                </el-icon>
+            </el-button>
+            <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0"
+                style="margin-left: 20px;">
+                <el-icon>
+                    <Bottom />
+                </el-icon> 移除
+            </el-button>
+        </div>
+    </div>
+    <el-table :data="bottomTableData" border stripe height="40vh" @selection-change="handleBottomSelectionChange">
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
-        <el-table-column prop="shoeRId" label="工厂鞋型号"></el-table-column>
-        <el-table-column prop="materialType" label="材料类型"></el-table-column>
-        <el-table-column prop="materialName" label="材料名称" width="100">
+        <el-table-column prop="orderRId" label="订单号"></el-table-column>
+        <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
+        <el-table-column prop="materialType" label="类型"></el-table-column>
+        <el-table-column prop="materialName" label="名称" width="100">
             <template #default="scope">
                 <el-tooltip effect="dark" :content="scope.row.materialName" placement="bottom">
                     <span class="truncate-text">
@@ -70,9 +114,10 @@
         <el-table-column prop="materialSpecification" label="规格"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-        <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺" min-width="200"></el-table-column>
-        <el-table-column prop="estimatedInboundAmount" label="采购单数量"></el-table-column>
-        <el-table-column prop="actualInboundAmount" label="实入库数量"></el-table-column>
+        <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺"
+            min-width="200"></el-table-column>
+        <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
+        <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
         <el-table-column prop="supplierName" label="供应商"></el-table-column>
         <el-table-column fixed="right" label="操作" width="150">
@@ -212,7 +257,7 @@ export default {
             currentPage: 1,
             recordData: [],
             sizeRecordData: [],
-            tableData: [],
+            bottomTableData: [],
             columns: [],
             totalRows: 0,
             currentRow: {},
@@ -260,6 +305,10 @@ export default {
                 supplierName: [{ required: true, message: '请输入出库厂家', trigger: 'blur' }],
                 departmentId: [{ required: true, message: '请选择部门', trigger: 'blur' }],
             },
+            topTableData: [],
+            topSelected: [],
+            bottomTableData: [],
+            bottomSelected: [],
         }
     },
     mounted() {
@@ -272,6 +321,24 @@ export default {
         this.outboundForm = { ...this.formItemTemplate }
     },
     methods: {
+        // Move selected items from bottom to top
+        moveUp() {
+            this.topTableData = this.topTableData.concat(this.bottomSelected);
+            this.bottomTableData = this.bottomTableData.filter(
+                item => !this.bottomSelected.includes(item)
+            );
+            this.$refs.bottomTableData.clearSelection();
+            this.bottomSelected = [];
+        },
+        // Move selected items from top to bottom
+        moveDown() {
+            this.bottomTableData = this.bottomTableData.concat(this.topSelected);
+            this.topTableData = this.topTableData.filter(
+                item => !this.topSelected.includes(item)
+            );
+            this.$refs.topTableData.clearSelection();
+            this.topSelected = [];
+        },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
                 .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
@@ -309,17 +376,20 @@ export default {
             this.currentSizeMaterialQuantityRow = row
             this.isOpenSizeMaterialQuantityDialogVisible = true
         },
-        handleSelectionChange(selection) {
-            this.selectedRows = selection;
+        handleTopSelectionChange(selection) {
+            this.topSelected = selection;
+        },
+        handleBottomSelectionChange(selection) {
+            this.bottomSelected = selection;
         },
         async confirmOrderShoesToOutbound() {
             this.$refs.outboundForm.validate(async (valid) => {
                 if (valid) {
-                    if (this.selectedRows.length == 0) {
+                    if (this.topTableData.length == 0) {
                         ElMessage.error("未选择材料")
                         return
                     }
-                    this.selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
+                    this.selectedRowsCopy = JSON.parse(JSON.stringify(this.topTableData))
                     // collect all orderShoeId that are null
                     this.selectedRowsCopy.forEach(row => {
                         row["selectedOrderShoeId"] = row.orderShoeId
@@ -377,7 +447,7 @@ export default {
                 "warehouseId": this.outboundForm.warehouseId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
-            this.tableData = response.data.result
+            this.bottomTableData = response.data.result
             this.totalRows = response.data.total
         },
         formatDecimal(row, column, cellValue, index) {
