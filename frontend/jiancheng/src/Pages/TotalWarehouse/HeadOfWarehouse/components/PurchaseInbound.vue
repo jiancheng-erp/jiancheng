@@ -176,7 +176,7 @@
                     <tr>
                         <td>
                             <div style="position: relative; padding: 5px;">
-                                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
+                                <h2 style="margin: 0; text-align: center; font-size: 24px;">健诚鞋业入库单</h2>
                                 <span
                                     style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
                                     单据编号:{{ previewInboundForm.inboundRId }}
