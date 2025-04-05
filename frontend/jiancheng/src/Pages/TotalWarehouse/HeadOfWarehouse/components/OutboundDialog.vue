@@ -1,5 +1,5 @@
 <template>
-    <el-dialog title="确认订单鞋型" v-model="localVisible" width="50%" :close-on-click-modal="false">
+    <el-dialog title="确认订单鞋型" v-model="localVisible" width="50%" :close-on-click-modal="false" @close="handleClose">
         <el-table :data="selectedRows" border stripe>
             <el-table-column prop="selectedOrderRId" label="订单号"></el-table-column>
             <el-table-column prop="selectedShoeRId" label="鞋型号"></el-table-column>
@@ -43,12 +43,6 @@
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
         </el-table>
-        <!-- <div v-else>
-            <el-descriptions :column="2" border>
-                <el-descriptions-item label="订单号"> {{ currentSelectedAssetRow.orderRId }}</el-descriptions-item>
-                <el-descriptions-item label="工厂型号"> {{ currentSelectedAssetRow.shoeRId }}</el-descriptions-item>
-            </el-descriptions>
-        </div> -->
         <template #footer>
             <el-button @click="confirmSelectOrderShoe">确定</el-button>
         </template>
@@ -64,72 +58,36 @@
                     {{ getOutboundName(outboundForm.outboundType) }}
                 </el-descriptions-item>
                 <el-descriptions-item label="出库至">
-                    {{ getDepartmentName }}
+                    {{ getDestination }}
                 </el-descriptions-item>
             </el-descriptions>
         </div>
         <!-- 外包发货的form item -->
         <!-- 外发复合的form item -->
-        <div v-if="outboundForm.outboundType != 3">
-            <el-table :data="outboundForm.items" style="width: 100%" border stripe>
-                <el-table-column prop="selectedOrderRId" label="订单号" />
-                <el-table-column prop="selectedShoeRId" label="工厂型号" />
-                <el-table-column prop="materialName" label="材料名称" />
-                <el-table-column prop="materialModel" label="材料型号" />
-                <el-table-column prop="materialSpecification" label="材料规格" />
-                <el-table-column prop="colorName" label="颜色" />
-                <el-table-column prop="actualInboundUnit" label="单位" />
-                <el-table-column prop="currentAmount" label="库存" />
-                <el-table-column prop="outboundQuantity" label="出库数量">
-                    <template #default="scope">
-                        <el-input-number v-if="scope.row.materialCategory == 0" size="small"
-                            v-model="scope.row.outboundQuantity" :min="0" :precision="5"
-                            :step="0.00001"></el-input-number>
-                        <el-button v-else type="primary"
-                            @click="openSizeMaterialQuantityDialog(scope.row)">打开</el-button>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="remark" label="备注">
-                    <template #default="scope">
-                        <el-input v-model="scope.row.remark" :maxlength="40" show-word-limit size="small">
+        <el-table :data="outboundForm.items" style="width: 100%" border stripe>
+            <el-table-column prop="selectedOrderRId" label="订单号" />
+            <el-table-column prop="selectedShoeRId" label="工厂型号" />
+            <el-table-column prop="materialName" label="材料名称" />
+            <el-table-column prop="materialModel" label="材料型号" />
+            <el-table-column prop="materialSpecification" label="材料规格" />
+            <el-table-column prop="colorName" label="颜色" />
+            <el-table-column prop="actualInboundUnit" label="单位" />
+            <el-table-column prop="currentAmount" label="库存" />
+            <el-table-column prop="outboundQuantity" label="出库数量">
+                <template #default="scope">
+                    <el-input-number v-if="scope.row.materialName !== '大底'" size="small"
+                        v-model="scope.row.outboundQuantity" :min="0" :precision="5" :step="0.00001"></el-input-number>
+                    <el-button v-else type="primary" @click="openSizeMaterialQuantityDialog(scope.row)">打开</el-button>
+                </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注">
+                <template #default="scope">
+                    <el-input v-model="scope.row.remark" :maxlength="40" show-word-limit size="small">
 
-                        </el-input>
-                    </template>
-                </el-table-column>
-            </el-table>
-        </div>
-        <div v-else>
-            <el-table :data="outboundForm.items" style="width: 100%" border stripe
-                default-expand-all>
-                <el-table-column type="expand">
-                    <template #default="props">
-                        <el-table :data="props.row.craftNameList" border stripe
-                            @selection-change="handleCompositeSelectionChange">
-                            <el-table-column prop="craftName" label="复合工艺" />
-                            <el-table-column prop="outboundQuantity" label="出库数量">
-                                <template #default="scope">
-                                    <el-input-number size="small" v-model="scope.row.outboundQuantity" :min="0"
-                                        :max="Number(props.row.currentAmount)" :precision="5" :step="0.00001"
-                                        @change="(newVal, oldVal) => handleCompositeAmountChange(newVal, oldVal, props.row)"></el-input-number>
-                                </template>
-                            </el-table-column>
-                            <el-table-column prop="remark" label="备注">
-                                <template #default="scope">
-                                    <el-input v-model="scope.row.remark" :maxlength="40" show-word-limit
-                                        type="textarea"></el-input>
-                                </template>
-                            </el-table-column>
-                        </el-table>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="materialName" label="材料名称" />
-                <el-table-column prop="materialModel" label="材料型号" />
-                <el-table-column prop="materialSpecification" label="材料规格" />
-                <el-table-column prop="colorName" label="颜色" />
-                <el-table-column prop="actualInboundUnit" label="单位" />
-                <el-table-column prop="currentAmount" label="库存" />
-            </el-table>
-        </div>
+                    </el-input>
+                </template>
+            </el-table-column>
+        </el-table>
         <template #footer>
             <span>
                 <el-button @click="isMultiOutboundDialogVisible = false">取消</el-button>
@@ -187,7 +145,7 @@ export default {
             required: true
         },
     },
-    emits: ["update-visible", "get-material-table-data"],
+    emits: ["update-visible"],
     watch: {
         visible(newVal) {
             this.localVisible = newVal;
@@ -204,11 +162,15 @@ export default {
                 );
             });
         },
-        getDepartmentName() {
-            const result = this.departmentOptions.filter(item => {
-                return item.value == this.outboundForm.departmentId
-            })[0].label
-            return result
+        getDestination() {
+            if (this.outboundForm.outboundType == 0) {
+                const result = this.departmentOptions.filter(item => {
+                    return item.value == this.outboundForm.departmentId
+                })[0].label
+                return result
+            } else if (this.outboundForm.outboundType == 3) {
+                return this.outboundForm.supplierName
+            }
         }
     },
     data() {
@@ -308,14 +270,7 @@ export default {
         async groupSelectedRows() {
             let groupedData = [];
             for (let item of this.selectedRows) {
-                let craftNameList = []
-                if (item.craftName) {
-                    craftNameList = item.craftName.split("@")
-                }
-                let newItem = { ...item, outboundQuantity: 0, remark: "", sizeMaterialOutboundTable: [], craftNameList: [] }
-                craftNameList.forEach(craftName => {
-                    newItem.craftNameList.push({ craftName: craftName, outboundQuantity: 0, remark: "" })
-                })
+                let newItem = { ...item, outboundQuantity: 0, remark: "", sizeMaterialOutboundTable: [] }
                 if (item.materialCategory == 1) {
                     console.log(item)
                     // newItem["sizeMaterialOutboundTable"] = response.data
@@ -343,7 +298,12 @@ export default {
             // await this.getOutsourceInfo()
         },
         async submitOutboundForm() {
-            console.log("Form is valid. Proceeding with submission.");
+            for (let item of this.outboundForm.items) {
+                if (item.outboundQuantity <= 0) {
+                    ElMessage.error("出库数量必须大于0")
+                    return
+                }
+            }
             let data = {
                 "currentDateTime": this.outboundForm.currentDateTime,
                 "outboundType": this.outboundForm.outboundType,
@@ -351,22 +311,20 @@ export default {
                 "outboundAddress": this.outboundForm.outboundAddress,
                 "picker": this.outboundForm.picker,
                 "outsourceInfoId": null,
-                "compositeSupplierId": null,
+                "supplierName": this.outboundForm.supplierName,
                 "items": this.outboundForm.items,
                 "remark": this.outboundForm.remark,
             }
             try {
                 console.log(data)
-                const response = await axios.post(`${this.$apiBaseUrl}/warehouse/outboundmaterial`, data)
+                await axios.post(`${this.$apiBaseUrl}/warehouse/outboundmaterial`, data)
                 ElMessage.success("出库成功")
-                ElMessage.success(response.data.outboundRId)
             }
             catch (error) {
                 console.log(error)
                 ElMessage.error(error.response.data.message)
             }
             this.isMultiOutboundDialogVisible = false
-            this.$emit("get-material-table-data")
             this.handleClose()
         },
         handleClose() {

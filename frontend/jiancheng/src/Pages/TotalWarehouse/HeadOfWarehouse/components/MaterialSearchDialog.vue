@@ -9,11 +9,11 @@
             <el-option v-for="item in materialNameOptions" :value="item.value" :label="item.label" />
         </el-select>
         请选择材料型号：
-        <el-input v-model="searchForm.materialModelSearch" placeholder="" />
+        <el-input v-model="searchForm.materialModelSearch" placeholder="" clearable />
         请选择材料规格：
-        <el-input v-model="searchForm.materialSpecificationSearch" placeholder="" />
+        <el-input v-model="searchForm.materialSpecificationSearch" placeholder="" clearable />
         请选择材料颜色：
-        <el-input v-model="searchForm.materialColorSearch" placeholder="" />
+        <el-input v-model="searchForm.materialColorSearch" placeholder="" clearable />
         请选择材料供应商：
         <el-select v-model="searchForm.materialSupplierSearch" value-key="" placeholder="" clearable filterable>
             <el-option v-for="item in materialSupplierOptions" :value="item" />

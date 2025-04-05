@@ -2,7 +2,7 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <el-button type="success" @click="confirmOrderShoesToOutbound">
+            <el-button v-if="role == 23" type="success" @click="confirmOrderShoesToOutbound">
                 出库
             </el-button>
         </el-col>
@@ -13,34 +13,32 @@
     <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
-                <el-form-item prop="currentDateTime" label="日期">
+                <el-form-item v-if="role == 23" prop="currentDateTime" label="日期">
                     <el-date-picker v-model="outboundForm.currentDateTime" type="datetime"
                         value-format="YYYY-MM-DD HH:mm:ss" clearable />
                 </el-form-item>
-                <el-form-item prop="outboundType" label="出库类型">
+                <el-form-item v-if="role == 23" prop="outboundType" label="出库类型">
                     <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
                         <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
                             :label="item.label"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="outboundForm.outboundType == 0" prop="departmentId" label="部门">
+                <el-form-item v-if="outboundForm.outboundType == 0 && role == 23" prop="departmentId" label="部门">
                     <el-select v-model="outboundForm.departmentId" filterable clearable>
                         <el-option v-for="item in departmentOptions" :label="item.label"
                             :value="item.value"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType)" prop="supplierName" label="出库厂家">
+                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType) && role == 23" prop="supplierName"
+                    label="出库厂家">
                     <el-autocomplete v-model="outboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
                         @select="handleSupplierSelect" />
                 </el-form-item>
-                <el-form-item prop="remark" label="备注">
+                <el-form-item v-if="role == 23" prop="picker" label="领料人">
+                    <el-input v-model="outboundForm.picker"></el-input>
+                </el-form-item>
+                <el-form-item v-if="role == 23" prop="remark" label="备注">
                     <el-input v-model="outboundForm.remark"></el-input>
-                </el-form-item>
-                <el-form-item prop="orderRId" label="生产订单号">
-                    <el-input v-model="outboundForm.orderRId" clearable @change="getMaterialTableData"></el-input>
-                </el-form-item>
-                <el-form-item prop="shoeRId" label="工厂鞋型">
-                    <el-input v-model="outboundForm.shoeRId" clearable @change="getMaterialTableData"></el-input>
                 </el-form-item>
                 <el-form-item prop="warehouseId" label="仓库">
                     <el-select v-model="outboundForm.warehouseId" filterable clearable @change="getMaterialTableData">
@@ -54,8 +52,9 @@
     </el-row>
     <div class="transfer-tables">
         <!-- Top Table -->
-        <el-table ref="topTableData" :data="topTableData" style="width: 100%; margin-bottom: 20px;"
-            @selection-change="handleTopSelectionChange" border stripe height="40vh">
+        <el-table v-if="role == 23" ref="topTableData" :data="topTableData"
+            style="width: 100%; margin-bottom: 20px; height: 60vh" @selection-change="handleTopSelectionChange" border
+            stripe>
             <el-table-column type="selection" width="55" />
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
@@ -73,8 +72,6 @@
             <el-table-column prop="materialSpecification" label="规格"></el-table-column>
             <el-table-column prop="colorName" label="颜色"></el-table-column>
             <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-            <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺"
-                min-width="200"></el-table-column>
             <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
             <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
@@ -82,21 +79,21 @@
         </el-table>
 
         <!-- Control Buttons -->
-        <div class="transfer-buttons" style="text-align: center; margin-bottom: 20px;">
+        <div v-if="role == 23" class="transfer-buttons" style="text-align: center; margin-bottom: 20px;">
             <el-button type="primary" @click="moveUp" :disabled="bottomSelected.length === 0">
                 选择 <el-icon>
                     <Top />
                 </el-icon>
             </el-button>
-            <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0"
-                style="margin-left: 20px;">
+            <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0" style="margin-left: 20px;">
                 <el-icon>
                     <Bottom />
                 </el-icon> 移除
             </el-button>
         </div>
     </div>
-    <el-table :data="bottomTableData" border stripe height="40vh" @selection-change="handleBottomSelectionChange">
+    <el-table ref="bottomTableData" :data="bottomTableData" border stripe height="40vh"
+        @selection-change="handleBottomSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
@@ -114,8 +111,6 @@
         <el-table-column prop="materialSpecification" label="规格"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-        <el-table-column v-if="searchForm.craftNameSearch == 1" prop="craftName" label="复合工艺"
-            min-width="200"></el-table-column>
         <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
@@ -214,8 +209,8 @@
     </el-dialog>
 
     <OutboundDialog :visible="isConfirmOrderShoesDialogOpen" :outboundForm="outboundForm"
-        @update-visible="updateConfirmOrderShoesDialogVis" @get-material-table-data="getMaterialTableData"
-        :selectedRows="selectedRowsCopy" :outboundOptions="outboundOptions" :departmentOptions="departmentOptions" />
+        @update-visible="updateConfirmOrderShoesDialogVis" :selectedRows="selectedRowsCopy"
+        :outboundOptions="outboundOptions" :departmentOptions="departmentOptions" />
 </template>
 <script>
 import axios from 'axios'
@@ -234,6 +229,7 @@ export default {
     },
     data() {
         return {
+            role: localStorage.getItem('role'),
             isRecordDialogVisible: false,
             isSizeRecordDialogVisible: false,
             isMaterialDialogVisible: false,
@@ -247,7 +243,6 @@ export default {
                 materialSpecificationSearch: '',
                 materialSupplierSearch: '',
                 totalPurchaseOrderRIdSearch: '',
-                craftNameSearch: 0,
             },
             materialTypeOptions: [],
             materialSupplierOptions: [],
@@ -276,7 +271,7 @@ export default {
                 outboundType: 0,
                 outboundQuantity: 0,
                 departmentId: null,
-                receiver: null,
+                picker: null,
                 outboundAddress: null,
                 deadlineDate: null,
                 outsourceInfoId: null,
@@ -351,14 +346,6 @@ export default {
         },
         async handleOutboundType(value) {
             this.outboundForm.outboundType = value
-            if (value == 3) {
-                this.searchForm.craftNameSearch = 1
-                await this.getMaterialTableData()
-            }
-            else {
-                this.searchForm.craftNameSearch = 0
-                await this.getMaterialTableData()
-            }
         },
         async getWarehouseOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/allwarehouses`)
@@ -371,6 +358,15 @@ export default {
         },
         updateConfirmOrderShoesDialogVis(newVal) {
             this.isConfirmOrderShoesDialogOpen = newVal
+            if (newVal == false) {
+                this.topSelected = []
+                this.bottomSelected = []
+                this.topTableData = []
+                this.bottomTableData = []
+                this.outboundForm = { ...this.formItemTemplate }
+                this.outboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
+                this.getMaterialTableData()
+            }
         },
         openSizeMaterialQuantityDialog(row) {
             this.currentSizeMaterialQuantityRow = row
