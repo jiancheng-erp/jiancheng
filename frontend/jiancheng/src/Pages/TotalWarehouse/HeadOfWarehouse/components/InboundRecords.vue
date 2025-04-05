@@ -1,24 +1,27 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="6">
+        <el-col>
             <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable>
+                @clear="getInboundRecordsTable" clearable style="width: 300px;">
             </el-date-picker>
-        </el-col>
-        <el-col :span="4" :offset="1">
-            <el-input v-model="supplierNameSearch" placeholder="请输入厂家名称" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable>
+            <el-input v-model="supplierNameSearch" placeholder="厂家名称搜索" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-        </el-col>
-        <el-col :span="4" :offset="0">
-            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable>
+            <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-        </el-col>
-        <el-col :span="4" :offset="0">
+            <el-select v-model="warehouseNameSearch" @change="getInboundRecordsTable" placeholder="仓库名称搜索" 
+                @clear="getInboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
+                <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label" :value="item.value"></el-option>
+            </el-select>
+            <el-select v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
+                <el-option v-for="(item, index) in materialSupplierOptions" :key="index" :label="item"
+                    :value="item"></el-option>
+            </el-select>
             <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable"
-                clearable>
+                clearable style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
                 <el-option label="待审核" :value="0"></el-option>
                 <el-option label="已批准" :value="1"></el-option>
@@ -41,7 +44,7 @@
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="payMethod" label="付款方式"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
-                <el-table-column label="查看" width="280">
+                <el-table-column label="查看" min-width="100">
                     <template #default="scope">
                         <el-button-group>
                             <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
@@ -302,7 +305,11 @@ export default {
         materialSupplierOptions: {
             type: Array,
             required: true
-        }
+        },
+        warehouseOptions: {
+            type: Array,
+            required: true
+        },
     },
     data() {
         return {
@@ -334,6 +341,7 @@ export default {
             dateRange: [null, null],
             inboundRIdSearch: null,
             supplierNameSearch: null,
+            warehouseNameSearch: null,
             editDialogVisible: false,
             materialNameOptions: [],
             unitOptions: [],
@@ -399,6 +407,7 @@ export default {
                     endDate: this.dateRange[1],
                     inboundRId: this.inboundRIdSearch,
                     supplierName: this.supplierNameSearch,
+                    warehouseName: this.warehouseNameSearch,
                     status: this.statusSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialinboundrecords`, { params })
