@@ -511,9 +511,12 @@ def get_order_info_business():
                     to_camel(db_attr): getattr(entity.PackagingInfo, db_attr)
                     for db_attr in database_attr_list
                 }
-                temp_obj["unitPerRatio"] = (
-                    entity.OrderShoeBatchInfo.packaging_info_quantity
-                )
+                # casting decimal to int or float accordingly for frontend
+                if entity.OrderShoeBatchInfo.packaging_info_quantity:
+                    if entity.OrderShoeBatchInfo.packaging_info_quantity == int(entity.OrderShoeBatchInfo.packaging_info_quantity):
+                        temp_obj["unitPerRatio"] = int(entity.OrderShoeBatchInfo.packaging_info_quantity)
+                    else:
+                        temp_obj["unitPerRatio"] = float(entity.OrderShoeBatchInfo.packaging_info_quantity)
                 response_order_shoe["shoeTypeBatchInfoList"].append(temp_obj)
 
             shoeTypeBatchData = {
