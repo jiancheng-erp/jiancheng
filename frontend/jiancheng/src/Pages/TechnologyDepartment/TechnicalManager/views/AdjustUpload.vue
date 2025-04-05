@@ -18,24 +18,15 @@
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
                             <el-descriptions title="" :column="2" border>
-                                <el-descriptions-item label="订单编号" align="center">{{
-                                    orderData.orderId
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单创建时间" align="center">{{
-                                    orderData.createTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="客户名称" align="center">{{
-                                    orderData.customerName
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                                <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                                <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
                                 <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
-                                <el-descriptions-item label="订单预计截止日期" align="center">{{
-                                    orderData.deadlineTime
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                                 <el-descriptions-item label="退回订单" align="center">
-                                    <el-button type="danger" size="default"
-                                        @click="openReturnOrderDialog">退回流程</el-button>
+                                    <el-button type="danger" size="default" @click="openReturnOrderDialog">退回流程</el-button>
                                 </el-descriptions-item>
                             </el-descriptions>
                         </el-col>
@@ -45,8 +36,7 @@
             <el-row :gutter="20" style="margin-top: 10px">
                 <el-col :span="4" :offset="0">
                     <div style="display: flex; align-items: center; white-space: nowrap">
-                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default"
-                            :suffix-icon="SearchIcon" clearable @input="tableWholeFilter"></el-input>
+                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="SearchIcon" clearable @input="tableWholeFilter"></el-input>
                     </div>
                 </el-col>
             </el-row>
@@ -60,8 +50,7 @@
                                     <el-table-column prop="color" label="颜色"></el-table-column>
                                     <el-table-column label="鞋图" align="center">
                                         <template #default="scope">
-                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image"
-                                                fit="contain" />
+                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image" fit="contain" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="firstBomId" label="一次BOM表"></el-table-column>
@@ -82,73 +71,53 @@
                                 </div>
                                 <div v-else>
                                     <div v-if="scope.row.status === '未上传'">
-                                        <el-button v-if="isEditor()" type="primary"
-                                            @click="openUploadDialog(scope.row)">创建工艺单</el-button>
+                                        <el-button v-if="isEditor()" type="primary" @click="openUploadDialog(scope.row)">创建工艺单</el-button>
                                         <span v-else>工艺单未下发</span>
                                     </div>
                                     <div v-else-if="scope.row.status === '已上传'">
-                                        <el-button v-if="isEditor()" type="primary"
-                                            @click="openEditDialog(scope.row)">编辑工艺单</el-button>
-                                        <el-button v-if="isEditor()" type="success"
-                                            @click="openPreviewDialog(scope.row)">预览工艺单</el-button>
+                                        <el-button v-if="isEditor()" type="primary" @click="openEditDialog(scope.row)">编辑工艺单</el-button>
+                                        <el-button v-if="isEditor()" type="success" @click="openPreviewDialog(scope.row)">预览工艺单</el-button>
                                     </div>
                                     <div v-else-if="scope.row.status === '完成用量填写'">
                                         <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
                                     </div>
-                                    <div v-else-if="
-                                        scope.row.status === '等待用量填写' ||
-                                        scope.row.status === '已审核并下发'
-                                    ">
+                                    <div v-else-if="scope.row.status === '等待用量填写' || scope.row.status === '已审核并下发'">
                                         <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
                                     </div>
                                     <div v-if="scope.row.status === '已审核并下发'">
-                                        <el-button type="success"
-                                            @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
-                                        <el-button type="warning"
-                                            @click="downloadProductionInstructionImage(scope.row)">下载备注图片
-                                        </el-button>
+                                        <el-button type="success" @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
+                                        <el-button type="warning" @click="downloadProductionInstructionImage(scope.row)">下载备注图片 </el-button>
                                     </div>
                                 </div>
                             </template>
                         </el-table-column>
-                    </el-table></el-col>
+                    </el-table></el-col
+                >
             </el-row>
             <el-row :gutter="22" style="margin-top: 10px">
                 <el-col :span="6" :offset="20">
-                    <el-button v-if="isEditor()" type="primary" size="default" @click="openIssueDialog">下发工艺单（生产指令单）
-                    </el-button>
+                    <el-button v-if="isEditor()" type="primary" size="default" @click="openIssueDialog">下发工艺单（生产指令单） </el-button>
                 </el-col>
             </el-row>
             <el-dialog title="正式工艺单下发页面" v-model="isFinalBOM" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
-                            <el-table :data="unIssueBOMData" border style="height: 400px"
-                                @selection-change="handleShoeSelectionChange">
+                            <el-table :data="unIssueBOMData" border style="height: 400px" @selection-change="handleShoeSelectionChange">
                                 <el-table-column type="selection" width="55"></el-table-column>
-                                <el-table-column prop="inheritId" label="工厂型号" align="center"
-                                    width="100"></el-table-column>
+                                <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
                                 <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
                                 <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                                 <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
                                 <el-table-column label="操作" align="center">
                                     <template #default="scope">
-                                        <el-button type="primary" size="default"
-                                            @click="openPreviewDialog(scope.row)">查看工艺单（生产指令单）</el-button>
+                                        <el-button type="primary" size="default" @click="openPreviewDialog(scope.row)">查看工艺单（生产指令单）</el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -158,13 +127,11 @@
                 <template #footer>
                     <span>
                         <el-button @click="isFinalBOM = false">取消</el-button>
-                        <el-button v-if="isEditor()" type="primary"
-                            @click="issueBOMs(selectedShoe)">下发选定工艺单（生产指令单）</el-button>
+                        <el-button v-if="isEditor()" type="primary" @click="issueBOMs(selectedShoe)">下发选定工艺单（生产指令单）</el-button>
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%"
-                :close-on-click-modal="false">
+            <el-dialog :title="`工艺单创建 ${newcraftSheetId}`" v-model="isProductionOrderCreateDialogVisible" width="90%" :close-on-click-modal="false">
                 <el-button type="primary" size="default" @click="confirmloadPastCraftSheet">加载过往工艺单信息</el-button>
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
@@ -190,24 +157,19 @@
                 </el-descriptions>
                 <el-descriptions title="工艺单特殊工艺信息" border :column="1">
                     <el-descriptions-item label="裁断特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.cuttingSpecialCraft" size="default"
-                            maxlength="300" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.cuttingSpecialCraft" size="default" maxlength="300" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="针车特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.sewingSpecialCraft" size="default"
-                            maxlength="300" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.sewingSpecialCraft" size="default" maxlength="300" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="成型特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.moldingSpecialCraft" size="default"
-                            maxlength="300" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.moldingSpecialCraft" size="default" maxlength="300" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="后处理备注">
-                        <el-input type="textarea" v-model="craftSheetDetail.postProcessing" maxlength="150" autosize
-                            show-word-limit size="default"></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.postProcessing" maxlength="150" autosize show-word-limit size="default"></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="科盛油性胶">
-                        <el-input type="textarea" v-model="craftSheetDetail.oilyGlue" maxlength="300" autosize
-                            show-word-limit size="default"></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.oilyGlue" maxlength="300" autosize show-word-limit size="default"></el-input>
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-button type="primary" size="default" @click="openMaterialCraftDialog">打开材料工艺编辑页面</el-button>
@@ -222,8 +184,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog title="材料工艺填写及更改页面" v-model="isMaterialCraftVisDialog" width="100%" :close-on-click-modal="false"
-                fullscreen style="overflow-y: scroll">
+            <el-dialog title="材料工艺填写及更改页面" v-model="isMaterialCraftVisDialog" width="100%" :close-on-click-modal="false" fullscreen style="overflow-y: scroll">
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
@@ -236,18 +197,20 @@
                             <el-col :span="22" :offset="0">
                                 <span>面料：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(0)">手动添加面料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(0)">手动添加面料</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(0)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('surfaceMaterialData')" border
+                                <vxe-table
+                                    :data="getMaterialDataByType('surfaceMaterialData')"
+                                    border
                                     :edit-config="{ mode: 'row', trigger: 'click' }"
                                     :column-config="{ resizable: true }"
-                                    :row-config="{ resizable: true, isHover: true }">
+                                    :row-config="{ resizable: true, isHover: true }"
+                                >
                                     <vxe-column type="seq" width="55" row-resize></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
@@ -255,10 +218,8 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'">
+                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -267,63 +228,61 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                            <el-select
+                                                v-model="row.materialName"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 0)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 0)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -334,19 +293,25 @@
                             <el-col :span="22" :offset="0">
                                 <span>里料：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(1)">手动添加里料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(1)">手动添加里料</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(1)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('insideMaterialData')" border
-                                    :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
+                                <vxe-table
+                                    :data="getMaterialDataByType('insideMaterialData')"
+                                    border
+                                    :edit-config="{ mode: 'row', trigger: 'click' }"
+                                    style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
-                                    :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
+                                    :resizable-config="{
+                                        isDblclickAutoWidth: true,
+                                        isDblclickAutoHeight: true
+                                    }"
+                                >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
@@ -354,14 +319,10 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option-group v-for="(names, letter) in sortSupplierOptions"
-                                                    :key="letter" :label="letter">
-                                                    <el-option v-for="name in names" :key="name" :value="name"
-                                                        :label="name"></el-option>
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                                <el-option-group v-for="(names, letter) in sortSupplierOptions" :key="letter" :label="letter">
+                                                    <el-option v-for="name in names" :key="name" :value="name" :label="name"></el-option>
                                                 </el-option-group>
-
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -370,63 +331,61 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                            <el-select
+                                                v-model="row.materialName"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 1)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 1)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -436,20 +395,26 @@
                             <el-col :span="22" :offset="0">
                                 <span>辅料：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(2)">手动添加辅料</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(2)">手动添加辅料</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(2)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('accessoryMaterialData')" border
-                                    :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
+                                <vxe-table
+                                    :data="getMaterialDataByType('accessoryMaterialData')"
+                                    border
+                                    :edit-config="{ mode: 'row', trigger: 'click' }"
+                                    style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
-                                    :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }"
-                                    max-height="350">
+                                    :resizable-config="{
+                                        isDblclickAutoWidth: true,
+                                        isDblclickAutoHeight: true
+                                    }"
+                                    max-height="350"
+                                >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
@@ -457,10 +422,8 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'">
+                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -469,63 +432,61 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                            <el-select
+                                                v-model="row.materialName"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 2)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 2)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -535,19 +496,25 @@
                             <el-col :span="22" :offset="0">
                                 <span>大底：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(3)">手动添加大底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(3)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('outsoleMaterialData')" border
-                                    :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
+                                <vxe-table
+                                    :data="getMaterialDataByType('outsoleMaterialData')"
+                                    border
+                                    :edit-config="{ mode: 'row', trigger: 'click' }"
+                                    style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
-                                    :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
+                                    :resizable-config="{
+                                        isDblclickAutoWidth: true,
+                                        isDblclickAutoHeight: true
+                                    }"
+                                >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
@@ -555,10 +522,8 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -567,63 +532,61 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                            <el-select
+                                                v-model="row.materialName"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 3)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 3)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -633,19 +596,25 @@
                             <el-col :span="22" :offset="0">
                                 <span>中底：</span>
                                 <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(4)">手动添加中底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(4)">手动添加中底</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(4)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('midsoleMaterialData')" border
-                                    :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
+                                <vxe-table
+                                    :data="getMaterialDataByType('midsoleMaterialData')"
+                                    border
+                                    :edit-config="{ mode: 'row', trigger: 'click' }"
+                                    style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
-                                    :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
+                                    :resizable-config="{
+                                        isDblclickAutoWidth: true,
+                                        isDblclickAutoHeight: true
+                                    }"
+                                >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
@@ -653,10 +622,8 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'" @blur="trimField(row, 'supplierName')">
+                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -665,63 +632,61 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName"
-                                                @change="handleMaterialNameSelect(row, $event)" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])"
-                                                    :key="item.value" :value="item.value"
-                                                    :label="item.label"></el-option>
+                                            <el-select
+                                                v-model="row.materialName"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 4)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 4)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -730,21 +695,26 @@
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
                                 <span>烫底：</span>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(6)">添加成品烫底</el-button>
-                                <el-button type="primary" size="default"
-                                    @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
                                 <!-- <el-button type="success" @click="syncMaterials(6)">{{ this.syncMaterialButtonText
                                 }}</el-button> -->
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <vxe-table :data="getMaterialDataByType('hotsoleMaterialData')" border
-                                    :edit-config="{ mode: 'row', trigger: 'click' }" style="width: 100%"
+                                <vxe-table
+                                    :data="getMaterialDataByType('hotsoleMaterialData')"
+                                    border
+                                    :edit-config="{ mode: 'row', trigger: 'click' }"
+                                    style="width: 100%"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
-                                    :resizable-config="{ isDblclickAutoWidth: true, isDblclickAutoHeight: true }">
+                                    :resizable-config="{
+                                        isDblclickAutoWidth: true,
+                                        isDblclickAutoHeight: true
+                                    }"
+                                >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
                                     <!-- <vxe-column field="materialDetailType" title="材料二级类型"
@@ -758,10 +728,8 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable
-                                                :disabled="row.materialSource === 'P'">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName"
-                                                    :value="item.supplierName" :label="item.supplierName"></el-option>
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
                                     </vxe-column>
@@ -770,75 +738,66 @@
                                             <span>{{ row.materialName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.materialName" filterable @change="
-                                                handleMaterialNameSelect(row, $event)"
-                                                :disabled="row.materialSource === 'P'">
+                                            <el-select
+                                                v-model="row.materialName"
+                                                filterable
+                                                @blur="trimField(row, 'materialName')"
+                                                @change="handleMaterialNameSelect(row, $event)"
+                                                :disabled="row.materialSource === 'P'"
+                                            >
                                                 <div v-if="row.materialType === '里料'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [2]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                                 <div v-else-if="row.materialType === '烫底'">
-                                                    <el-option v-for="item in filterByTypes(
-                                                        materialNameOptions,
-                                                        [16]
-                                                    )" :key="item.value" :value="item.value" :label="item.label">
-                                                    </el-option>
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                             </el-select>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialModel" title="材料型号"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'" clearable
+                                            <vxe-input
+                                                v-model="row.materialModel"
+                                                :disabled="row.materialSource === 'P'"
+                                                clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
-                                                :showWordCount="row.materialSource !== 'P'"></vxe-input>
+                                                @blur="trimField(row, 'materialModel')"
+                                                :showWordCount="row.materialSource !== 'P'"
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="materialSpecification" title="材料规格"
-                                        :edit-render="{ autoFocus: 'input' }">
+                                    <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.materialSpecification" clearable
+                                            <vxe-input
+                                                v-model="row.materialSpecification"
+                                                clearable
                                                 :max-length="wordLengths.SPECIFICATION_LENGTH"
-                                                showWordCount></vxe-input>
+                                                @blur="trimField(row, 'materialSpecification')"
+                                                showWordCount
+                                            ></vxe-input>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
-                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)"
-                                                :disabled="row.materialType === '烫底'">
-                                                编辑工艺
-                                            </vxe-button>
+                                            <vxe-button status="primary" size="small" @click="openCraftDialog(row)" :disabled="row.materialType === '烫底'"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="color" title="颜色" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.color" clearable
-                                                :max-length="wordLengths.COLOR_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.color" clearable :max-length="wordLengths.COLOR_LENGTH" @blur="validateColor(row)" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
 
-                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender">
-                                    </vxe-column>
+                                    <vxe-column field="useDepart" title="使用工段" :edit-render="departmentRender"> </vxe-column>
                                     <vxe-column field="comment" title="备注" :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
-                                            <vxe-input v-model="row.comment" clearable
-                                                :max-length="wordLengths.COMMENT_LENGTH" showWordCount></vxe-input>
+                                            <vxe-input v-model="row.comment" clearable :max-length="wordLengths.COMMENT_LENGTH" @blur="trimField(row, 'comment')" showWordCount></vxe-input>
                                         </template>
                                     </vxe-column>
-                                    <vxe-column field="processingRemark" title="加工备注">
-                                    </vxe-column>
+                                    <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
-                                            <vxe-button status="danger" size="small"
-                                                :disabled="scope.row.materialSource === 'P'"
-                                                @click="deleteMaterial(scope.$rowIndex, 6)">
-                                                删除
-                                            </vxe-button>
+                                            <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 6)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
@@ -857,29 +816,42 @@
                 <el-row :gutter="20">
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料类型查询：<el-input v-model="materialTypeSearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料类型查询：<el-input
+                                v-model="materialTypeSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料名称查询：<el-input v-model="materialSearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料名称查询：<el-input
+                                v-model="materialSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            工厂名查询：<el-input v-model="factorySearch" placeholder="" size="default"
-                                :suffix-icon="SearchIcon" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            工厂名查询：<el-input
+                                v-model="factorySearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="SearchIcon"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                 </el-row>
-                <el-table :data="assetFilterTable" border ref="materialSelectTable"
-                    @selection-change="handleMaterialSelectionChange" style="height: 400px"
-                    v-loading="materialAddfinished">
+                <el-table :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" style="height: 400px" v-loading="materialAddfinished">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="materialType" label="材料类型" />
                     <el-table-column prop="materialName" label="材料名称" />
@@ -898,17 +870,12 @@
             <el-dialog title="输入工艺名称" v-model="isCraftDialogVisible" width="70%">
                 <div v-for="(craft, index) in inputCrafts" :key="index">
                     <el-row :gutter="20">
-                        <el-col :span="20" :offset="0">
-                            <el-input type="textarea" resize="both" v-model="inputCrafts[index]" placeholder="请输入工艺名称"
-                                size="default"></el-input></el-col>
-                        <el-col :span="4" :offset="0">
-                            <el-button type="danger" size="small" @click="removeCraft(index)">删除工艺</el-button></el-col>
+                        <el-col :span="20" :offset="0"> <el-input type="textarea" resize="both" v-model="inputCrafts[index]" placeholder="请输入工艺名称" size="default"></el-input></el-col>
+                        <el-col :span="4" :offset="0"> <el-button type="danger" size="small" @click="removeCraft(index)">删除工艺</el-button></el-col>
                     </el-row>
                 </div>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0">
-                        <el-button type="primary" size="default" @click="addCraft">添加工艺
-                        </el-button></el-col>
+                    <el-col :span="12" :offset="0"> <el-button type="primary" size="default" @click="addCraft">添加工艺 </el-button></el-col>
                 </el-row>
 
                 <template #footer>
@@ -922,29 +889,16 @@
                 <div style="height: 650px; overflow-y: scroll">
                     <el-row :gutter="20">
                         <el-col :span="23" :offset="0">
-                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4"
-                                style="margin-top: 20px">
+                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                     <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
                                 </el-descriptions-item>
-                                <el-descriptions-item label="型号" align="center">{{
-                                    currentShoeId
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="客户号" align="center">{{
-                                    orderShoeData.customerProductName
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="色号" align="center">{{
-                                    orderShoeData.color
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="设计师" align="center">{{
-                                    orderShoeData.shoeDesigner
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="调版员" align="center">{{
-                                    orderShoeData.shoeAdjuster
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="商标" align="center">{{
-                                    orderShoeData.brandName
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="型号" align="center">{{ currentShoeId }}</el-descriptions-item>
+                                <el-descriptions-item label="客户号" align="center">{{ orderShoeData.customerProductName }}</el-descriptions-item>
+                                <el-descriptions-item label="色号" align="center">{{ orderShoeData.color }}</el-descriptions-item>
+                                <el-descriptions-item label="设计师" align="center">{{ orderShoeData.shoeDesigner }}</el-descriptions-item>
+                                <el-descriptions-item label="调版员" align="center">{{ orderShoeData.shoeAdjuster }}</el-descriptions-item>
+                                <el-descriptions-item label="商标" align="center">{{ orderShoeData.brandName }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -989,8 +943,7 @@
 
                     <el-tabs v-model="activeTab">
                         <!-- Generate tabs from backend-provided tabcolor array -->
-                        <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color"
-                            style="overflow-y: scroll">
+                        <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color" style="overflow-y: scroll">
                             <el-row :gutter="20">
                                 <el-col :span="2" :offset="0"> 面料： </el-col>
                             </el-row>
@@ -1057,8 +1010,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%"
-                :close-on-click-modal="false">
+            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%" :close-on-click-modal="false">
                 <el-button type="primary" size="default" @click="confirmloadPastCraftSheet">加载过往工艺单信息</el-button>
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
@@ -1084,24 +1036,19 @@
                 </el-descriptions>
                 <el-descriptions title="工艺单特殊工艺信息" border :column="1">
                     <el-descriptions-item label="裁断特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.cuttingSpecialCraft" size="default"
-                            maxlength="150" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.cuttingSpecialCraft" size="default" maxlength="150" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="针车特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.sewingSpecialCraft" size="default"
-                            maxlength="150" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.sewingSpecialCraft" size="default" maxlength="150" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="成型特殊工艺">
-                        <el-input type="textarea" v-model="craftSheetDetail.moldingSpecialCraft" size="default"
-                            maxlength="200" autosize show-word-limit></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.moldingSpecialCraft" size="default" maxlength="200" autosize show-word-limit></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="后处理备注">
-                        <el-input type="textarea" v-model="craftSheetDetail.postProcessing" maxlength="150" autosize
-                            show-word-limit size="default"></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.postProcessing" maxlength="150" autosize show-word-limit size="default"></el-input>
                     </el-descriptions-item>
                     <el-descriptions-item label="科盛油性胶">
-                        <el-input type="textarea" v-model="craftSheetDetail.oilyGlue" maxlength="300" autosize
-                            show-word-limit size="default"></el-input>
+                        <el-input type="textarea" v-model="craftSheetDetail.oilyGlue" maxlength="300" autosize show-word-limit size="default"></el-input>
                     </el-descriptions-item>
                 </el-descriptions>
                 <el-button type="primary" size="default" @click="openMaterialCraftDialog">打开材料工艺编辑页面</el-button>
@@ -1116,31 +1063,61 @@
                 </template>
             </el-dialog>
             <el-dialog v-model="isUploadImageDialogVisible" title="上传刀模图">
-                <el-upload ref="uploadImage" class="upload-image"
-                    :action="`${this.$apiBaseUrl}/craftsheet/uploadcutdieimg`" :on-success="handleUploadSuccess"
-                    :on-error="handleUploadError" :headers="uploadHeaders" :before-upload="beforeUpload"
-                    :file-list="fileList" list-type="picture-card" accept="image/*" :auto-upload="false"
-                    @remove="handleFileRemove" :data="cutDieImgData">
+                <el-upload
+                    ref="uploadImage"
+                    class="upload-image"
+                    :action="`${this.$apiBaseUrl}/craftsheet/uploadcutdieimg`"
+                    :on-success="handleUploadSuccess"
+                    :on-error="handleUploadError"
+                    :headers="uploadHeaders"
+                    :before-upload="beforeUpload"
+                    :file-list="fileList"
+                    list-type="picture-card"
+                    accept="image/*"
+                    :auto-upload="false"
+                    @remove="handleFileRemove"
+                    :data="cutDieImgData"
+                >
                 </el-upload>
                 <div slot="tip" class="el-upload__tip">只能上传图片文件</div>
                 <el-button type="primary" size="default" @click="pasteClipboardImage('main')">粘贴剪切板内容</el-button>
             </el-dialog>
             <el-dialog v-model="isUploadImageNoteDialogVisible" title="上传图片备注">
-                <el-upload ref="uploadImageNote" class="upload-image"
-                    :action="`${this.$apiBaseUrl}/craftsheet/uploadpicnoteimg`" :on-success="handleUploadSuccessPicNote"
-                    :on-error="handleUploadError" :headers="uploadHeaders" :before-upload="beforeUpload"
-                    :file-list="fileListPicNote" list-type="picture-card" accept="image/*" :auto-upload="false"
-                    :data="picNoteImgData" @remove="handleFileRemovePicNote">
+                <el-upload
+                    ref="uploadImageNote"
+                    class="upload-image"
+                    :action="`${this.$apiBaseUrl}/craftsheet/uploadpicnoteimg`"
+                    :on-success="handleUploadSuccessPicNote"
+                    :on-error="handleUploadError"
+                    :headers="uploadHeaders"
+                    :before-upload="beforeUpload"
+                    :file-list="fileListPicNote"
+                    list-type="picture-card"
+                    accept="image/*"
+                    :auto-upload="false"
+                    :data="picNoteImgData"
+                    @remove="handleFileRemovePicNote"
+                >
                 </el-upload>
                 <div slot="tip" class="el-upload__tip">只能上传图片文件</div>
                 <el-button type="primary" size="default" @click="pasteClipboardImage('note')">粘贴剪切板内容</el-button>
             </el-dialog>
             <el-dialog v-model="isUploadProcessSheetVisable" title="上传工艺单EXCEL">
-                <el-upload ref="uploadProcessSheet" class="upload-image"
+                <el-upload
+                    ref="uploadProcessSheet"
+                    class="upload-image"
                     :action="`${this.$apiBaseUrl}/craftsheet/uploadprocesssheet`"
-                    :on-success="handleUploadSuccessProcessSheet" :on-error="handleUploadError" :headers="uploadHeaders"
-                    :limit="1" :before-upload="beforeUpload" :file-list="fileListProcessSheet" accept=".xls,.xlsx"
-                    :auto-upload="false" :data="craftSheetData" @remove="handleFileRemoveProcessSheet">
+                    :on-success="handleUploadSuccessProcessSheet"
+                    :on-error="handleUploadError"
+                    :headers="uploadHeaders"
+                    :limit="1"
+                    :before-upload="beforeUpload"
+                    :file-list="fileListProcessSheet"
+                    accept=".xls,.xlsx"
+                    :auto-upload="false"
+                    :data="craftSheetData"
+                    @remove="handleFileRemoveProcessSheet"
+                >
                     <template #trigger>
                         <el-button type="primary">选择文件</el-button>
                     </template>
@@ -1154,10 +1131,8 @@
                         <el-col :span="24" :offset="0">
                             <el-form :model="revertForm" :rules="revertRules" ref="revertForm" label-width="100px">
                                 <el-form-item label="退回至状态" prop="revertToStatus">
-                                    <el-select v-model="revertForm.revertToStatus" placeholder="请选择退回至状态" clearable
-                                        @change="handleStatusSelect">
-                                        <el-option v-for="item in revertStatusReasonOptions" :key="item.status"
-                                            :label="item.statusName" :value="item.status"></el-option>
+                                    <el-select v-model="revertForm.revertToStatus" placeholder="请选择退回至状态" clearable @change="handleStatusSelect">
+                                        <el-option v-for="item in revertStatusReasonOptions" :key="item.status" :label="item.statusName" :value="item.status"></el-option>
                                     </el-select>
                                 </el-form-item>
                                 <el-form-item label="需要中间流程" prop="isNeedMiddleProcess">
@@ -1167,12 +1142,10 @@
                                     </el-radio-group>
                                 </el-form-item>
                                 <el-form-item label="退回原因" prop="revertReason">
-                                    <el-input v-model="revertForm.revertReason" :rows="4" placeholder="请输入退回原因"
-                                        disabled></el-input>
+                                    <el-input v-model="revertForm.revertReason" :rows="4" placeholder="请输入退回原因" disabled></el-input>
                                 </el-form-item>
                                 <el-form-item label="退回详细原因" prop="revertDetail">
-                                    <el-input v-model="revertForm.revertDetail" type="textarea" :rows="4"
-                                        placeholder="请输入退回原因"></el-input>
+                                    <el-input v-model="revertForm.revertDetail" type="textarea" :rows="4" placeholder="请输入退回原因"></el-input>
                                 </el-form-item>
                             </el-form>
                         </el-col>
@@ -1181,7 +1154,7 @@
                 <template #footer>
                     <span>
                         <el-button @click="isRevertDialogVisable = false">取消</el-button>
-                        <el-button type="primary" :disabled="revertForm.revertToStatus === ''"  @click="saveRevertForm">确认</el-button>
+                        <el-button type="primary" :disabled="revertForm.revertToStatus === ''" @click="saveRevertForm">确认</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -1198,7 +1171,7 @@ import MaterialDataTable from '../components/MaterialDataTable.vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 import * as constants from '@/Pages/utils/constants'
-import pinyin from "pinyin";
+import pinyin from 'pinyin'
 export default {
     components: {
         AllHeader,
@@ -1297,15 +1270,14 @@ export default {
                 supplierName: '',
                 comment: '',
                 isPurchase: false,
-                materialSource: 'C',
+                materialSource: 'C'
             },
             craftSheetDetail: {
                 adjuster: '',
                 cutDie: '',
                 reviewer: '',
                 productionRemark: '大货产前小做每码5双',
-                cuttingSpecialCraft:
-                    '7.5码用7码刀模/8.5码用8码刀模/9.5码用9码刀模/10.5码用10码刀模,其它码数不变',
+                cuttingSpecialCraft: '7.5码用7码刀模/8.5码用8码刀模/9.5码用9码刀模/10.5码用10码刀模,其它码数不变',
                 sewingSpecialCraft: `车线针距：面料合缝1.5MM,PU里合缝1.5MM,布里合缝2-3MM,贴里布要服贴帮面，贴子根包头放到位.鞋口里要抓弧度贴。鞋口放保险丝。7.5码用7码鞋包/8.5码用8码鞋包/9.5码用9码鞋包/10.5码用10码鞋包,其它码数不变`,
                 moldingSpecialCraft: `所有后跟合缝的鞋款后帮定型机定过再夹包，所有后跟包脚13MM，组合底：80℃ TPR:90℃，PU:85℃ 冬季温度高5℃ 压合7秒13公斤 8码后高70mm 7.5码复7码底(内显7.外显7.5码)8.5码复8码底(内显8.外显8.5码)9.5码复9码底(内显9.外显9.5码半)10.5码复10码底(内显10.外显10.5码)其它码数不变`,
                 postProcessing: '',
@@ -1370,49 +1342,51 @@ export default {
             return Search
         },
         sortSupplierOptions() {
-            const groups = {};
+            const groups = {}
 
             this.supplierNameOptions.forEach((item) => {
                 let name = item.supplierName
                 // Get the first Pinyin character
-                const firstLetter = pinyin(name, { style: pinyin.STYLE_NORMAL })[0][0][0].toUpperCase();
+                const firstLetter = pinyin(name, {
+                    style: pinyin.STYLE_NORMAL
+                })[0][0][0].toUpperCase()
 
                 // Create group if it doesn't exist
                 if (!groups[firstLetter]) {
-                    groups[firstLetter] = [];
+                    groups[firstLetter] = []
                 }
 
                 // Add name to its group
-                groups[firstLetter].push(name);
-            });
+                groups[firstLetter].push(name)
+            })
 
             // Sort the groups alphabetically
             return Object.keys(groups)
                 .sort()
                 .reduce((acc, key) => {
                     acc[key] = groups[key].sort((a, b) => {
-                        const pinyinA = pinyin(a, { style: pinyin.STYLE_NORMAL }).join('');
-                        const pinyinB = pinyin(b, { style: pinyin.STYLE_NORMAL }).join('');
-                        return pinyinA.localeCompare(pinyinB);
-                    });
-                    return acc;
-                }, {});
+                        const pinyinA = pinyin(a, { style: pinyin.STYLE_NORMAL }).join('')
+                        const pinyinB = pinyin(b, { style: pinyin.STYLE_NORMAL }).join('')
+                        return pinyinA.localeCompare(pinyinB)
+                    })
+                    return acc
+                }, {})
             // return [...this.supplierNameOptions].sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'zh-CN'));
-        },
+        }
     },
     methods: {
         filterByTypes(options, types) {
             return options.filter((option) => types.includes(option.type))
         },
         async querySupplierNames() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/allsuppliers`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allsuppliers`)
             this.supplierNameOptions = response.data
         },
         async getAllMaterialName() {
             const params = { department: 0 }
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, {
+                params
+            })
             this.materialNameOptions = response.data
         },
         async pasteClipboardImage(target) {
@@ -1504,24 +1478,18 @@ export default {
             this.assetFilterTable = this.assetTable
         },
         async getOrderInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`)
             this.orderData = response.data
             console.log(this.orderData)
             this.updateArrowKey += 1
         },
         async getAllShoeListInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/craftsheet/getordershoelist?orderid=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/craftsheet/getordershoelist?orderid=${this.orderId}`)
             this.testTableData = response.data
             this.tableWholeFilter()
         },
         async getOrderShoeInfo(orderShoeId) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getordershoeinfo?orderid=${this.orderId}&ordershoeid=${orderShoeId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getordershoeinfo?orderid=${this.orderId}&ordershoeid=${orderShoeId}`)
             this.orderShoeData = response.data
         },
         async getNewcraftSheetId() {
@@ -1555,18 +1523,12 @@ export default {
             this.materialWholeData.forEach((shoeTypeData) => {
                 if (shoeTypeData.color !== this.activeTab) {
                     // keep the data of materialSource 'P'
-                    let developmentData = shoeTypeData[tableName].filter(
-                        (materialData) => materialData.materialSource === 'P'
-                    )
+                    let developmentData = shoeTypeData[tableName].filter((materialData) => materialData.materialSource === 'P')
                     // if materialSource is 'C', then it can be copied
-                    let newAddedData = dataToCopy.filter(
-                        (materialData) => materialData.materialSource === 'C'
-                    )
+                    let newAddedData = dataToCopy.filter((materialData) => materialData.materialSource === 'C')
                     // add development data to newAddedData
                     developmentData = developmentData.concat(newAddedData)
-                    shoeTypeData[tableName] = JSON.parse(
-                        JSON.stringify(developmentData)
-                    )
+                    shoeTypeData[tableName] = JSON.parse(JSON.stringify(developmentData))
                 }
             })
         },
@@ -1596,9 +1558,7 @@ export default {
             }
         },
         addMaterialByManual(typeSymbol) {
-            const preActiveMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const preActiveMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
             if (!preActiveMaterialData) {
                 this.materialWholeData.push({
                     color: this.activeTab,
@@ -1611,9 +1571,7 @@ export default {
                     hotsoleMaterialData: []
                 })
             }
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
             let newEntry = {
                 materialType: '',
                 materialDetailType: '',
@@ -1625,7 +1583,7 @@ export default {
                 supplierName: '',
                 materialSource: 'C',
                 comment: '',
-                isPurchase: false,
+                isPurchase: false
             }
             switch (typeSymbol) {
                 case 0:
@@ -1719,12 +1677,8 @@ export default {
             this.newMaterialVis = false
 
             // Find the data for the current active tab
-            const preActiveMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
-            const preActiveUniversalMaterialData = this.universalMaterialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const preActiveMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
+            const preActiveUniversalMaterialData = this.universalMaterialWholeData.find((item) => item.color === this.activeTab)
             console.log(this.materialWholeData)
             console.log(this.activeTab)
 
@@ -1740,9 +1694,7 @@ export default {
                     hotsoleMaterialData: []
                 })
             }
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
 
             // Determine the correct array to push into based on typeSymbol
             switch (typeSymbol) {
@@ -1776,29 +1728,22 @@ export default {
         },
         async getMaterialFilterData() {
             this.materialAddfinished = true
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/getmaterialtypeandname`,
-                {
-                    params: {
-                        materialtype: this.materialTypeSearch,
-                        materialname: this.materialSearch,
-                        suppliername: this.factorySearch
-                    }
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getmaterialtypeandname`, {
+                params: {
+                    materialtype: this.materialTypeSearch,
+                    materialname: this.materialSearch,
+                    suppliername: this.factorySearch
                 }
-            )
+            })
             this.assetFilterTable = response.data
             this.materialAddfinished = false
         },
         async getMaterialOriginData(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/craftsheet/getoriginmaterialinfo?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/craftsheet/getoriginmaterialinfo?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`)
             this.materialWholeData = response.data.instructionData
         },
         async getCraftSheetData(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/craftsheet/getcraftsheetinfo?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/craftsheet/getcraftsheetinfo?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`)
             console.log(response.data)
             this.craftSheetDetail = response.data.craftSheetDetail
             this.materialWholeData = response.data.uploadData
@@ -1853,8 +1798,7 @@ export default {
             this.currentShoeId = row.inheritId
             await this.getCraftSheetData(row)
             this.craftSheetDetail.productionRemark = '大货产前小做每码5双'
-            this.craftSheetDetail.cuttingSpecialCraft =
-                '7.5码用7码刀模/8.5码用8码刀模/9.5码用9码刀模/10.5码用10码刀模,其它码数不变'
+            this.craftSheetDetail.cuttingSpecialCraft = '7.5码用7码刀模/8.5码用8码刀模/9.5码用9码刀模/10.5码用10码刀模,其它码数不变'
             this.craftSheetDetail.sewingSpecialCraft =
                 '车线针距：面料合缝1.5MM,PU里合缝1.5MM,布里合缝2-3MM,贴里布要服贴帮面，贴子根包头放到位.鞋口里要抓弧度贴。鞋口放保险丝。7.5码用7码鞋包/8.5码用8码鞋包/9.5码用9码鞋包/10.5码用10码鞋包,其它码数不变'
             this.craftSheetDetail.moldingSpecialCraft =
@@ -1911,9 +1855,7 @@ export default {
             return []
         },
         getUniversalMaterialDataByType(type) {
-            const activeData = this.universalMaterialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeData = this.universalMaterialWholeData.find((item) => item.color === this.activeTab)
             if (activeData) {
                 return activeData[type]
             }
@@ -1921,14 +1863,7 @@ export default {
         },
         async editProductionInstrucion() {
             for (const materialData of this.materialWholeData) {
-                for (const materialType of [
-                    'surfaceMaterialData',
-                    'insideMaterialData',
-                    'accessoryMaterialData',
-                    'outsoleMaterialData',
-                    'midsoleMaterialData',
-                    'hotsoleMaterialData'
-                ]) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
                     for (const item of materialData[materialType]) {
                         if (!item.supplierName || !item.materialName) {
                             this.$message({
@@ -1968,14 +1903,7 @@ export default {
         },
         async saveProductionInstruction() {
             for (const materialData of this.materialWholeData) {
-                for (const materialType of [
-                    'surfaceMaterialData',
-                    'insideMaterialData',
-                    'accessoryMaterialData',
-                    'outsoleMaterialData',
-                    'midsoleMaterialData',
-                    'hotsoleMaterialData'
-                ]) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
                     for (const item of materialData[materialType]) {
                         if (!item.supplierName || !item.materialName) {
                             this.$message({
@@ -2128,10 +2056,7 @@ export default {
             if (selection.length > 1) {
                 // Ensure only one row is selected
                 this.$refs.materialSelectTable.clearSelection()
-                this.$refs.materialSelectTable.toggleRowSelection(
-                    selection[selection.length - 1],
-                    true
-                )
+                this.$refs.materialSelectTable.toggleRowSelection(selection[selection.length - 1], true)
             } else {
                 this.materialSelectRow = selection[0]
             }
@@ -2144,9 +2069,7 @@ export default {
         deleteMaterial(index, typeSymbol) {
             console.log(index, typeSymbol)
             // Find the material data for the currently active color
-            const activeMaterialData = this.materialWholeData.find(
-                (item) => item.color === this.activeTab
-            )
+            const activeMaterialData = this.materialWholeData.find((item) => item.color === this.activeTab)
 
             if (!activeMaterialData) return
 
@@ -2195,9 +2118,7 @@ export default {
         async queryMaterialNames(queryString, callback) {
             if (queryString.trim()) {
                 await axios
-                    .get(
-                        `${this.$apiBaseUrl}/devproductionorder/getautofinishedmaterialname?materialName=${queryString}`
-                    )
+                    .get(`${this.$apiBaseUrl}/devproductionorder/getautofinishedmaterialname?materialName=${queryString}`)
                     .then((response) => {
                         const suggestions = response.data.map((item) => ({
                             value: item.name
@@ -2212,9 +2133,7 @@ export default {
             }
         },
         async handleMaterialNameSelect(row, selectedItem) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`)
             row.materialId = response.data.materialId
             row.unit = response.data.unit
             row.materialType = response.data.materialType
@@ -2238,21 +2157,15 @@ export default {
                 this.currentRow.materialCraftName = this.inputCrafts
                     .filter((craft) => craft.trim() !== '') // 移除空值
                     .join(', ')
-                this.currentRow.materialCraftNameList = this.inputCrafts.filter(
-                    (craft) => craft.trim() !== ''
-                ) // 移除空值
+                this.currentRow.materialCraftNameList = this.inputCrafts.filter((craft) => craft.trim() !== '') // 移除空值
             }
             this.isCraftDialogVisible = false
         },
         downloadCraftSheet(row) {
-            window.open(
-                `${this.$apiBaseUrl}/craftsheet/downloadcraftsheet?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`
-            )
+            window.open(`${this.$apiBaseUrl}/craftsheet/downloadcraftsheet?orderid=${this.orderData.orderId}&ordershoeid=${row.inheritId}`)
         },
         downloadProductionInstructionImage(row) {
-            window.open(
-                `${this.$apiBaseUrl}/devproductionorder/downloadpicnotes?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`
-            )
+            window.open(`${this.$apiBaseUrl}/devproductionorder/downloadpicnotes?orderid=${this.orderData.orderId}&ordershoerid=${row.inheritId}`)
         },
         openReturnOrderDialog() {
             this.revertForm.revertToStatus = ''
@@ -2263,7 +2176,7 @@ export default {
         },
         handleStatusSelect() {
             //when select status, make the revertReason to be the reason field of the selected status
-            const selectedStatus = this.revertStatusReasonOptions.find(item => item.status === this.revertForm.revertToStatus)
+            const selectedStatus = this.revertStatusReasonOptions.find((item) => item.status === this.revertForm.revertToStatus)
             this.revertForm.revertReason = selectedStatus.reason
         },
         saveRevertForm() {
@@ -2271,14 +2184,16 @@ export default {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
-            }).then(() => {
-                this.revertOrder()
-            }).catch(() => {
-                this.$message({
-                    type: 'info',
-                    message: '已取消退回'
-                })
             })
+                .then(() => {
+                    this.revertOrder()
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消退回'
+                    })
+                })
         },
         async revertOrder() {
             this.$refs.revertForm.validate(async (valid) => {
@@ -2300,8 +2215,7 @@ export default {
                     })
                     this.isRevertDialogVisable = false
                     this.getAllShoeListInfo()
-                }
-                else {
+                } else {
                     this.$message({
                         type: 'error',
                         message: '退回失败'
@@ -2323,18 +2237,14 @@ export default {
                     await axios.patch(`${this.$apiBaseUrl}/purchaseorder/reverttooriginalbomitem`, params)
                     await this.getBOMDetails(this.currentOrderShoeRow)
                     ElMessage.success('还原成功')
-                }
-                catch (error) {
+                } catch (error) {
                     console.log(error)
                     ElMessage.error('还原失败')
                 }
-
             })
         },
         async getAllRevertStatusReasonOptions() {
-            const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderreason`,
-                { params: { orderId: this.orderData.orderDBId, flow: 3 } }
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderreason`, { params: { orderId: this.orderData.orderDBId, flow: 3 } })
             this.revertStatusReasonOptions = response.data
         },
         confirmloadPastCraftSheet() {
@@ -2342,27 +2252,29 @@ export default {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
-            }).then(() => {
-                this.getPastCraftSheet()
-            }).catch(() => {
-                this.$message({
-                    type: 'info',
-                    message: '已取消加载'
-                })
             })
+                .then(() => {
+                    this.getPastCraftSheet()
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消加载'
+                    })
+                })
         },
         async getPastCraftSheet() {
             try {
                 console.log(this.materialWholeData)
                 const response = await axios.get(`${this.$apiBaseUrl}/craftsheet/pastcraftsheetexist`, {
                     params: {
-                        orderId: this.orderData.orderDBId,
+                        orderId: this.orderData.orderDBId
                     }
                 })
                 if (response.data.exist == true) {
                     const pastCraftSheetResponse = await axios.get(`${this.$apiBaseUrl}/craftsheet/getpastcraftsheet`, {
                         params: {
-                            orderId: this.orderData.orderDBId,
+                            orderId: this.orderData.orderDBId
                         }
                     })
                     this.craftSheetDetail = pastCraftSheetResponse.data.craftSheetDetail
@@ -2370,55 +2282,45 @@ export default {
                     // match the response data with the current color, and do not change the origin field "productionInstructionItemId"
 
                     // 替换每条数据中的 productionInstructionItemId
-                    const pastMaterialWholeData = pastCraftSheetResponse.data.uploadData;
+                    const pastMaterialWholeData = pastCraftSheetResponse.data.uploadData
 
-                    const typeKeys = [
-                        "surfaceMaterialData",
-                        "insideMaterialData",
-                        "accessoryMaterialData",
-                        "outsoleMaterialData",
-                        "midsoleMaterialData",
-                        "lastMaterialData",
-                        "hotsoleMaterialData",
-                    ];
+                    const typeKeys = ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'lastMaterialData', 'hotsoleMaterialData']
 
                     for (const pastColorBlock of pastMaterialWholeData) {
                         // ✅ 只处理已有颜色
-                        const currentColorBlock = this.materialWholeData.find(c => c.color === pastColorBlock.color);
-                        if (!currentColorBlock) continue;
+                        const currentColorBlock = this.materialWholeData.find((c) => c.color === pastColorBlock.color)
+                        if (!currentColorBlock) continue
 
                         for (const key of typeKeys) {
                             for (const pastItem of pastColorBlock[key]) {
-                                const matchIndex = currentColorBlock[key].findIndex(originItem =>
-                                    originItem.materialId === pastItem.materialId &&
-                                    originItem.materialModel === pastItem.materialModel &&
-                                    originItem.materialSpecification === pastItem.materialSpecification &&
-                                    originItem.color === pastItem.color
-                                );
+                                const matchIndex = currentColorBlock[key].findIndex(
+                                    (originItem) =>
+                                        originItem.materialId === pastItem.materialId &&
+                                        originItem.materialModel === pastItem.materialModel &&
+                                        originItem.materialSpecification === pastItem.materialSpecification &&
+                                        originItem.color === pastItem.color
+                                )
 
                                 if (matchIndex !== -1) {
                                     // ✅ 找到匹配项：用历史数据覆盖，但保留 productionInstructionItemId（若非 null）
-                                    const originalItem = currentColorBlock[key][matchIndex];
-                                    const mergedProductionId = originalItem.productionInstructionItemId != null
-                                        ? originalItem.productionInstructionItemId
-                                        : pastItem.productionInstructionItemId;
+                                    const originalItem = currentColorBlock[key][matchIndex]
+                                    const mergedProductionId = originalItem.productionInstructionItemId != null ? originalItem.productionInstructionItemId : pastItem.productionInstructionItemId
 
                                     currentColorBlock[key][matchIndex] = {
                                         ...pastItem,
-                                        productionInstructionItemId: mergedProductionId,
-                                    };
+                                        productionInstructionItemId: mergedProductionId
+                                    }
                                 } else {
                                     if (pastItem.productionInstructionItemId === null) {
                                         currentColorBlock[key].push({
                                             ...pastItem,
-                                            productionInstructionItemId: null,
-                                        });
+                                            productionInstructionItemId: null
+                                        })
                                     }
                                 }
                             }
                         }
                     }
-
 
                     this.$message({
                         type: 'success',
@@ -2434,6 +2336,19 @@ export default {
                 console.error('Error loading past craft sheet:', error)
             }
         },
+        trimField(row, field) {
+            if (row[field] && typeof row[field] === 'string') {
+                row[field] = row[field].trim()
+            }
+        },
+        // Special color validation rule: no ending with '色'
+        validateColor(row) {
+            this.trimField(row, 'color')
+            if (row.color && row.color.endsWith('色')) {
+                this.$message.warning('颜色不能以“色”结尾')
+                row.color = row.color.slice(0, -1)
+            }
+        }
     }
 }
 </script>

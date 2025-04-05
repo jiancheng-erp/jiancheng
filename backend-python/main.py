@@ -9,6 +9,7 @@ from update_db import sync_schema
 from script.refresh_craft_name import refresh_storage_craft_match_craft_sheet
 from script.refresh_default_craft_sheet import refresh_default_craft_sheet
 from script.refresh_default_bom import refresh_default_bom
+from script.format_space_and_color_stynax import format_space_and_color_stynax
 
 def main():
     # Create a new Flask app using the factory.
@@ -29,6 +30,7 @@ def main():
     # refresh_storage_craft_match_craft_sheet(app, db)
     # refresh_default_craft_sheet(app, db)
     # refresh_default_bom(app, db)
+    # format_space_and_color_stynax(app, db)
 
     # Run the Flask app.
     app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)

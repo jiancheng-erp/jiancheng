@@ -827,6 +827,7 @@ def get_all_orders():
                 "shoeRId": shoe.shoe_rid,
                 "orderRid": order.order_rid,
                 "orderCid": order.order_cid,
+                "shoeCid": order_shoe.customer_product_name,
                 "orderSalesman": staff_id_to_name_mapping[order.salesman_id] if order.salesman_id in staff_id_to_name_mapping.keys() else '',
                 "orderSupervisor": staff_id_to_name_mapping[order.supervisor_id] if order.supervisor_id in staff_id_to_name_mapping.keys() else '',
                 "customerName": customer.customer_name,

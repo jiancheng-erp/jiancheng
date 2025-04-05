@@ -21,6 +21,36 @@
                     @input="filterByCid()"
                 ></el-input>
             </el-col>
+            <el-col :span="4" :offset="0">
+                <el-input
+                    v-model="customerIdFilter"
+                    placeholder="请输入客户号"
+                    size="default"
+                    :suffix-icon="Search"
+                    clearable
+                    @input="filterByCustomerName()"
+                ></el-input>
+            </el-col>
+            <el-col :span="4" :offset="0">
+                <el-input
+                    v-model="shoeRidFilter"
+                    placeholder="请输入鞋型号"
+                    size="default"
+                    :suffix-icon="Search"
+                    clearable
+                    @input="filterByShoeRid()"
+                ></el-input>
+            </el-col>
+            <el-col :span="4" :offset="0">
+                <el-input
+                    v-model="shoeCidFilter"
+                    placeholder="请输入客户鞋型号"
+                    size="default"
+                    :suffix-icon="Search"
+                    clearable
+                    @input="filterByShoeCid()"
+                ></el-input>
+            </el-col>
             <el-col :span="6" :offset="0">
                 <el-radio-group v-model="radio" @change="dataPagination()">
                     <el-radio-button label="所有订单" value="all" />
@@ -37,6 +67,8 @@
                 <el-table-column prop="orderSupervisor" label="责任人"/>
                 <el-table-column prop="customerName" label="客户名" />
                 <el-table-column prop="orderCid" label="客户订单号" />
+                <el-table-column prop="shoeRId" label="鞋型号" />
+                <el-table-column prop="shoeCid" label="客户鞋型号" />
                 <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
                 <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
                 <el-table-column prop="orderStatus" label="订单状态" />
@@ -85,6 +117,9 @@ import { ElMessage } from 'element-plus'
 
 let orderRidFilter = ref('')
 let orderCidFilter = ref('')
+let customerIdFilter = ref('')
+let shoeRidFilter = ref('')
+let shoeCidFilter = ref('')
 let displayData = ref([])
 let allData = ref([])
 let examineData = ref([])
@@ -237,6 +272,108 @@ function filterByCid() {
         )
     }
 
+}
+function filterByCustomerName() {
+    if (radio.value == 'all') {
+        const arr = allData.value.filter((task) => {
+                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = arr.length
+    } else if (radio.value == '待审批') {
+        const arr = examineData.value.filter((task) => {
+                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    } else {
+        const arr = approvedData.value.filter((task) => {
+                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    }
+}
+function filterByShoeRid() {
+    if (radio.value == 'all') {
+        const arr = allData.value.filter((task) => {
+                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = arr.length
+    } else if (radio.value == '待审批') {
+        const arr = examineData.value.filter((task) => {
+                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    } else {
+        const arr = approvedData.value.filter((task) => {
+                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    }
+}
+function filterByShoeCid() {
+    if (radio.value == 'all') {
+        const arr = allData.value.filter((task) => {
+                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+        currentTotalRows.value = arr.length
+    } else if (radio.value == '待审批') {
+        const arr = examineData.value.filter((task) => {
+                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    } else {
+        const arr = approvedData.value.filter((task) => {
+                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                return filterMatch
+            })
+        currentTotalRows.value = arr.length
+        displayData.value = arr.slice(
+            (currentPage.value - 1) * currentPageSize.value,
+            currentPageSize.value * currentPage.value
+        )
+    }
 }
 
 function chageCurrentPageSize(val) {

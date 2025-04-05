@@ -60,6 +60,12 @@
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
+                <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
+                    <template #edit="scope">
+                        <vxe-input v-model="scope.row.shoeRId" clearable :disabled="scope.row.disableEdit"
+                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                    </template>
+                </vxe-column>
                 <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
                     <template #default="{ row }">
                         <span>{{ row.materialName }}</span>
@@ -72,16 +78,15 @@
                         </el-select>
                     </template>
                 </vxe-column>
-                <vxe-column field="materialModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
+                <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.materialModel" clearable :disabled="scope.row.disableEdit"
+                        <vxe-input v-model="scope.row.inboundModel" clearable
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }"
-                    width="200">
+                <vxe-column field="inboundSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.materialSpecification" clearable :disabled="scope.row.disableEdit"
+                        <vxe-input v-model="scope.row.inboundSpecification" clearable
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
@@ -148,6 +153,7 @@
             @selection-change="handleSizeMaterialSelect" height="600">
             <el-table-column type="selection" width="55"></el-table-column>
             <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
+            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
             <el-table-column prop="materialName" label="材料名称"></el-table-column>
             <el-table-column prop="materialModel" label="材料型号"></el-table-column>
             <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
@@ -170,7 +176,7 @@
                     <tr>
                         <td>
                             <div style="position: relative; padding: 5px;">
-                                <h2 style="margin: 0; text-align: center;">健诚鞋业入库单</h2>
+                                <h2 style="margin: 0; text-align: center; font-size: 24px;">健诚鞋业入库单</h2>
                                 <span
                                     style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
                                     单据编号:{{ previewInboundForm.inboundRId }}
@@ -198,20 +204,20 @@
                 <tbody>
                     <tr>
                         <td>
-                            <table v-if="previewData.length > 0 && previewData[0].materialName !== '大底'"
-                                class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
+                            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
                                 style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
                                         <th width="100">型号</th>
-                                        <th width="200">规格</th>
+                                        <th width="180">规格</th>
                                         <th width="80">颜色</th>
                                         <th width="55">单位</th>
-                                        <th width="110">订单号</th>
-                                        <th width="100">数量</th>
-                                        <th width="110">单价</th>
-                                        <th width="110">金额</th>
+                                        <th width="100">订单号</th>
+                                        <th width="100">工厂鞋型</th>
+                                        <th width="90">数量</th>
+                                        <th width="90">单价</th>
+                                        <th width="100">金额</th>
                                         <th>备注</th>
                                     </tr>
                                 </thead>
@@ -222,39 +228,8 @@
                                     <td>{{ item.materialColor }}</td>
                                     <td>{{ item.actualInboundUnit }}</td>
                                     <td>{{ item.orderRId }}</td>
+                                    <td>{{ item.shoeRId }}</td>
                                     <td>{{ item.inboundQuantity }}</td>
-                                    <td>{{ item.unitPrice }}</td>
-                                    <td>{{ item.itemTotalPrice }}</td>
-                                    <td>{{ item.remark }}</td>
-                                </tr>
-                            </table>
-                            <table v-else class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                                <tr>
-                                    <th width="100">材料名</th>
-                                    <th width="100">型号</th>
-                                    <th width="200">规格</th>
-                                    <th width="80">颜色</th>
-                                    <th width="55">单位</th>
-                                    <th width="110">订单号</th>
-                                    <th width="40" v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
-                                        column.label }}
-                                    </th>
-                                    <th width="110">单价</th>
-                                    <th width="110">金额</th>
-                                    <th>备注</th>
-                                </tr>
-                                <tr v-for="(item, index) in previewData" :key="index" align="center">
-                                    <td>{{ item.materialName }}</td>
-                                    <td>{{ item.materialModel }}</td>
-                                    <td>{{ item.materialSpecification }}</td>
-                                    <td>{{ item.materialColor }}</td>
-                                    <td>{{ item.actualInboundUnit }}</td>
-                                    <td>{{ item.orderRId }}</td>
-                                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{
-                                        item[column.prop]
-                                    }}
-                                    </td>
                                     <td>{{ item.unitPrice }}</td>
                                     <td>{{ item.itemTotalPrice }}</td>
                                     <td>{{ item.remark }}</td>
@@ -339,6 +314,8 @@ export default {
                 inboundQuantity: 0,
                 unitPrice: 0,
                 disableEdit: false,
+                inboundModel: '',
+                inboundSpecification: '',
             },
             isMaterialSelectDialogVis: false,
             isSizeMaterialSelectDialogVis: false,
@@ -413,10 +390,23 @@ export default {
     },
     methods: {
         updateMaterialTableData(value) {
-            this.materialTableData = [...this.materialTableData, ...value]
-            this.materialTableData.splice(this.currentIndex, 1)
-            this.currentIndex = null
             this.searchedMaterials = []
+            let seen = new Set()
+            let temp = [...this.materialTableData, ...value]
+            temp.splice(this.currentIndex, 1)
+            for (const obj of temp) {
+                // create tuple of name, spec, model, color, and orderRId
+                let tuple = `${obj.materialName}-${obj.materialSpecification}-${obj.materialModel}-${obj.materialColor}-${obj.orderRId}`
+                if (seen.has(tuple)) {
+                    ElMessage.error("入库单不能有重复数据")
+                    // 去掉新创建行
+                    this.currentIndex = null
+                    return
+                }
+                seen.add(tuple)
+            }
+            this.materialTableData = [...temp]
+            this.currentIndex = null
         },
         updateDialogVisible(value) {
             this.isMaterialSelectDialogVis = value
@@ -540,10 +530,6 @@ export default {
                     ElMessage.warning('请填写材料类型')
                     return
                 }
-                if (!scope.row.materialName) {
-                    ElMessage.warning('请填写材料名称')
-                    return
-                }
                 event.preventDefault(); // Prevent default Enter key behavior
                 this.currentKeyDownRow = scope.row; // Store the current row
                 this.currentIndex = scope.rowIndex; // Store the current row index
@@ -589,25 +575,29 @@ export default {
             this.searchedSizeMaterials = response.data
         },
         confirmSelection() {
-            this.materialTableData = []
             if (this.selectedSizeMaterials.length == 0) {
                 ElMessage.warning('请至少选择一行材料')
                 return
             }
-            let firstOrderRId = this.selectedSizeMaterials[0].orderRId
-            for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
-                if (this.selectedSizeMaterials[i].orderRId != firstOrderRId) {
-                    ElMessage.warning('请确保选择的材料属于同一生产订单')
-                    return
+            if (this.selectedSizeMaterials[0].materialName === '大底') {
+                let firstOrderRId = this.selectedSizeMaterials[0].orderRId
+                for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
+                    console.log(firstOrderRId, this.selectedSizeMaterials[i].orderRId)
+                    if (this.selectedSizeMaterials[i].orderRId != firstOrderRId) {
+                        ElMessage.warning('请确保选择的材料属于同一生产订单')
+                        return
+                    }
                 }
             }
             let tempTable = []
+            this.materialTableData.splice(this.currentIndex, 1)
             for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
                 let selectedMaterial = this.selectedSizeMaterials[i]
-                console.log(selectedMaterial)
+                selectedMaterial.inboundModel = selectedMaterial.materialModel
+                selectedMaterial.inboundSpecification = selectedMaterial.materialSpecification
                 let sizeColumns = selectedMaterial.shoeSizeColumns
                 for (let j = 0; j < sizeColumns.length; j++) {
-                    if (i == 0) {
+                    if (i == 0 && selectedMaterial.materialName === '大底') {
                         let obj = { "label": sizeColumns[j], "prop": `amount${j}` }
                         tempTable.push(obj)
 
@@ -620,7 +610,9 @@ export default {
                 selectedMaterial.itemTotalPrice = (selectedMaterial.inboundQuantity * selectedMaterial.unitPrice).toFixed(3)
                 this.materialTableData.push(selectedMaterial)
             }
+
             this.shoeSizeColumns = tempTable
+            this.materialTableData = [...this.materialTableData]
             this.isSizeMaterialSelectDialogVis = false
         },
         async handleMaterialNameSelect(row, value) {
@@ -629,6 +621,9 @@ export default {
             )
             row.actualInboundUnit = response.data.unit
             row.materialCategory = response.data.materialCategory
+            if (!(row.materialName === '大底')) {
+                this.shoeSizeColumns = []
+            }
         },
         async submitInboundForm() {
             const params = {
@@ -678,6 +673,9 @@ export default {
                         // trim and upper the orderRId
                         if (item.orderRId != null) {
                             item.orderRId = item.orderRId.trim().toUpperCase();
+                        }
+                        if (item.shoeRId != null) {
+                            item.shoeRId = item.shoeRId.trim().toUpperCase();
                         }
                         if (item.materialModel != null) {
                             item.materialModel = item.materialModel.trim();

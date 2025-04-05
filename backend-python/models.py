@@ -203,6 +203,8 @@ class MaterialStorage(db.Model):
             "material_model",
             "material_specification",
             "material_storage_color",
+            "inbound_model",
+            "inbound_specification",
             "order_shoe_id",
             name="unq_material_storage",
         ),
@@ -243,6 +245,8 @@ class MaterialStorage(db.Model):
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     actual_inbound_unit = db.Column(db.String(5), nullable=True)
     actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
+    inbound_model = db.Column(db.String(50), nullable=True)
+    inbound_specification = db.Column(db.String(100), nullable=True)
 
     def __repr__(self):
         return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"
