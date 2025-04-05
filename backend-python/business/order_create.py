@@ -10,7 +10,7 @@ import shutil
 from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from api_utility import format_date
-
+from decimal import Decimal
 
 from app_config import db
 
@@ -157,25 +157,25 @@ def create_new_order():
 			new_entity = existing_entity
 		batch_info_entity_array = []
 		for batch in batch_info:
-			quantity_per_ratio = int(quantity_mapping[str(batch['packagingInfoId'])])
+			quantity_per_ratio = float(quantity_mapping[str(batch['packagingInfoId'])])
 			new_entity = OrderShoeBatchInfo(
 				order_shoe_type_id = new_entity.order_shoe_type_id,
 				name = batch['packagingInfoName'],
-				size_34_amount = batch['size34Ratio']*quantity_per_ratio,
-				size_35_amount = batch['size35Ratio']*quantity_per_ratio,
-				size_36_amount = batch['size36Ratio']*quantity_per_ratio,
-				size_37_amount = batch['size37Ratio']*quantity_per_ratio,
-				size_38_amount = batch['size38Ratio']*quantity_per_ratio,
-				size_39_amount = batch['size39Ratio']*quantity_per_ratio,
-				size_40_amount = batch['size40Ratio']*quantity_per_ratio,
-				size_41_amount = batch['size41Ratio']*quantity_per_ratio,
-				size_42_amount = batch['size42Ratio']*quantity_per_ratio,
-				size_43_amount = batch['size43Ratio']*quantity_per_ratio,
-				size_44_amount = batch['size44Ratio']*quantity_per_ratio,
-				size_45_amount = batch['size45Ratio']*quantity_per_ratio,
-				size_46_amount = batch['size46Ratio']*quantity_per_ratio,
+				size_34_amount = int(batch['size34Ratio']*quantity_per_ratio),
+				size_35_amount = int(batch['size35Ratio']*quantity_per_ratio),
+				size_36_amount = int(batch['size36Ratio']*quantity_per_ratio),
+				size_37_amount = int(batch['size37Ratio']*quantity_per_ratio),
+				size_38_amount = int(batch['size38Ratio']*quantity_per_ratio),
+				size_39_amount = int(batch['size39Ratio']*quantity_per_ratio),
+				size_40_amount = int(batch['size40Ratio']*quantity_per_ratio),
+				size_41_amount = int(batch['size41Ratio']*quantity_per_ratio),
+				size_42_amount = int(batch['size42Ratio']*quantity_per_ratio),
+				size_43_amount = int(batch['size43Ratio']*quantity_per_ratio),
+				size_44_amount = int(batch['size44Ratio']*quantity_per_ratio),
+				size_45_amount = int(batch['size45Ratio']*quantity_per_ratio),
+				size_46_amount = int(batch['size46Ratio']*quantity_per_ratio),
 				total_price = 0,
-				total_amount = batch['totalQuantityRatio']*quantity_per_ratio,
+				total_amount = int(batch['totalQuantityRatio']*quantity_per_ratio),
 				packaging_info_id = batch['packagingInfoId'],
 				packaging_info_quantity = quantity_per_ratio)
 			batch_info_entity_array.append(new_entity)

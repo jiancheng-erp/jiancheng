@@ -394,7 +394,7 @@ class OrderShoeBatchInfo(db.Model):
     size_45_amount = db.Column(db.Integer, nullable=True)
     size_46_amount = db.Column(db.Integer, nullable=True)
     packaging_info_id = db.Column(db.Integer, nullable=True)
-    packaging_info_quantity = db.Column(db.Integer, nullable=True)
+    packaging_info_quantity = db.Column(db.DECIMAL(12,3), nullable=True)
     order_shoe_type_id = db.Column(
         db.BigInteger,
     )
