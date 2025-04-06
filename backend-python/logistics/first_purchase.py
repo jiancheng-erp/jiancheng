@@ -1062,6 +1062,8 @@ def submit_purchase_divide_orders():
                 material_outsource_status="0",
                 material_model=material_model,
                 material_specification=material_specification,
+                inbound_model=material_model,
+                inbound_specification=material_specification,
                 material_storage_color=color,
                 total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                 craft_name=craft_name,

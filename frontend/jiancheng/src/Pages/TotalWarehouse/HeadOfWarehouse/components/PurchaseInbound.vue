@@ -395,15 +395,18 @@ export default {
             let temp = [...this.materialTableData, ...value]
             temp.splice(this.currentIndex, 1)
             for (const obj of temp) {
+                if (!obj.orderRId) {
+                    continue
+                }
                 // create tuple of name, spec, model, color, and orderRId
-                let tuple = `${obj.materialName}-${obj.materialSpecification}-${obj.materialModel}-${obj.materialColor}-${obj.orderRId}`
-                if (seen.has(tuple)) {
+                let storageId = obj.storageId || ''
+                if (storageId !== '' && seen.has(obj.orderRId)) {
                     ElMessage.error("入库单不能有重复数据")
                     // 去掉新创建行
                     this.currentIndex = null
                     return
                 }
-                seen.add(tuple)
+                seen.add(obj.orderRId)
             }
             this.materialTableData = [...temp]
             this.currentIndex = null

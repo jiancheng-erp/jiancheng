@@ -1114,32 +1114,18 @@ def inbound_material():
     )
     inbound_type = data.get("inboundType", 0)
 
-    # 查重数据
+    # 检查数据
     items = data.get("items", [])
     seen = set()
     for item in items:
-        material_name = item.get("materialName", None)
-        material_model = item.get("materialModel", None)
-        material_specification = item.get("materialSpecification", None)
-        inbound_material = item.get("inboundModel", None)
-        inbound_specification = item.get("inboundSpecification", None)
-        material_color = item.get("materialColor", None)
-        unit = item.get("actualInboundUnit", None)
         order_rid = item.get("orderRId", None)
-        obj = (
-            material_name,
-            material_model,
-            material_specification,
-            inbound_material,
-            inbound_specification,
-            material_color,
-            unit,
-            order_rid,
-        )
-        if obj in seen:
-            error_message = json.dumps({"message": "材料信息重复"})
+        storage_id = item.get("materialStorageId", None)
+        if order_rid == None or order_rid == "":
+            continue
+        if storage_id and order_rid in seen:
+            error_message = json.dumps({"message": "订单材料信息重复"})
             abort(Response(error_message, 400))
-        seen.add(obj)
+        seen.add(order_rid)
 
     # 采购入库
     if inbound_type == 0:

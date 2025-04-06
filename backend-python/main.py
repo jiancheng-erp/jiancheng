@@ -35,7 +35,7 @@ def main():
     # refresh_correct_size_material_amount_in_bom(app, db)
 
     # Run the Flask app.
-    app.run(host="0.0.0.0", port=8000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=8000, debug=True, threaded=True)
 
 if __name__ == "__main__":
     main()
