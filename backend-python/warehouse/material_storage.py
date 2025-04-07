@@ -2554,49 +2554,57 @@ def update_inbound_record():
                 db.session.add(new_storage)
                 db.session.flush()
 
-            # update inbound record detail
-            inbound_record_detail.size_material_storage_id = (
-                new_storage.size_material_storage_id
-            )
-            inbound_record_detail.unit_price = unit_price
             old_inbound_amount = inbound_record_detail.inbound_amount
-            inbound_record_detail.inbound_amount = inbound_quantity
-            inbound_record_detail.item_total_price = item_total_price
-            inbound_record_detail.remark = remark
 
             old_storage.total_actual_inbound_amount -= old_inbound_amount
             old_storage.total_current_amount -= old_inbound_amount
             new_storage.total_actual_inbound_amount += inbound_quantity
             new_storage.total_current_amount += inbound_quantity
-
             if actual_material.material_name == "大底":
                 old_size_inbound_amount = []
+
+                # edit inbound record detail
                 for i in range(len(SHOESIZERANGE)):
                     shoe_size = SHOESIZERANGE[i]
                     column_name = f"size_{shoe_size}_inbound_amount"
-                    old_size_inbound_amount.append(
-                        getattr(inbound_record_detail, column_name, 0)
-                    )
+                    detail_old_value = getattr(
+                        inbound_record_detail, column_name, 0
+                    ) if getattr(inbound_record_detail, column_name, 0) else 0
+                    old_size_inbound_amount.append(detail_old_value)
                     inbound_value = item.get(f"amount{i}", 0)
                     setattr(inbound_record_detail, column_name, inbound_value)
+
+                # edit size material storage
                 for i in range(len(SHOESIZERANGE)):
                     shoe_size = SHOESIZERANGE[i]
+                    
                     column_name = f"size_{shoe_size}_actual_inbound_amount"
+                    # set old value to old storage first
                     old_value = getattr(old_storage, column_name, 0)
-                    new_value = getattr(new_storage, column_name, 0)
-                    inbound_value = item.get(f"amount{i}", 0)
                     setattr(
                         old_storage, column_name, old_value - old_size_inbound_amount[i]
                     )
+                    # set new value to new storage
+                    new_value = getattr(new_storage, column_name, 0)
+                    inbound_value = item.get(f"amount{i}", 0)
                     setattr(new_storage, column_name, new_value + inbound_value)
 
                     column_name = f"size_{shoe_size}_current_amount"
                     old_value = getattr(old_storage, column_name, 0)
-                    new_value = getattr(new_storage, column_name, 0)
                     setattr(
                         old_storage, column_name, old_value - old_size_inbound_amount[i]
                     )
+                    new_value = getattr(new_storage, column_name, 0)
                     setattr(new_storage, column_name, new_value + inbound_value)
+
+            # update inbound record detail
+            inbound_record_detail.size_material_storage_id = (
+                new_storage.size_material_storage_id
+            )
+            inbound_record_detail.unit_price = unit_price
+            inbound_record_detail.inbound_amount = inbound_quantity
+            inbound_record_detail.item_total_price = item_total_price
+            inbound_record_detail.remark = remark
 
     # update inbound record
     inbound_record.total_price = total_price
