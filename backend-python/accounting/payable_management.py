@@ -50,7 +50,6 @@ def add_transactions():
         new_transaction_entity_list.append(new_transaction_entity)
         payable_entity = db.session.query(AccountingPayableAccount).filter_by(account_id = to_account_id).first()
         payable_entity.account_payable_balance = payable_entity.account_payable_balance - Decimal(transaction_amount)
-    print(new_transaction_entity_list)
     for transaction in new_transaction_entity_list:
         db.session.add(transaction)
     # db.session.add_all(new_transaction_entity_list)
@@ -70,7 +69,6 @@ def get_payable_info():
                                      .join(Material, MaterialStorage.actual_inbound_material_id == Material.material_id)
                                      .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
                                      .all())
-    print(payable_transactions_entities)
     account_owner_id_to_account_res = {}
     for account, payee in payable_object_accounts:
         account_res_data = {}
@@ -80,7 +78,6 @@ def get_payable_info():
             account_res_data[to_camel(attr.replace("payee", "account_owner"))] = getattr(payee, attr)
         transaction_details = []
         account_res_data["transactionDetails"] = transaction_details
-        print(account_res_data)
         account_owner_id_to_account_res[account.account_owner_id] = account_res_data
     for transaction , inbound_record, inbound_record_detail, material_storage, material, material_type in payable_transactions_entities:
         cur_transaction_res = {}
@@ -140,10 +137,22 @@ def get_payable_info_new():
         account_owner_id = payment_transaction.to_account_id
         account_owner_id_to_account_res[account_owner_id]['transactionDetails'].append(transaction_res)
     
+    account_payable_has_sum = set()
+    account_paid_has_sum = set()
+    all_account_id = set(account_owner_id_to_account_res.keys())
     for account_id ,payable_sum in payable_sum_by_account_id:
         account_owner_id_to_account_res[account_id]['accountTotalPayable'] = payable_sum
+        account_payable_has_sum.add(account_id)
     for account_id, paid_sum in paid_sum_by_account_id:
         account_owner_id_to_account_res[account_id]['accountTotalPaid'] = paid_sum
+        account_paid_has_sum.add(account_id)
+
+
+    for account_id in all_account_id.difference(account_payable_has_sum):
+        account_owner_id_to_account_res[account_id]['accountTotalPayable'] = 0.00
+
+    for account_id in all_account_id.difference(account_paid_has_sum):
+        account_owner_id_to_account_res[account_id]['accountTotalPaid'] = 0.00
     res_data = list(account_owner_id_to_account_res.values())
     return jsonify({"payableInfo":res_data}), 200
 @payable_management_bp.route('/payable_management/get_transaction_history', methods=['GET'])

@@ -109,6 +109,13 @@ def format_line_group(line_group_obj):
     return line_group_obj.split(",")
 
 
+def format_outbound_type(outbound_type):
+    mapping = {0:"自产", 1:"废料",2:"外包", 3:"复合"}
+    if outbound_type in [0,1,2,3,'0','1','2','3']:
+        return mapping[int(outbound_type)]
+
+
+
 def status_converter(current_status_arr, current_status_value_arr):
     status = "未排期"
     if 17 in current_status_arr and current_status_value_arr[current_status_arr.index(17)] == 1:
@@ -196,8 +203,6 @@ def db_obj_to_res(db_entity, db_model,attr_name_offset=0, attr_name_list=[], ini
             res[to_camel(attr)] = getattr(db_entity, attr)
     else:
         for attr in attr_name_list:
-            print(attr[attr_name_offset:])
-            print(to_camel(attr[attr_name_offset:]))
             res[to_camel(attr[attr_name_offset:])] = getattr(db_entity, attr)
 
     return res
