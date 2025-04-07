@@ -5,9 +5,6 @@
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 300px;">
             </el-date-picker>
-            <el-input v-model="supplierNameSearch" placeholder="厂家名称搜索" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
-            </el-input>
             <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
@@ -201,8 +198,8 @@
         </el-row>
         <el-row>
             <el-col>
-                <el-table :data="recordData.items" border stripe height="600">
-                    <el-table-column label="材料名">
+                <el-table :data="recordData.items" border stripe height="600" style="overflow-x: scroll;" id="editTable">
+                    <el-table-column label="材料名" width="150">
                         <template #default="scope">
                             <el-select v-model="scope.row.materialName" filterable clearable>
                                 <el-option v-for="(item, index) in materialNameOptions" :key="index" :label="item.label"
@@ -210,22 +207,22 @@
                             </el-select>
                         </template>
                     </el-table-column>
-                    <el-table-column label="型号">
+                    <el-table-column label="型号" width="150">
                         <template #default="scope">
                             <el-input v-model="scope.row.materialModel"></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="规格">
+                    <el-table-column label="规格" width="150">
                         <template #default="scope">
-                            <el-input v-model="scope.row.materialSpecification"></el-input>
+                            <el-input v-model="scope.row.materialSpecification" type="textarea" autosize></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="颜色">
+                    <el-table-column label="颜色" width="150">
                         <template #default="scope">
                             <el-input v-model="scope.row.colorName"></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="单位">
+                    <el-table-column label="单位" width="150">
                         <template #default="scope">
                             <el-select v-model="scope.row.actualInboundUnit" filterable clearable>
                                 <el-option v-for="item in unitOptions" :key="item.value" :value="item.value"
@@ -233,40 +230,49 @@
                             </el-select>
                         </template>
                     </el-table-column>
-                    <el-table-column label="订单号">
+                    <el-table-column label="订单号" width="150">
                         <template #default="scope">
                             <el-input v-model="scope.row.orderRId"></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="工厂鞋型">
+                    <el-table-column label="工厂鞋型" width="150">
                         <template #default="scope">
                             <el-input v-model="scope.row.shoeRId"></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="数量">
+                    <el-table-column label="数量" width="150">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.inboundQuantity" :step="0.001" :min="0" :precision="3"
                                 size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
                         </template>
                     </el-table-column>
-                    <el-table-column label="单价">
+                    <el-table-column label="单价" width="150">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.unitPrice" :step="0.001" :min="0" :precision="3"
                                 size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
                         </template>
                     </el-table-column>
-                    <el-table-column label="总价">
+                    <el-table-column label="总价" width="150">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.itemTotalPrice" :step="0.001" :min="0" :precision="3"
                                 size="small"></el-input-number>
                         </template>
                     </el-table-column>
-                    <el-table-column label="备注">
+                    <!-- 每个鞋码数量 -->
+                    <template v-for="(item, index) in recordData.shoeSizeColumns" :key="index">
+                        <el-table-column :label="item.label" :prop="item.prop" width="150">
+                            <template #default="scope">
+                                <el-input-number v-model="scope.row[item.prop]" :step="0.001" :min="0" :precision="3"
+                                    size="small" @change="updateTotalShoes(scope.row)"></el-input-number>
+                            </template>
+                        </el-table-column>
+                    </template>
+                    <el-table-column label="备注" width="150">
                         <template #default="scope">
                             <el-input v-model="scope.row.remark"></el-input>
                         </template>
                     </el-table-column>
-                    <el-table-column label="删除" width="80">
+                    <el-table-column label="删除" width="80" fixed="right">
                         <template #default="scope">
                             <el-switch v-model="scope.row.toDelete" :active-value="1" :inactive-value="0"
                                 @change="(value) => markDelete(scope.row, value)" />
@@ -297,6 +303,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
+import Decimal from 'decimal.js';
 export default {
     directives: {
         print
@@ -353,14 +360,19 @@ export default {
     mounted() {
         this.getInboundRecordsTable()
     },
-    computed: {
-        filteredShoeSizeColumns() {
-            return this.recordData.shoeSizeColumns.filter(column =>
-                this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-            )
-        }
-    },
     methods: {
+        updateTotalShoes(row) {
+            console.log(row)
+            let total = new Decimal(0)
+            for (let i = 0; i < this.recordData.shoeSizeColumns.length; i++) {
+                if (row[this.recordData.shoeSizeColumns[i].prop] === undefined) {
+                    row[this.recordData.shoeSizeColumns[i].prop] = 0
+                }
+                total = total.plus(new Decimal(row[this.recordData.shoeSizeColumns[i].prop]))
+            }
+            row.inboundQuantity = total.toDecimalPlaces(3).toNumber()
+            row.itemTotalPrice = (total.times(row.unitPrice)).toDecimalPlaces(3).toNumber()
+        },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
                 .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
@@ -448,6 +460,8 @@ export default {
                         tempTable.push(obj)
                     }
                     this.recordData["shoeSizeColumns"] = tempTable
+                    console.log(this.recordData)
+                    console.log(typeof this.recordData["items"][0].itemTotalPrice)
                 }
             }
             catch (error) {
@@ -476,7 +490,7 @@ export default {
             this.currentRow = row
             this.currentRow.newSupplierName = row.supplierName
             this.currentRow.newPayMethod = row.payMethod
-            this.getInboundRecordDetail(row)
+            await this.getInboundRecordDetail(row)
             this.getMaterialNameOptions()
             this.getUnitOptions()
             this.editDialogVisible = true
@@ -603,7 +617,7 @@ export default {
     }
 }
 </script>
-<style>
+<style scoped>
 #printView {
     padding-left: 20px;
     padding-right: 20px;
