@@ -13,7 +13,7 @@
                 <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label" :value="item.value"></el-option>
             </el-select>
             <el-select v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
+                @clear="getInboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
                 <el-option v-for="(item, index) in materialSupplierOptions" :key="index" :label="item"
                     :value="item"></el-option>
             </el-select>
@@ -31,15 +31,11 @@
             <el-table :data="tableData" border height="600" stripe>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
-                <el-table-column label="入库类型">
-                    <template #default="scope">
-                        {{ determineInboundName(scope.row.inboundType) }}
-                    </template>
-                </el-table-column>
                 <el-table-column prop="warehouseName" label="仓库名称">
                 </el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="payMethod" label="付款方式"></el-table-column>
+                <el-table-column prop="remark" label="备注"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
                 <el-table-column label="查看" min-width="100">
                     <template #default="scope">
