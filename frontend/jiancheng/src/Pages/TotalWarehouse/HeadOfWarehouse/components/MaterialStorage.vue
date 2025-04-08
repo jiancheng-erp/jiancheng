@@ -120,7 +120,7 @@
                 <el-button-group>
                     <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small"
                         @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
-                    <el-button type="primary" size="small" @click="viewRecords(scope.row)" disabled>入/出库记录</el-button>
+                    <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
                 </el-button-group>
             </template>
         </el-table-column>
@@ -133,7 +133,7 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="材料入库/出库记录" v-model="isRecordDialogVisible" width="60%">
+    <el-dialog title="材料入库/出库记录" v-model="isRecordDialogVisible" width="80%">
         <el-descriptions border size="default" title="材料信息">
             <el-descriptions-item label="材料名称">
                 {{ currentRow.materialName }}
@@ -164,13 +164,18 @@
                     <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                     <el-table-column prop="inboundType" label="用途"></el-table-column>
                     <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column prop="unitPrice" label="单价"></el-table-column>
                     <el-table-column prop="inboundAmount" label="数量"></el-table-column>
+                    <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
                     <el-table-column prop="remark" label="备注"></el-table-column>
                 </el-table>
                 <el-table v-if="currentRow.materialCategory == 1" :data="sizeMaterialInboundRecordData" border stripe>
                     <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                     <el-table-column prop="inboundType" label="用途"></el-table-column>
                     <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column prop="unitPrice" label="单价"></el-table-column>
+                    <el-table-column prop="inboundAmount" label="数量"></el-table-column>
+                    <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
                     <el-table-column v-for="column in shoeSizeColumns" :key="column.prop" :prop="column.prop"
                         :label="column.label"></el-table-column>
                     <el-table-column prop="remark" label="备注"></el-table-column>
@@ -184,7 +189,6 @@
                     <el-table-column prop="outboundAmount" label="数量"></el-table-column>
                     <el-table-column prop="outboundDestination" label="出库至"></el-table-column>
                     <el-table-column prop="picker" label="领料人"></el-table-column>
-                    <el-table-column prop="outboundAddress" label="出库地址"></el-table-column>
                     <el-table-column prop="remark" label="备注"></el-table-column>
                 </el-table>
                 <el-table v-if="currentRow.materialCategory == 1" :data="sizeMaterialOutboundRecordData" border stripe>
@@ -195,7 +199,6 @@
                         :label="column.label"></el-table-column>
                     <el-table-column prop="outboundDestination" label="出库至"></el-table-column>
                     <el-table-column prop="picker" label="领料人"></el-table-column>
-                    <el-table-column prop="outboundAddress" label="出库地址"></el-table-column>
                     <el-table-column prop="remark" label="备注"></el-table-column>
                 </el-table>
             </el-tab-pane>
@@ -465,8 +468,8 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordsforsizematerial`, { params })
                 this.sizeMaterialInboundRecordData = response.data
 
-                let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
-                this.sizeMaterialOutboundRecordData = sizeResponse.data
+                // let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
+                // this.sizeMaterialOutboundRecordData = sizeResponse.data
 
                 let params1 = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
                 let response1 = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params: params1 })

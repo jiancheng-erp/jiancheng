@@ -867,12 +867,16 @@ def _handle_purchase_inbound(data, next_group_id):
         # 用户选择了材料
         else:
             if item["materialCategory"] == 0:
-                storage = MaterialStorage.query.get(storage_id)
+                storage = db.session.query(MaterialStorage).filter(
+                    MaterialStorage.material_storage_id == storage_id,
+                ).first()
                 # 修改实际入库的型号和规格
                 storage.inbound_model = item.get("inboundModel", None)
                 storage.inbound_specification = item.get("inboundSpecification", None)
             elif item["materialCategory"] == 1:
-                storage = SizeMaterialStorage.query.get(storage_id)
+                storage = db.session.query(SizeMaterialStorage).filter(
+                    SizeMaterialStorage.size_material_storage_id == storage_id,
+                ).first()
 
         # set inbound quantity
         inbound_quantity = Decimal(item["inboundQuantity"])
@@ -1120,12 +1124,12 @@ def inbound_material():
     for item in items:
         order_rid = item.get("orderRId", None)
         storage_id = item.get("materialStorageId", None)
-        if order_rid == None or order_rid == "":
+        if (order_rid == None or order_rid == "") and storage_id == None:
             continue
-        if storage_id and order_rid in seen:
+        if (storage_id, order_rid) in seen:
             error_message = json.dumps({"message": "订单材料信息重复"})
             abort(Response(error_message, 400))
-        seen.add(order_rid)
+        seen.add((storage_id, order_rid))
 
     # 采购入库
     if inbound_type == 0:
@@ -2038,25 +2042,29 @@ def get_outbound_record_by_batch_id():
 def get_inbound_records_for_material():
     storage_id = request.args.get("storageId")
     response = (
-        db.session.query(InboundRecord)
-        .filter(InboundRecord.material_storage_id == storage_id)
+        db.session.query(InboundRecord, InboundRecordDetail)
+        .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .filter(InboundRecordDetail.material_storage_id == storage_id)
         .order_by(desc(InboundRecord.inbound_datetime))
         .all()
     )
     result = []
     for row in response:
-        if row.inbound_type == 1:
+        record, item = row
+        if record.inbound_type == 1:
             inbound_purpose = "生产剩余"
-        elif row.inbound_type == 2:
+        elif record.inbound_type == 2:
             inbound_purpose = "复合入库"
         else:
             inbound_purpose = "采购入库"
         obj = {
-            "inboundRId": row.inbound_rid,
-            "timestamp": format_datetime(row.inbound_datetime),
+            "inboundRId": record.inbound_rid,
+            "timestamp": format_datetime(record.inbound_datetime),
             "inboundType": inbound_purpose,
-            "inboundAmount": row.inbound_amount,
-            "remark": row.remark,
+            "inboundAmount": item.inbound_amount,
+            "unitPrice": item.unit_price,
+            "itemTotalPrice": item.item_total_price,
+            "remark": item.remark,
         }
         result.append(obj)
     return result
@@ -2068,30 +2076,34 @@ def get_inbound_records_for_material():
 def get_inbound_records_for_size_material():
     storage_id = request.args.get("storageId")
     response = (
-        db.session.query(InboundRecord)
-        .filter(InboundRecord.size_material_storage_id == storage_id)
+        db.session.query(InboundRecord, InboundRecordDetail)
+        .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .filter(InboundRecordDetail.size_material_storage_id == storage_id)
         .order_by(desc(InboundRecord.inbound_datetime))
         .all()
     )
     result = []
     for row in response:
-        if row.inbound_type == 1:
+        record, item = row
+        if record.inbound_type == 1:
             inbound_purpose = "生产剩余"
-        elif row.inbound_type == 2:
+        elif record.inbound_type == 2:
             inbound_purpose = "复合入库"
         else:
             inbound_purpose = "采购入库"
         obj = {
-            "inboundRId": row.inbound_rid,
-            "timestamp": format_datetime(row.inbound_datetime),
+            "inboundRId": record.inbound_rid,
+            "timestamp": format_datetime(record.inbound_datetime),
             "inboundType": inbound_purpose,
-            "inboundAmount": row.inbound_amount,
-            "remark": row.remark,
+            "inboundAmount": item.inbound_amount,
+            "unitPrice": item.unit_price,
+            "itemTotalPrice": item.item_total_price,
+            "remark": item.remark,
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
             column_name = f"size_{shoe_size}_inbound_amount"
-            obj[f"amount{i}"] = getattr(row, column_name)
+            obj[f"amount{i}"] = getattr(item, column_name)
         result.append(obj)
     return result
 
@@ -2100,52 +2112,39 @@ def get_inbound_records_for_size_material():
 def get_outbound_records_for_material():
     storage_id = request.args.get("storageId")
     response = (
-        db.session.query(OutboundRecord)
-        .filter(OutboundRecord.material_storage_id == storage_id)
+        db.session.query(OutboundRecord, OutboundRecordDetail, Supplier, Department)
+        .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
+        .outerjoin(Supplier, Supplier.supplier_id == OutboundRecord.composite_supplier_id)
+        .outerjoin(Department, Department.department_id == OutboundRecord.outbound_department)
+        .filter(OutboundRecordDetail.material_storage_id == storage_id)
         .order_by(desc(OutboundRecord.outbound_datetime))
         .all()
     )
     result = []
     for row in response:
+        outbound_record, item, supplier, department = row
         outbound_destination = ""
         outbound_address = ""
         if row.outbound_type == 1:
             outbound_purpose = "废料处理"
-        elif row.outbound_type == 2:
-            outbound_purpose = "外包发货"
-            outbound_destination = (
-                db.session.query(OutsourceFactory.factory_id)
-                .join(
-                    OutsourceInfo,
-                    OutsourceInfo.factory_id == OutsourceFactory.factory_id,
-                )
-                .filter(OutsourceInfo.outsource_info_id == row.outsource_info_id)
-                .scalar()
-            )
-            outbound_address = row.outbound_address
+        # elif row.outbound_type == 2:
+        #     outbound_purpose = "外包发货"
+        #     outbound_destination = 
+            # outbound_address = row.outbound_address
         elif row.outbound_type == 3:
             outbound_purpose = "外发复合"
-            outbound_destination = (
-                db.session.query(Supplier.supplier_name)
-                .filter(Supplier.supplier_id == row.composite_supplier_id)
-                .scalar()
-            )
-            outbound_address = row.outbound_address
+            outbound_destination = supplier.supplier_name if supplier else None
         else:
             outbound_purpose = "生产使用"
-            outbound_destination = (
-                db.session.query(Department.department_name)
-                .filter(Department.department_id == row.outbound_department)
-                .scalar()
-            )
+            outbound_destination = department.department_name if department else None
         obj = {
-            "outboundRId": row.outbound_rid,
-            "timestamp": format_datetime(row.outbound_datetime),
+            "outboundRId": outbound_record.outbound_rid,
+            "timestamp": format_datetime(outbound_record.outbound_datetime),
             "outboundType": outbound_purpose,
-            "outboundAmount": row.outbound_amount,
-            "remark": row.remark,
+            "outboundAmount": item.outbound_amount,
+            "remark": item.remark,
             "outboundDestination": outbound_destination,
-            "picker": row.picker,
+            "picker": item.picker,
             "outboundAddress": outbound_address,
         }
         result.append(obj)
