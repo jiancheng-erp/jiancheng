@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res, format_datetime,format_outbound_type, accounting_audit_status_converter
-from sqlalchemy import func
+from sqlalchemy import func, and_
 
 
 from app_config import db
@@ -49,11 +49,13 @@ name_mapping_inbound_summary = {
     "supplier_name":"供应商",
     "material_name":"材料名称",
     "material_model":"材料型号",
+    "material_color":"材料颜色",
     "material_specification":"材料规格",
     "unit_price":"采购单价",
     "material_unit":"单位",
     "total_amount":"总入库数量",
     "total_price":"总价",
+    "spu_Rid":"SPU"
     # "craft_name":"工艺名称",
     # "approval_status":"审批状态",
 }
@@ -211,18 +213,22 @@ def get_warehouse_inbound_summery():
     #          .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
     #                  .group_by(SPUMaterial.material_id ,SPUMaterial.material_model, InboundRecordDetail.unit_price)
     #                  )
-    query = (db.session.query(Material.material_id, MaterialStorage.material_model, MaterialStorage.material_specification, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
+    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
              .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
              .join(Material, MaterialStorage.material_id == Material.material_id)
-                     .group_by(Material.material_id ,MaterialStorage.material_model,MaterialStorage.material_specification, InboundRecordDetail.unit_price)
-                     )
+             .join(SPUMaterial,and_(Material.material_id == SPUMaterial.material_id, MaterialStorage.material_model == SPUMaterial.material_model,
+                    MaterialStorage.material_specification == SPUMaterial.material_specification,
+                     MaterialStorage.material_storage_color == SPUMaterial.color))
+                     .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price)
+                    )
+
     time_period_subquery = query.subquery()
     
     response_query = (db.session.query(time_period_subquery, Material, Supplier)
                       .join(Material, time_period_subquery.c.material_id == Material.material_id)
                       .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-
+                      
                       )
     # inbound_record_summery_subquery = query.subquery()
     # response_query = (db.session.query(inbound_record_summery_subquery, MaterialStorage, Material, Supplier)
@@ -237,14 +243,17 @@ def get_warehouse_inbound_summery():
     total_count = response_query.distinct().count()
     response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_summary = []
-    for m_id, material_model,material_spec, unit_price, inbound_amount_sum, material, supplier in response_entities:
+    print(response_entities[0])
+    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, inbound_amount_sum, material, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = unit_price
         res['totalAmount'] = inbound_amount_sum
         res['totalPrice'] = unit_price * inbound_amount_sum
-        res['materialModel'] = material_model
-        res['materialSpecification'] = material_spec
+        res['materialModel'] = m_model
+        res['materialSpecification'] = m_specification
+        res['materialColor'] = color
+        res['spuRid'] = spu_rid
         inbound_summary.append(res)
     return jsonify({"inboundSummary":inbound_summary, "total":total_count}), 200
 
