@@ -53,7 +53,7 @@
     <div class="transfer-tables">
         <!-- Top Table -->
         <el-table v-if="role == 23" ref="topTableData" :data="topTableData"
-            style="width: 100%; margin-bottom: 20px; height: 60vh" @selection-change="handleTopSelectionChange" border
+            style="width: 100%; margin-bottom: 20px; height: 20vh" @selection-change="handleTopSelectionChange" border
             stripe>
             <el-table-column type="selection" width="55" />
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -92,7 +92,7 @@
             </el-button>
         </div>
     </div>
-    <el-table ref="bottomTableData" :data="bottomTableData" border stripe height="40vh"
+    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 30vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -207,7 +207,9 @@
     <el-dialog title="尺码材料库存" v-model="isViewSizeMaterialStockOpen" width="60%">
         <el-table :data="filteredSizeMaterialStock" border stripe>
             <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
-            <el-table-column prop="currentQuantity" label="材料数量"></el-table-column>
+            <el-table-column prop="predictQuantity" label="采购数量"></el-table-column>
+            <el-table-column prop="actualQuantity" label="入库数量"></el-table-column>
+            <el-table-column prop="currentQuantity" label="库存"></el-table-column>
         </el-table>
     </el-dialog>
 
@@ -468,8 +470,8 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordsforsizematerial`, { params })
                 this.sizeMaterialInboundRecordData = response.data
 
-                // let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
-                // this.sizeMaterialOutboundRecordData = sizeResponse.data
+                let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
+                this.sizeMaterialOutboundRecordData = sizeResponse.data
 
                 let params1 = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
                 let response1 = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params: params1 })
