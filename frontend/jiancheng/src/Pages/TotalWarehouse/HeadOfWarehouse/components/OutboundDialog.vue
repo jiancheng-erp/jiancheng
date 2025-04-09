@@ -99,7 +99,7 @@
     <el-dialog title="多鞋码材料出库数量" v-model="isOpenSizeMaterialQuantityDialogVisible" width="50%">
         <el-form>
             <el-form-item>
-                <el-table :data="filteredData" border stripe>
+                <el-table :data="currentSizeMaterialQuantityRow.sizeMaterialOutboundTable" border stripe>
                     <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
                     <el-table-column prop="currentQuantity" label="库存"></el-table-column>
                     <el-table-column label="出库数量">
@@ -155,13 +155,6 @@ export default {
         },
     },
     computed: {
-        filteredData() {
-            return this.currentSizeMaterialQuantityRow.sizeMaterialOutboundTable.filter((row) => {
-                return (
-                    row.predictQuantity > 0
-                );
-            });
-        },
         getDestination() {
             if (this.outboundForm.outboundType == 0) {
                 const result = this.departmentOptions.filter(item => {
@@ -218,7 +211,7 @@ export default {
             this.currentSizeMaterialQuantityRow.sizeMaterialOutboundTable.forEach((element, index) => {
                 this.currentSizeMaterialQuantityRow[`amount${index}`] = element.outboundQuantity
             })
-            this.currentSizeMaterialQuantityRow.outboundQuantity = this.filteredData.reduce((acc, row) => {
+            this.currentSizeMaterialQuantityRow.outboundQuantity = this.currentSizeMaterialQuantityRow.sizeMaterialOutboundTable.reduce((acc, row) => {
                 return acc + row.outboundQuantity;
             }, 0);
         },
@@ -273,24 +266,13 @@ export default {
                 let newItem = { ...item, outboundQuantity: 0, remark: "", sizeMaterialOutboundTable: [] }
                 if (item.materialCategory == 1) {
                     console.log(item)
-                    // newItem["sizeMaterialOutboundTable"] = response.data
-                    // newItem["sizeMaterialOutboundTable"].forEach(row => {
-                    //     row.outboundQuantity = 0
-                    // })
-                    // newItem.sizeMaterialOutboundTable.forEach((element, index) => {
-                    //     newItem[`amount${index}`] = element.outboundQuantity
-                    // })
-                    // // insert shoe size columns into current row
-                    // newItem.sizeMaterialOutboundTable.forEach((element, index) => {
-                    //     // for display
-                    //     if (element.predictQuantity > 0) {
-                    //         shoeSizeColumns.push({
-                    //             "prop": `amount${index}`,
-                    //             "label": element.shoeSizeName
-                    //         })
-                    //     }
-                    // })
-                    // newItem["shoeSizeColumns"] = shoeSizeColumns
+                    let params = { "sizeMaterialStorageId": item.materialStorageId, orderId: item.orderId, purchaseDivideOrderId: item.purchaseDivideOrderId }
+                    let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
+                    newItem["sizeMaterialOutboundTable"] = response.data
+                    newItem["sizeMaterialOutboundTable"].forEach((row, index) => {
+                        row.outboundQuantity = 0
+                        newItem[`amount${index}`] = 0
+                    })
                 }
                 groupedData.push(newItem);
             }

@@ -12,11 +12,9 @@
                 @clear="getInboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
                 <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label" :value="item.value"></el-option>
             </el-select>
-            <el-select v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
-                <el-option v-for="(item, index) in materialSupplierOptions" :key="index" :label="item"
-                    :value="item"></el-option>
-            </el-select>
+            <el-input v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
+            </el-input>
             <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable"
                 clearable style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
