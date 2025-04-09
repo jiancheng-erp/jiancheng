@@ -1,4 +1,3 @@
-from numpy import mat
 from openpyxl.utils import range_boundaries
 
 from openpyxl import load_workbook
