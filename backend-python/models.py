@@ -247,6 +247,7 @@ class MaterialStorage(db.Model):
     actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_model = db.Column(db.String(50), nullable=True)
     inbound_specification = db.Column(db.String(100), nullable=True)
+    spu_material_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"
@@ -295,6 +296,8 @@ class Order(db.Model):
     last_status = db.Column(db.String(1), nullable=False, default=0)
     cutting_model_status = db.Column(db.String(1), nullable=False, default=0)
     order_size_table = db.Column(db.JSON, nullable=True)
+    order_paper_production_instruction_status = db.Column(db.String(1), nullable=False, default='0')
+    order_paper_color_document_status = db.Column(db.String(1), nullable=False, default='0')
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
@@ -962,6 +965,7 @@ class SizeMaterialStorage(db.Model):
     craft_name = db.Column(db.String(200), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     shoe_size_columns = db.Column(db.JSON, nullable=True)
+    spu_material_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<SizeMaterialStorage {self.size_material_specification}>"
@@ -1571,14 +1575,14 @@ class DefaultCraftSheet(db.Model):
     __table_args__ = (
         db.UniqueConstraint('shoe_id', name='unq_default_craft_sheet'),
     )
-    
-    
+
+
 class SPUMaterial(db.Model):
     __tablename__ = "spu_material"
     spu_material_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    material_id = db.Column(db.Integer, nullable=False)
-    material_model = db.Column(db.String(50), nullable=True)
+    material_id = db.Column(db.BigInteger, nullable=False)
     material_specification = db.Column(db.String(100), nullable=True)
+    material_model = db.Column(db.String(50), nullable=True)
     color = db.Column(db.String(40), nullable=True)
-    spu_rid = db.Column(db.String(50), nullable=False)
+    spu_rid = db.Column(db.String(50), nullable=True)
     
