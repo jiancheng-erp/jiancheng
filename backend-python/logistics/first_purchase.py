@@ -305,6 +305,7 @@ def get_shoe_bom_items():
         .filter(
             TotalBom.total_bom_rid == bom_rid,
             ProductionInstructionItem.material_type.in_(["S", "I", "O", "M", "H"]),
+            Material.material_name != "烫底"
         )
         .order_by(material_order, Supplier.supplier_name, Material.material_name)
         .all()

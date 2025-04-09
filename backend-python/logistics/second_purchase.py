@@ -23,7 +23,7 @@ from general_document.last_purchase_divide_order import generate_last_excel_file
 from general_document.package_purchase_divide_order import generate_package_excel_file
 from models import *
 from sqlalchemy.dialects.mysql import insert
-from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.expression import or_, and_
 from sqlalchemy.sql.expression import case
 
 second_purchase_bp = Blueprint("second_purrchase_bp", __name__)
@@ -305,7 +305,13 @@ def get_shoe_bom_items():
         )
         .filter(
             TotalBom.total_bom_rid == bom_rid,
-            ProductionInstructionItem.material_type.in_(["A"]),
+            or_(
+                ProductionInstructionItem.material_type == "A",
+                and_(
+                    ProductionInstructionItem.material_type == "H",
+                    Material.material_name == "烫底"
+                )
+            )
         )
         .order_by(material_order, Supplier.supplier_name, Material.material_name)
         .all()
@@ -943,6 +949,15 @@ def submit_purchase_divide_orders():
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
+        )
+        .outerjoin(
+            CraftSheetItem,
+            ProductionInstructionItem.production_instruction_item_id == CraftSheetItem.production_instruction_item_id,
+        )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
