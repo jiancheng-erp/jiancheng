@@ -1210,10 +1210,7 @@ export default {
         async getAllOrders() {
             // const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
             const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
-                {
-                    currentStaffId: this.staffId
-                }
+                `${this.$apiBaseUrl}/order/getallorders`
             )
             this.unfilteredData = response.data
             this.displayData = this.unfilteredData
