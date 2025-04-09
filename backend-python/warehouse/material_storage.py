@@ -16,6 +16,7 @@ from flask import Blueprint, current_app, jsonify, request, abort, Response
 from models import *
 from sqlalchemy import desc, func, text, literal, cast, JSON, or_
 import json
+from script.refresh_spu_rid import generate_spu_rid
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
@@ -678,6 +679,28 @@ def _empty_material_type():
     abort(Response(error_message, 400))
 
 
+def _create_spu_record(material_id, model, specification, color):
+    existed_spu = db.session.query(SPUMaterial).filter(
+        SPUMaterial.material_id == material_id,
+        SPUMaterial.material_model == model,
+        SPUMaterial.material_specification == specification,
+        SPUMaterial.color == color,
+    ).first()
+    if existed_spu:
+        return existed_spu.spu_material_id
+    rid = generate_spu_rid(material_id)
+    spu_record = SPUMaterial(
+        material_id=material_id,
+        material_model=model,
+        material_specification=specification,
+        color=color,
+        spu_rid=rid,
+    )
+    db.session.add(spu_record)
+    db.session.flush()
+    return spu_record.spu_material_id
+
+
 def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id):
     """
     处理用户手动输入的材料信息
@@ -729,6 +752,7 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
     material_model = material_model.replace(" ", "")
     material_specification = material_specification.replace(" ", "")
     material_color = material_color.replace(" ", "")
+    spu_material_id = _create_spu_record(material_id, material_model, material_specification, material_color)
 
     material_category = item.get("materialCategory", 0)
 
@@ -768,6 +792,7 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
                 inbound_specification=material_specification,
                 material_storage_color=material_color,
                 actual_inbound_unit=unit,
+                spu_material_id=spu_material_id,
             )
         elif material_category == 1:
             batch_info_type = (
@@ -790,6 +815,7 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
                 size_material_model=material_model,
                 size_material_color=material_color,
                 shoe_size_columns=shoe_size_columns,
+                spu_material_id=spu_material_id,
             )
         db.session.add(storage)
         db.session.flush()
@@ -2502,6 +2528,7 @@ def update_inbound_record():
             db.session.flush()
 
         actual_material_id = actual_material.material_id
+        spu_material_id = _create_spu_record(actual_material_id, material_model, material_specification, color_name)
 
         # find material storage based on
         # (actual_inbound_material_id, actual_inbound_unit, material_model, material_specification, material_storage_color, order_shoe_id)
@@ -2526,6 +2553,7 @@ def update_inbound_record():
                     actual_inbound_unit=actual_inbound_unit,
                     order_id=order_id,
                     order_shoe_id=order_shoe_id,
+                    spu_material_id=spu_material_id,
                 )
                 db.session.add(new_storage)
                 db.session.flush()
@@ -2562,6 +2590,7 @@ def update_inbound_record():
                     size_material_color=color_name,
                     order_id=order_id,
                     order_shoe_id=order_shoe_id,
+                    spu_material_id=spu_material_id,
                 )
                 db.session.add(new_storage)
                 db.session.flush()
