@@ -33,7 +33,7 @@ def sync_schema(app, db):
                 default_value = ""
                 if column_obj.default is not None:
                     default_value = f" DEFAULT '{column_obj.default.arg}'"
-                alter_stmt = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_obj.type} {nullable}{default_value}"
+                alter_stmt = f"ALTER TABLE `{table_name}` ADD COLUMN `{column_name}` {column_obj.type} {nullable}{default_value}"
                 print(f"Adding missing column: {column_name} to {table_name}")
                 connection.execute(text(alter_stmt))
 
@@ -54,14 +54,14 @@ def sync_schema(app, db):
                 print(f"Warning: Column '{column_name}' exists in DB but is missing in the model for table '{table_name}'.")
 
                 # Check if column contains data before deletion
-                result = connection.execute(text(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NOT NULL")).fetchone()
+                result = connection.execute(text(f"SELECT COUNT(*) FROM `{table_name}` WHERE `{column_name}` IS NOT NULL")).fetchone()
                 if result and result[0] > 0:
                     print(f"Error: Cannot remove column '{column_name}' from table '{table_name}' because it contains data. Ignore this column...")
                     break
 
                 # Safe removal if no data exists
                 try:
-                    connection.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {column_name}"))
+                    connection.execute(text(f"ALTER TABLE `{table_name}` DROP COLUMN `{column_name}`"))
                     print(f"Column '{column_name}' has been removed from {table_name}.")
                 except SQLAlchemyError as e:
                     print(f"Failed to drop column '{column_name}' from {table_name}: {e}")

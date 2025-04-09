@@ -1,7 +1,11 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
+from accounting import accounting
 from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res, format_datetime,format_outbound_type, accounting_audit_status_converter
 from sqlalchemy import func, and_
+from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
+from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
+import time
 
 
 from app_config import db
@@ -290,3 +294,53 @@ def get_outbound_display_columns():
                          "id":res_id})
         res_id += 1
     return jsonify({"selectableColumns":res_data}), 200
+
+@accounting_warehouse_bp.route("/accounting/createinboundexcelanddownload", methods=["GET"])
+def create_excel_and_download():
+    warehouse_filter = request.args.get('selectedWarehouse')
+    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
+    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    material_model_filter = request.args.get('materialModelFilter', type=str)
+    # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
+    # print(approval_status_filter)
+    query = (db.session.query(InboundRecord,InboundRecordDetail,MaterialStorage, Material, Supplier)
+                .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
+                .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+                .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
+                .join(Material, MaterialStorage.material_id == Material.material_id))
+    
+    if warehouse_filter:
+        query = query.filter(InboundRecord.warehouse_id == warehouse_filter)
+    if supplier_name_filter:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
+    if date_range_filter_start:
+        query = query.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
+    if date_range_filter_end:
+        query = query.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+    if material_model_filter:
+        query = query.filter(MaterialStorage.material_model.ilike(f"%{material_model_filter}%"))
+    # if approval_status_filter != []:
+    #     query = query.filter(InboundRecord.approval_status.in_(approval_status_filter))
+    total_count = query.distinct().count()
+    response_entities = query.distinct().all()
+    inbound_records = []
+    for inbound_record, inbound_record_detail, material_storage, material, supplier in response_entities:
+        res = db_obj_to_res(inbound_record, InboundRecord,attr_name_list=type_to_attr_mapping["InboundRecord"])
+        res = db_obj_to_res(inbound_record_detail, InboundRecordDetail,attr_name_list=type_to_attr_mapping['InboundRecordDetail'],initial_res=res)
+        res = db_obj_to_res(material_storage, MaterialStorage,attr_name_list=type_to_attr_mapping['MaterialStorage'],initial_res=res)
+        res = db_obj_to_res(material, Material,attr_name_list=type_to_attr_mapping['Material'],initial_res=res)
+        res = db_obj_to_res(supplier, Supplier,attr_name_list=type_to_attr_mapping['Supplier'],initial_res=res)
+        res[to_camel('inbound_datetime')] = format_datetime(inbound_record.inbound_datetime)
+        res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
+        inbound_records.append(res)
+    # Generate the Excel file using the inbound_summary data
+    template_path = FILE_STORAGE_PATH + "/财务入库总单模板.xlsx"
+    timestamp = str(time.time())
+    new_file_name = f"财务入库单总单输出_{timestamp}.xlsx"
+    save_path = FILE_STORAGE_PATH + "/财务部文件/入库总单/" + new_file_name
+    time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
+    generate_accounting_inbound_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_records)
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
+    
+    

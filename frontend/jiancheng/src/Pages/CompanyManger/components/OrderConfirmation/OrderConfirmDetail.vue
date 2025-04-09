@@ -384,7 +384,7 @@ function tableHeaderStyle({ row, rowIndex }) {
 }
 function imagerUrl(url) {
     if (url) {
-        return 'http://192.168.16.100:12667/' + url
+        return url
     }
 }
 function updateValue(row) {
