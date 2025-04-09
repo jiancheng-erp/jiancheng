@@ -8,7 +8,7 @@
         处理应付款
     </el-button>
     <!-- <el-switch v-model="showDetails"></el-switch> -->
-    <el-switch v-model="oldNewLayout"
+    <!-- <el-switch v-model="oldNewLayout"
             size="large"
             active-text="库存明细"
             inactive-text="金额明细"></el-switch>
@@ -40,9 +40,9 @@
             <el-table-column button > </el-table-column>
 
         </el-table>
-    </el-container>
+    </el-container> -->
 
-    <el-container v-if="!oldNewLayout">
+    <el-container>
         <el-table :data="display_data" >
             <el-table-column type="expand">
                 <template #default="props">
@@ -67,9 +67,9 @@
                 </template>
             </el-table-column>
             <el-table-column label="应付对象" prop="accountOwnerName"></el-table-column>
-            <el-table-column label="当前应付余额" prop="accountPayableBalance"></el-table-column>
-            <el-table-column label="总应付数额" prop="accountTotalPayable"></el-table-column>
-            <el-table-column label="总排款数额" prop="accountTotalPaid"></el-table-column>
+            <el-table-column label="当前应付余额" prop="accountPayableBalance" sortable :sort-method="sortByPayableBalance"></el-table-column>
+            <el-table-column label="总应付数额" prop="accountTotalPayable" sortable :sort-method="sortByTotalPayable"></el-table-column>
+            <el-table-column label="总排款数额" prop="accountTotalPaid" sortable></el-table-column>
         </el-table>
 
     </el-container>
@@ -138,6 +138,7 @@
 <script setup lang="ts">
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import axios from 'axios'
+import Decimal from 'decimal.js'
 import { ElMessage, ElMessageBox ,TabPaneName} from 'element-plus'
 import { ITEM_RENDER_EVT } from 'element-plus/es/components/virtual-list/src/defaults'
 
@@ -146,6 +147,7 @@ interface Transaction {
     toAccountName:string
     transactionAmount:number
 }
+Decimal.set({precision:2, rounding:5})
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 let display_data = ref([])
 let showDetails = ref(false)
@@ -167,6 +169,11 @@ async function getAllPayableInfo(){
 async function getAllPayableInfoNew(){
     const res = await axios.get($api_baseUrl + `/payable_management/get_payable_info_new`)
     display_data.value = res.data.payableInfo
+    display_data.value.forEach((account)=> {
+        account.accountPayableBalance = account.accountPayableBalance
+        account.accountTotalPayable = account.accountTotalPayable
+        account.accountTotalPaid =account.accountTotalPaid
+    })
     console.log(display_data.value)
 }
 async function getThirdGradeAccountInfo(){
@@ -187,6 +194,12 @@ async function submitNewTransactions(){
 //     console.log(1)
 //     return
 // }
+function sortByPayableBalance(a,b){
+    return (Decimal(a.accountPayableBalance).minus(Decimal(b.accountPayableBalance)))
+}
+function sortByTotalPayable(a,b){
+    return (Decimal(a.accountTotalPayable).minus(Decimal(b.accountTotalPayable)))
+}
 function openAddPayableTransactionDialog(){
     addPayableTransactionDialogVis.value = true
 }

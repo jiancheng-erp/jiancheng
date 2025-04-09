@@ -32,7 +32,6 @@ third_grade_prefix = "third_grade_"
 @accounts_management_bp.route("/accountsmanagement/firstgrade/addaccount", methods=["POST"])
 def add_first_grade_account():
     account_name = request.json.get("firstGradeAccountName")
-    print("account name is " + str(account_name))
     if not account_name:
         return jsonify({"msg":"account name cannot be empty"}), 400
     existing_entity = db.session.query(FirstGradeAccount).filter_by(account_name = account_name).first()
@@ -49,7 +48,6 @@ def add_first_grade_account():
 ## second grade accounts belongs to first grade account
 @accounts_management_bp.route("/accountsmanagement/secondgrade/addaccount", methods=["POST"])
 def add_second_grade_account():
-    print(request.json)
     account_name = request.json.get("secondGradeAccountName")
     account_belongs_to = request.json.get("firstGradeAccountBelonged")
     if not account_name:
@@ -106,8 +104,6 @@ def bound_payable_event():
     third_grade_account_id = request.json.get("boundThirdGradeAccountId")
     payable_event_type_enum = request.json.get("boundPayableEventTypeEnum")
     # verify if account is payable account
-    print("account id is " + str(third_grade_account_id))
-    print("event enum is " + payable_event_type_enum)
     account_entity = db.session.query(ThirdGradeAccount).filter_by(account_id = third_grade_account_id).first()
     if account_entity.account_type == ACCOUNT_TYPE_PAYABLE:
         if payable_event_type_enum in PAYABLE_EVENT_TO_TEXT.keys():
@@ -170,7 +166,6 @@ def get_bound_info_accounts():
     result = dict()
     result['payableBoundInfo'] = []
     result['recievableBoundInfo'] = []
-    print(result.keys())
     payable_entities = db.session.query(ThirdGradeAccount).filter_by(account_type = 1).all()
     recievable_entities = db.session.query(ThirdGradeAccount).filter_by(account_type = 0).all()
     for entity in payable_entities:
@@ -227,7 +222,6 @@ def get_all_accounts():
         sec_belongs_to = sec_entity["secondGradeAccountBelongsFg"]
         if sec_belongs_to != None:
             fir_acc_to_res[sec_belongs_to]["associatedSecondGradeAccount"].append(sec_entity)
-    print(fir_acc_to_res)
     return jsonify({"firstGradeAccountsMapping": fir_acc_to_res}), 200
 ## Update accounts
 

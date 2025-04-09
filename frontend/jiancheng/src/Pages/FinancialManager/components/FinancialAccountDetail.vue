@@ -49,15 +49,12 @@ onMounted(()=>{
 async function getAllAccounts(){
     const res = await axios.get($api_baseUrl + `/accountsmanagement/getallaccounts`)
     firstGradeAccounts.value = res.data.firstGradeAccountsMapping
-    console.log(firstGradeAccounts.value)
 }
 
 function updateSecondGradeTabs(targetName: TabPaneName){
-    console.log(firstGradeAccounts.value)
     secondGradeAccounts.value = firstGradeAccounts.value[targetName['paneName']].associatedSecondGradeAccount
 }
 function updateThirdGradeTabs(targetName: TabPaneName){
-    console.log(secondGradeAccounts.value)
     thirdGradeAccounts.value = secondGradeAccounts.value.find((account)=> account.secondGradeAccountId == targetName['paneName']).associatedThirdGradeAccount
 }
 function updateThirdGradeInfo(targetName: TabPaneName){
