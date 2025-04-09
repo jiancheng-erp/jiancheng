@@ -919,6 +919,7 @@
                             <el-col :span="6" :offset="0">
                                 <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
                                 <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(8)">添加烫底加工商（必填）</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(6)">{{ this.syncMaterialButtonText }}</el-button>
@@ -930,7 +931,7 @@
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='加工'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
+                                            <el-select v-model="scope.row.materialType" :disabled="scope.row.materialType==='加工' || scope.row.materialType==='烫底'" filterable @change="handleMaterialTypeSelect(scope.row, $event)" @blur="trimInput(scope.row, 'materialType')">
                                                 <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                             </el-select>
                                         </template>
@@ -946,6 +947,9 @@
                                                 </div>                                                
                                                 <div v-else-if="scope.row.materialType === '加工'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [10])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                                </div>
+                                                <div v-else-if="scope.row.materialType === '烫底'">
+                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
                                                 </div>
                                             </el-select>
                                         </template>
@@ -1471,6 +1475,11 @@ export default {
                     break
                 case 7:
                     this.defaultManuallyAddedMaterial.materialType = '里料'
+                    activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
+                    this.defaultManuallyAddedMaterial = newEntry
+                    break
+                case 8:
+                    this.defaultManuallyAddedMaterial.materialType = '烫底'
                     activeMaterialData.hotsoleMaterialData.push(this.defaultManuallyAddedMaterial)
                     this.defaultManuallyAddedMaterial = newEntry
                     break
