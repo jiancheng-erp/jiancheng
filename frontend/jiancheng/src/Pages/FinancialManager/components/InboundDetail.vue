@@ -9,7 +9,7 @@
     </el-tabs> -->
 
     <el-row >
-        <el-col :span="4" :offset="0">
+        <el-col :span="2" :offset="0">
             <el-select v-model="currentWarehouse" clearable filterable @change="updateInboundDisplayRecord">
             <el-option v-for="item in warehouseOptions"
             :key="item.warehouseId"
@@ -19,7 +19,7 @@
             </el-select>
         </el-col>
 
-        <el-col :span="4" :offset="0">
+        <el-col :span="2" :offset="0">
             <el-input v-model="supplierNameFilter" placeholder="供应商搜索" size="normal" clearable @change="updateInboundDisplayRecord"></el-input>
         </el-col>
         <el-col :span="4" :offset="0">
@@ -66,14 +66,31 @@
     
     
     <el-row :gutter="20">
-        < <el-checkbox-group v-model="checkedColumnValues" size="normal"  @change="updateCheckBox">
+    
+    <el-col :span=20>
+
+    
+    <el-checkbox-group v-model="checkedColumnValues" size="normal"  @change="updateCheckBox">
         <el-checkbox-button v-for="col in allColumns" :key="col.id" :label="col.id">
             {{col.labelName}}
         </el-checkbox-button>
     </el-checkbox-group>
+    </el-col>
+
+    <el-col :span="4">
+        <el-button type="primary" @click="deselectAllColumns">
+        清空选择
+        </el-button>
+
+        <el-button @click="selectAllColumns">
+            全选
+        </el-button>
+    </el-col>
+    
+
     </el-row>
     
-   
+
     <el-row :gutter="20">
         <el-table :data="displayRecords" border stripe>
         <el-table-column v-for="col in selectedColumns"
@@ -107,10 +124,11 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, onMounted, getCurrentInstance } from 'vue'
+import { ref, onMounted, getCurrentInstance, nextTick } from 'vue'
 import axios from 'axios'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { ElRow } from 'element-plus'
+import { update } from 'cypress/types/lodash'
 
 
 const { setAxiosToken } = useSetAxiosToken()
@@ -143,7 +161,7 @@ const currentApi = ref('')
 //                     value: () => {
 //                         const end = new Date()
 //                         const start = new Date()
-//                         start.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
+//                         starselectAllColumnst.setTime(start.getTime() - 3600 * 1000 * 24 * 30)
 //                         return [start, end]
 //                     }
 //                 }
@@ -164,13 +182,23 @@ onMounted(() => {
     mountApi()
     console.log(warehouseOptions.value)
 })
-
+function deselectAllColumns(){
+    checkedColumnValues.value = []
+    updateCheckBox()
+}
+function selectAllColumns(){
+    checkedColumnValues.value = allColumns.value.map((col) => col.id)
+    updateCheckBox()
+}
 function mountApi(){
     currentApi.value = "detail"
 }
-function switchColumnNDisplay(){
-    getSelectableColumns()
-    updateInboundDisplayRecord()
+async function switchColumnNDisplay(){
+    deselectAllColumns()
+    await getSelectableColumns()
+    currentPage.value = 1
+    await updateInboundDisplayRecord()
+    selectAllColumns()    
 }
 function updateCheckBox(){
     let temp = []
@@ -182,6 +210,7 @@ function updateCheckBox(){
         });
     });
     selectedColumns.value = temp;
+    console.log(selectedColumns.value)
 }
 function getCurrentPageInfo()
 {
