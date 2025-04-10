@@ -1,7 +1,10 @@
 <template>
     <el-row :gutter="10" style="margin-top: 20px">
         <el-col :span="2" :offset="0">
-            <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">订单导出</el-button>
+            <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">配码订单导出</el-button>
+        </el-col>
+        <el-col :span="2" :offset="0">
+            <el-button size="default" type="primary" @click="exportAmountOrder" style="margin-bottom: 20px;">数量订单导出</el-button>
         </el-col>
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
             <el-input v-model="filters.orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="filterOrders()"
@@ -132,7 +135,27 @@ function exportOrder() {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
-                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}`
+                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=0`,
+                    )
+                }
+            }
+        })
+    }
+}
+
+function exportAmountOrder() {
+    if (selectData.value.length === 0) {
+        ElMessage.warning('请选择要导出的订单')
+    } else {
+        ElMessageBox.alert('请确认选择订单为同一个客户订单', '', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            callback: async (action) => {
+                if (action === 'confirm') {
+                    // get order db id from selectData
+                    const exportOrderIds = selectData.value.map(order => order.orderDbId)
+                    window.open(
+                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=1`,
                     )
                 }
             }

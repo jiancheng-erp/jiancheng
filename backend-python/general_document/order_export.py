@@ -86,6 +86,53 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                 column_name = get_next_column_name(column_name)
                 ws[f"{column_name}{row}"] = unit_price * total_quantity_ratio * count
                 row += 1
+                
+def insert_series_data_amount(wb: Workbook, series_data, col, row):
+    ws = wb.active
+    for order_shoe_id in series_data:
+        # order_rid = series_data[order_shoe_id].get("order_rid")
+        customer_product_name = series_data[order_shoe_id].get("customerProductName")
+        for color_shoe in series_data[order_shoe_id]["shoes"]:
+            color_name = color_shoe.get("colorName")
+            img_url = color_shoe.get("imgUrl")
+            image = None
+            if img_url:
+                image = Image(os.path.join(IMAGE_UPLOAD_PATH, img_url))
+            unit_price = color_shoe.get("unitPrice")
+            packaging_info = color_shoe.get("packagingInfo")
+            column_name = "A"
+            for packaging_item in packaging_info:
+                total_quantity_ratio = packaging_item.get("totalQuantityRatio")
+                count = packaging_item.get("count")
+                packaging_info_name = packaging_item.get("packagingInfoName")
+                insert_row_with_format(ws, row, row + 1)
+                if image:
+                    image.height = 120
+                    image.width = 120
+                    ws.add_image(image, f"{column_name}{row}")
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = customer_product_name
+                # skip material
+                column_name = get_next_column_name(column_name)
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = color_name
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = packaging_info_name
+                column_name = get_next_column_name(column_name)
+                for i in SHOESIZERANGE:
+                    ws[f"{column_name}{row}"] = packaging_item.get(f"size{i}Ratio") * count
+                    column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = total_quantity_ratio
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = count
+                column_name = get_next_column_name(column_name)
+                # total pairs
+                ws[f"{column_name}{row}"] = total_quantity_ratio * count
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = unit_price
+                column_name = get_next_column_name(column_name)
+                ws[f"{column_name}{row}"] = unit_price * total_quantity_ratio * count
+                row += 1
 
 
 # Function to save the workbook after modification
@@ -101,6 +148,25 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     ws = wb.active
     # Insert the series data
     insert_series_data(wb, order_data, "A", 9)
+
+    # insert shoe size name
+    column = "F"
+    row = 8
+    for i in range(len(SHOESIZERANGE)):
+        ws[f"{column}{row}"] = metadata["sizeNames"][i]
+        column = get_next_column_name(column)
+
+    # Save the workbook
+    save_workbook(wb, new_file_path)
+    print(f"Workbook saved as {new_file_path}")
+    
+def generate_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+    print(f"Generating Excel file")
+    # Load template
+    wb = load_template(template_path, new_file_path)
+    ws = wb.active
+    # Insert the series data
+    insert_series_data_amount(wb, order_data, "A", 9)
 
     # insert shoe size name
     column = "F"
