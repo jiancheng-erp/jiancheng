@@ -209,7 +209,11 @@ def get_warehouse_inbound_summery():
     if date_range_filter_start:
         inbound_records = inbound_records.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
     if date_range_filter_end:
-        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+        ### next day
+        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
+        next_day_delta = timedelta(days=1)
+        query_compare_date = format_date((input_date_time + next_day_delta))
+        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= query_compare_date)
     inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
     # query = (db.session.query(SPUMaterial.material_id, SPUMaterial.material_model, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
     #          .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
@@ -253,8 +257,8 @@ def get_warehouse_inbound_summery():
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = unit_price
-        res['totalAmount'] = inbound_amount_sum
-        res['totalPrice'] = unit_price * inbound_amount_sum
+        res['totalAmount'] = round(inbound_amount_sum, 3)
+        res['totalPrice'] = round(unit_price * inbound_amount_sum, 4)
         res['materialModel'] = m_model
         res['materialSpecification'] = m_specification
         res['materialColor'] = color
@@ -318,7 +322,11 @@ def create_excel_and_download():
     if date_range_filter_start:
         query = query.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
     if date_range_filter_end:
-        query = query.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+        ### next day
+        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
+        next_day_delta = timedelta(days=1)
+        query_compare_date = format_date((input_date_time + next_day_delta))
+        query = query.filter(InboundRecord.inbound_datetime <= query_compare_date)
     if material_model_filter:
         query = query.filter(MaterialStorage.material_model.ilike(f"%{material_model_filter}%"))
     # if approval_status_filter != []:
@@ -359,7 +367,11 @@ def create_inbound_summary_excel_and_download():
     if date_range_filter_start:
         inbound_records = inbound_records.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
     if date_range_filter_end:
-        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+        ### next day
+        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
+        next_day_delta = timedelta(days=1)
+        query_compare_date = format_date((input_date_time + next_day_delta))
+        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= query_compare_date)
     inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
     query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
@@ -389,8 +401,8 @@ def create_inbound_summary_excel_and_download():
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = unit_price
-        res['totalAmount'] = inbound_amount_sum
-        res['totalPrice'] = unit_price * inbound_amount_sum
+        res['totalAmount'] = round(inbound_amount_sum, 3)
+        res['totalPrice'] = round(unit_price * inbound_amount_sum, 4)
         res['materialModel'] = m_model
         res['materialSpecification'] = m_specification
         res['materialColor'] = color
