@@ -1,12 +1,12 @@
 from flask import Blueprint, jsonify, request, send_file
 from accounting import accounting
 from models import *
-from api_utility import to_camel, to_snake, db_obj_to_res, format_datetime,format_outbound_type, accounting_audit_status_converter
+from api_utility import to_camel, to_snake, db_obj_to_res,format_date, format_datetime,format_outbound_type, accounting_audit_status_converter
 from sqlalchemy import func, and_
 from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import time
-
+from datetime import datetime, timedelta
 
 from app_config import db
 
@@ -45,8 +45,6 @@ name_en_cn_mapping_inbound = {
     "material_unit":"单位",
     "inbound_amount":"入库数量",
     "item_total_price":"总价",
-    "composite_unit_cost":"复合工艺单价",
-    "craft_name":"工艺名称",
     "approval_status":"审批状态",
     }
 name_mapping_inbound_summary = {
@@ -78,8 +76,6 @@ name_en_cn_mapping_outbound = {
     "material_unit":"单位",
     "outbound_amount":"出库数量",
     "item_total_price":"总价",
-    "composite_unit_cost":"复合工艺单价",
-    "craft_name":"工艺名称",
     "approval_status":"审批状态",
 }
 type_to_attr_mapping = {
@@ -164,7 +160,7 @@ def get_warehouse_inbound_record():
                 .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
                 .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
                 .join(Material, MaterialStorage.material_id == Material.material_id))
-    
+    print(date_range_filter_end)
     if warehouse_filter:
         query = query.filter(InboundRecord.warehouse_id == warehouse_filter)
     if supplier_name_filter:
@@ -172,7 +168,11 @@ def get_warehouse_inbound_record():
     if date_range_filter_start:
         query = query.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
     if date_range_filter_end:
-        query = query.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+        ### next day
+        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
+        next_day_delta = timedelta(days=1)
+        query_compare_date = format_date((input_date_time + next_day_delta))
+        query = query.filter(InboundRecord.inbound_datetime <= query_compare_date)
     if material_model_filter:
         query = query.filter(MaterialStorage.material_model.ilike(f"%{material_model_filter}%"))
     # if approval_status_filter != []:
