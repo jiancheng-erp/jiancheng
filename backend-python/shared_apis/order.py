@@ -13,6 +13,7 @@ from event_processor import EventProcessor
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE
 from general_document.order_export import (
     generate_excel_file,
+    generate_amount_excel_file,
 )
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
@@ -67,6 +68,99 @@ def get_order_shoe_by_order():
         .all()
     )
     return
+
+@order_bp.route("/order/getdevordershoebystatusfordoc", methods=["GET"])
+def get_dev_orders_for_doc():
+    _, staff, department = current_user_info()
+
+    shoe_department = department.department_name
+    print("department" + shoe_department)
+    status_val = DEV_ORDER_SHOE_STATUS
+    t_s = time.time()
+    status_val = request.args.get("ordershoestatus")
+    # order_shoe_by_department_table = (
+    #     db.session.query(
+    #         OrderShoe.shoe_id,
+    #         OrderShoe.order_shoe_id,
+    #         OrderShoe.order_id,
+    #         Shoe,
+    #     )
+    #     .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+    #     .filter(Shoe.shoe_department_id == shoe_department)
+    #     .first()
+    # )
+    if staff.staff_id == TECHNICAL_CLERK_ROLE:
+        entities = (
+            db.session.query(
+                Order,
+                Customer,
+                Shoe,
+                OrderShoeStatus.current_status_value,
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(
+                OrderShoeStatus,
+                OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+            .filter(OrderShoeStatus.current_status == status_val)
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .order_by(Order.start_date.asc())
+            .all()
+        )
+    else:
+        entities = (
+            db.session.query(
+                Order,
+                Customer,
+                Shoe,
+                OrderShoeStatus.current_status_value,
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(
+                OrderShoeStatus,
+                OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+            .filter(OrderShoeStatus.current_status == status_val)
+            .filter(Order.order_paper_color_document_status == "0")
+            .filter(Order.order_paper_production_instruction_status == "0")
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .filter(Shoe.shoe_department_id == shoe_department)
+            .order_by(Order.start_date.asc())
+            .all()
+        )
+
+    pending_orders, in_progress_orders = [], []
+    for entity in entities:
+        order, customer, shoe, status_value = entity
+        formatted_start_date = order.start_date.strftime("%Y-%m-%d")
+        formatted_deadline_date = order.end_date.strftime("%Y-%m-%d")
+        response_obj = {
+            "orderId": order.order_id,
+            "orderRid": order.order_rid,
+            "customerName": customer.customer_name,
+            "shoeRId": shoe.shoe_rid,
+            "statusValue": status_value,
+            "createTime": formatted_start_date,
+            "deadlineTime": formatted_deadline_date,
+        }
+        if status_value == 0:
+            pending_orders.append(response_obj)
+        elif status_value == 1:
+            in_progress_orders.append(response_obj)
+
+    result = {"pendingOrders": pending_orders, "inProgressOrders": in_progress_orders}
+    t_e = time.time()
+    print("Time Taken is ")
+    print(t_e - t_s)
+    return result
 
 
 @order_bp.route("/order/getdevordershoebystatus", methods=["GET"])
@@ -1302,6 +1396,7 @@ def get_technical_confirm_status():
 
 @order_bp.route("/order/exportorder", methods=["GET"])
 def export_order():
+    output_type = request.args.get("outputType", type=int)
     order_ids = request.args.get("orderIds").split(",")
     response = (
         db.session.query(
@@ -1329,6 +1424,7 @@ def export_order():
         .all()
     )
     order_shoe_mapping = {}
+    
     for row in response:
         (
             order,
@@ -1395,11 +1491,20 @@ def export_order():
     # add size_name of batch info type
     for i in range(len(SHOESIZERANGE)):
         meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))
-    template_path = os.path.join("./general_document", "订单模板.xlsx")
-    new_file_path = os.path.join("./general_document", "订单.xlsx")
-    new_name = f"订单.xlsx"
-    generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
-    return send_file(new_file_path, as_attachment=True, download_name=new_name)
+    template_path = os.path.join(FILE_STORAGE_PATH, "订单模板.xlsx")
+    if output_type == 0:
+        timestamp = str(time.time())
+        new_file_name = f"导出配码订单_{timestamp}.xlsx"
+        new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码订单", new_file_name)
+        generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+    else:
+        timestamp = str(time.time())
+        new_file_name = f"导出数量订单_{timestamp}.xlsx"
+        new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量订单", new_file_name)
+        generate_amount_excel_file(
+            template_path, new_file_path, order_shoe_mapping, meta_data
+        )
+    return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
 
 
 @order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
