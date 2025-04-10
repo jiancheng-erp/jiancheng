@@ -286,8 +286,8 @@ async function filterByDate(){
 }
 async function createAndDownloadInboundExcel() {
     const apiParams = getCurrentPageInfo();
-
-    try {
+    if (summaryOrDetail.value == true) {
+        try {
         const res = await axios.get($api_baseUrl + `/accounting/createinboundexcelanddownload`, {
             params: apiParams,
             responseType: 'blob', // Important: this tells Axios to handle binary data
@@ -298,7 +298,7 @@ async function createAndDownloadInboundExcel() {
 
         // Use the filename from the Content-Disposition header if available
         const disposition = res.headers['content-disposition'];
-        let filename = '财务部入库总单.xlsx'; // fallback name
+        let filename = '财务部入库明细单.xlsx'; // fallback name
         if (disposition && disposition.includes('filename=')) {
             const match = disposition.match(/filename="?(.+?)"?$/);
             if (match.length > 1) {
@@ -317,9 +317,39 @@ async function createAndDownloadInboundExcel() {
     } catch (error) {
         console.error("Failed to download Excel:", error);
     }
+    } else {
+        try {
+            const res = await axios.get($api_baseUrl + `/accounting/createinboundsummaryexcelanddownload`, {
+                params: apiParams,
+                responseType: 'blob', // Important: this tells Axios to handle binary data
+            });
 
+            // Create a Blob from the response data
+            const blob = new Blob([res.data], { type: res.headers['content-type'] });
 
+            // Use the filename from the Content-Disposition header if available
+            const disposition = res.headers['content-disposition'];
+            let filename = '财务部入库汇总单.xlsx'; // fallback name
+            if (disposition && disposition.includes('filename=')) {
+                const match = disposition.match(/filename="?(.+?)"?$/);
+                if (match.length > 1) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
 
+            // Create a link and trigger the download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (error) {
+            console.error("Failed to download Excel:", error);
+        }
+        
+    }
 }
 </script>
 <style>
