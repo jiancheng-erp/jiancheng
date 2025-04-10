@@ -1,5 +1,10 @@
 <template>
     <el-dialog title="搜索条件设置" v-model="localVisible" @close="handleClose" width="30%">
+        请选择仓库：
+        <el-select v-model="searchForm.warehouseId" filterable clearable @change="getMaterialTableData">
+            <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :value="item.warehouseId"
+                :label="item.warehouseName"></el-option>
+        </el-select>
         请选择材料类型：
         <el-select v-model="searchForm.materialTypeSearch" value-key="" placeholder="" clearable filterable>
             <el-option v-for="item in materialTypeOptions" :value="item" />
@@ -47,6 +52,10 @@ export default {
             required: true
         },
         materialNameOptions: {
+            type: Array,
+            required: true
+        },
+        warehouseOptions: {
             type: Array,
             required: true
         },
