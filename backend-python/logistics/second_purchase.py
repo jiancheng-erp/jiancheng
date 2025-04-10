@@ -16,6 +16,7 @@ from flask import Blueprint, jsonify, request, send_file, current_app
 from general_document.material_statistics import generate_material_statistics_file
 from general_document.purchase_divide_order import generate_excel_file
 from general_document.size_purchase_divide_order import generate_size_excel_file
+from general_document.hotsole_purchase_order import generate_hotsole_excel_file
 from general_document.cutmodel_purchase_divide_order import (
     generate_cut_model_excel_file,
 )
@@ -1129,13 +1130,14 @@ def submit_purchase_divide_orders():
         os.mkdir(
             os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order")
         )
-    customer_name = (
+    customer = (
         db.session.query(Customer)
         .join(Order, Order.customer_id == Customer.customer_id)
         .filter(Order.order_id == order_id)
         .first()
-        .customer_name
     )
+    customer_name = customer.customer_name if customer else ""
+    customer_brand = customer.customer_brand if customer else ""
 
     # Iterate through the query results and group items by PurchaseDivideOrder
     for (
@@ -1245,7 +1247,7 @@ def submit_purchase_divide_orders():
                 )  # 从 batch_info_type 生成客人码
 
             # 3️⃣ 根据 `material_name` 选择合适的尺码来源
-            if "大底" in material.material_name:
+            if "大底" in material.material_name or "烫底" in material.material_name:
                 size_values = order_size_table.get(
                     "大底", order_size_table["客人码"]
                 )  # 兜底使用 `客人码`
@@ -1256,41 +1258,60 @@ def submit_purchase_divide_orders():
             else:
                 size_values = order_size_table["客人码"]
             print(size_values)
-
+            if "烫底" in material.material_name:
+                obj = {
+                    "物品名称": material.material_name,
+                    "使用材料": bom_item.material_specification,
+                    "工厂型号": order_shoe_rid,
+                    "鞋面颜色": bom_item.bom_item_color,
+                    "工艺说明": bom_item.craft_name,
+                    "备注": bom_item.remark,
+                }
+                for index, size_value in enumerate(size_values):
+                    customer_value = order_size_table["客人码"][index]
+                    if customer_value in customer_size_map:
+                        actual_size = customer_size_map[customer_value]
+                        # 例如 7.5 -> 34
+                        obj[size_value] = getattr(
+                            purchase_order_item,
+                            f"size_{actual_size}_purchase_amount",
+                            0,
+                        )
+            else:
             # 4️⃣ 转换为实际尺码并构造最终的 obj
-            obj = {
-                "物品名称": (
-                    material.material_name
-                    + " "
-                    + (bom_item.material_model if bom_item.material_model else "")
-                    + " "
-                    + (
-                        bom_item.material_specification
-                        if bom_item.material_specification
+                obj = {
+                    "物品名称": (
+                        material.material_name
+                        + " "
+                        + (bom_item.material_model if bom_item.material_model else "")
+                        + " "
+                        + (
+                            bom_item.material_specification
+                            if bom_item.material_specification
+                            else ""
+                        )
+                        + " "
+                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                    ),
+                    "型号": (
+                        material.material_name + " " + purchase_order_item.material_model
+                        if purchase_order_item.material_model
                         else ""
-                    )
-                    + " "
-                    + (bom_item.bom_item_color if bom_item.bom_item_color else "")
-                ),
-                "型号": (
-                    material.material_name + " " + purchase_order_item.material_model
-                    if purchase_order_item.material_model
-                    else ""
-                ),
-                "类别": (
-                    purchase_order_item.material_specification
-                    if purchase_order_item.material_specification
-                    else ""
-                ),
-                "备注": bom_item.remark,
-            }
-            for index, size_value in enumerate(size_values):
-                customer_value = order_size_table["客人码"][index]
-                if customer_value in customer_size_map:
-                    actual_size = customer_size_map[customer_value]  # 例如 7.5 -> 34
-                    obj[size_value] = getattr(
-                        purchase_order_item, f"size_{actual_size}_purchase_amount", 0
-                    )
+                    ),
+                    "类别": (
+                        purchase_order_item.material_specification
+                        if purchase_order_item.material_specification
+                        else ""
+                    ),
+                    "备注": bom_item.remark,
+                }
+                for index, size_value in enumerate(size_values):
+                    customer_value = order_size_table["客人码"][index]
+                    if customer_value in customer_size_map:
+                        actual_size = customer_size_map[customer_value]  # 例如 7.5 -> 34
+                        obj[size_value] = getattr(
+                            purchase_order_item, f"size_{actual_size}_purchase_amount", 0
+                        )
 
             # 5️⃣ 添加到 seriesData
             if purchase_order_id not in size_purchase_divide_order_dict:
@@ -1299,6 +1320,7 @@ def submit_purchase_divide_orders():
                     "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                     "备注": purchase_divide_order.purchase_order_remark,
                     "客户名": customer_name,
+                    "商标": customer_brand,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
@@ -1308,13 +1330,14 @@ def submit_purchase_divide_orders():
 
             size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
             print(size_purchase_divide_order_dict)
-    customer_name = (
+    customer = (
         db.session.query(Order, Customer)
         .join(Customer, Order.customer_id == Customer.customer_id)
         .filter(Order.order_id == order_id)
         .first()
-        .Customer.customer_name
     )
+    customer_name = customer.Customer.customer_name
+    brand_name = customer.Customer.customer_brand
     template_path = os.path.join(FILE_STORAGE_PATH, "材料统计表模板.xlsx")
 
     materials_output_path = os.path.join(
@@ -1337,6 +1360,9 @@ def submit_purchase_divide_orders():
     # Convert the dictionary to a list
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
+    hotsole_template_path = os.path.join(
+        FILE_STORAGE_PATH, "烫底标准采购订单.xlsx"
+    )
     for purchase_order_id, data in purchase_divide_order_dict.items():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
@@ -1357,7 +1383,12 @@ def submit_purchase_divide_orders():
             purchase_order_id + "_" + data["供应商"] + ".xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
-        generate_size_excel_file(size_template_path, new_file_path, data)
+        if "烫底" in data["seriesData"][0]["物品名称"]:
+            generate_hotsole_excel_file(
+                hotsole_template_path, new_file_path, data
+            )
+        else:
+            generate_size_excel_file(size_template_path, new_file_path, data)
         generated_files.append(new_file_path)
     zip_file_path = os.path.join(
         FILE_STORAGE_PATH,
