@@ -1581,8 +1581,8 @@ class SPUMaterial(db.Model):
     __tablename__ = "spu_material"
     spu_material_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     material_id = db.Column(db.BigInteger, nullable=False)
-    material_specification = db.Column(db.String(100), nullable=True)
     material_model = db.Column(db.String(50), nullable=True)
+    material_specification = db.Column(db.String(100), nullable=True)
     color = db.Column(db.String(40), nullable=True)
     spu_rid = db.Column(db.String(50), nullable=True)
     

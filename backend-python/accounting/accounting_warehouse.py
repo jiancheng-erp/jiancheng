@@ -4,6 +4,7 @@ from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res,format_date, format_datetime,format_outbound_type, accounting_audit_status_converter
 from sqlalchemy import func, and_
 from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
+from general_document.accounting_summary_excel import generate_accounting_summary_excel
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import time
 from datetime import datetime, timedelta
@@ -343,4 +344,64 @@ def create_excel_and_download():
     generate_accounting_inbound_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_records)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
     
+@accounting_warehouse_bp.route("/accounting/createinboundsummaryexcelanddownload", methods=["GET"])
+def create_inbound_summary_excel_and_download():
+    warehouse_filter = request.args.get('selectedWarehouse')
+    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
+    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    material_model_filter = request.args.get('materialModelFilter', type=str)
+    # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
+    # print(approval_status_filter)
+    inbound_records = (db.session.query(InboundRecord.inbound_record_id))
+    if warehouse_filter:
+        inbound_records = inbound_records.filter(InboundRecord.warehouse_id == warehouse_filter)
+    if date_range_filter_start:
+        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
+    if date_range_filter_end:
+        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= date_range_filter_end)
+    inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
+    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
+             .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
+             .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
+             .join(Material, MaterialStorage.material_id == Material.material_id)
+             .join(SPUMaterial,and_(Material.material_id == SPUMaterial.material_id, MaterialStorage.material_model == SPUMaterial.material_model,
+                    MaterialStorage.material_specification == SPUMaterial.material_specification,
+                     MaterialStorage.material_storage_color == SPUMaterial.color))
+                     .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price)
+                    )
+
+    time_period_subquery = query.subquery()
+    
+    response_query = (db.session.query(time_period_subquery, Material, Supplier)
+                      .join(Material, time_period_subquery.c.material_id == Material.material_id)
+                      .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                      
+                      )
+    if supplier_name_filter:
+        response_query  = response_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
+    if material_model_filter:
+        response_query = response_query.filter(time_period_subquery.c.material_model.ilike(f"%{material_model_filter}%"))
+    total_count = response_query.distinct().count()
+    response_entities = response_query.distinct().all()
+    inbound_summary = []
+    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, inbound_amount_sum, material, supplier in response_entities:
+        res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
+        res['supplierName'] = supplier.supplier_name
+        res['unitPrice'] = unit_price
+        res['totalAmount'] = inbound_amount_sum
+        res['totalPrice'] = unit_price * inbound_amount_sum
+        res['materialModel'] = m_model
+        res['materialSpecification'] = m_specification
+        res['materialColor'] = color
+        res['spuRid'] = spu_rid
+        inbound_summary.append(res)
+    # Generate the Excel file using the inbound_summary data
+    template_path = FILE_STORAGE_PATH + "/财务入库汇总单模板.xlsx"
+    timestamp = str(time.time())
+    new_file_name = f"财务入库单汇总输出_{timestamp}.xlsx"
+    save_path = FILE_STORAGE_PATH + "/财务部文件/入库汇总单/" + new_file_name
+    time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
+    generate_accounting_summary_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_summary)
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
     
