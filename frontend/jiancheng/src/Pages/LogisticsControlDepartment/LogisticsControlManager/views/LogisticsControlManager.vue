@@ -28,6 +28,9 @@
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>耗材/固定资产订单生成</span>
                         </el-menu-item> -->
+                        <el-menu-item index="11" @click="handleMenuClick(11)">
+                            <span>仓库</span>
+                        </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>材料管理</span>
                         </el-menu-item>
@@ -75,6 +78,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue'
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
 import RevertDashboard from '@/components/RevertDashboard.vue'
 import TestPage from '../components/TestPage.vue'
+import MaterialStorage from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/MaterialStorage.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 export default {
     components: {
@@ -91,8 +95,8 @@ export default {
         PersonalInfo,
         LogisticsBatchTypeManagement,
         MultiPurchaseIssue,
-        RevertDashboard
-
+        RevertDashboard,
+        MaterialStorage,
     },
     data() {
         return {
@@ -140,6 +144,9 @@ export default {
                     break
                 case 10:
                     this.currentComponent = 'LogisticsBatchTypeManagement' 
+                case 11:
+                    this.currentComponent = 'MaterialStorage'
+                    break
             }
         },
         async logout() {

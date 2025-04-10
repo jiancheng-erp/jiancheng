@@ -7,7 +7,7 @@
             </el-button>
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions"
+            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions" :warehouse-options="warehouseOptions"
             :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
     </el-row>
     <el-row :gutter="20">
@@ -39,12 +39,6 @@
                 </el-form-item>
                 <el-form-item v-if="role == 23" prop="remark" label="备注">
                     <el-input v-model="outboundForm.remark"></el-input>
-                </el-form-item>
-                <el-form-item prop="warehouseId" label="仓库">
-                    <el-select v-model="outboundForm.warehouseId" filterable clearable @change="getMaterialTableData">
-                        <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :value="item.warehouseId"
-                            :label="item.warehouseName"></el-option>
-                    </el-select>
                 </el-form-item>
             </el-form>
         </el-col>
@@ -92,7 +86,7 @@
             </el-button>
         </div>
     </div>
-    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 30vh; width: 100%"
+    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 60vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -213,8 +207,9 @@
         </el-table>
     </el-dialog>
 
-    <OutboundDialog :visible="isConfirmOrderShoesDialogOpen" :outboundForm="outboundForm"
+    <OutboundDialog :visible="isConfirmOrderShoesDialogOpen" :parentOutboundForm="outboundForm"
         @update-visible="updateConfirmOrderShoesDialogVis" :selectedRows="selectedRowsCopy"
+        @update-outbound-form="updateOutboundForm"
         :outboundOptions="outboundOptions" :departmentOptions="departmentOptions" />
 </template>
 <script>
@@ -361,17 +356,18 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
             this.materialNameOptions = response.data
         },
+        updateOutboundForm(newVal) {
+            this.outboundForm = { ...newVal }
+        },
         updateConfirmOrderShoesDialogVis(newVal) {
             this.isConfirmOrderShoesDialogOpen = newVal
-            if (newVal == false) {
-                this.topSelected = []
-                this.bottomSelected = []
-                this.topTableData = []
-                this.bottomTableData = []
-                this.outboundForm = { ...this.formItemTemplate }
-                this.outboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
-                this.getMaterialTableData()
-            }
+            this.topSelected = []
+            this.bottomSelected = []
+            this.topTableData = []
+            this.bottomTableData = []
+            this.outboundForm = { ...this.formItemTemplate }
+            this.outboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
+            this.getMaterialTableData()
         },
         openSizeMaterialQuantityDialog(row) {
             this.currentSizeMaterialQuantityRow = row
@@ -445,7 +441,7 @@ export default {
                 "orderRId": this.searchForm.orderNumberSearch,
                 "shoeRId": this.searchForm.shoeNumberSearch,
                 "purchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
-                "warehouseId": this.outboundForm.warehouseId,
+                "warehouseId": this.searchForm.warehouseId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
             this.bottomTableData = response.data.result
