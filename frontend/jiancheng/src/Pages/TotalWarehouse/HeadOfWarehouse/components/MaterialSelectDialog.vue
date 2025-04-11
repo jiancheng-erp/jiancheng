@@ -303,12 +303,12 @@ export default {
                     orderRId: null,
                     shoeRId: null,
                     inboundQuantity: remainTotalQuantity,
-                    ...this.materialSelection,
+                    ...this.materialSelection[0],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
                     itemTotalPrice: (remainTotalQuantity * this.unitPrice).toFixed(3),
-                    inboundModel: this.materialSelection.materialModel,
-                    inboundSpecification: this.materialSelection.materialSpecification,
+                    inboundModel: this.materialSelection[0].materialModel,
+                    inboundSpecification: this.materialSelection[0].materialSpecification,
                 })
             }
             this.$emit("confirm", this.topTableData);

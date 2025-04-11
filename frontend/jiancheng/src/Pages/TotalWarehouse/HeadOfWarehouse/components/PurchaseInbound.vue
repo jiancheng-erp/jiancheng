@@ -62,7 +62,7 @@
                 </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.shoeRId" clearable :disabled="scope.row.disableEdit"
+                        <vxe-input v-model="scope.row.shoeRId" clearable :disabled="true"
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>

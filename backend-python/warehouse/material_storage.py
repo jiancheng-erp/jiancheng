@@ -1807,6 +1807,7 @@ def get_inbound_record_by_batch_id():
                 Material,
                 Supplier,
                 Order,
+                Shoe
             )
             .join(
                 InboundRecord,
@@ -1826,6 +1827,14 @@ def get_inbound_record_by_batch_id():
             .outerjoin(
                 Order,
                 Order.order_id == MaterialStorage.order_id,
+            )
+            .outerjoin(
+                OrderShoe,
+                OrderShoe.order_id == MaterialStorage.order_id,
+            )
+            .outerjoin(
+                Shoe,
+                Shoe.shoe_id == OrderShoe.shoe_id,
             )
             .filter(
                 InboundRecord.inbound_batch_id == inbound_batch_id,
@@ -1883,6 +1892,7 @@ def get_inbound_record_by_batch_id():
             material,
             supplier,
             order,
+            shoe
         ) = row
         unit_price = (
             round(record_detail.unit_price, 3) if record_detail.unit_price else 0.00
@@ -1914,6 +1924,7 @@ def get_inbound_record_by_batch_id():
             "orderRId": order.order_rid if order else None,
             "supplierName": supplier.supplier_name if supplier else None,
             "shoeSizeColumns": shoe_size_columns,
+            "shoeRId": shoe.shoe_rid if shoe else None,
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
