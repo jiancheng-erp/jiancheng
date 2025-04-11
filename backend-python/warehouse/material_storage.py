@@ -969,6 +969,7 @@ def _handle_purchase_inbound(data, next_group_id):
 
         # set cost
         unit_price = Decimal(item.get("unitPrice", 0))
+        storage.unit_price = unit_price
         record_detail.unit_price = unit_price
 
         item_total_price = Decimal(item.get("itemTotalPrice", 0))
