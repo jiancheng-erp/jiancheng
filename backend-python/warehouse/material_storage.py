@@ -308,6 +308,41 @@ def get_all_material_info():
     return {"result": result, "total": count_result}
 
 
+@material_storage_bp.route("/warehouse/getsizematerialstoragebystorageid", methods=["GET"])
+def get_size_material_storage_by_storage_id():
+    """
+    根据材料库存ID获取尺码材料库存信息
+    """
+    storage_id = request.args.get("storageId", None)
+    if not storage_id:
+        _no_storage_id_error()
+    storage = db.session.query(SizeMaterialStorage).filter(
+        SizeMaterialStorage.size_material_storage_id == storage_id
+    ).first()
+    if not storage:
+        return jsonify({"message": "没有找到该材料库存"}), 404
+
+    obj = {
+        "materialStorageId": storage.size_material_storage_id,
+        "estimatedInboundAmount": storage.total_estimated_inbound_amount,
+        "actualInboundAmount": storage.total_actual_inbound_amount,
+        "currentAmount": storage.total_current_amount,
+        "shoeSizeColumns": storage.shoe_size_columns,
+    }
+    for i, shoe_size in enumerate(SHOESIZERANGE):
+        estimated_inbound_amount = getattr(
+            storage, f"size_{shoe_size}_estimated_inbound_amount"
+        )
+        actual_inbound_amount = getattr(
+            storage, f"size_{shoe_size}_actual_inbound_amount"
+        )
+        current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
+        obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
+        obj[f"actualInboundAmount{i}"] = actual_inbound_amount
+        obj[f"currentAmount{i}"] = current_amount
+    return obj
+
+
 @material_storage_bp.route("/warehouse/getsizematerials", methods=["GET"])
 def get_size_materials():
     filters = {
@@ -756,6 +791,13 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
 
     material_category = item.get("materialCategory", 0)
 
+    order_id, order_shoe_id = None, None
+    order_rid = item.get("orderRId", None)
+    if order_rid:
+        order, order_shoe = _find_order_shoe(order_rid)
+        order_id = order.order_id
+        order_shoe_id = order_shoe.order_shoe_id
+
     # 普通材料
     if material_category == 0:
         storage_query = db.session.query(MaterialStorage).filter(
@@ -764,17 +806,22 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
             MaterialStorage.inbound_model == material_model,
             MaterialStorage.material_storage_color == material_color,
             MaterialStorage.actual_inbound_unit == actual_inbound_unit,
-            MaterialStorage.order_shoe_id.is_(None),
         )
     # 尺码材料
-    # TODO: 只入大底，中底
     elif material_category == 1:
         storage_query = db.session.query(SizeMaterialStorage).filter(
             SizeMaterialStorage.material_id == material_id,
             SizeMaterialStorage.size_material_specification == material_specification,
             SizeMaterialStorage.size_material_model == material_model,
             SizeMaterialStorage.size_material_color == material_color,
-            SizeMaterialStorage.order_shoe_id.is_(None),
+        )
+    if order_shoe_id:
+        storage_query = storage_query.filter(
+            MaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
+        )
+    else:
+        storage_query = storage_query.filter(
+            MaterialStorage.order_shoe_id.is_(None),
         )
     # 根据材料信息查找对应的材料库存
     # 如果没有找到，则创建新的材料库存
@@ -793,6 +840,8 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
                 material_storage_color=material_color,
                 actual_inbound_unit=unit,
                 spu_material_id=spu_material_id,
+                order_id=order_id,
+                order_shoe_id=order_shoe_id,
             )
         elif material_category == 1:
             batch_info_type = (
@@ -816,6 +865,8 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
                 size_material_color=material_color,
                 shoe_size_columns=shoe_size_columns,
                 spu_material_id=spu_material_id,
+                order_id=order_id,
+                order_shoe_id=order_shoe_id,
             )
         db.session.add(storage)
         db.session.flush()
@@ -883,12 +934,6 @@ def _handle_purchase_inbound(data, next_group_id):
 
         # 用户手填材料
         if not storage_id:
-            # 如果用户输入了订单号，则这是带订单号的材料，
-            # 不能让用户手动输入材料信息
-            order_rid: str = item.get("orderRId", None)
-            if order_rid:
-                error_message = json.dumps({"message": "不能手动输入订单材料信息"})
-                abort(Response(error_message, 400))
             storage_id, storage = _find_storage_in_db(
                 item, material_type_id, supplier_obj.supplier_id, batch_info_type_id
             )
@@ -924,6 +969,7 @@ def _handle_purchase_inbound(data, next_group_id):
 
         # set cost
         unit_price = Decimal(item.get("unitPrice", 0))
+        storage.unit_price = unit_price
         record_detail.unit_price = unit_price
 
         item_total_price = Decimal(item.get("itemTotalPrice", 0))
@@ -1034,112 +1080,6 @@ def _handle_production_remain_inbound(data, next_group_id):
     return inbound_record.inbound_rid
 
 
-def _handle_composite_inbound(data, next_group_id):
-    timestamp = data.get("currentDateTime", datetime.now())
-    remark = data.get("remark", None)
-    items = data.get("items", [])
-    formatted_timestamp = (
-        timestamp.replace("-", "").replace(" ", "").replace("T", "").replace(":", "")
-    )
-    inbound_rid = "IR" + formatted_timestamp + "T2"
-    supplier_name = data.get("supplierName", None)
-    batch_info_type_id = data.get("batchInfoTypeId", None)
-    warehouse_id = data.get("warehouseId", None)
-    material_type_id = data.get("materialTypeId", None)
-    if not material_type_id:
-        _empty_material_type()
-
-    supplier_obj = _handle_supplier_obj(supplier_name)
-
-    # create inbound record
-    inbound_record = InboundRecord(
-        inbound_datetime=formatted_timestamp,
-        inbound_type=2,
-        inbound_rid=inbound_rid,
-        inbound_batch_id=next_group_id,
-        supplier_id=supplier_obj.supplier_id,
-        remark=remark,
-        pay_method=data.get("payMethod", None),
-        warehouse_id=warehouse_id,
-    )
-    db.session.add(inbound_record)
-    db.session.flush()
-
-    total_price = 0
-    for item in items:
-        item: dict
-        material_category = item.get("materialCategory", 0)
-        storage_id = item.get("materialStorageId", None)
-
-        # 如果用户输入了订单号，则这是带订单号的材料，
-        # 不能让用户手动输入材料信息
-        order_rid: str = item.get("orderRId", None)
-        if order_rid:
-            error_message = json.dumps({"message": "不能手动输入订单材料信息"})
-            abort(Response(error_message, 400))
-
-        # 用户手填材料
-        if not storage_id:
-            storage_id, storage = _find_storage_in_db(
-                item, material_type_id, supplier_obj.supplier_id, batch_info_type_id
-            )
-        # 用户选择了材料
-        else:
-            if item["materialCategory"] == 0:
-                storage = MaterialStorage.query.get(storage_id)
-                # 修改实际入库的型号和规格
-                storage.inbound_model = item.get("inboundModel", None)
-                storage.inbound_specification = item.get("inboundSpecification", None)
-            elif item["materialCategory"] == 1:
-                storage = SizeMaterialStorage.query.get(storage_id)
-
-        # set inbound quantity
-        inbound_quantity = Decimal(item["inboundQuantity"])
-        record_detail = InboundRecordDetail(
-            inbound_record_id=inbound_record.inbound_record_id,
-            inbound_amount=inbound_quantity,
-            remark=item.get("remark", None),
-        )
-
-        # set cost
-        unit_price = Decimal(item.get("unitPrice", 0))
-        record_detail.composite_unit_cost = unit_price
-
-        item_total_price = Decimal(item.get("itemTotalPrice", 0))
-        total_price += item_total_price
-        record_detail.item_total_price = item_total_price
-
-        if material_category == 0:
-            inbound_record.is_sized_material = 0
-            record_detail.material_storage_id = storage_id
-            storage.actual_inbound_amount += inbound_quantity
-            storage.current_amount += inbound_quantity
-        elif material_category == 1:
-            inbound_record.is_sized_material = 1
-            record_detail.size_material_storage_id = storage_id
-            storage.total_actual_inbound_amount += inbound_quantity
-            storage.total_current_amount += inbound_quantity
-
-            for i, shoe_size in enumerate(SHOESIZERANGE):
-                if f"amount{i}" not in item:
-                    break
-                column_name = f"size_{shoe_size}_actual_inbound_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value + int(item[f"amount{i}"])
-                setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_current_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value + int(item[f"amount{i}"])
-                setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_inbound_amount"
-                setattr(record_detail, column_name, int(item[f"amount{i}"]))
-        db.session.add(record_detail)
-    inbound_record.total_price = total_price
-    return inbound_record.inbound_rid
-
-
 @material_storage_bp.route("/warehouse/inboundmaterial", methods=["POST"])
 def inbound_material():
     data = request.get_json()
@@ -1171,9 +1111,6 @@ def inbound_material():
     # 生产剩余入库
     elif inbound_type == 1:
         inbound_rid = _handle_production_remain_inbound(data, next_group_id)
-    # 复合入库
-    elif inbound_type == 2:
-        inbound_rid = _handle_composite_inbound(data, next_group_id)
     else:
         return jsonify({"message": "invalid inbound type"}), 400
 
@@ -1830,7 +1767,7 @@ def get_inbound_record_by_batch_id():
             )
             .outerjoin(
                 OrderShoe,
-                OrderShoe.order_id == MaterialStorage.order_id,
+                OrderShoe.order_id == Order.order_id,
             )
             .outerjoin(
                 Shoe,
@@ -1854,6 +1791,7 @@ def get_inbound_record_by_batch_id():
                 Material,
                 Supplier,
                 Order,
+                Shoe
             )
             .join(
                 InboundRecord,
@@ -1870,6 +1808,14 @@ def get_inbound_record_by_batch_id():
             .outerjoin(
                 Order,
                 Order.order_id == SizeMaterialStorage.order_id,
+            )
+            .outerjoin(
+                OrderShoe,
+                OrderShoe.order_id == Order.order_id,
+            )
+            .outerjoin(
+                Shoe,
+                Shoe.shoe_id == OrderShoe.shoe_id,
             )
             .filter(
                 InboundRecord.inbound_batch_id == inbound_batch_id,

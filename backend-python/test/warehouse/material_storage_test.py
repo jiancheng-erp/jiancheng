@@ -337,6 +337,259 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     assert record_detail[0].size_40_inbound_amount == 50.0
 
 
+# 用户手输订单材料
+def test_inbound_material_user_enter_order_material(client: FlaskClient):
+    """
+    测试用户手输订单非底材材料
+    """
+
+    # insert supplier
+    supplier = Supplier(
+        supplier_id=1,
+        supplier_name="深源皮革",
+    )
+
+    material = Material(
+        material_id=1,
+        material_name="布里",
+        material_type_id=2,
+        material_supplier=1,
+    )
+
+    material_type = MaterialType(
+        material_type_id=2,
+        material_type_name="面料",
+        warehouse_id=1,
+    )
+
+    warehouse = MaterialWarehouse(
+        material_warehouse_id=1, material_warehouse_name="面料仓"
+    )
+
+    order = Order(
+        order_id=1,
+        order_rid="W25-006",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
+
+    db.session.add(supplier)
+    db.session.add(material)
+    db.session.add(material_type)
+    db.session.add(warehouse)
+    db.session.add(order)
+    db.session.add(order_shoe)
+    db.session.commit()
+
+    # Use the test client to hit your Flask endpoint.
+    query_string = {
+        "inboundType": 0,
+        "currentDateTime": "2025-04-06 16:59:45",
+        "supplierName": "深源皮革",
+        "warehouseId": 1,
+        "remark": "123",
+        "items": [
+            {
+                "materialCategory": 0,
+                "materialColor": "",
+                "materialModel": "3701",
+                "materialName": "布里",
+                "materialSpecification": "测试123",
+                "orderId": 1,
+                "orderRId": "W25-006",
+                "shoeRId": "3E29515",
+                "supplierName": "日禾底材",
+                "unitPrice": "12.500",
+                "inboundModel": "3701",
+                "inboundSpecification": "测试123",
+                "inboundQuantity": 600,
+                "itemTotalPrice": "7500",
+            }
+        ],
+        "batchInfoTypeId": None,
+        "payMethod": "应付账款",
+        "materialTypeId": 2,
+    }
+    from flask import Response
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    assert response.status_code == 200
+    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
+
+    storage = (
+        db.session.query(MaterialStorage)
+        .filter_by(material_storage_id=1)
+        .first()
+    )
+
+    assert storage.material_model == "3701"
+    assert storage.material_specification == "测试123"
+    assert storage.actual_inbound_amount == 600
+    assert storage.current_amount == 600
+
+    record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+
+    assert record.total_price == 7500
+
+    record_detail = (
+        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
+    )
+
+    assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].unit_price == 12.5
+    assert record_detail[0].inbound_amount == 600
+    assert record_detail[0].item_total_price == 7500.0
+
+
+# 用户手输订单材料
+def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
+    """
+    测试用户手输订单底材材料
+    """
+
+    # insert supplier
+    supplier = Supplier(
+        supplier_id=1,
+        supplier_name="日禾底材",
+    )
+
+    material = Material(
+        material_id=1,
+        material_name="大底",
+        material_type_id=2,
+        material_supplier=1,
+    )
+
+    material_type = MaterialType(
+        material_type_id=2,
+        material_type_name="底材",
+        warehouse_id=1,
+    )
+
+    warehouse = MaterialWarehouse(
+        material_warehouse_id=1, material_warehouse_name="底材仓"
+    )
+
+    order = Order(
+        order_id=1,
+        order_rid="W25-006",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
+
+    db.session.add(supplier)
+    db.session.add(material)
+    db.session.add(material_type)
+    db.session.add(warehouse)
+    db.session.add(order)
+    db.session.add(order_shoe)
+    db.session.commit()
+
+    # Use the test client to hit your Flask endpoint.
+    query_string = {
+        "inboundType": 0,
+        "currentDateTime": "2025-04-06 16:59:45",
+        "supplierName": "日禾底材",
+        "warehouseId": 1,
+        "remark": "123",
+        "items": [
+            {
+                "materialCategory": 1,
+                "materialColor": "",
+                "materialModel": "9166",
+                "materialName": "大底",
+                "materialSpecification": "棕/后跟喷棕",
+                "orderId": 1,
+                "orderRId": "W25-006",
+                "shoeRId": "3E29515",
+                "supplierName": "日禾底材",
+                "unitPrice": "12.500",
+                "inboundModel": "9166",
+                "inboundSpecification": "棕/后跟喷棕",
+                "amount0": 0,
+                "amount1": 50,
+                "amount2": 100,
+                "amount3": 150,
+                "amount4": 150,
+                "amount5": 100,
+                "amount6": 50,
+                "amount7": 0,
+                "inboundQuantity": 600,
+                "itemTotalPrice": "7500",
+            }
+        ],
+        "batchInfoTypeId": None,
+        "payMethod": "应付账款",
+        "materialTypeId": 2,
+    }
+    from flask import Response
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    assert response.status_code == 200
+    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
+
+    storage = (
+        db.session.query(SizeMaterialStorage)
+        .filter_by(size_material_storage_id=1)
+        .first()
+    )
+
+    assert storage.size_material_model == "9166"
+    assert storage.size_material_specification == "棕/后跟喷棕"
+    assert storage.total_actual_inbound_amount == 600
+    assert storage.total_current_amount == 600
+
+    assert storage.size_35_actual_inbound_amount == 50.0
+    assert storage.size_36_actual_inbound_amount == 100.0
+    assert storage.size_37_actual_inbound_amount == 150.0
+    assert storage.size_38_actual_inbound_amount == 150.0
+    assert storage.size_39_actual_inbound_amount == 100.0
+    assert storage.size_40_actual_inbound_amount == 50.0
+
+    assert storage.size_35_current_amount == 50.0
+    assert storage.size_36_current_amount == 100.0
+    assert storage.size_37_current_amount == 150.0
+    assert storage.size_38_current_amount == 150.0
+    assert storage.size_39_current_amount == 100.0
+    assert storage.size_40_current_amount == 50.0
+
+    record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+
+    assert record.total_price == 7500
+
+    record_detail = (
+        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
+    )
+
+    assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].unit_price == 12.5
+    assert record_detail[0].inbound_amount == 600
+    assert record_detail[0].item_total_price == 7500.0
+
+    assert record_detail[0].size_35_inbound_amount == 50.0
+    assert record_detail[0].size_36_inbound_amount == 100.0
+    assert record_detail[0].size_37_inbound_amount == 150.0
+    assert record_detail[0].size_38_inbound_amount == 150.0
+    assert record_detail[0].size_39_inbound_amount == 100.0
+    assert record_detail[0].size_40_inbound_amount == 50.0
+
+
 def test_update_inbound_record(client: FlaskClient):
     """
     测试更新入库单

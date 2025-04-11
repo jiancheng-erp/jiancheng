@@ -33,13 +33,13 @@
                 <el-form-item prop="remark" label="备注">
                     <el-input v-model="inboundForm.remark"></el-input>
                 </el-form-item>
-                <!-- <el-form-item prop="shoeSize" label="码段">
+                <el-form-item prop="shoeSize" label="码段">
                     <el-select v-model="inboundForm.shoeSize" filterable clearable @change="insertShoeSizeColumns">
                         <el-option v-for="item in logisticsShoeSizes" :key="item.batchInfoTypeId"
                             :value="item.batchInfoTypeId" :label="item.batchInfoTypeName">
                         </el-option>
                     </el-select>
-                </el-form-item> -->
+                </el-form-item>
                 <el-form-item prop="payMethod" label="结算方式">
                     <el-select v-model="inboundForm.payMethod" filterable clearable>
                         <el-option v-for="item in ['应付账款', '现金']" :key="item" :value="item" :label="item"></el-option>
@@ -353,7 +353,6 @@ export default {
             inboundOptions: [
                 { label: '采购入库', value: 0 },
                 { label: '生产剩余', value: 1 },
-                { label: '复合入库', value: 2 }
             ],
             shoeSizeColumns: [],
             previewData: [],

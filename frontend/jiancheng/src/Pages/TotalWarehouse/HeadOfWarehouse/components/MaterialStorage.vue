@@ -199,7 +199,7 @@
         </el-tabs>
     </el-dialog>
     <el-dialog title="尺码材料库存" v-model="isViewSizeMaterialStockOpen" width="60%">
-        <el-table :data="filteredSizeMaterialStock" border stripe>
+        <el-table :data="sizeMaterialStockData" border stripe>
             <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
             <el-table-column prop="predictQuantity" label="采购数量"></el-table-column>
             <el-table-column prop="actualQuantity" label="入库数量"></el-table-column>
@@ -221,11 +221,6 @@ export default {
     components: {
         MaterialSearchDialog,
         OutboundDialog
-    },
-    computed: {
-        filteredSizeMaterialStock() {
-            return this.sizeMaterialStockData.filter(item => item.predictQuantity > 0)
-        }
     },
     data() {
         return {
@@ -403,9 +398,19 @@ export default {
             })
         },
         async viewSizeMaterialStock(row) {
-            let params = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
-            let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
-            this.sizeMaterialStockData = response.data
+            let params = { "storageId": row.materialStorageId }
+            let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerialstoragebystorageid`, { params })
+            let temp = []
+            for (let i=0; i < response.data.shoeSizeColumns.length; i++) {
+                let obj = {
+                    "shoeSizeName": response.data.shoeSizeColumns[i],
+                    "predictQuantity": response.data[`estimatedInboundAmount${i}`],
+                    "actualQuantity": response.data[`actualInboundAmount${i}`],
+                    "currentQuantity": response.data[`currentAmount${i}`],
+                }
+                temp.push(obj)
+            }
+            this.sizeMaterialStockData = temp
             this.isViewSizeMaterialStockOpen = true
         },
         updateDialogVisible(newVal) {
@@ -469,16 +474,12 @@ export default {
                 let sizeResponse = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordsforsizematerial`, { params })
                 this.sizeMaterialOutboundRecordData = sizeResponse.data
 
-                let params1 = { "sizeMaterialStorageId": row.materialStorageId, orderId: row.orderId, purchaseDivideOrderId: row.purchaseDivideOrderId }
-                let response1 = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params: params1 })
-                response1.data.forEach((element, index) => {
-                    let obj = {
-                        "prop": `amount${index}`,
-                        "label": element.shoeSizeName
+                this.shoeSizeColumns = this.currentRow.shoeSizeColumns.map((item, index) => {
+                    return {
+                        prop: `amount${index}`,
+                        label: item,
                     }
-                    tempShoeSizeColumns.push(obj)
-                });
-                this.shoeSizeColumns = [...tempShoeSizeColumns]
+                })
                 this.isRecordDialogVisible = true
             } else {
                 let params = { "storageId": row.materialStorageId }

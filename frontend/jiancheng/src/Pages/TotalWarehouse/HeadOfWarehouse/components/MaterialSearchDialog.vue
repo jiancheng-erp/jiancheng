@@ -1,7 +1,7 @@
 <template>
     <el-dialog title="搜索条件设置" v-model="localVisible" @close="handleClose" width="30%">
         请选择仓库：
-        <el-select v-model="searchForm.warehouseId" filterable clearable @change="getMaterialTableData">
+        <el-select v-model="searchForm.warehouseId" filterable clearable>
             <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :value="item.warehouseId"
                 :label="item.warehouseName"></el-option>
         </el-select>
