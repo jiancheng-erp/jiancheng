@@ -285,11 +285,20 @@ export default {
             for (let item of this.selectedRows) {
                 let newItem = { ...item, outboundQuantity: 0, remark: "", sizeMaterialOutboundTable: [] }
                 if (item.materialCategory == 1) {
-                    console.log(item)
-                    let params = { "sizeMaterialStorageId": item.materialStorageId, orderId: item.orderId, purchaseDivideOrderId: item.purchaseDivideOrderId }
-                    let response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getsizematerialbyid`, { params })
-                    newItem["sizeMaterialOutboundTable"] = response.data
-                    newItem["sizeMaterialOutboundTable"].forEach((row, index) => {
+                    let params = { "storageId": item.materialStorageId }
+                    let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerialstoragebystorageid`, { params })
+                    let temp = []
+                    for (let i = 0; i < response.data.shoeSizeColumns.length; i++) {
+                        let obj = {
+                            "shoeSizeName": response.data.shoeSizeColumns[i],
+                            "predictQuantity": response.data[`estimatedInboundAmount${i}`],
+                            "actualQuantity": response.data[`actualInboundAmount${i}`],
+                            "currentQuantity": response.data[`currentAmount${i}`],
+                        }
+                        temp.push(obj)
+                    }
+                    newItem.sizeMaterialOutboundTable = temp
+                    newItem.sizeMaterialOutboundTable.forEach((row, index) => {
                         row.outboundQuantity = 0
                         newItem[`amount${index}`] = 0
                     })
