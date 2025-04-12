@@ -135,6 +135,8 @@
     <el-row :gutter="20">
         <el-table :data="paginatedDisplayData" border stripe height="500">
             <el-table-column prop="orderRid" label="订单号" sortable/>
+            <el-table-column prop="orderSalesman" label="创建业务员"/>
+            <el-table-column prop="orderSupervisor" label="审核"/>
             <el-table-column prop="orderCid" label="客户订单号" />
             <el-table-column prop="customerName" label="客户名" />
             <el-table-column prop="customerBrand" label="客户商标" />
@@ -171,6 +173,7 @@
             layout="total,prev,pager,next,jumper"
             style="margin-top: 20px"
         ></el-pagination>
+        
     </el-row>
 
     <el-dialog title="创建订单鞋型填写" v-model="orderCreationInfoVis" width="100%" fullscreen :close-on-click-modal="false">
@@ -357,6 +360,12 @@
                     >
                     </el-input>
                 </el-col>
+                <el-col :span="2" :offset="2">
+                    <el-button type="primary" size="default" @click="openAddShoeDialog">
+                        添加新鞋型
+                    </el-button>
+                    
+                </el-col>
             </el-row>
             <el-table
                 :data="shoeTableData"
@@ -390,11 +399,16 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="shoeRid" label="鞋型编号"></el-table-column>
+                <el-table-column>
+                    <template #default="scope">
+                    <el-button type="primary" size="default" @click="openAddShoeTypeDialog(scope.row)">添加鞋款</el-button>
+                    </template>
+                </el-table-column>
             </el-table>
             <el-pagination
                 :current-page="currentOrderCreatePage"
                 :page-size="orderCreatePageSize"
-                :total="totalItems"
+                :total="shoeTotalItems"
                 @current-change="handleOrderCreatePageChange"
                 layout="total, prev, pager, next, jumper"
                 style="margin-top: 20px"
@@ -407,7 +421,58 @@
             </span>
         </template>
     </el-dialog>
+    
+    <el-dialog title="添加新鞋型" v-model="addShoeDialogVis" width="50%">
+        <el-form :model="shoeForm" label-width="120px" :inline="false">
+            <el-form-item label="鞋型编号">
+                <el-input v-model="shoeForm.shoeRid"></el-input>
+            </el-form-item>
+            <el-form-item label="设计师">
+                <el-input v-model="shoeForm.shoeDesigner"></el-input>
+            </el-form-item>
+            <el-form-item label="设计部门">
+                <el-select v-model="shoeForm.shoeDepartmentId" placeholder="请选择设计部门">
+                    <el-option label="开发一部" value="开发一部"></el-option>
+                    <el-option label="开发二部" value="开发二部"></el-option>
+                    <el-option label="开发三部" value="开发三部"></el-option>
+                    <el-option label="开发五部" value="开发五部"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="选择颜色">
+                <el-select v-model="shoeForm.colorIds" placeholder="请选择" multiple>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
+                        :value="item.value"></el-option>
+                </el-select>
+            </el-form-item>
+            
+        </el-form>
+        <template #footer>
+            <span>
+                <el-button @click="addShoeDialogVis = false">取消</el-button>
+                <el-button type="primary" @click="addNewShoe">确认上传</el-button>
+            </span>
+        </template>
+    </el-dialog>
 
+    <el-dialog title="添加鞋款" v-model="addShoeTypeDialogVis" width="50%">
+        <el-form :model="shoeColorForm" label-width="120px" :inline="false">
+            <el-form-item label="所属鞋型编号">
+                <el-input v-model="shoeIdToAdd" :disabled="true"></el-input>
+            </el-form-item>
+            <el-form-item label="选择颜色">
+                <el-select v-model="shoeColorForm.shoeTypeColors" placeholder="请选择" multiple>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
+                        :value="item.value"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span>
+                <el-button @click="addShoeTypeDialogVis = false">取消</el-button>
+                <el-button type="primary" @click="addShoeTypes">确认上传</el-button>
+            </span>
+        </template>
+    </el-dialog>
     <el-dialog title="创建订单详情填写" v-model="orderCreationSecondInfoVis" width="100%" fullscreen :close-on-click-modal="false">
         <el-row :gutter="20">
             <el-col :span="24" :offset="0">
@@ -697,7 +762,7 @@
 <script>
 import { Download, Upload } from '@element-plus/icons-vue'
 import axios from 'axios'
-import { ElMessage, ElPagination, ElMessageBox } from 'element-plus'
+import { ElMessage, ElPagination, ElMessageBox, ElButton } from 'element-plus'
 import { toggleRowStatus } from 'element-plus/es/components/table/src/util'
 
 export default {
@@ -735,6 +800,8 @@ export default {
             parentBoarder: false,
             childBoarder: false,
             addBatchInfoDialogVis: false,
+            addShoeDialogVis: false,
+            addShoeTypeDialogVis: false,
             Upload,
             batchNameFilter: '',
             orderRidFilter: '',
@@ -762,6 +829,15 @@ export default {
             curBatchType: {},
             userRole: '',
             userName: '',
+            shoeForm: {
+                shoeId: '',
+                shoeRid: '',
+                shoeDesigner: '',
+                shoeAdjuster: '',
+                colorIds: '',
+                shoeDepartmentId: ''
+            },
+            colorOptions: [],
             orderForm: {
                 orderRId: '',
                 orderCid: '',
@@ -829,6 +905,10 @@ export default {
                 size45Name: 'size45Ratio',
                 size46Name: 'size46Ratio'
             },
+            shoeColorForm:{
+                shoeId:'',
+                shoeTypeColors:'',
+            },
             shortcuts: [
                 {
                     text: '过去一周',
@@ -853,7 +933,7 @@ export default {
             sortRadio: 'asc',
             buttonText: '查看所有订单',
             buttonFlag: true,
-            totalItems: 0,
+            shoeTotalItems: 0,
             currentOrderCreatePage: 1,
             orderCreatePageSize: 20,
             orderStatusOption: ["全部订单", "需审批订单", "我发起的订单"],
@@ -885,17 +965,22 @@ export default {
         this.getAllCutomers()
         // this.getAllOrderStatus()
         this.getAllShoes()
+        this.getAllColors()
         this.getAllBatchTypes()
         this.initialStatusFilter()
     },
     methods: {
+        async getAllColors() {
+            const response = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
+            this.colorOptions = response.data
+        },
         initialStatusFilter() {
             if (this.role === '21') {
                 this.selectedOrderStatus = "我发起的订单"
                 this.handleOrderStatusChange(this.selectedOrderStatus)
             }
             else {
-                this.selectedOrderStatus = "全部订单"
+                this.selectedOrderStatus = "需审批订单"
                 this.handleOrderStatusChange(this.selectedOrderStatus)
             }
         },
@@ -990,6 +1075,73 @@ export default {
                 this.customerDisplayBatchData,
                 idField
             )
+        },
+        openAddShoeDialog(){
+            this.addShoeDialogVis = true
+        },
+        openAddShoeTypeDialog(row){
+            console.log(row)
+            this.shoeIdToAdd = row.shoeRid
+            this.shoeColorForm.shoeId = row.shoeId
+            this.shoeColorForm.shoeTypeColors = row.shoeTypeColors.map(color => color.value)
+            this.addShoeTypeDialogVis = true
+        },
+        addNewShoe() {
+            
+            this.$confirm('确认添加新鞋型？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                // this.currentShoeImageId = this.shoeForm.shoeRid
+                const response = await axios.post(
+                    `${this.$apiBaseUrl}/shoemanage/addshoe`,
+                    this.shoeForm
+                )
+                if (response.status === 200) {
+                    this.$message({
+                        type: 'success',
+                        message: '添加成功'
+                    })
+                    this.addShoeDialogVis = false
+                    this.shoeForm = {
+                        shoeId: '',
+                        shoeRid: '',
+                        shoeDesigner: '',
+                        shoeAdjuster: '',
+                        shoeDepartmentId: ''
+                    }
+                    this.shoeRidFilter=''
+                    await this.getAllShoes()
+                }
+            })
+        },
+        addShoeTypes(){
+            console.log(this.shoeColorForm)
+            this.shoeColorForm['colorId'] = this.shoeColorForm['shoeTypeColors']
+            this.$confirm('确认添加颜色？','提示',{
+                confirmButtonText:'确定',
+                cancelButtonText:'取消',
+                type:'warning'
+            }).then(async ()=> {
+                const response = await axios.post(
+                    `${this.$apiBaseUrl}/shoemanage/addshoetype`,
+                    this.shoeColorForm
+                )
+                if (response.status === 200) {
+                            this.$message({
+                                type: 'success',
+                                message: '上传成功'
+                            })
+                this.addShoeTypeDialogVis = false
+                this.shoeColorForm = {
+                    shoeId:'',
+                    shoeTypeColors:'',
+                    colorId:''
+                }
+                await this.getAllShoes()
+                }
+            })
         },
         openAddCustomerBatchDialog() {
             this.batchForm.customerId = this.newOrderForm.customerId
@@ -1228,6 +1380,7 @@ export default {
             this.unfilteredData = response.data
             this.displayData = this.unfilteredData
             this.totalItems = this.unfilteredData.length
+            this.currentPage = 1
         },
         // async getAllOrderStatus() {
         //     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorderstatus`)
@@ -1249,7 +1402,7 @@ export default {
             }
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {params})
             this.shoeTableData = response.data.shoeTable
-            this.totalItems = response.data.total
+            this.shoeTotalItems = response.data.total
         },
         async getOrderDocInfo(orderRid) {
             const response = await axios.get(`${this.$apiBaseUrl}/order/getorderdocinfo`, {
@@ -1344,6 +1497,7 @@ export default {
             this.indexToFilter.forEach((index) => this.filterOrderByFilterType(index + 1))
             this.filterOrderByStatus()
             this.totalItems = this.displayData.length
+            this.currentPage = 1
             return
         },
         filterOrderByStatus() {
@@ -1723,12 +1877,14 @@ export default {
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
+                    this.currentPage = 1
                 }
                 else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
+                    this.currentPage = 1
                 }
 
             }
@@ -1743,6 +1899,7 @@ export default {
                     console.log(this.unfilteredData)
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
+                    this.currentPage = 1
                 }
                 else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`,
@@ -1750,6 +1907,7 @@ export default {
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
+                    this.currentPage = 1
                 }
             }
         },
@@ -1777,6 +1935,8 @@ export default {
             this.unfilteredData = response.data
             this.displayData = response.data
             this.totalItems = response.data.length
+            this.currentPage = 1
+            
             this.radio = "all"
             this.sortRadio = "asc"
             }

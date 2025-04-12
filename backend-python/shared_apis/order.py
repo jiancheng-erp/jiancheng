@@ -27,8 +27,16 @@ ORDER_IN_PROD_STATUS = 9
 PACKAGING_SPECS_UPLOADED = "2"
 # 业务部经理角色码
 BUSINESS_MANAGER_ROLE = 4
+ORDER_STATUS_MANAGER_DISPLAY_MSG = {
+    0:"文员未提交",
+    1:"待审批"
+}
 # 业务部职员角色码
 BUSINESS_CLERK_ROLE = 21
+ORDER_STATUS_CLERK_DISPLAY_MSG = {
+    0:"未提交",
+    1:"已提交"
+}
 # 技术部文员
 TECHNICAL_CLERK_ROLE = 15
 
@@ -808,6 +816,7 @@ def get_display_orders_manager():
                 .order_by(Order.order_rid.asc())
                 .all()
             )
+        msg_mapping = ORDER_STATUS_MANAGER_DISPLAY_MSG
     elif current_user_role == BUSINESS_CLERK_ROLE:
         entities = (
             db.session.query(
@@ -826,9 +835,17 @@ def get_display_orders_manager():
             .order_by(Order.order_rid.asc())
             .all()
         )
+        msg_mapping = ORDER_STATUS_CLERK_DISPLAY_MSG
     else:
         return jsonify({"message": "invalid user role"}), 401
     result = []
+    department_staff_id_mapping = {}
+    staff_entities = (db.session.query(Staff)
+                      .filter_by(department_id = 10)
+                      .all())
+    for entity in staff_entities:
+        department_staff_id_mapping[entity.staff_id] = entity.staff_name
+    print(department_staff_id_mapping)
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
@@ -837,19 +854,13 @@ def get_display_orders_manager():
         if order_status_reference and order_status:
             order_status_message = order_status_reference.order_status_name
             if order_status.order_current_status == ORDER_CREATION_STATUS:
-                if (
-                    order_status.order_status_value != None
-                    and order_status.order_status_value == 0
-                ):
-                    order_status_message += " \n待提交"
-                elif (
-                    order_status.order_status_value != None
-                    and order_status.order_status_value == 1
-                ):
-                    order_status_message += " \n待审核下发"
+                if order_status.order_status_value != None:
+                    order_status_message += " \n" + msg_mapping[order_status.order_status_value]
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
-
+        print("debug")
+        print(order.salesman_id)
+        print(department_staff_id_mapping[order.salesman_id])
         result.append(
             {
                 "orderDbId": order.order_id,
@@ -863,6 +874,8 @@ def get_display_orders_manager():
                 "orderEndDate": formatted_end_date,
                 "orderStatus": order_status_message,
                 "orderStatusVal": order_status.order_current_status,
+                "orderSalesman":department_staff_id_mapping[order.salesman_id],
+                "orderSupervisor":department_staff_id_mapping[order.supervisor_id]
             }
         )
     return jsonify(result)
@@ -905,12 +918,12 @@ def get_all_orders():
                     order_status.order_status_value != None
                     and order_status.order_status_value == 0
                 ):
-                    order_status_message += " \n未填写财务信息"
+                    order_status_message += " \n业务员未提交"
                 elif (
                     order_status.order_status_value != None
                     and order_status.order_status_value == 1
                 ):
-                    order_status_message += " \n已填写 待下发"
+                    order_status_message += " \n待经理审核下发"
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
 

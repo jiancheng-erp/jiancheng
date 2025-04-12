@@ -21,9 +21,14 @@ def get_all_colors():
 @color_bp.route("/general/addnewcolor", methods=["POST"])
 def add_new_color():
     request_attr_names = {"colorName":"color_name", "colorNameEN":"color_en_name", "colorNameSP":"color_sp_name", "colorNameIT":"color_it_name"}
-    entity = Color()
-    for attr in request_attr_names.keys():
-        setattr(entity, request_attr_names[attr], request.json.get(attr))
-    db.session.add(entity)
-    db.session.commit()
-    return jsonify({"message":"OK"}), 200
+    color_cn_name = request.json.get("colorName")
+    existing = db.session.query(Color).filter_by(color_name = color_cn_name).first()
+    if not existing:
+        entity = Color()
+        for attr in request_attr_names.keys():
+            setattr(entity, request_attr_names[attr], request.json.get(attr))
+        db.session.add(entity)
+        db.session.commit()
+        return jsonify({"message":"OK"}), 200
+    else:
+        return jsonify({"message":"duplicate color"}), 500

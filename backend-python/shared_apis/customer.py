@@ -24,7 +24,7 @@ def get_all_customers():
 
 @customer_bp.route("/customer/getcustomerdetails", methods=["GET"])
 def get_customer_details():
-    customers = Customer.query.all()
+    customers = Customer.query.order_by(Customer.customer_name).all()
     result = []
     for customer in customers:
         result.append(

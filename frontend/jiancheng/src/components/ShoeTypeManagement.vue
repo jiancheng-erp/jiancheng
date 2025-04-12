@@ -35,7 +35,7 @@
                                 <template #default="scope">
                                     <el-button type="primary"
                                         @click="openReUploadImageDialog(scope.row)">重新上传鞋图</el-button>
-                                    <el-button type="danger" @click="deleteShoeModel(scope.row)">删除</el-button>
+                                    <el-button v-if="allowDelete" type="danger" @click="deleteShoeModel(scope.row)">删除</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -107,21 +107,28 @@
         </template>
     </el-dialog>
     <el-dialog title="添加新鞋型" v-model="addShoeDialogVis" width="50%">
-        <el-form :model="orderForm" label-width="120px" :inline="false">
+        <el-form :model="shoeForm" label-width="120px" :inline="false">
             <el-form-item label="鞋型编号">
-                <el-input v-model="orderForm.shoeRid"></el-input>
+                <el-input v-model="shoeForm.shoeRid"></el-input>
             </el-form-item>
             <el-form-item label="设计师">
-                <el-input v-model="orderForm.shoeDesigner"></el-input>
+                <el-input v-model="shoeForm.shoeDesigner"></el-input>
             </el-form-item>
             <el-form-item label="设计部门">
-                <el-select v-model="orderForm.shoeDepartmentId" placeholder="请选择设计部门">
+                <el-select v-model="shoeForm.shoeDepartmentId" placeholder="请选择设计部门">
                     <el-option label="开发一部" value="开发一部"></el-option>
                     <el-option label="开发二部" value="开发二部"></el-option>
                     <el-option label="开发三部" value="开发三部"></el-option>
                     <el-option label="开发五部" value="开发五部"></el-option>
                 </el-select>
             </el-form-item>
+            <el-form-item label="选择颜色">
+                <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
+                        :value="item.value"></el-option>
+                </el-select>
+            </el-form-item>
+            
         </el-form>
         <template #footer>
             <span>
@@ -131,12 +138,12 @@
         </template>
     </el-dialog>
     <el-dialog title="添加鞋款" v-model="shoeModel" width="50%">
-        <el-form :model="orderForm" label-width="120px" :inline="false">
+        <el-form :model="shoeForm" label-width="120px" :inline="false">
             <el-form-item label="所属鞋型编号">
                 <el-input v-model="colorModel" :disabled="true"></el-input>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="orderForm.colorId" placeholder="请选择" multiple>
+                <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple>
                     <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
@@ -150,15 +157,21 @@
         </template>
     </el-dialog>
     <el-dialog title="编辑鞋型" v-model="editShoeDialogVis" width="50%">
-        <el-form :model="orderForm" label-width="120px" :inline="false">
+        <el-form :model="shoeForm" label-width="120px" :inline="false">
             <el-form-item label="鞋型编号">
-                <el-input v-model="orderForm.shoeRid" :disabled="this.userRole == 21 ? true : false"></el-input>
+                <el-input v-model="shoeForm.shoeRid" :disabled="this.userRole == 21 ? true : false"></el-input>
             </el-form-item>
             <el-form-item label="设计师">
-                <el-input v-model="orderForm.shoeDesigner" :disabled="this.userRole == 21 ? true : false"></el-input>
+                <el-input v-model="shoeForm.shoeDesigner" :disabled="this.userRole == 21 ? true : false"></el-input>
+            </el-form-item>
+            <el-form-item label="选择颜色">
+                <el-select v-model="shoeForm.shoeTypeColors" placeholder="请选择" multiple>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
+                        :value="item.value"></el-option>
+                </el-select>
             </el-form-item>
             <el-form-item label="设计部门">
-                <el-select v-model="orderForm.shoeDepartmentId" :disabled="this.userRole == 21 ? true : false">
+                <el-select v-model="shoeForm.shoeDepartmentId" :disabled="this.userRole == 21 ? true : false">
                     <el-option label="开发一部" value="开发一部"></el-option>
                     <el-option label="开发二部" value="开发二部"></el-option>
                     <el-option label="开发三部" value="开发三部"></el-option>
@@ -204,7 +217,7 @@ export default {
             pageSize:20,
             totalItems:0,
             fileList: [],
-            orderForm: {
+            shoeForm: {
                 shoeId: '',
                 shoeRid: '',
                 shoeDesigner: '',
@@ -247,6 +260,9 @@ export default {
             return {
                 Authorization: `Bearer ${this.token}`
             }
+        },
+        allowDelete() {
+            return userRole != 21
         }
     },
     methods: {
@@ -305,7 +321,7 @@ export default {
         },
         openAddShoeDialog() {
             this.addShoeDialogVis = true
-            this.orderForm = {
+            this.shoeForm = {
                 shoeId: '',
                 shoeRid: '',
                 shoeDesigner: '',
@@ -314,7 +330,7 @@ export default {
             }
         },
         openEditShoeDialog(row) {
-            this.orderForm = row
+            this.shoeForm = row
             this.editShoeDialogVis = true
         },
         openReUploadImageDialog(row) {
@@ -379,10 +395,10 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(async () => {
-                this.currentShoeImageId = this.orderForm.shoeRid
+                this.currentShoeImageId = this.shoeForm.shoeRid
                 const response = await axios.post(
                     `${this.$apiBaseUrl}/shoemanage/addshoe`,
-                    this.orderForm
+                    this.shoeForm
                 )
                 if (response.status === 200) {
                     this.$message({
@@ -390,7 +406,7 @@ export default {
                         message: '添加成功'
                     })
                     this.addShoeDialogVis = false
-                    this.orderForm = {
+                    this.shoeForm = {
                         shoeId: '',
                         shoeRid: '',
                         shoeDesigner: '',
@@ -410,7 +426,7 @@ export default {
             }).then(async () => {
                 const response = await axios.post(
                     `${this.$apiBaseUrl}/shoemanage/editshoe`,
-                    this.orderForm
+                    this.shoeForm
                 )
                 if (response.status === 200) {
                     this.$message({
@@ -418,7 +434,7 @@ export default {
                         message: '修改成功'
                     })
                     this.editShoeDialogVis = false
-                    this.orderForm = {
+                    this.shoeForm = {
                         shoeId: '',
                         shoeRid: '',
                         shoeDesigner: '',
@@ -440,13 +456,14 @@ export default {
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(async () => {
-                    if (this.orderForm.colorId == '') {
+                    if (this.shoeForm.colorId == '') {
                         ElMessage.warning('请选择鞋款颜色')
                     } else {
-                        this.orderForm.shoeId = this.idModel
+                        this.shoeForm.shoeId = this.idModel
+                        console.log(this.shoeForm)
                         const response = await axios.post(
                             `${this.$apiBaseUrl}/shoemanage/addshoetype`,
-                            this.orderForm
+                            this.shoeForm
                         )
                         if (response.status === 200) {
                             this.$message({
@@ -454,7 +471,7 @@ export default {
                                 message: '上传成功'
                             })
                             this.shoeModel = false
-                            this.orderForm = {
+                            this.shoeForm = {
                                 shoeId: '',
                                 shoeRid: '',
                                 shoeDesigner: '',
