@@ -7,14 +7,11 @@
     <el-row :gutter="20">
         <el-col :span="4" :offset="0" style="white-space: nowrap">
             客户名称：
-            <el-input v-model="searchName" placeholder="请输入要筛选的客户名称" clearable></el-input>
+            <el-input v-model="searchName" placeholder="请输入要筛选的客户名称" clearable @input="getFilterData"></el-input>
         </el-col>
         <el-col :span="4" :offset="2" style="white-space: nowrap">
             客户商标：
-            <el-input v-model="searchBrand" placeholder="请输入要筛选的客户商标" clearable></el-input>
-        </el-col>
-        <el-col :span="2" :offset="1" style="white-space: nowrap">
-            <el-button type="primary" @click="getFilterData">筛选</el-button>
+            <el-input v-model="searchBrand" placeholder="请输入要筛选的客户商标" clearable @input="getFilterData"></el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -129,7 +126,7 @@
                         <el-button type="primary" size="default" @click="editBatchInfo(scope.row)"
                             >查看详情</el-button
                         >
-                        <el-button type="primary" size = "default" @click="deleteBatchInfo(scope.row)">
+                        <el-button  v-if ="allowEditCustomer" type="primary" size = "default" @click="deleteBatchInfo(scope.row)">
                         删除</el-button>
                     </template>
                 </el-table-column>
@@ -603,6 +600,8 @@ export default {
         },
         getFilterData() {
             if (this.searchName !== '' || this.searchBrand !== '') {
+                console.log(this.searchName)
+                console.log(this.searchBrand)
                 this.customerTableData = this.filterArray.filter((item) => {
                     if (this.searchName !== '' && this.searchBrand !== '') {
                         return item.customerName.indexOf(this.searchName) !== -1 && item.customerBrand.indexOf(this.searchBrand) !== -1

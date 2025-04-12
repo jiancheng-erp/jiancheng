@@ -92,9 +92,11 @@ def get_all_shoes_new():
         for attr in SHOE_TABLE_ATTRNAMES:
             res_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
         res_data[shoe.shoe_id]["shoeTypeData"] = []
+        res_data[shoe.shoe_id]["shoeTypeColors"] = []
 
     for shoe, shoe_type, color in entities:
         shoe_type_res = {}
+        color_entity = {}
         for attr in SHOETYPE_TABLE_ATTRNAMES:
             shoe_type_res[to_camel(attr)] = getattr(shoe_type, attr)
         shoe_type_res["colorName"] = color.color_name
@@ -104,6 +106,8 @@ def get_all_shoes_new():
             if shoe_type.shoe_image_url
             else None
         )
+        color_entity = {'label':color.color_name,'value':color.color_id}
+        res_data[shoe_type.shoe_id]['shoeTypeColors'].append(color_entity)
         res_data[shoe_type.shoe_id]["shoeTypeData"].append(shoe_type_res)
     result_data = list(res_data.values())
     time_t2 = time.time()

@@ -94,6 +94,8 @@ def edit_shoe_type():
 def add_shoe_type():
     color_ids = request.json.get("colorId")
     shoe_id = request.json.get("shoeId")
+    print(color_ids)
+    print(shoe_id)
     existing_color = []
     for color_id in color_ids:
         shoe_type_existing = (
@@ -154,6 +156,8 @@ def add_shoe():
     shoe_rid = request.json.get("shoeRid")
     shoe_desinger = request.json.get("shoeDesigner")
     shoe_department_id = request.json.get("shoeDepartmentId")
+    colors = request.json.get("colorIds")
+    print(colors)
     existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == shoe_rid).first()
     if existing_shoe:
         return jsonify({"error": "shoe_rid already exists"}), 200
@@ -163,6 +167,13 @@ def add_shoe():
         shoe_entity.shoe_designer = shoe_desinger
         shoe_entity.shoe_department_id = shoe_department_id
         db.session.add(shoe_entity)
+        db.session.flush()
+        shoe_id = shoe_entity.shoe_id
+        for color_id in colors:
+            shoe_type_entity = ShoeType()
+            shoe_type_entity.color_id = color_id
+            shoe_type_entity.shoe_id = shoe_id
+            db.session.add(shoe_type_entity)
         db.session.commit()
         return jsonify({"message": "shoe added"}), 200
 
