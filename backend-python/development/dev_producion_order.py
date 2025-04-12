@@ -9,6 +9,7 @@ from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
 import json
 from constants import DEFAULT_SUPPLIER
+from wechat_api.send_message_api import send_massage_to_users
 
 dev_producion_order_bp = Blueprint("dev_producion_order_bp", __name__)
 
@@ -197,6 +198,239 @@ def get_order_shoe_list():
 
     return jsonify(result)
 
+@dev_producion_order_bp.route("/devproductionorder/getordershoelistfordoc", methods=["GET"])
+def get_order_shoe_list_for_doc():
+    order_id = request.args.get("orderid")
+
+    # Querying the necessary data with joins and filters
+    entities = (
+        db.session.query(
+            Order,
+            OrderShoe,
+            OrderShoeType,
+            Shoe,
+            ShoeType,
+            Color,
+            Bom,
+            TotalBom,
+            PurchaseOrder,
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
+        .outerjoin(
+            Bom, OrderShoeType.order_shoe_type_id == Bom.order_shoe_type_id
+        )  # Assuming BOM is optional
+        .outerjoin(TotalBom, Bom.total_bom_id == TotalBom.total_bom_id)
+        .outerjoin(PurchaseOrder, PurchaseOrder.bom_id == TotalBom.total_bom_id)
+        .filter(Order.order_id == order_id)
+        .all()
+    )
+
+    # Initialize the result list
+    result_dict = {}
+
+    # Loop through the entities to build the result
+    for entity in entities:
+        (
+            order,
+            order_shoe,
+            order_shoe_type,
+            shoe,
+            shoe_type,
+            color,
+            bom,
+            total_bom,
+            purchase_order,
+        ) = entity
+        if order.order_paper_production_instruction_status and order.order_paper_color_document_status == "0":
+            status_string = "全部未递交"
+        elif order.order_paper_production_instruction_status and order.order_paper_color_document_status == "2":
+            status_string = "全部已确认递交"
+        elif order.order_paper_production_instruction_status and order.order_paper_color_document_status == "1":
+            status_string = "全部递交但未确认"
+        else:
+            status_string = "部分递交"
+
+        # Grouping by shoe_rid (inheritId) to avoid duplicate shoes
+        # Initialize the result dictionary for the shoe if not already present
+        if shoe.shoe_rid not in result_dict:
+            result_dict[shoe.shoe_rid] = {
+                "orderId": order.order_rid,
+                "orderShoeId": order_shoe.order_shoe_id,
+                "inheritId": shoe.shoe_rid,
+                "status": status_string,
+                "customerProductName": order_shoe.customer_product_name,
+                "designer": shoe.shoe_designer,
+                "editter": order_shoe.adjust_staff,
+                "typeInfos": [],  # Initialize list for type info (colors, etc.)
+                "colorSet": set(),  # Initialize set to track colors and prevent duplicate entries
+                "businessTechnicalRemark": order_shoe.business_technical_remark,
+                "businessMaterialRemark": order_shoe.business_material_remark,
+            }
+
+        # Check if this color already exists in typeInfos
+        existing_entry = next(
+            (
+                info
+                for info in result_dict[shoe.shoe_rid]["typeInfos"]
+                if info["color"] == color.color_name
+            ),
+            None,
+        )
+
+        # Prepare BOM and PurchaseOrder details
+        first_bom_id = None
+        first_bom_status = "未填写"
+        first_purchase_order_id = None
+        first_purchase_order_status = "未填写"
+        second_bom_id = None
+        second_bom_status = "未填写"
+        second_purchase_order_id = None
+        second_purchase_order_status = "未填写"
+
+        # Set BOM details based on bom_type
+        if bom:
+            if bom.bom_type == 0:
+                first_bom_id = bom.bom_rid
+                first_bom_status = {
+                    "1": "材料已保存",
+                    "2": "材料已提交",
+                    "3": "等待用量填写",
+                    "4": "用量填写已保存",
+                    "5": "用量填写已提交",
+                    "6": "用量填写已下发",
+                }.get(bom.bom_status, "未填写")
+            elif bom.bom_type == 1:
+                second_bom_id = bom.bom_rid
+                second_bom_status = {"1": "已保存", "2": "已提交", "3": "已下发"}.get(
+                    bom.bom_status, "未填写"
+                )
+
+        # Set PurchaseOrder details based on purchase_order_type
+        if purchase_order:
+            if purchase_order.purchase_order_type == "F":
+                first_purchase_order_id = purchase_order.purchase_order_rid
+                first_purchase_order_status = {
+                    "1": "已保存",
+                    "2": "已提交",
+                    "3": "已下发",
+                }.get(purchase_order.purchase_order_status, "未填写")
+            elif purchase_order.purchase_order_type == "S":
+                second_purchase_order_id = purchase_order.purchase_order_rid
+                second_purchase_order_status = {
+                    "1": "已保存",
+                    "2": "已提交",
+                    "3": "已下发",
+                }.get(purchase_order.purchase_order_status, "未填写")
+
+        # If the color entry already exists, update it with BOM details
+        if existing_entry:
+            print(existing_entry)
+            # Update only if fields are not already filled to prevent overwriting
+            if first_bom_id and existing_entry.get("firstBomId") == "未填写":
+                existing_entry["firstBomId"] = first_bom_id
+                existing_entry["firstBomStatus"] = first_bom_status
+                existing_entry["firstPurchaseOrderId"] = first_purchase_order_id
+                existing_entry["firstPurchaseOrderStatus"] = first_purchase_order_status
+
+            if second_bom_id and existing_entry.get("secondBomId") == "未填写":
+                existing_entry["secondBomId"] = second_bom_id
+                existing_entry["secondBomStatus"] = second_bom_status
+                existing_entry["secondPurchaseOrderId"] = second_purchase_order_id
+                existing_entry["secondPurchaseOrderStatus"] = (
+                    second_purchase_order_status
+                )
+        else:
+            # If the color doesn't exist, create a new entry in typeInfos
+            result_dict[shoe.shoe_rid]["typeInfos"].append(
+                {
+                    "orderShoeTypeId": order_shoe_type.order_shoe_type_id,
+                    "orderShoeRid": shoe.shoe_rid,
+                    "color": color.color_name,
+                    "image": (
+                        IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+                        if shoe_type.shoe_image_url
+                        else None
+                    ),
+                    "firstBomId": first_bom_id if first_bom_id else "未填写",
+                    "firstBomStatus": first_bom_status,
+                    "firstPurchaseOrderId": (
+                        first_purchase_order_id if first_purchase_order_id else "未填写"
+                    ),
+                    "firstPurchaseOrderStatus": first_purchase_order_status,
+                    "secondBomId": second_bom_id if second_bom_id else "未填写",
+                    "secondBomStatus": second_bom_status,
+                    "secondPurchaseOrderId": (
+                        second_purchase_order_id
+                        if second_purchase_order_id
+                        else "未填写"
+                    ),
+                    "secondPurchaseOrderStatus": second_purchase_order_status,
+                }
+            )
+
+        # Add the color to colorSet to prevent future duplicates
+        result_dict[shoe.shoe_rid]["colorSet"].add(color.color_name)
+
+    # Remove the colorSet before returning the result
+    for shoe_rid in result_dict:
+        result_dict[shoe_rid].pop("colorSet")
+
+    # Convert result_dict to a list of values
+    result = list(result_dict.values())
+
+    return jsonify(result)
+
+@dev_producion_order_bp.route("/devproductionorder/savedocumentpassstatus", methods=["POST"])
+def save_document_pass_status():
+    order_id = request.json.get("orderId")
+    is_production_instruction_passed = request.json.get("isProductionInstructionPassed")
+    is_color_card_passed = request.json.get("isColorCardPassed")
+    print(is_production_instruction_passed, is_color_card_passed)
+    order = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if order:
+        order.order_paper_production_instruction_status = '1' if is_production_instruction_passed else '0'
+        order.order_paper_color_document_status = '1' if is_color_card_passed else '0'
+        db.session.commit()
+        return jsonify({"message": "Document pass status saved successfully"})
+    else:
+        return jsonify({"message": "Order not found"}), 404
+    
+@dev_producion_order_bp.route("/devproductionorder/getdocumentpassstatus", methods=["GET"])
+def get_document_pass_status():
+    order_id = request.args.get("orderId")
+    order = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if order:
+        is_production_instruction_passed = order.order_paper_production_instruction_status
+        is_color_card_passed = order.order_paper_color_document_status
+        if is_production_instruction_passed == '0':
+            is_production_instruction_passed = False
+        else:
+            is_production_instruction_passed = True
+        if is_color_card_passed == '0':
+            is_color_card_passed = False
+        else:
+            is_color_card_passed = True
+        return jsonify({
+            "isProductionInstructionPassed": is_production_instruction_passed,
+            "isColorCardPassed": is_color_card_passed
+        })
+    else:
+        return jsonify({"message": "Order not found"}), 404
+    
+@dev_producion_order_bp.route("/devproductionorder/issuedocumentpassstatus", methods=["POST"])
+def issue_document_pass_status():
+    order_id = request.json.get("orderId")
+    order = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if order:
+        order.order_paper_production_instruction_status = '2'
+        order.order_paper_color_document_status = '2'
+        db.session.commit()
+        return jsonify({"message": "Document pass status issued successfully"})
+    
 
 @dev_producion_order_bp.route(
     "/devproductionorder/getnewproductioninstructionid", methods=["GET"]
@@ -1008,6 +1242,11 @@ def issue_production_order():
         db.session.add_all(event_arr)
         db.session.flush()
     db.session.commit()
+    # Send WeChat message to users
+    message = f"投产指令单已发出至一次用量填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    users = "SunHaoZheng"
+    send_massage_to_users(message, users)
+    
     return jsonify({"message": "Production order issued successfully"})
 
 
