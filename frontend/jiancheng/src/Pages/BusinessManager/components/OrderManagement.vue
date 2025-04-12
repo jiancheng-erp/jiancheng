@@ -13,6 +13,7 @@
             v-model="selectedOrderStatus"
             placeholder="请选择订单类型"
             size="default"
+            :disabled="role === '21'"
             @change="handleOrderStatusChange"
             style="width: 200px;width: 150px;"
             >
@@ -704,6 +705,7 @@ export default {
         return {
             token: localStorage.getItem('token'),
             staffId: localStorage.getItem('staffid'),
+            role: localStorage.getItem('role'),
             orderNotInCurStatus: '',
             orderInCurStatus: '',
             currentPage: 1,
@@ -879,13 +881,24 @@ export default {
     mounted() {
         this.$setAxiosToken()
         this.userInfo()
-        this.getAllOrders()
+        // this.getAllOrders()
         this.getAllCutomers()
         // this.getAllOrderStatus()
         this.getAllShoes()
         this.getAllBatchTypes()
+        this.initialStatusFilter()
     },
     methods: {
+        initialStatusFilter() {
+            if (this.role === '21') {
+                this.selectedOrderStatus = "我发起的订单"
+                this.handleOrderStatusChange(this.selectedOrderStatus)
+            }
+            else {
+                this.selectedOrderStatus = "全部订单"
+                this.handleOrderStatusChange(this.selectedOrderStatus)
+            }
+        },
         handleOrderCreatePageChange(newPage) {
             this.currentOrderCreatePage = newPage
             this.getAllShoes()
