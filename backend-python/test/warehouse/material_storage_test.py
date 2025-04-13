@@ -133,6 +133,7 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         inbound_specification="Spec A",
         actual_inbound_unit="米",
         estimated_inbound_amount=100,
+        spu_material_id=1,
     )
     db.session.add(supplier)
     db.session.add(material)
@@ -195,6 +196,7 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     assert record_detail[0].unit_price == 12.5
     assert record_detail[0].inbound_amount == 20.0
     assert record_detail[0].item_total_price == 250.0
+    assert record_detail[0].spu_material_id == 1
 
 
 # 用户选择订单材料

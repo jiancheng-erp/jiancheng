@@ -166,6 +166,7 @@ def get_all_material_info():
             MaterialStorage.inbound_model,
             MaterialStorage.actual_inbound_unit,
             MaterialStorage.actual_purchase_amount,
+            MaterialStorage.average_price,
             Material.material_id,
             Material.material_name,
             Material.material_unit,
@@ -208,6 +209,7 @@ def get_all_material_info():
             SizeMaterialStorage.total_estimated_inbound_amount.label(
                 "actual_purchase_amount"
             ),
+            SizeMaterialStorage.average_price,
             Material.material_id,
             Material.material_name,
             Material.material_unit,
@@ -262,6 +264,7 @@ def get_all_material_info():
             material_model,
             actual_inbound_unit,
             actual_purchase_amount,
+            average_price,
             material_id,
             material_name,
             material_unit,
@@ -285,6 +288,7 @@ def get_all_material_info():
             "actualInboundUnit": actual_inbound_unit,
             "currentAmount": current_amount,
             "unitPrice": unit_price,
+            "averagePrice": average_price,
             "totalPrice": (
                 0 if not unit_price else round(actual_inbound_amount * unit_price, 2)
             ),
@@ -965,6 +969,7 @@ def _handle_purchase_inbound(data, next_group_id):
             inbound_record_id=inbound_record.inbound_record_id,
             inbound_amount=inbound_quantity,
             remark=item.get("remark", None),
+            spu_material_id=storage.spu_material_id,
         )
 
         # set cost
@@ -1053,6 +1058,7 @@ def _handle_production_remain_inbound(data, next_group_id):
             inbound_record_id=inbound_record.inbound_record_id,
             inbound_amount=inbound_quantity,
             remark=item.get("remark", None),
+            spu_material_id=storage.spu_material_id,
         )
 
         if material_category == 0:
@@ -1157,9 +1163,9 @@ def _handle_production_outbound(data, next_group_id):
 
         # 用户选择了材料
         if item["materialCategory"] == 0:
-            storage = MaterialStorage.query.get(storage_id)
+            storage = db.session.query(MaterialStorage).filter(MaterialStorage.material_storage_id == storage_id).first()
         elif item["materialCategory"] == 1:
-            storage = SizeMaterialStorage.query.get(storage_id)
+            storage = db.session.query(SizeMaterialStorage).filter(SizeMaterialStorage.size_material_storage_id == storage_id).first()
 
         selected_order_rid = item.get("selectedOrderRId", None)
         order_shoe_id = None
@@ -1171,6 +1177,9 @@ def _handle_production_outbound(data, next_group_id):
             outbound_amount=outbound_quantity,
             remark=item.get("remark", None),
             order_shoe_id=order_shoe_id,
+            unit_price=storage.average_price,
+            item_total_price=outbound_quantity * storage.average_price,
+            spu_material_id=storage.spu_material_id,
         )
 
         if material_category == 0:
@@ -1271,6 +1280,7 @@ def _handle_composite_outbound(data, next_group_id):
             outbound_amount=outbound_quantity,
             remark=item.get("remark", None),
             order_shoe_id=order_shoe_id,
+            spu_material_id=storage.spu_material_id,
         )
 
         if material_category == 0:
@@ -1959,6 +1969,8 @@ def get_outbound_record_by_batch_id():
         db.session.query(
             OutboundRecordDetail.id,
             OutboundRecordDetail.outbound_amount,
+            OutboundRecordDetail.unit_price,
+            OutboundRecordDetail.item_total_price,
             OutboundRecordDetail.remark,
             MaterialStorage.material_storage_id,
             MaterialStorage.inbound_model,
@@ -2005,6 +2017,8 @@ def get_outbound_record_by_batch_id():
         db.session.query(
             OutboundRecordDetail.id,
             OutboundRecordDetail.outbound_amount,
+            OutboundRecordDetail.unit_price,
+            OutboundRecordDetail.item_total_price,
             OutboundRecordDetail.remark,
             SizeMaterialStorage.size_material_storage_id,
             SizeMaterialStorage.size_material_model,
@@ -2051,6 +2065,8 @@ def get_outbound_record_by_batch_id():
         (
             record_item_id,
             record_item_outbound_amount,
+            unit_price,
+            item_total_price,
             record_item_remark,
             material_storage_id,
             material_model,
@@ -2065,6 +2081,8 @@ def get_outbound_record_by_batch_id():
         ) = row
         obj = {
             "outboundQuantity": record_item_outbound_amount,
+            "unitPrice": unit_price,
+            "itemTotalPrice": item_total_price,
             "outboundRecordDetailId": record_item_id,
             "remark": record_item_remark,
             "materialName": material_name,
@@ -2189,14 +2207,13 @@ def get_outbound_records_for_material():
     for row in response:
         outbound_record, item, supplier, department = row
         outbound_destination = ""
-        outbound_address = ""
-        if row.outbound_type == 1:
+        if outbound_record.outbound_type == 1:
             outbound_purpose = "废料处理"
         # elif row.outbound_type == 2:
         #     outbound_purpose = "外包发货"
         #     outbound_destination =
         # outbound_address = row.outbound_address
-        elif row.outbound_type == 3:
+        elif outbound_record.outbound_type == 3:
             outbound_purpose = "外发复合"
             outbound_destination = supplier.supplier_name if supplier else None
         else:
@@ -2206,11 +2223,12 @@ def get_outbound_records_for_material():
             "outboundRId": outbound_record.outbound_rid,
             "timestamp": format_datetime(outbound_record.outbound_datetime),
             "outboundType": outbound_purpose,
+            "unitPrice": item.unit_price,
             "outboundAmount": item.outbound_amount,
+            "itemTotalPrice": item.item_total_price,
             "remark": item.remark,
             "outboundDestination": outbound_destination,
-            "picker": item.picker,
-            "outboundAddress": outbound_address,
+            "picker": outbound_record.picker,
         }
         result.append(obj)
     return result
@@ -2522,6 +2540,7 @@ def update_inbound_record():
             inbound_record_detail.inbound_amount = inbound_quantity
             inbound_record_detail.item_total_price = item_total_price
             inbound_record_detail.remark = remark
+            inbound_record_detail.spu_material_id = new_storage.spu_material_id
 
             old_storage.actual_inbound_amount -= old_inbound_amount
             old_storage.current_amount -= old_inbound_amount
