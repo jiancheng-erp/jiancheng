@@ -113,7 +113,7 @@ def _update_average_price(inbound_record):
             .subquery()
         )
         avg_prices = (
-            db.ssession.query(
+            db.session.query(
                 SizeMaterialStorage,
                 func.coalesce(
                     total_query.c.item_total_price / total_query.c.inbound_amount,

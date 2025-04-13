@@ -12,7 +12,7 @@
             </div>
             <el-tabs tab-position="left" style="height: 700px" class="demo-tabs" type="border-card">
                 <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
-                <el-tab-pane label="入库待审核"><InboundRecords /></el-tab-pane>
+                <el-tab-pane label="入库待审核"><InOutboundRecords /></el-tab-pane>
                 <el-tab-pane label="入库明细"><InboundDetails /></el-tab-pane>
                 <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane>
 
@@ -28,7 +28,7 @@ import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 
 // import FinancialDetailsDisplay from '../components/FinancialDetailsDisplay.vue'
-import InboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InboundRecords.vue'
+import InOutboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InOutboundRecords.vue'
 import InboundDetails from '../components/FinancialWarehouseDetail.vue'
 import FinancialPayableDetail from '../components/FinancialPayableDetail.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
