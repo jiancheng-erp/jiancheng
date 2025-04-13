@@ -124,12 +124,12 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4">
+        <!-- <el-col :span="4">
             <el-radio-group v-model="sortRadio" size="small" @change="switchSortLogic(sortRadio)">
                 <el-radio-button label="升序排列" value="asc" />
                 <el-radio-button label="降序排列" value="desc" />
             </el-radio-group>
-        </el-col>
+        </el-col> -->
 
     </el-row>
     <el-row :gutter="20">
