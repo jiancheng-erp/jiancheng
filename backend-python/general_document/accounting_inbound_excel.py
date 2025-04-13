@@ -26,7 +26,7 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         material_name = data.get("materialName", "")
         material_model = data.get("materialModel", "")
         material_specification = data.get("materialSpecification", "")
-        material_storage_color = data.get("materialStorageColor", "")
+        material_storage_color = data.get("color", "")
         unit_price = data.get("unitPrice", 0)
         material_unit = data.get("materialUnit", "")
         inbound_amount = data.get("inboundAmount", 0)
