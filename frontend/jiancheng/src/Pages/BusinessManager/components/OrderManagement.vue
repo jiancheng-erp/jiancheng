@@ -495,6 +495,7 @@
             </el-col>
         </el-row>
         <el-table
+            class="order-shoe-create-table"
             :data="this.newOrderForm.orderShoeTypes"
             border
             stripe
@@ -504,8 +505,9 @@
                     return row.shoeTypeId
                 }
             "
-            :default-expand-all="true"
-        >
+            :row-class-name="'persistent-shadow-row'"
+                :default-expand-all="true"
+            >
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.orderShoeTypeBatchInfo" border>
@@ -1952,3 +1954,27 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+/* Clean base style */
+::v-deep(.persistent-shadow-row > td) {
+  border-top: 5px solid #dcdfe6;
+  border-bottom: 5px solid #dcdfe6;
+  background-color: #fff;
+  padding: 12px 16px;
+}
+
+/* Left rounded corners */
+::v-deep(.persistent-shadow-row > td:first-child) {
+  border-left: 5px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+/* Right rounded corners */
+::v-deep(.persistent-shadow-row > td:last-child) {
+  border-right: 5px solid #dcdfe6;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+</style>
