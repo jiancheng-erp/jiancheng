@@ -105,11 +105,12 @@
         <el-table-column prop="materialSpecification" label="规格"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
+        <el-table-column prop="averagePrice" label="平均价" ></el-table-column>
         <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
         <el-table-column prop="supplierName" label="供应商"></el-table-column>
-        <el-table-column fixed="right" label="操作" width="150">
+        <el-table-column fixed="right" label="操作" width="120">
             <template #default="scope">
                 <el-button-group>
                     <el-button v-if="scope.row.materialCategory == 1" type="primary" size="small"
@@ -180,7 +181,9 @@
                     <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
                     <el-table-column prop="outboundType" label="用途"></el-table-column>
                     <el-table-column prop="timestamp" label="时间"></el-table-column>
+                    <el-table-column prop="unitPrice" label="平均价"></el-table-column>
                     <el-table-column prop="outboundAmount" label="数量"></el-table-column>
+                    <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
                     <el-table-column prop="outboundDestination" label="出库至"></el-table-column>
                     <el-table-column prop="picker" label="领料人"></el-table-column>
                     <el-table-column prop="remark" label="备注"></el-table-column>

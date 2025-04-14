@@ -71,13 +71,15 @@
             <el-table-column prop="materialSpecification" label="规格"></el-table-column>
             <el-table-column prop="colorName" label="颜色"></el-table-column>
             <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
+            <el-table-column prop="unitPrice" label="平均价"></el-table-column>
             <el-table-column prop="outboundQuantity" label="数量"></el-table-column>
+            <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
         </el-table>
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
-            <el-button type="primary" v-print="'#printView'">打印</el-button>
+            <!-- <el-button type="primary" v-print="'#printView'">打印</el-button>
             <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业出库单${currentRow.outboundRId}`, `printView`)">下载PDF</el-button>
+                @click="downloadPDF(`健诚鞋业出库单${currentRow.outboundRId}`, `printView`)">下载PDF</el-button> -->
         </template>
     </el-dialog>
 </template>

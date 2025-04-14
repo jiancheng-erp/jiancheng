@@ -128,7 +128,6 @@ import { ref, onMounted, getCurrentInstance, nextTick } from 'vue'
 import axios from 'axios'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { ElRow } from 'element-plus'
-import { update } from 'cypress/types/lodash'
 
 
 const { setAxiosToken } = useSetAxiosToken()
