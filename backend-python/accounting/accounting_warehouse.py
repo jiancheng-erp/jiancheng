@@ -218,7 +218,6 @@ def get_warehouse_inbound_record():
         res[to_camel('inbound_datetime')] = format_datetime(inbound_record.inbound_datetime)
         res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
         res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
-        res[to_camel('remark')]
         inbound_records.append(res)
     return jsonify({"inboundRecords":inbound_records, "total":total_count}), 200
 
@@ -377,6 +376,7 @@ def create_excel_and_download():
     total_count = query.distinct().count()
     response_entities = query.all()
     inbound_records = []
+    warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
     for inbound_record, inbound_record_detail, material, supplier, spu in response_entities:
         res = db_obj_to_res(inbound_record, InboundRecord,attr_name_list=type_to_attr_mapping["InboundRecord"])
         res = db_obj_to_res(inbound_record_detail, InboundRecordDetail,attr_name_list=type_to_attr_mapping['InboundRecordDetail'],initial_res=res)
@@ -385,6 +385,8 @@ def create_excel_and_download():
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list = type_to_attr_mapping['SPUMaterial'], initial_res=res)
         res[to_camel('inbound_datetime')] = format_datetime(inbound_record.inbound_datetime)
         res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
+        res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
+
         inbound_records.append(res)
     # Generate the Excel file using the inbound_summary data
     template_path = FILE_STORAGE_PATH + "/财务入库总单模板.xlsx"
