@@ -26,7 +26,7 @@
                 </el-col>
                 <el-col :span="12">
                     <span style="margin-right: 50px;">订单入库数量：{{ selectedInboundQuantity }}</span>
-                    <span>剩余到货数量：{{ totalInboundQuantity - selectedInboundQuantity }}</span>
+                    <span>剩余到货数量：{{ (totalInboundQuantity - selectedInboundQuantity).toFixed(5) }}</span>
                 </el-col>
             </el-row>
 
@@ -94,6 +94,7 @@
 <script>
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import Decimal from 'decimal.js';
 export default {
     props: {
         visible: {
@@ -288,16 +289,18 @@ export default {
                 return
             }
             for (let i = 0; i < this.topTableData.length; i++) {
+                let formatItemTotalPrice = new Decimal(this.topTableData[i].inboundQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
                 this.topTableData[i] = {
                     ...this.topTableData[i],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
                     inboundQuantity: this.topTableData[i].inboundQuantity,
-                    itemTotalPrice: (this.topTableData[i].inboundQuantity * this.unitPrice).toFixed(3),
+                    itemTotalPrice: formatItemTotalPrice,
                 }
                 console.log(this.topTableData[i])
             }
-            let remainTotalQuantity = this.totalInboundQuantity - this.selectedInboundQuantity
+            let remainTotalQuantity = new Decimal(this.totalInboundQuantity).minus(new Decimal(this.selectedInboundQuantity)).toDecimalPlaces(5).toNumber()
+            let remainTotalPrice = new Decimal(remainTotalQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
             if (remainTotalQuantity > 0) {
                 this.topTableData.push({
                     orderRId: null,
@@ -306,7 +309,7 @@ export default {
                     ...this.materialSelection[0],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
-                    itemTotalPrice: (remainTotalQuantity * this.unitPrice).toFixed(3),
+                    itemTotalPrice: remainTotalPrice,
                     inboundModel: this.materialSelection[0].materialModel,
                     inboundSpecification: this.materialSelection[0].materialSpecification,
                 })

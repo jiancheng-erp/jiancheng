@@ -1746,6 +1746,8 @@ def get_inbound_record_by_batch_id():
             db.session.query(
                 InboundRecordDetail,
                 MaterialStorage.material_storage_id,
+                MaterialStorage.material_model,
+                MaterialStorage.material_specification,
                 MaterialStorage.inbound_model,
                 MaterialStorage.inbound_specification,
                 MaterialStorage.material_storage_color,
@@ -1795,6 +1797,8 @@ def get_inbound_record_by_batch_id():
                 SizeMaterialStorage.size_material_storage_id,
                 SizeMaterialStorage.size_material_model,
                 SizeMaterialStorage.size_material_specification,
+                SizeMaterialStorage.size_material_model.label("inbound_model"),
+                SizeMaterialStorage.size_material_specification.label("inbound_specification"),
                 SizeMaterialStorage.size_material_color,
                 Material.material_unit,
                 SizeMaterialStorage.shoe_size_columns,
@@ -1842,6 +1846,8 @@ def get_inbound_record_by_batch_id():
             material_storage_id,
             material_model,
             material_specification,
+            inbound_model,
+            inbound_specification,
             material_storage_color,
             material_unit,
             shoe_size_columns,
@@ -1873,6 +1879,8 @@ def get_inbound_record_by_batch_id():
             "materialName": material.material_name,
             "materialModel": material_model,
             "materialSpecification": material_specification,
+            "inboundModel": inbound_model,
+            "inboundSpecification": inbound_specification,
             "colorName": material_storage_color,
             "materialUnit": material_unit,
             "materialStorageId": material_storage_id,
@@ -2403,6 +2411,18 @@ def _handle_delete_inbound_record_detail(
     db.session.delete(inbound_record_detail)
 
 
+def _handle_delete_storage(storage, is_sized_material):
+    total_purchase_order_id = storage.total_purchase_order_id
+    if is_sized_material == 0:
+        # search dependency
+        detail = db.session.query(InboundRecordDetail.material_storage_id == storage.material_storage_id).first()
+    else:
+        detail = db.session.query(InboundRecordDetail.size_material_storage_id == storage.size_material_storage_id).first()
+
+    if not total_purchase_order_id and not detail:
+        db.session.delete(storage)
+
+
 @material_storage_bp.route("/warehouse/updateinboundrecord", methods=["PATCH"])
 def update_inbound_record():
     data = request.get_json()
@@ -2438,6 +2458,8 @@ def update_inbound_record():
         order_rid = item.get("orderRId")
         material_model = item.get("materialModel")
         material_specification = item.get("materialSpecification")
+        inbound_model = item.get("inboundModel")
+        inbound_specification = item.get("inboundSpecification")
         color_name = item.get("colorName")
         actual_inbound_unit = item.get("actualInboundUnit")
         remark = item.get("remark")
@@ -2503,7 +2525,7 @@ def update_inbound_record():
             db.session.flush()
 
         actual_material_id = actual_material.material_id
-        spu_material_id = _create_spu_record(actual_material_id, material_model, material_specification, color_name)
+        spu_material_id = _create_spu_record(actual_material_id, inbound_model, inbound_specification, color_name)
 
         # find material storage based on
         # (actual_inbound_material_id, actual_inbound_unit, material_model, material_specification, material_storage_color, order_shoe_id)
@@ -2512,8 +2534,10 @@ def update_inbound_record():
             new_storage = MaterialStorage.query.filter(
                 MaterialStorage.actual_inbound_material_id == actual_material_id,
                 MaterialStorage.actual_inbound_unit == actual_inbound_unit,
-                MaterialStorage.inbound_model == material_model,
-                MaterialStorage.inbound_specification == material_specification,
+                MaterialStorage.material_model == material_model,
+                MaterialStorage.material_specification == material_specification,
+                MaterialStorage.inbound_model == inbound_model,
+                MaterialStorage.inbound_specification == inbound_specification,
                 MaterialStorage.material_storage_color == color_name,
                 MaterialStorage.order_shoe_id == order_shoe_id,
             ).first()
@@ -2524,11 +2548,14 @@ def update_inbound_record():
                     actual_inbound_material_id=actual_material_id,
                     material_specification=material_specification,
                     material_model=material_model,
+                    inbound_model=inbound_model,
+                    inbound_specification=inbound_specification,
                     material_storage_color=color_name,
                     actual_inbound_unit=actual_inbound_unit,
                     order_id=order_id,
                     order_shoe_id=order_shoe_id,
                     spu_material_id=spu_material_id,
+                    unit_price=unit_price,
                 )
                 db.session.add(new_storage)
                 db.session.flush()
@@ -2551,9 +2578,9 @@ def update_inbound_record():
             old_storage: SizeMaterialStorage = SizeMaterialStorage.query.get(storage_id)
             new_storage: SizeMaterialStorage = SizeMaterialStorage.query.filter(
                 SizeMaterialStorage.material_id == actual_material_id,
-                SizeMaterialStorage.size_material_model == material_model,
+                SizeMaterialStorage.size_material_model == inbound_model,
                 SizeMaterialStorage.size_material_specification
-                == material_specification,
+                == inbound_specification,
                 SizeMaterialStorage.size_material_color == color_name,
                 SizeMaterialStorage.order_shoe_id == order_shoe_id,
             ).first()
@@ -2561,12 +2588,14 @@ def update_inbound_record():
             if not new_storage:
                 new_storage = SizeMaterialStorage(
                     material_id=actual_material_id,
-                    size_material_specification=material_specification,
-                    size_material_model=material_model,
+                    size_material_specification=inbound_specification,
+                    size_material_model=inbound_model,
                     size_material_color=color_name,
                     order_id=order_id,
                     order_shoe_id=order_shoe_id,
                     spu_material_id=spu_material_id,
+                    shoe_size_columns=old_storage.shoe_size_columns,
+                    unit_price=unit_price,
                 )
                 db.session.add(new_storage)
                 db.session.flush()
