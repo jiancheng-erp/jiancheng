@@ -846,6 +846,8 @@ def get_display_orders_manager():
     for entity in staff_entities:
         department_staff_id_mapping[entity.staff_id] = entity.staff_name
     print(department_staff_id_mapping)
+    print(department_staff_id_mapping[current_staff_id])
+    
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")

@@ -398,6 +398,7 @@ export default {
             return
         },
         addNewShoe() {
+            console.log(this.shoeForm)
             this.$confirm('确认添加新鞋型？', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
@@ -416,7 +417,8 @@ export default {
                         shoeRid: '',
                         shoeDesigner: '',
                         shoeAdjuster: '',
-                        shoeDepartmentId: ''
+                        shoeDepartmentId: '',
+                        colorId:''
                     }
                     this.inheritIdSearch = ''
                     await this.getAllShoes()
@@ -452,6 +454,7 @@ export default {
                 this.shoeModel = true
                 this.colorModel = value.shoeRid
                 this.idModel = value.shoeId
+                this.shoeForm.colorId = value.shoeTypeColors.map(colorEntity => colorEntity.value)
             } else {
                 this.$confirm('确认上传鞋款？', '提示', {
                     confirmButtonText: '确定',

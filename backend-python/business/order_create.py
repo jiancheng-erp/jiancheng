@@ -233,6 +233,9 @@ def order_event_proceed():
 		if order_shoe_type_entity.unit_price == 0 or order_shoe_type_entity.currency_type == None:
 			price_all_filled = False
 	order_entity = db.session.query(Order).filter_by(order_id = order_id).first()
+	print(order_entity != None)
+	print(int(order_entity.production_list_upload_status) == 2)
+	print(price_all_filled)
 	if order_entity != None and int(order_entity.production_list_upload_status) == 2 and price_all_filled:
 		cur_time = format_date(datetime.datetime.now())
 		new_event = Event(staff_id = staff_id, handle_time = cur_time, operation_id = NEW_ORDER_STEP_OP, event_order_id = order_id)
