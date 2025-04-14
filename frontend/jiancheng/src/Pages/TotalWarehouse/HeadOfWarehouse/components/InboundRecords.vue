@@ -120,8 +120,8 @@
 
                                 <tr v-for="(item, index) in recordData.items" :key="index" align="center">
                                     <td>{{ item.materialName }}</td>
-                                    <td>{{ item.materialModel }}</td>
-                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.inboundModel }}</td>
+                                    <td>{{ item.inboundSpecification }}</td>
                                     <td>{{ item.colorName }}</td>
                                     <td>{{ item.actualInboundUnit }}</td>
                                     <td>{{ item.orderRId }}</td>
@@ -203,12 +203,12 @@
                     </el-table-column>
                     <el-table-column label="型号" width="150">
                         <template #default="scope">
-                            <el-input v-model="scope.row.materialModel"></el-input>
+                            <el-input v-model="scope.row.inboundModel"></el-input>
                         </template>
                     </el-table-column>
                     <el-table-column label="规格" width="150">
                         <template #default="scope">
-                            <el-input v-model="scope.row.materialSpecification" type="textarea" autosize></el-input>
+                            <el-input v-model="scope.row.inboundSpecification" type="textarea" autosize></el-input>
                         </template>
                     </el-table-column>
                     <el-table-column label="颜色" width="150">
