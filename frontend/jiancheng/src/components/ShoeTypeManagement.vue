@@ -7,9 +7,16 @@
             鞋型号搜索：
             <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes" :suffix-icon="Search"></el-input>
         </el-col>
-        <el-col :span="2" :offset="2">
-            <el-button type="primary" @click="openShoeColorManagementDialog"> 颜色管理 </el-button>
+        <el-col :span="6" :offset="10">
+            <el-button type="primary" @click="openAddShoeDialog">添加新鞋型</el-button>
+            <el-button type="primary" icon="Edit" @click="openShoeColorDialog">添加鞋款颜色</el-button>
         </el-col>
+
+        <el-col :span="2" :offset="0">
+            <el-button v-if='userRole == 4' type="warning" @click="openShoeColorManagementDialog"> 颜色管理 </el-button>
+        </el-col>
+        
+
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
@@ -54,10 +61,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="0">
-        <el-col :span="8" :offset="0">
-            <el-button type="primary" @click="openAddShoeDialog">添加新鞋型</el-button>
-            <el-button type="primary" icon="Edit" @click="openShoeColorDialog">添加鞋款颜色</el-button>
-        </el-col>
+        
         <el-col :span="8" :offset="2">
             <el-pagination
                 @size-change="handleSizeChange"
@@ -88,11 +92,9 @@
         </el-table>
     </el-dialog>
     <el-dialog title="添加鞋款颜色" v-model="addShoeColorDialogVis" width="50%">
-        <el-form :model="colorForm" label-width="120px" :inline="false">
-            <el-form-item label="颜色中文名称">
-                <el-input v-model="colorForm.colorName"></el-input>
-            </el-form-item>
-            <el-form-item label="颜色英文名称">
+                <el-input v-model="colorForm.colorName" @input="filterColorInfoList"></el-input>
+
+            <!-- <el-form-item label="颜色英文名称">
                 <el-input v-model="colorForm.colorNameEN"></el-input>
             </el-form-item>
             <el-form-item label="颜色西语名称">
@@ -100,8 +102,13 @@
             </el-form-item>
             <el-form-item label="颜色意语名称">
                 <el-input v-model="colorForm.colorNameIT"></el-input>
-            </el-form-item>
-        </el-form>
+            </el-form-item> -->
+        <el-table :data="displayColorInfoList" row-key="colorId" ref="colorSelectionTable" >
+            <el-table-column sortable prop="colorNameCN" label="颜色中文"></el-table-column>
+            <el-table-column prop="colorNameEN" label="颜色英文"></el-table-column>
+            <el-table-column prop="colorNameSP" label="颜色西语"></el-table-column>
+            <el-table-column sortable prop="colorBoundCount" label="当前颜色绑定鞋款"></el-table-column>
+        </el-table>
         <template #footer>
             <span>
                 <el-button @click="addShoeColorDialogVis = false">取消</el-button>
@@ -275,6 +282,12 @@ export default {
         },
         allowDelete() {
             return userRole != 21
+        },
+        userIsManager(){
+            return userRole == 4
+        },
+        userIsClerk(){
+            return userRole == 21
         }
     },
     methods: {
@@ -304,6 +317,16 @@ export default {
         async updateColorInfo() {
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/shoecolorinfo`)
             this.colorInfoList = response.data.colorInfo
+            this.displayColorInfoList = this.colorInfoList
+            
+        },
+        filterColorInfoList(){
+            console.log(this.colorInfoList)
+            console.log(this.colorForm.colorName)
+            this.displayColorInfoList = this.colorInfoList.filter(color => color.colorNameCN.includes(this.colorForm.colorName))
+            console.log(this.displayColorInfoList)
+            
+            // this.displayColorInfoList = this.colorInfoList.filter(color => color.)
         },
         openShoeColorManagementDialog() {
             this.colorManagementDialogVis = true
