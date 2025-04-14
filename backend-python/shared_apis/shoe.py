@@ -235,7 +235,7 @@ def get_shoe_batch_by_size_table():
 def get_shoe_color_info():
     entities = (
         db.session.query(Color, func.count(ShoeType.shoe_type_id))
-        .join(ShoeType, ShoeType.color_id == Color.color_id)
+        .outerjoin(ShoeType, ShoeType.color_id == Color.color_id)
         .group_by(Color.color_id)
         .all()
     )

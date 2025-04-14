@@ -83,7 +83,7 @@
                 <el-button type="primary" @click="mergeSelectedColor">颜色合并</el-button>
             </el-col>
         </el-row>
-        <el-table :data="colorInfoList" row-key="colorId" ref="colorSelectionTable" @selection-change="handleColorSelect">
+        <el-table :data="mergeColorInfoList" row-key="colorId" ref="colorSelectionTable" @selection-change="handleColorSelect">
             <el-table-column size="small" type="selection" align="center"> </el-table-column>
             <el-table-column sortable prop="colorNameCN" label="颜色中文"></el-table-column>
             <el-table-column prop="colorNameEN" label="颜色英文"></el-table-column>
@@ -254,6 +254,7 @@ export default {
             addShoeColorDialogVis: false,
             colorManagementDialogVis: false,
             colorInfoList: [],
+            mergeColorInfoList:[],
             Search,
             inheritIdSearch: '',
             shoeTableData: [],
@@ -316,14 +317,12 @@ export default {
         async updateColorInfo() {
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/shoecolorinfo`)
             this.colorInfoList = response.data.colorInfo
+            this.mergeColorInfoList = this.colorInfoList.filter(color => color.colorBoundCount != 0)
             this.displayColorInfoList = this.colorInfoList
             
         },
         filterColorInfoList(){
-            console.log(this.colorInfoList)
-            console.log(this.colorForm.colorName)
             this.displayColorInfoList = this.colorInfoList.filter(color => color.colorNameCN.includes(this.colorForm.colorName))
-            console.log(this.displayColorInfoList)
             
             // this.displayColorInfoList = this.colorInfoList.filter(color => color.)
         },
@@ -407,8 +406,9 @@ export default {
                 })
             }
             this.getAllColors()
+            this.updateColorInfo()
             this.addShoeColorDialogVis = false
-
+            this.displayColorInfoList = this.colorInfoList
             this.colorForm = {
                 colorName: '',
                 colorNameEN: '',
