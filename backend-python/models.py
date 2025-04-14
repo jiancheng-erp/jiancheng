@@ -373,7 +373,7 @@ class PackagingInfo(db.Model):
     size_45_ratio = db.Column(db.Integer, nullable=True)
     size_46_ratio = db.Column(db.Integer, nullable=True)
     total_quantity_ratio = db.Column(db.Integer, nullable=True)
-
+    is_active = db.Column(db.String(1), nullable=False, default='1')
     def __repr__(self):
         return f"<PackagingInfo(packaging_info_id={self.packaging_info_id})>"
 
