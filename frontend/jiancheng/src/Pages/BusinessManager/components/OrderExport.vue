@@ -1,10 +1,12 @@
 <template>
     <el-row :gutter="10" style="margin-top: 20px">
-        <el-col :span="2" :offset="0">
-            <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">配码订单导出</el-button>
-        </el-col>
-        <el-col :span="2" :offset="0">
-            <el-button size="default" type="primary" @click="exportAmountOrder" style="margin-bottom: 20px;">数量订单导出</el-button>
+        <el-col :span="8" :offset="0">
+            <el-button-group>
+                <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">配码订单导出</el-button>
+                <el-button size="default" type="primary" @click="exportAmountOrder" style="margin-bottom: 20px;">数量订单导出</el-button>
+                <el-button size="default" type="primary" @click="exportProductionOrder" style="margin-bottom: 20px;">配码生产订单导出</el-button>
+                <el-button size="default" type="primary" @click="exportProductionAmountOrder" style="margin-bottom: 20px;">数量生产订单导出</el-button>
+            </el-button-group>        
         </el-col>
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
             <el-input v-model="filters.orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="filterOrders()"
@@ -156,6 +158,46 @@ function exportAmountOrder() {
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
                         `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=1`,
+                    )
+                }
+            }
+        })
+    }
+}
+
+function exportProductionOrder() {
+    if (selectData.value.length === 0) {
+        ElMessage.warning('请选择要导出的订单')
+    } else {
+        ElMessageBox.alert('注意只能选择一个订单', '', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            callback: async (action) => {
+                if (action === 'confirm') {
+                    // get order db id from selectData
+                    const exportOrderIds = selectData.value.map(order => order.orderDbId)
+                    window.open(
+                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=0`,
+                    )
+                }
+            }
+        })
+    }
+}
+
+function exportProductionAmountOrder() {
+    if (selectData.value.length === 0) {
+        ElMessage.warning('请选择要导出的订单')
+    } else {
+        ElMessageBox.alert('注意只能选择一个订单', '', {
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            callback: async (action) => {
+                if (action === 'confirm') {
+                    // get order db id from selectData
+                    const exportOrderIds = selectData.value.map(order => order.orderDbId)
+                    window.open(
+                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=1`,
                     )
                 }
             }
