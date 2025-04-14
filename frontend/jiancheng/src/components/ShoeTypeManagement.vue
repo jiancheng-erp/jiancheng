@@ -201,10 +201,9 @@
             v-if="imageUrl"
             ref="cropper"
             :src="imageUrl"
-            :stencil-props="{ aspectRatio: 1 }"
             :auto-zoom="true"
+            :resize-image="true"
             :background-class="'cropper-background'"
-            style="width: 100%; height: 400px; margin-top: 20px"
         />
 
         <!-- 底部按钮 -->
@@ -441,7 +440,7 @@ export default {
                         shoeDesigner: '',
                         shoeAdjuster: '',
                         shoeDepartmentId: '',
-                        colorId:''
+                        colorId: ''
                     }
                     this.inheritIdSearch = ''
                     await this.getAllShoes()
@@ -477,7 +476,7 @@ export default {
                 this.shoeModel = true
                 this.colorModel = value.shoeRid
                 this.idModel = value.shoeId
-                this.shoeForm.colorId = value.shoeTypeColors.map(colorEntity => colorEntity.value)
+                this.shoeForm.colorId = value.shoeTypeColors.map((colorEntity) => colorEntity.value)
             } else {
                 this.$confirm('确认上传鞋款？', '提示', {
                     confirmButtonText: '确定',
