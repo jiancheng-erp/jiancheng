@@ -23,7 +23,7 @@ INBOUND_SUMMARY_MATERIAL_COLUMNS = ["material_name","material_unit"]
 
 
 INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","approval_status"]
-INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost"]
+INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
 MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name","material_unit"]
 
 SPU_MATERIAL_TABLE_ATTRNAMES = ['material_model','material_specification','color','spu_rid']
@@ -36,6 +36,7 @@ SELECTABLE_ATTRNAMES = [INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES,SUPPLIER_SELEC
 name_en_cn_mapping_inbound = {
     "inbound_rid":"入库单据号",
     "inbound_datetime":"入库时间",
+    "material_warehouse":"入库仓库",
     "supplier_name":"供应商",
     "material_name":"材料名称",
     "material_model":"材料型号",
@@ -46,7 +47,8 @@ name_en_cn_mapping_inbound = {
     "inbound_amount":"入库数量",
     "item_total_price":"总价",
     "approval_status":"审批状态",
-    "spu_rid":"SPU"
+    "spu_rid":"SPU",
+    "remark":"入库备注",
     }
 name_mapping_inbound_summary = {
     "supplier_name":"供应商",
@@ -202,6 +204,8 @@ def get_warehouse_inbound_record():
         query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
     # if approval_status_filter != []:
     #     query = query.filter(InboundRecord.approval_status.in_(approval_status_filter))
+    warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
+
     total_count = query.distinct().count()
     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_records = []
@@ -213,6 +217,8 @@ def get_warehouse_inbound_record():
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list = type_to_attr_mapping['SPUMaterial'], initial_res=res)
         res[to_camel('inbound_datetime')] = format_datetime(inbound_record.inbound_datetime)
         res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
+        res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
+        res[to_camel('remark')]
         inbound_records.append(res)
     return jsonify({"inboundRecords":inbound_records, "total":total_count}), 200
 

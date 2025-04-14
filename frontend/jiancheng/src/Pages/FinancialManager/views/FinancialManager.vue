@@ -16,7 +16,7 @@
                 <!-- <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane> -->
                 <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane>
                 <el-tab-pane label="财务科目信息"><FinancialAccountDetail /></el-tab-pane>
-                <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane>
+                <!-- <el-tab-pane label="财务科目分类管理"><FinancialAccountManagement /></el-tab-pane> -->
                 <!-- <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane> -->
                 <el-tab-pane label="总仓入库记录"><FinancialWarehouseDetail/></el-tab-pane>
                 <!-- <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
