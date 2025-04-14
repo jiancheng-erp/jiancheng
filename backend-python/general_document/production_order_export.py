@@ -6,6 +6,7 @@ from constants import SHOESIZERANGE
 from file_locations import IMAGE_UPLOAD_PATH
 import os
 from collections import defaultdict
+from openpyxl.drawing.image import Image
 from openpyxl.utils import units
 
 
@@ -50,11 +51,21 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
     # Group data: shoe_rid → customer_product_name → color
     for order_shoe_id in series_data:
+        title = series_data[order_shoe_id].get("title")
+        ws['A1'] = title
+        order_rid = series_data[order_shoe_id].get("orderRId")
+        ws["B3"] = order_rid
+        start_date = series_data[order_shoe_id].get("orderStartDate")
+        end_date = series_data[order_shoe_id].get("orderEndDate")
+        customer_rid = series_data[order_shoe_id].get("orderCId")
+        ws["D3"] = start_date
+        ws["I3"] = end_date
+        ws["Q3"] = customer_rid
         metadata = series_data[order_shoe_id]
         shoe_rid = metadata.get("shoeRId")
         customer_product_name = metadata.get("customerProductName")
         for color_shoe in metadata["shoes"]:
-            color = color_shoe.get("colorName")
+            color = color_shoe.get("color")
             grouped_data[shoe_rid][customer_product_name][color].append({
                 "color_name": color_shoe.get("colorName"),
                 "img_url": color_shoe.get("imgUrl"),
@@ -74,6 +85,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
                 row_count_for_color = sum(len(entry["packaging_info"]) for entry in color_entries)
                 color_end = row + row_count_for_color - 1
+
                 if row_count_for_color < 6:
                     per_row_height = IMAGE_ROW_HEIGHT / row_count_for_color
                 else:
@@ -87,12 +99,13 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         ws.row_dimensions[row].height = per_row_height
                         color_rows.append(row)
 
-                        col_idx = column_index_from_string("B")
+                        col_idx = column_index_from_string("C")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
-                        col_idx += 1  # Skip material column
+                        ws[f"{get_column_letter(col_idx)}{row}"] = color_name
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
                         col_idx += 1
 
@@ -110,6 +123,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
+                        ws[f"{get_column_letter(col_idx)}{row}"] = entry.get("remark")
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
@@ -119,8 +134,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                 # Merge columns A (image), D, E
                 if row_count_for_color > 1:
                     ws.merge_cells(f"A{color_start}:A{color_end}")
-                    ws.merge_cells(f"C{color_start}:C{color_end}")
                     ws.merge_cells(f"D{color_start}:D{color_end}")
+                    ws.merge_cells(f"E{color_start}:E{color_end}")
 
                 # Insert image only if provided
                 if img_url:
@@ -152,7 +167,14 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
             # Merge column C (customer_product_name)
             if row - cust_start > 1:
-                ws.merge_cells(f"B{cust_start}:B{row - 1}")
+                ws.merge_cells(f"C{cust_start}:C{row - 1}")
+
+        # Merge column B (shoe_rid)
+        if row - shoe_start > 1:
+            ws.merge_cells(f"B{shoe_start}:B{row - 1}")
+            ws.merge_cells(f"W{shoe_start}:W{row - 1}")
+        ws[f"B{shoe_start}"] = shoe_rid
+
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
     ws = wb.active
@@ -162,11 +184,21 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
     # Group data: shoe_rid → customer_product_name → color
     for order_shoe_id in series_data:
+        title = series_data[order_shoe_id].get("title")
+        ws['A1'] = title
+        order_rid = series_data[order_shoe_id].get("orderRId")
+        ws["B3"] = order_rid
+        start_date = series_data[order_shoe_id].get("orderStartDate")
+        end_date = series_data[order_shoe_id].get("orderEndDate")
+        customer_rid = series_data[order_shoe_id].get("orderCId")
+        ws["D3"] = start_date
+        ws["I3"] = end_date
+        ws["Q3"] = customer_rid
         metadata = series_data[order_shoe_id]
         shoe_rid = metadata.get("shoeRId")
         customer_product_name = metadata.get("customerProductName")
         for color_shoe in metadata["shoes"]:
-            color = color_shoe.get("colorName")
+            color = color_shoe.get("color")
             grouped_data[shoe_rid][customer_product_name][color].append({
                 "color_name": color_shoe.get("colorName"),
                 "img_url": color_shoe.get("imgUrl"),
@@ -186,6 +218,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
                 row_count_for_color = sum(len(entry["packaging_info"]) for entry in color_entries)
                 color_end = row + row_count_for_color - 1
+
                 if row_count_for_color < 6:
                     per_row_height = IMAGE_ROW_HEIGHT / row_count_for_color
                 else:
@@ -199,13 +232,13 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         ws.row_dimensions[row].height = per_row_height
                         color_rows.append(row)
                         count = packaging.get("count", 0)
-
-                        col_idx = column_index_from_string("B")
+                        col_idx = column_index_from_string("C")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
-                        col_idx += 1  # Skip material column
+                        ws[f"{get_column_letter(col_idx)}{row}"] = color_name
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
                         col_idx += 1
 
@@ -223,6 +256,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
+                        ws[f"{get_column_letter(col_idx)}{row}"] = entry.get("remark")
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
@@ -232,8 +267,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                 # Merge columns A (image), D, E
                 if row_count_for_color > 1:
                     ws.merge_cells(f"A{color_start}:A{color_end}")
-                    ws.merge_cells(f"C{color_start}:C{color_end}")
                     ws.merge_cells(f"D{color_start}:D{color_end}")
+                    ws.merge_cells(f"E{color_start}:E{color_end}")
 
                 # Insert image only if provided
                 if img_url:
@@ -265,7 +300,13 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
             # Merge column C (customer_product_name)
             if row - cust_start > 1:
-                ws.merge_cells(f"B{cust_start}:B{row - 1}")
+                ws.merge_cells(f"C{cust_start}:C{row - 1}")
+
+        # Merge column B (shoe_rid)
+        if row - shoe_start > 1:
+            ws.merge_cells(f"B{shoe_start}:B{row - 1}")
+            ws.merge_cells(f"W{shoe_start}:W{row - 1}")
+        ws[f"B{shoe_start}"] = shoe_rid
 
 
 # Function to save the workbook after modification
@@ -274,36 +315,35 @@ def save_workbook(wb, new_file_path):
 
 
 # Main function to generate the Excel file
-def generate_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_production_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
     print(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data(wb, order_data, "A", 9)
+    insert_series_data(wb, order_data, "A", 6)
 
     # insert shoe size name
-    column = "F"
-    row = 8
+    column = "G"
+    row = 5
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)
-
     # Save the workbook
     save_workbook(wb, new_file_path)
     print(f"Workbook saved as {new_file_path}")
     
-def generate_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_production_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
     print(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data_amount(wb, order_data, "A", 9)
+    insert_series_data_amount(wb, order_data, "A", 6)
 
     # insert shoe size name
-    column = "F"
-    row = 8
+    column = "G"
+    row = 5
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)

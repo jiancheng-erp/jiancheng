@@ -15,8 +15,13 @@ from general_document.order_export import (
     generate_excel_file,
     generate_amount_excel_file,
 )
+from general_document.production_order_export import (
+    generate_production_excel_file,
+    generate_production_amount_excel_file,
+)
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
+from shared_apis import customer
 
 order_bp = Blueprint("order_bp", __name__)
 # 订单初始状态
@@ -1422,6 +1427,7 @@ def export_order():
             ShoeType,
             OrderShoeBatchInfo,
             PackagingInfo,
+            Color
         )
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
@@ -1434,6 +1440,9 @@ def export_order():
         .join(
             PackagingInfo,
             PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
+        )
+        .join(
+            Color, Color.color_id == ShoeType.color_id
         )
         .filter(Order.order_id.in_(order_ids))
         .all()
@@ -1449,6 +1458,7 @@ def export_order():
             shoe_type,
             order_shoe_batch_info,
             packaging_info,
+            color
         ) = row
         if order_shoe.order_shoe_id not in order_shoe_mapping:
             order_shoe_mapping[order_shoe.order_shoe_id] = {
@@ -1456,8 +1466,10 @@ def export_order():
                 "customerProductName": order_shoe.customer_product_name,
                 "shoeRId": shoe.shoe_rid,
                 "shoes": [],
+                "remark": order_shoe.business_technical_remark + order_shoe.business_material_remark,
             }
             shoe_meta_data = {
+                "color": color.color_name,
                 "colorName": order_shoe_type.customer_color_name,
                 "imgUrl": shoe_type.shoe_image_url,
                 "unitPrice": order_shoe_type.unit_price,
@@ -1477,6 +1489,7 @@ def export_order():
             order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
         else:
             shoe_meta_data = {
+                "color": color.color_name,
                 "colorName": order_shoe_type.customer_color_name,
                 "imgUrl": shoe_type.shoe_image_url,
                 "unitPrice": order_shoe_type.unit_price,
@@ -1517,6 +1530,131 @@ def export_order():
         new_file_name = f"导出数量订单_{timestamp}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量订单", new_file_name)
         generate_amount_excel_file(
+            template_path, new_file_path, order_shoe_mapping, meta_data
+        )
+    return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
+
+@order_bp.route("/order/exportproductionorder", methods=["GET"])
+def export_production_order():
+    output_type = request.args.get("outputType", type=int)
+    order_ids = request.args.get("orderIds").split(",")
+    response = (
+        db.session.query(
+            Order,
+            Customer,
+            OrderShoe,
+            Shoe,
+            OrderShoeType,
+            ShoeType,
+            OrderShoeBatchInfo,
+            PackagingInfo,
+            Color
+        )
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .join(
+            PackagingInfo,
+            PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
+        )
+        .join(
+            Color, Color.color_id == ShoeType.color_id
+        )
+        .filter(Order.order_id.in_(order_ids))
+        .all()
+    )
+    order_shoe_mapping = {}
+    for row in response:
+        (
+            order,
+            customer,
+            order_shoe,
+            shoe,
+            order_shoe_type,
+            shoe_type,
+            order_shoe_batch_info,
+            packaging_info,
+            color
+            
+        ) = row
+        if order_shoe.order_shoe_id not in order_shoe_mapping:
+            order_shoe_mapping[order_shoe.order_shoe_id] = {
+                "orderRId": order.order_rid,
+                "customerProductName": order_shoe.customer_product_name,
+                "shoeRId": shoe.shoe_rid,
+                "shoes": [],
+                "remark": order_shoe.business_technical_remark + order_shoe.business_material_remark,
+                "orderStartDate": order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A",
+                "orderEndDate": order.end_date.strftime("%Y-%m-%d") if order.end_date else "N/A",
+                "orderCId": order.order_cid,
+                "title": f"健诚集团{customer.customer_name}号客人{customer.customer_brand}生产订单"
+            }
+            shoe_meta_data = {
+                "color": color.color_name,
+                "colorName": order_shoe_type.customer_color_name,
+                "imgUrl": shoe_type.shoe_image_url,
+                "unitPrice": order_shoe_type.unit_price,
+                "packagingInfo": [],
+            }
+            obj = {
+                "packagingInfoName": packaging_info.packaging_info_name,
+                "packagingInfoLocale": packaging_info.packaging_info_locale,
+                "totalQuantityRatio": packaging_info.total_quantity_ratio,
+                "count": order_shoe_batch_info.packaging_info_quantity,
+            }
+            for i in range(len(SHOESIZERANGE)):
+                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
+                    packaging_info, f"size_{i+34}_ratio"
+                )
+            shoe_meta_data["packagingInfo"].append(obj)
+            order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
+        else:
+            shoe_meta_data = {
+                "color": color.color_name,
+                "colorName": order_shoe_type.customer_color_name,
+                "imgUrl": shoe_type.shoe_image_url,
+                "unitPrice": order_shoe_type.unit_price,
+                "packagingInfo": [],
+            }
+            obj = {
+                "packagingInfoName": packaging_info.packaging_info_name,
+                "packagingInfoLocale": packaging_info.packaging_info_locale,
+                "totalQuantityRatio": packaging_info.total_quantity_ratio,
+                "count": order_shoe_batch_info.packaging_info_quantity,
+            }
+            for i in range(len(SHOESIZERANGE)):
+                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
+                    packaging_info, f"size_{i+34}_ratio"
+                )
+            shoe_meta_data["packagingInfo"].append(obj)
+            order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
+    shoe_size_names = (
+        db.session.query(BatchInfoType)
+        .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+        .filter(Order.order_id == order_ids[0])
+        .first()
+    )
+    meta_data = {"sizeNames": []}
+    # add size_name of batch info type
+    for i in range(len(SHOESIZERANGE)):
+        meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))
+    template_path = os.path.join(FILE_STORAGE_PATH, "生产订单模板.xlsx")
+    if output_type == 0:
+        timestamp = str(time.time())
+        new_file_name = f"导出配码生产订单_{timestamp}.xlsx"
+        new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码生产订单", new_file_name)
+        generate_production_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+    else:
+        timestamp = str(time.time())
+        new_file_name = f"导出数量生产订单_{timestamp}.xlsx"
+        new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量生产订单", new_file_name)
+        generate_production_amount_excel_file(
             template_path, new_file_path, order_shoe_mapping, meta_data
         )
     return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
