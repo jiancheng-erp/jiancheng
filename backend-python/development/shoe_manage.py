@@ -156,7 +156,7 @@ def add_shoe():
     shoe_rid = request.json.get("shoeRid")
     shoe_desinger = request.json.get("shoeDesigner")
     shoe_department_id = request.json.get("shoeDepartmentId")
-    colors = request.json.get("colorIds")
+    colors = request.json.get("colorId")
     print(colors)
     existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == shoe_rid).first()
     if existing_shoe:

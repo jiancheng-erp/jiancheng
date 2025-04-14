@@ -71,7 +71,7 @@
                 <el-input v-model="orderForm.shoeRId"></el-input>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="orderForm.shoeColor" placeholder="请选择">
+                <el-select v-model="orderForm.colorIds" placeholder="请选择">
                     <el-option
                         v-for="item in colorOptions"
                         :key="item.value"
@@ -100,7 +100,7 @@
                 <el-input v-model="orderForm.shoeRId"></el-input>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="orderForm.shoeColor" placeholder="请选择">
+                <el-select v-model="orderForm.colorIds" placeholder="请选择">
                     <el-option
                         v-for="item in colorOptions"
                         :key="item.value"
@@ -167,7 +167,7 @@ export default {
                 shoeRId: "",
                 shoeDesigner: "",
                 shoeAdjuster: "",
-                shoeColor: "",
+                colorIds: "",
             },
             reUploadImageDialogVis: false,
             editShoeDialogVis: false,
@@ -205,6 +205,7 @@ export default {
         },
         openAddShoeDialog() {
             this.addShoeDialogVis = true;
+            
         },
         openEditShoeDialog(row) {
             this.orderForm = row;

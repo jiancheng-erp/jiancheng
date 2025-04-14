@@ -439,7 +439,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="shoeForm.colorIds" placeholder="请选择" multiple>
+                <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple>
                     <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
@@ -457,7 +457,7 @@
     <el-dialog title="添加鞋款" v-model="addShoeTypeDialogVis" width="50%">
         <el-form :model="shoeColorForm" label-width="120px" :inline="false">
             <el-form-item label="所属鞋型编号">
-                <el-input v-model="shoeIdToAdd" :disabled="true"></el-input>
+                <el-input v-model="shoeColorForm.displayRid" :disabled="true"></el-input>
             </el-form-item>
             <el-form-item label="选择颜色">
                 <el-select v-model="shoeColorForm.shoeTypeColors" placeholder="请选择" multiple>
@@ -836,7 +836,7 @@ export default {
                 shoeRid: '',
                 shoeDesigner: '',
                 shoeAdjuster: '',
-                colorIds: '',
+                colorId: '',
                 shoeDepartmentId: ''
             },
             colorOptions: [],
@@ -910,6 +910,7 @@ export default {
             shoeColorForm:{
                 shoeId:'',
                 shoeTypeColors:'',
+                displayRid:'',
             },
             shortcuts: [
                 {
@@ -1082,14 +1083,15 @@ export default {
             this.addShoeDialogVis = true
         },
         openAddShoeTypeDialog(row){
-            console.log(row)
             this.shoeIdToAdd = row.shoeRid
+            this.shoeColorForm.displayRid = row.shoeRid
             this.shoeColorForm.shoeId = row.shoeId
             this.shoeColorForm.shoeTypeColors = row.shoeTypeColors.map(color => color.value)
+            console.log(this.shoeIdToAdd)
+            console.log(this.shoeColorForm)
             this.addShoeTypeDialogVis = true
         },
         addNewShoe() {
-            
             this.$confirm('确认添加新鞋型？', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
@@ -1139,7 +1141,8 @@ export default {
                 this.shoeColorForm = {
                     shoeId:'',
                     shoeTypeColors:'',
-                    colorId:''
+                    colorId:'',
+                    displayRid:''
                 }
                 await this.getAllShoes()
                 }
@@ -1376,9 +1379,15 @@ export default {
         },
         async getAllOrders() {
             // const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getallorders`
-            )
+
+            if (role == 21) {
+            response = await axios.get(`${apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                currentStaffId: staffId
+            })
+            }
+            if (role == 4) {
+                response = await axios.get(`${apiBaseUrl}/order/getallorders`)
+            }
             this.unfilteredData = response.data
             this.displayData = this.unfilteredData
             this.totalItems = this.unfilteredData.length
