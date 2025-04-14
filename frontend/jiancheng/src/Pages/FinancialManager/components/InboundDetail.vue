@@ -67,7 +67,7 @@
     
     <el-row :gutter="20">
     
-    <el-col :span=20>
+    <el-col :span=22>
 
     
     <el-checkbox-group v-model="checkedColumnValues" size="normal"  @change="updateCheckBox">
@@ -77,7 +77,7 @@
     </el-checkbox-group>
     </el-col>
 
-    <el-col :span="4">
+    <el-col :span="2">
         <el-button type="primary" @click="deselectAllColumns">
         清空选择
         </el-button>

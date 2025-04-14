@@ -92,8 +92,7 @@
         </el-table>
     </el-dialog>
     <el-dialog title="添加鞋款颜色" v-model="addShoeColorDialogVis" width="50%">
-                <el-input v-model="colorForm.colorName" @input="filterColorInfoList"></el-input>
-
+                <el-input placeholder="输入新颜色中文名字" v-model="colorForm.colorName" @input="filterColorInfoList"></el-input>
             <!-- <el-form-item label="颜色英文名称">
                 <el-input v-model="colorForm.colorNameEN"></el-input>
             </el-form-item>
