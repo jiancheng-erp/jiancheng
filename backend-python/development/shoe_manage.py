@@ -94,8 +94,6 @@ def edit_shoe_type():
 def add_shoe_type():
     color_ids = request.json.get("colorId")
     shoe_id = request.json.get("shoeId")
-    print(color_ids)
-    print(shoe_id)
     existing_color = []
     for color_id in color_ids:
         shoe_type_existing = (
