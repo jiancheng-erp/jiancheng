@@ -781,11 +781,11 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
         db.session.add(material)
         db.session.flush()
     material_id = material.material_id
-    material_model = item.get("inboundModel", "") if item.get("inboundModel") else ""
+    material_model = item.get("inboundModel") if item.get("inboundModel") else ""
     material_specification = (
-        item.get("inboundSpecification", "") if item.get("inboundSpecification") else ""
+        item.get("inboundSpecification") if item.get("inboundSpecification") else ""
     )
-    material_color = item.get("materialColor", "") if item.get("materialColor") else ""
+    material_color = item.get("materialColor") if item.get("materialColor") else ""
 
     # sanitize the material information
     material_model = material_model.replace(" ", "")
@@ -962,6 +962,20 @@ def _handle_purchase_inbound(data, next_group_id):
                     )
                     .first()
                 )
+
+            material_id = storage.actual_inbound_material_id
+            material_model = item.get("inboundModel") if item.get("inboundModel") else ""
+            material_specification = (
+                item.get("inboundSpecification") if item.get("inboundSpecification") else ""
+            )
+            material_color = item.get("materialColor") if item.get("materialColor") else ""
+
+            # sanitize the material information
+            material_model = material_model.replace(" ", "")
+            material_specification = material_specification.replace(" ", "")
+            material_color = material_color.replace(" ", "")
+            spu_material_id = _create_spu_record(material_id, material_model, material_specification, material_color)
+            storage.spu_material_id = spu_material_id
 
         # set inbound quantity
         inbound_quantity = Decimal(item["inboundQuantity"])
