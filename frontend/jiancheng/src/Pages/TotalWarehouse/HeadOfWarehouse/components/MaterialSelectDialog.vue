@@ -276,11 +276,12 @@ export default {
             }
             for (let i = 0; i < this.topTableData.length; i++) {
                 let formatItemTotalPrice = new Decimal(this.topTableData[i].inboundQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
+                let formatInboundQuantity = new Decimal(this.topTableData[i].inboundQuantity).toDecimalPlaces(5).toNumber()
                 this.topTableData[i] = {
                     ...this.topTableData[i],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
-                    inboundQuantity: this.topTableData[i].inboundQuantity,
+                    inboundQuantity: formatInboundQuantity,
                     itemTotalPrice: formatItemTotalPrice,
                 }
                 console.log(this.topTableData[i])
