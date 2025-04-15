@@ -811,6 +811,14 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
             MaterialStorage.material_storage_color == material_color,
             MaterialStorage.actual_inbound_unit == actual_inbound_unit,
         )
+        if order_shoe_id:
+            storage_query = storage_query.filter(
+                MaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
+            )
+        else:
+            storage_query = storage_query.filter(
+                MaterialStorage.order_shoe_id.is_(None),
+            )
     # 尺码材料
     elif material_category == 1:
         storage_query = db.session.query(SizeMaterialStorage).filter(
@@ -819,14 +827,14 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
             SizeMaterialStorage.size_material_model == material_model,
             SizeMaterialStorage.size_material_color == material_color,
         )
-    if order_shoe_id:
-        storage_query = storage_query.filter(
-            MaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
-        )
-    else:
-        storage_query = storage_query.filter(
-            MaterialStorage.order_shoe_id.is_(None),
-        )
+        if order_shoe_id:
+            storage_query = storage_query.filter(
+                SizeMaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
+            )
+        else:
+            storage_query = storage_query.filter(
+                SizeMaterialStorage.order_shoe_id.is_(None),
+            )
     # 根据材料信息查找对应的材料库存
     # 如果没有找到，则创建新的材料库存
     storage = storage_query.first()
@@ -954,6 +962,7 @@ def _handle_purchase_inbound(data, next_group_id):
                 # 修改实际入库的型号和规格
                 storage.inbound_model = item.get("inboundModel", None)
                 storage.inbound_specification = item.get("inboundSpecification", None)
+                material_id = storage.actual_inbound_material_id
             elif item["materialCategory"] == 1:
                 storage = (
                     db.session.query(SizeMaterialStorage)
@@ -962,8 +971,11 @@ def _handle_purchase_inbound(data, next_group_id):
                     )
                     .first()
                 )
+                material_id = storage.material_id
+            else:
+                error_message = json.dumps({"message": "材料类型错误"})
+                abort(Response(error_message, 400))
 
-            material_id = storage.actual_inbound_material_id
             material_model = item.get("inboundModel") if item.get("inboundModel") else ""
             material_specification = (
                 item.get("inboundSpecification") if item.get("inboundSpecification") else ""
