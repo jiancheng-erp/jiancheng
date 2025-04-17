@@ -17,6 +17,7 @@ from models import *
 from sqlalchemy import desc, func, text, literal, cast, JSON, or_
 import json
 from script.refresh_spu_rid import generate_spu_rid
+from logger import logger
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
@@ -740,17 +741,11 @@ def _create_spu_record(material_id, model, specification, color):
     return spu_record.spu_material_id
 
 
-def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id):
+def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_type_id):
     """
     处理用户手动输入的材料信息
     """
-    item: dict
-    material_name = item.get("materialName", None)
-    if not material_name:
-        error_message = json.dumps({"message": "材料名称不能为空"})
-        abort(Response(error_message, 400))
-
-    material_name = material_name.replace(" ", "")
+    material_name = item["materialName"]
     material = (
         db.session.query(Material)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
@@ -760,7 +755,7 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
         .first()
     )
 
-    actual_inbound_unit = item.get("actualInboundUnit", None)
+    actual_inbound_unit = item["actualInboundUnit"]
     if not material:
         material = Material(
             material_name=material_name,
@@ -781,19 +776,12 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
         db.session.add(material)
         db.session.flush()
     material_id = material.material_id
-    material_model = item.get("inboundModel") if item.get("inboundModel") else ""
-    material_specification = (
-        item.get("inboundSpecification") if item.get("inboundSpecification") else ""
-    )
-    material_color = item.get("materialColor") if item.get("materialColor") else ""
-
-    # sanitize the material information
-    material_model = material_model.replace(" ", "")
-    material_specification = material_specification.replace(" ", "")
-    material_color = material_color.replace(" ", "")
-    spu_material_id = _create_spu_record(material_id, material_model, material_specification, material_color)
+    material_model = item["inboundModel"]
+    material_specification = item["inboundSpecification"]
+    material_color = item["materialColor"]
 
     material_category = item.get("materialCategory", 0)
+    spu_material_id = _create_spu_record(material_id, material_model, material_specification, material_color)
 
     order_id, order_shoe_id = None, None
     order_rid = item.get("orderRId", None)
@@ -840,8 +828,7 @@ def _find_storage_in_db(item, material_type_id, supplier_id, batch_info_type_id)
     storage = storage_query.first()
     if not storage:
         if material_category == 0:
-            unit = item["actualInboundUnit"] if item.get("actualInboundUnit") else ""
-            unit = unit.replace(" ", "")
+            unit = item["actualInboundUnit"]
             storage = MaterialStorage(
                 material_id=material_id,
                 actual_inbound_material_id=material_id,
@@ -1115,6 +1102,7 @@ def _handle_production_remain_inbound(data, next_group_id):
 @material_storage_bp.route("/warehouse/inboundmaterial", methods=["POST"])
 def inbound_material():
     data = request.get_json()
+    logger.debug(f"data: {data}")
     # Determine the next available group_id
     next_group_id = (
         db.session.query(
@@ -1128,14 +1116,38 @@ def inbound_material():
     items = data.get("items", [])
     seen = set()
     for item in items:
+        item: dict
         order_rid = item.get("orderRId", None)
-        storage_id = item.get("materialStorageId", None)
-        if (order_rid == None or order_rid == "") and storage_id == None:
-            continue
-        if (storage_id, order_rid) in seen:
+        material_name = item.get("materialName", None)
+        if not material_name:
+            error_message = json.dumps({"message": "材料名称不能为空"})
+            abort(Response(error_message, 400))
+
+        inbound_material = item.get("inboundModel") if item.get("inboundModel") else ""
+        inbound_specification = (
+            item.get("inboundSpecification") if item.get("inboundSpecification") else ""
+        )
+        material_color = item.get("materialColor") if item.get("materialColor") else ""
+        actual_inbound_unit = item.get("actualInboundUnit") if item.get("actualInboundUnit") else ""
+
+        # sanitize the material information
+        material_name = material_name.replace(" ", "")
+        inbound_material = inbound_material.replace(" ", "")
+        inbound_specification = inbound_specification.replace(" ", "")
+        material_color = material_color.replace(" ", "")
+        actual_inbound_unit = actual_inbound_unit.replace(" ", "")
+
+        item["materialName"] = material_name
+        item["inboundModel"] = inbound_material
+        item["inboundSpecification"] = inbound_specification
+        item["materialColor"] = material_color
+        item["actualInboundUnit"] = actual_inbound_unit
+        
+        unique_key = (order_rid, material_name, inbound_material, inbound_specification, material_color, actual_inbound_unit)
+        if unique_key in seen:
             error_message = json.dumps({"message": "订单材料信息重复"})
             abort(Response(error_message, 400))
-        seen.add((storage_id, order_rid))
+        seen.add(unique_key)
 
     # 采购入库
     if inbound_type == 0:
@@ -2452,6 +2464,7 @@ def _handle_delete_storage(storage, is_sized_material):
 @material_storage_bp.route("/warehouse/updateinboundrecord", methods=["PATCH"])
 def update_inbound_record():
     data = request.get_json()
+    logger.debug(f"data: {data}")
     inbound_record_id = data.get("inboundRecordId")
     supplier_name = data.get("supplierName")
     inbound_type = data.get("inboundType")
