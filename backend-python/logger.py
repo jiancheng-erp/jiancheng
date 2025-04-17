@@ -9,7 +9,7 @@ handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 
 # Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - Line: %(lineno)d - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(filename)s - Line: %(lineno)d - %(message)s')
 handler.setFormatter(formatter)
 
 # Add the handler to the logger

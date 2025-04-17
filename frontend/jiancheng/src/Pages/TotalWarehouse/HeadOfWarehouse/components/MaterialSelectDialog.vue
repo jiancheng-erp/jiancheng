@@ -111,7 +111,7 @@ export default {
             required: true,
         },
     },
-    emits: ['update-visible'],
+    emits: ['confirm', 'update-visible'],
     data() {
         return {
             localVisible: this.visible,
@@ -124,7 +124,7 @@ export default {
             selectionPage: 0,
             bottomTableData: [],
             topTableData: [],
-            totalInboundQuantity: '',
+            totalInboundQuantity: 0,
             downSelected: [],
             topSelected: [],
             selectedInboundQuantity: 0,

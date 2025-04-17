@@ -56,8 +56,11 @@
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.orderRId" clearable :disabled="scope.row.disableEdit"
-                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                        <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
+                            @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
+                            <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
+                                :label="item.orderRId"></el-option>
+                        </el-select>
                     </template>
                 </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
@@ -287,6 +290,10 @@ export default {
             type: Array,
             required: true
         },
+        activeOrderShoes: {
+            type: Array,
+            required: true
+        },
     },
     data() {
         return {
@@ -388,6 +395,9 @@ export default {
         }
     },
     methods: {
+        handleOrderRIdSelect(row, value) {
+            row.shoeRId = this.activeOrderShoes.filter(item => item.orderRId == value)[0].shoeRId
+        },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
             let seen = new Set()
@@ -398,14 +408,14 @@ export default {
                     continue
                 }
                 // create tuple of name, spec, model, color, and orderRId
-                let storageId = obj.storageId || ''
-                if (storageId !== '' && seen.has(obj.orderRId)) {
+                let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}`
+                if (seen.has(string)) {
                     ElMessage.error("入库单不能有重复数据")
                     // 去掉新创建行
                     this.currentIndex = null
                     return
                 }
-                seen.add(obj.orderRId)
+                seen.add(string)
             }
             this.materialTableData = [...temp]
             this.currentIndex = null

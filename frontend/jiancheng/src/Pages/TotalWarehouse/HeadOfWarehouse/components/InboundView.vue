@@ -2,6 +2,7 @@
     <PurchaseInbound :material-supplier-options="materialSupplierOptions"
         :material-type-options="materialTypeOptions"
         :unit-options="unitOptions"
+        :active-order-shoes="activeOrderShoes"
         >
     </PurchaseInbound>
 </template>
@@ -26,13 +27,15 @@ export default {
             ],
             materialTypeOptions: [],
             materialSupplierOptions: [],
-            unitOptions: []
+            unitOptions: [],
+            activeOrderShoes: [],
         }
     },
     mounted() {
         this.getMaterialTypeOptions();
         this.getMaterialSupplierOptions();
         this.getUnitOptions();
+        this.getActiveOrderShoes();
     },
     methods: {
         async getMaterialTypeOptions() {
@@ -46,6 +49,10 @@ export default {
         async getUnitOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallunit`)
             this.unitOptions = response.data
+        },
+        async getActiveOrderShoes() {
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getactiveordershoes`)
+            this.activeOrderShoes = response.data
         },
     }
 }
