@@ -57,8 +57,8 @@
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
-                            @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
-                            <el-option v-for="item in scope.row.filteredOrders" :key="item.orderId" :value="item.orderRId"
+                            @change="handleOrderRIdSelect(scope.row, $event)" @focus="getFilteredShoes(scope.row, $event)" filterable clearable>
+                            <el-option v-for="item in filteredOrders" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
                     </template>
@@ -324,7 +324,6 @@ export default {
                 disableEdit: false,
                 inboundModel: '',
                 inboundSpecification: '',
-                filteredOrders: [],
             },
             isMaterialSelectDialogVis: false,
             isSizeMaterialSelectDialogVis: false,
@@ -369,6 +368,7 @@ export default {
             materialNameOptions: [],
             selectedSizeMaterials: [],
             orderRIdSearch: '',
+            filteredOrders: [],
         }
     },
     async mounted() {
@@ -398,14 +398,21 @@ export default {
     },
     methods: {
         handleOrderRIdSelect(row, value) {
-            row.shoeRId = row.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
+            row.shoeRId = this.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
         },
         handleShoeRIdSelect(row, value) {
             if (value == null || value == '') {
-                row.filteredOrders = [...this.activeOrderShoes]
+                this.filteredOrders = [...this.activeOrderShoes]
                 return
             }
-            row.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
+            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
+        },
+        getFilteredShoes(row, event) {
+            if (row.shoeRId == null || row.shoeRId == '') {
+                this.filteredOrders = [...this.activeOrderShoes]
+                return
+            }
+            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(row.shoeRId))
         },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
@@ -518,7 +525,6 @@ export default {
         },
         addRow() {
             const newRow = JSON.parse(JSON.stringify(this.rowTemplate));
-            newRow.filteredOrders = [...this.activeOrderShoes]
             this.materialTableData.push(newRow)
         },
         deleteRows() {
