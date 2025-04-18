@@ -122,6 +122,7 @@ def get_all_material_info():
     op_type = request.args.get("opType", default=0, type=int)
     sort_column = request.args.get("sortColumn")
     sort_order = request.args.get("sortOrder")
+    is_non_order_material = request.args.get("isNonOrderMaterial", default=0, type=int)
     filters = {
         "material_type_name": request.args.get("materialType", ""),
         "material_name": request.args.get("materialName", ""),
@@ -129,9 +130,10 @@ def get_all_material_info():
         "material_model": request.args.get("materialModel", ""),
         "material_color": request.args.get("materialColor", ""),
         "supplier": request.args.get("supplier", ""),
-        "order_rid": request.args.get("orderRId", ""),
-        "shoe_rid": request.args.get("shoeRId", ""),
     }
+    if is_non_order_material == 0:
+        filters["order_rid"] = request.args.get("orderRId", "")
+        filters["shoe_rid"] = request.args.get("shoeRId", "")
     material_filter_map = {
         "material_type_name": MaterialType.material_type_name,
         "material_name": Material.material_name,
@@ -233,19 +235,19 @@ def get_all_material_info():
 
     for key, value in filters.items():
         if value and value != "":
-            if key == "order_rid" and value == "无":
-                query1 = query1.filter(MaterialStorage.order_id.is_(None))
-                query2 = query2.filter(SizeMaterialStorage.order_id.is_(None))
-            else:
-                query1 = query1.filter(material_filter_map[key].ilike(f"%{value}%"))
-                query2 = query2.filter(
-                    size_material_filter_map[key].ilike(f"%{value}%")
-                )
+            query1 = query1.filter(material_filter_map[key].ilike(f"%{value}%"))
+            query2 = query2.filter(
+                size_material_filter_map[key].ilike(f"%{value}%")
+            )
 
     warehouse_id = request.args.get("warehouseId")
     if warehouse_id and warehouse_id != "":
         query1 = query1.filter(MaterialType.warehouse_id == warehouse_id)
         query2 = query2.filter(MaterialType.warehouse_id == warehouse_id)
+
+    if is_non_order_material == 1:
+        query1 = query1.filter(MaterialStorage.order_id.is_(None), MaterialStorage.order_shoe_id.is_(None))
+        query2 = query2.filter(SizeMaterialStorage.order_id.is_(None), SizeMaterialStorage.order_shoe_id.is_(None))
     union_query = query1.union(query2)
     count_result = union_query.distinct().count()
     response = union_query.distinct().limit(number).offset((page - 1) * number).all()
@@ -848,8 +850,11 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
                 .filter(BatchInfoType.batch_info_type_id == batch_info_type_id)
                 .first()
             )
-            shoe_size_columns = []
-            if batch_info_type:
+            shoe_size_columns: list = item.get("shoeSizeColumns", [])
+            if not shoe_size_columns and not batch_info_type and material_name == "大底":
+                error_message = json.dumps({"message": "尺码材料没有鞋码"})
+                abort(Response(error_message, 400))
+            if shoe_size_columns == [] and batch_info_type:
                 for i in range(len(SHOESIZERANGE)):
                     db_name = i + 34
                     size_name = getattr(batch_info_type, f"size_{db_name}_name")

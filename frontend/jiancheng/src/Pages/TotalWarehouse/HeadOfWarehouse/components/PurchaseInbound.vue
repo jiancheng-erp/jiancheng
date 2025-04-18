@@ -58,14 +58,15 @@
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
                             @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
-                            <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
+                            <el-option v-for="item in scope.row.filteredOrders" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
                     </template>
                 </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.shoeRId" clearable :disabled="true"
+                        <vxe-input v-model="scope.row.shoeRId" clearable
+                            @change="(event) => handleShoeRIdSelect(scope.row, event.value)"
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
@@ -197,7 +198,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                        }}</td>
+                                    }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -323,6 +324,7 @@ export default {
                 disableEdit: false,
                 inboundModel: '',
                 inboundSpecification: '',
+                filteredOrders: [],
             },
             isMaterialSelectDialogVis: false,
             isSizeMaterialSelectDialogVis: false,
@@ -396,7 +398,14 @@ export default {
     },
     methods: {
         handleOrderRIdSelect(row, value) {
-            row.shoeRId = this.activeOrderShoes.filter(item => item.orderRId == value)[0].shoeRId
+            row.shoeRId = row.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
+        },
+        handleShoeRIdSelect(row, value) {
+            if (value == null || value == '') {
+                row.filteredOrders = [...this.activeOrderShoes]
+                return
+            }
+            row.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
         },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
@@ -509,6 +518,7 @@ export default {
         },
         addRow() {
             const newRow = JSON.parse(JSON.stringify(this.rowTemplate));
+            newRow.filteredOrders = [...this.activeOrderShoes]
             this.materialTableData.push(newRow)
         },
         deleteRows() {
@@ -638,6 +648,11 @@ export default {
             }
         },
         async submitInboundForm() {
+            for (let i = 0; i < this.materialTableData.length; i++) {
+                if (this.materialTableData[i].shoeSizeColumns == null) {
+                    this.materialTableData[i].shoeSizeColumns = this.materialTableData[0].shoeSizeColumns
+                }
+            }
             const params = {
                 inboundType: this.inboundForm.inboundType,
                 currentDateTime: this.inboundForm.currentDateTime,
