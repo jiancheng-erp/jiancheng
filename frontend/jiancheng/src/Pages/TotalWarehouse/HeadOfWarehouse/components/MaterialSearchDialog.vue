@@ -23,8 +23,10 @@
         <el-select v-model="searchForm.materialSupplierSearch" value-key="" placeholder="" clearable filterable>
             <el-option v-for="item in materialSupplierOptions" :value="item" />
         </el-select>
-        搜索不带订单材料：
-        <el-switch v-model="searchForm.isNonOrderMaterial" :active-value="1" :inactive-value="0" style="display: block;" />
+        <div style="display: block;" >
+            搜索不带订单材料：
+            <el-switch v-model="searchForm.isNonOrderMaterial" :active-value="1" :inactive-value="0" />
+        </div>
         订单号筛选：
         <el-input v-model="searchForm.orderNumberSearch" placeholder="" clearable :disabled="searchForm.isNonOrderMaterial == 1" />
         鞋型号筛选：
