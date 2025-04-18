@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from flask.testing import FlaskClient
 from flask import Response
+import json
 
 
 # Add the parent directory to the path
@@ -634,6 +635,116 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
     assert spu_material.material_specification == "棕/后跟喷棕"
     assert spu_material.color == ""
 
+
+def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
+    """
+    测试用户手输订单底材材料
+    """
+
+    # insert supplier
+    supplier = Supplier(
+        supplier_id=1,
+        supplier_name="日禾底材",
+    )
+
+    material = Material(
+        material_id=1,
+        material_name="大底",
+        material_type_id=2,
+        material_supplier=1,
+    )
+
+    material_type = MaterialType(
+        material_type_id=2,
+        material_type_name="底材",
+        warehouse_id=1,
+    )
+
+    warehouse = MaterialWarehouse(
+        material_warehouse_id=1, material_warehouse_name="底材仓"
+    )
+
+    order = Order(
+        order_id=1,
+        order_rid="W25-006",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
+
+    batch_info_type = BatchInfoType(
+        batch_info_type_id=1,
+        batch_info_type_name="EU女",
+        batch_info_type_usage=1,
+        size_34_name="35",
+        size_35_name="36",
+        size_36_name="37",
+        size_37_name="38",
+        size_38_name="39",
+        size_39_name="40",
+        size_40_name="41",
+        size_41_name="42",
+    )
+
+    db.session.add(supplier)
+    db.session.add(material)
+    db.session.add(material_type)
+    db.session.add(warehouse)
+    db.session.add(order)
+    db.session.add(order_shoe)
+    db.session.add(batch_info_type)
+    db.session.commit()
+
+    # Use the test client to hit your Flask endpoint.
+    query_string = {
+        "inboundType": 0,
+        "currentDateTime": "2025-04-06 16:59:45",
+        "supplierName": "日禾底材",
+        "warehouseId": 1,
+        "remark": "123",
+        "items": [
+            {
+                "materialCategory": 1,
+                "materialColor": "",
+                "materialModel": "9166",
+                "materialName": "大底",
+                "materialSpecification": "棕/后跟喷棕",
+                "orderId": 1,
+                "orderRId": "W25-006",
+                "shoeRId": "3E29515",
+                "supplierName": "日禾底材",
+                "unitPrice": "12.500",
+                "inboundModel": "9166",
+                "inboundSpecification": "棕/后跟喷棕",
+                "amount0": 0,
+                "amount1": 50,
+                "amount2": 100,
+                "amount3": 150,
+                "amount4": 150,
+                "amount5": 100,
+                "amount6": 50,
+                "amount7": 0,
+                "inboundQuantity": 600,
+                "itemTotalPrice": "7500",
+                "shoeSizeColumns": [],
+            }
+        ],
+        "batchInfoTypeId": None,
+        "payMethod": "应付账款",
+        "materialTypeId": 2,
+    }
+
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    assert response.status_code == 400
+    assert json.loads(response.data)["message"] == "尺码材料没有鞋码"
 
 def test_inbound_material_user_enter_order_material_to_existed_storage(
     client: FlaskClient,
