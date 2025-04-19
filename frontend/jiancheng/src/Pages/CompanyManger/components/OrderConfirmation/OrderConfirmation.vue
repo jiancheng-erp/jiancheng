@@ -207,7 +207,7 @@ function openOrderDetail(orderId) {
 function filterByRid() {
     if (radio.value == 'all') {
         const arr = allData.value.filter((task) => {
-                const filterMatch = task.orderRid.includes(orderRidFilter.value)
+                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -218,7 +218,7 @@ function filterByRid() {
         currentTotalRows.value = arr.length
     } else if (radio.value == '待审批') {
         const arr = examineData.value.filter((task) => {
-                const filterMatch = task.orderRid.includes(orderRidFilter.value)
+                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -228,7 +228,7 @@ function filterByRid() {
         )
     } else {
         const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.orderRid.includes(orderRidFilter.value)
+                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -241,7 +241,7 @@ function filterByRid() {
 function filterByCid() {
     if (radio.value == 'all') {
         const arr = allData.value.filter((task) => {
-                const filterMatch = task.orderCid.includes(orderCidFilter.value)
+                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -252,7 +252,7 @@ function filterByCid() {
         currentTotalRows.value = arr.length
     } else if (radio.value == '待审批') {
         const arr = examineData.value.filter((task) => {
-                const filterMatch = task.orderCid.includes(orderCidFilter.value)
+                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -262,7 +262,7 @@ function filterByCid() {
         )
     } else {
         const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.orderCid.includes(orderCidFilter.value)
+                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -276,7 +276,7 @@ function filterByCid() {
 function filterByCustomerName() {
     if (radio.value == 'all') {
         const arr = allData.value.filter((task) => {
-                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -287,7 +287,7 @@ function filterByCustomerName() {
         currentTotalRows.value = arr.length
     } else if (radio.value == '待审批') {
         const arr = examineData.value.filter((task) => {
-                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -297,7 +297,7 @@ function filterByCustomerName() {
         )
     } else {
         const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.customerName.includes(customerIdFilter.value)
+                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -310,7 +310,7 @@ function filterByCustomerName() {
 function filterByShoeRid() {
     if (radio.value == 'all') {
         const arr = allData.value.filter((task) => {
-                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -321,7 +321,7 @@ function filterByShoeRid() {
         currentTotalRows.value = arr.length
     } else if (radio.value == '待审批') {
         const arr = examineData.value.filter((task) => {
-                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -331,7 +331,7 @@ function filterByShoeRid() {
         )
     } else {
         const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.shoeRId.includes(shoeRidFilter.value)
+                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -344,7 +344,7 @@ function filterByShoeRid() {
 function filterByShoeCid() {
     if (radio.value == 'all') {
         const arr = allData.value.filter((task) => {
-                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -355,7 +355,7 @@ function filterByShoeCid() {
         currentTotalRows.value = arr.length
     } else if (radio.value == '待审批') {
         const arr = examineData.value.filter((task) => {
-                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
@@ -365,7 +365,7 @@ function filterByShoeCid() {
         )
     } else {
         const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.shoeCid.includes(shoeCidFilter.value)
+                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
                 return filterMatch
             })
         currentTotalRows.value = arr.length
