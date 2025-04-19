@@ -1015,7 +1015,7 @@ def submit_purchase_divide_orders():
         remark = purchase_order_item.remark
         size_type = purchase_order_item.size_type
         if is_craft_existed:
-            craft_name = craft_sheet_item.craft_name
+            craft_name = craft_sheet_item.craft_name if craft_sheet_item else ""
         else:
             craft_name = bom_item.craft_name
         # don't create material storage if the quantity is 0

@@ -55,12 +55,18 @@ export default {
             }
             this.displayData = this.inProgressTaskData.filter(task => task.orderRId.toLowerCase().includes(this.searchOrder.toLowerCase()));
         },
+        refreshTaskData() {
+            this.$emit('getAllData')
+        },
         handleRowClick(row) {
             let url;
             if (row.taskName === '二次采购订单创建') {
                 url = `${window.location.origin}/logistics/secondpurchase/orderid=${row.orderId}`;
             }
             if (url) {
+                window.callRefreshTaskData = function () {
+                    this.refreshTaskData();
+                }.bind(this);
                 window.open(url, '_blank');
             }
         },

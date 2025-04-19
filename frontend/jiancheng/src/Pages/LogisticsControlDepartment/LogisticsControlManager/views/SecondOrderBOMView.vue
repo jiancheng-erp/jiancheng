@@ -137,6 +137,9 @@
                     <el-descriptions-item label="订单编号" align="center">{{
                         orderData.orderId
                         }}</el-descriptions-item>
+                        <el-descriptions-item label="鞋型编号" align="center">{{
+                        currentPurchaseShoeId
+                        }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{
                         orderData.createTime
                         }}</el-descriptions-item>
@@ -1266,6 +1269,13 @@ export default {
             })
             this.purchaseOrderCreateVis = false
             this.getAllShoeListInfo()
+            if (window.opener?.callRefreshTaskData) {
+                window.opener.callRefreshTaskData()
+                console.log('Function called successfully.')
+            }
+            else {
+                console.warn('Function not available on opener window.');
+            }
         },
         async submitPurchaseDivideOrderSave() {
             const loadingInstance = this.$loading({
@@ -1438,6 +1448,13 @@ export default {
                     })
                     this.isRevertDialogVisible = false
                     this.getAllShoeListInfo()
+                    if (window.opener?.callRefreshTaskData) {
+                        window.opener.callRefreshTaskData()
+                        console.log('Function called successfully.')
+                    }
+                    else {
+                        console.warn('Function not available on opener window.');
+                    }
                 }
                 else {
                     this.$message({
