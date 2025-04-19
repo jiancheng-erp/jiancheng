@@ -1147,12 +1147,6 @@ def inbound_material():
         item["inboundSpecification"] = inbound_specification
         item["materialColor"] = material_color
         item["actualInboundUnit"] = actual_inbound_unit
-        
-        unique_key = (order_rid, material_name, inbound_material, inbound_specification, material_color, actual_inbound_unit)
-        if unique_key in seen:
-            error_message = json.dumps({"message": "订单材料信息重复"})
-            abort(Response(error_message, 400))
-        seen.add(unique_key)
 
     # 采购入库
     if inbound_type == 0:

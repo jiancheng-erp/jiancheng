@@ -3,7 +3,7 @@
         <el-col :span="24">
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
-            <el-button type="success" @click="openPreviewDialog">确认入库</el-button>
+            <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -57,7 +57,8 @@
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
-                            @change="handleOrderRIdSelect(scope.row, $event)" @focus="getFilteredShoes(scope.row, $event)" filterable clearable>
+                            @change="handleOrderRIdSelect(scope.row, $event)"
+                            @focus="getFilteredShoes(scope.row, $event)" filterable clearable>
                             <el-option v-for="item in filteredOrders" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
@@ -419,20 +420,6 @@ export default {
             let seen = new Set()
             let temp = [...this.materialTableData, ...value]
             temp.splice(this.currentIndex, 1)
-            for (const obj of temp) {
-                if (!obj.orderRId) {
-                    continue
-                }
-                // create tuple of name, spec, model, color, and orderRId
-                let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}`
-                if (seen.has(string)) {
-                    ElMessage.error("入库单不能有重复数据")
-                    // 去掉新创建行
-                    this.currentIndex = null
-                    return
-                }
-                seen.add(string)
-            }
             this.materialTableData = [...temp]
             this.currentIndex = null
         },
@@ -684,6 +671,42 @@ export default {
                 }
                 ElMessage.error(this.errorMessage)
                 console.error("API Error:", error);
+            }
+        },
+        async confirmAndProceed() {
+            let duplicateCheck = false
+            let seen = new Set()
+            for (const obj of this.materialTableData) {
+                let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}-${obj.unitPrice}`
+                console.log(string)
+                if (seen.has(string)) {
+                    duplicateCheck = true
+                    break
+                }
+                seen.add(string)
+            }
+            console.log(duplicateCheck)
+            if (duplicateCheck) {
+                try {
+                    await ElMessageBox.confirm('有材料信息重复，是否继续？', '确认', {
+                        confirmButtonText: '是',
+                        cancelButtonText: '否',
+                        type: 'warning'
+                    });
+
+                    // ✅ User clicked Yes (Confirm)
+                    console.log('User confirmed. Proceeding to next step...');
+                    // Proceed to next code block
+                    this.openPreviewDialog();
+
+                } catch (error) {
+                    // ❌ User clicked No (Cancel) or closed the dialog
+                    console.log('User cancelled. Stop here.');
+                }
+            }
+            else {
+                // Proceed to next code block
+                this.openPreviewDialog();
             }
         },
         openPreviewDialog() {
