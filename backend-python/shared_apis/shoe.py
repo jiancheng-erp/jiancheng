@@ -102,7 +102,7 @@ def get_all_shoes_new():
         shoe_type_res["colorName"] = color.color_name
         shoe_type_res["shoeRid"] = shoe.shoe_rid
         shoe_type_res["shoeImageUrl"] = (
-            IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+            IMAGE_STORAGE_PATH + shoe_type.shoe_image_url + "?" + str(time.time())
             if shoe_type.shoe_image_url
             else None
         )
