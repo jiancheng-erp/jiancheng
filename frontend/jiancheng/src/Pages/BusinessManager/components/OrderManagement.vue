@@ -392,7 +392,13 @@
                                     <el-image
                                         :src="scope.row.shoeImageUrl"
                                         style="width: 150px; height: 100px"
+                                        :key="scope.row.shoeImageUrl"
                                     />
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作">
+                                <template #default="scope">
+                                    <el-button type="primary" @click="openReUploadImageDialog(scope.row)">重新上传鞋图</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -759,6 +765,26 @@
             </span>
         </template>
     </el-dialog>
+    <el-dialog title="裁剪并上传鞋图" v-model="reUploadImageDialogVis" width="60%" :close-on-click-modal="false">
+        <!-- 文件选择器 -->
+        <input type="file" accept="image/*" @change="onFileChange" />
+
+        <!-- 裁剪器 -->
+        <cropper
+            v-if="imageUrl"
+            ref="cropper"
+            :src="imageUrl"
+            :auto-zoom="true"
+            :resize-image="true"
+            :background-class="'cropper-background'"
+        />
+
+        <!-- 底部按钮 -->
+        <template #footer>
+            <el-button @click="reUploadImageDialogVis = false">取消</el-button>
+            <el-button type="primary" :disabled="!imageUrl" @click="uploadCroppedImage"> 确认上传 </el-button>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -766,8 +792,12 @@ import { Download, Upload } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage, ElPagination, ElMessageBox, ElButton } from 'element-plus'
 import { toggleRowStatus } from 'element-plus/es/components/table/src/util'
+import { Cropper } from 'vue-advanced-cropper'
 
 export default {
+    components: {
+        Cropper
+    },
     data() {
         return {
             token: localStorage.getItem('token'),
@@ -941,6 +971,12 @@ export default {
             orderCreatePageSize: 20,
             orderStatusOption: ["全部订单", "需审批订单", "我发起的订单"],
             selectedOrderStatus: "全部订单", // default selection
+            currentShoeImageId: '',
+            currentShoeColor: '',
+            currentShoeColorId: 0,
+            currentImageRow: {},
+            reUploadImageDialogVis: false,
+            imageUrl: ''
         }
     },
     computed: {
@@ -1951,6 +1987,64 @@ export default {
             this.radio = "all"
             this.sortRadio = "asc"
             }
+        },
+        openReUploadImageDialog(row) {
+            this.reUploadImageDialogVis = true
+            this.currentShoeImageId = row.shoeRid
+            this.currentShoeColor = row.colorName
+            this.currentShoeColorId = row.colorId
+            this.currentImageRow = row
+        },
+        onFileChange(event) {
+            const file = event.target.files[0]
+            if (!file) return
+
+            const reader = new FileReader()
+            reader.onload = () => {
+                this.imageUrl = reader.result
+            }
+            reader.readAsDataURL(file)
+        },
+        async uploadCroppedImage() {
+            const result = this.$refs.cropper.getResult()
+            const canvas = result.canvas
+            if (!canvas) return
+
+            await canvas.toBlob(async (blob) => {
+                const formData = new FormData()
+                formData.append('file', blob, 'cropped.jpg')
+                formData.append('shoeRid', this.currentShoeImageId)
+                formData.append('shoeColorId', this.currentShoeColorId)
+                formData.append('shoeColorName', this.currentShoeColor)
+
+                await axios
+                    .post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData)
+                    .then(() => {
+                        this.$message.success('上传成功')
+                        this.dialogVisible = false
+                        this.imageUrl = null
+                        this.refreshRowImage(this.currentShoeImageId, this.currentShoeColorId)
+
+                        // ✅ Update only the image URL of the edited row
+                    })
+                    .catch(() => {
+                        this.$message.error('上传失败')
+                    })
+            }, 'image/jpeg')
+            
+        },
+        async refreshRowImage(shoeId, shoeTypeId) {
+            console.log(shoeId, shoeTypeId)
+            const shoe = this.shoeTableData.find((s) => s.shoeRid === shoeId)
+            if (!shoe) return
+
+            const shoeType = shoe.shoeTypeData.find((t) => t.shoeTypeId === shoeTypeId)
+            if (!shoeType) return
+
+            const baseUrl = shoeType.shoeImageUrl.split('?')[0]
+            const newUrl = `${baseUrl}?t=${Date.now()}`
+            shoeType.shoeImageUrl = newUrl
+
         }
     },
     watch: {
