@@ -9,6 +9,8 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_jwt_extended import JWTManager, verify_jwt_in_request
 import redis
 
+WECHAT_TEST_MODE = True
+
 # Create an uninitialized db instance.
 db = SQLAlchemy()
 
