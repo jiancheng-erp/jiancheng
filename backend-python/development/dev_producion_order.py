@@ -1244,9 +1244,11 @@ def issue_production_order():
     db.session.commit()
     # Send WeChat message to users
     message = f"投产指令单已发出至一次用量填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
-    users = "SunHaoZheng"
+    users = "YangShuYao"
     send_massage_to_users(message, users)
-    
+    message = f"投产指令单已发出至工艺单填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    users = "YangShuYao"
+    send_massage_to_users(message, users)
     return jsonify({"message": "Production order issued successfully"})
 
 

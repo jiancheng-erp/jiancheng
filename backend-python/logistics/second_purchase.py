@@ -397,8 +397,8 @@ def get_shoe_bom_items():
                 ),
                 "unit": material.material_unit,
                 "unitUsage": bom_item.unit_usage
-                or (0.00 if material.material_category == 0 else None),
-                "approvalUsage": bom_item.total_usage or 0.00,
+                or (Decimal(0.00) if material.material_category == 0 else None),
+                "approvalUsage": bom_item.total_usage or Decimal(0.00),
                 "useDepart": bom_item.department_id,
                 "purchaseAmount": (
                     purchase_order_item.purchase_amount

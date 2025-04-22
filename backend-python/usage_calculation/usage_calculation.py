@@ -13,6 +13,7 @@ from api_utility import randomIdGenerater
 from collections import defaultdict
 from business.batch_info_type import get_order_batch_type_helper
 from sqlalchemy.sql.expression import case
+from wechat_api.send_message_api import send_massage_to_users
 
 usage_calculation_bp = Blueprint("usage_calculation_bp", __name__)
 
@@ -537,6 +538,12 @@ def issue_bom_usage():
             return jsonify({"status": "failed"})
         db.session.add_all(event_arr)
         db.session.flush()
+    message = f"订单已发出至一次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    users = "XieShuWa"
+    send_massage_to_users(message, users)
+    message = f"订单已发出至二次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    users = "FanJianMing"
+    send_massage_to_users(message, users)
     db.session.commit()
     return jsonify({"status": "success"})
 
