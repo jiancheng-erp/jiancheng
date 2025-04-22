@@ -4,6 +4,8 @@ import os
 import zipfile
 from itertools import groupby
 from operator import itemgetter
+from decimal import Decimal
+
 import json
 
 from api_utility import randomIdGenerater
@@ -343,7 +345,7 @@ def get_shoe_bom_items():
 
         # Initialize sizeInfo structure for this item
         size_info_template = {
-            f"{name_obj['label']}": {"approvalAmount": 0.00, "purchaseAmount": 0.00}
+            f"{name_obj['label']}": {"approvalAmount": Decimal(0.00), "purchaseAmount": Decimal(0.00)}
             for name_obj in size_name_info
         }
         inbound_material_id = (
@@ -433,7 +435,7 @@ def get_shoe_bom_items():
                     else combined_items[key]["bomItemId"]
                 )
             combined_items[key]["approvalUsage"] += (
-                bom_item.total_usage if bom_item.total_usage else 0.00
+                bom_item.total_usage if bom_item.total_usage else Decimal(0.00)
             )
             combined_items[key]["purchaseAmount"] += (
                 purchase_order_item.purchase_amount
@@ -447,14 +449,14 @@ def get_shoe_bom_items():
             size_field = f"size_{db_name}_total_usage"
             purchase_field = f"size_{db_name}_purchase_amount"
 
-            approval_amount = getattr(bom_item, size_field, 0.00) or 0.00
+            approval_amount = getattr(bom_item, size_field, Decimal(0.00)) or Decimal(0.00)
             purchase_amount = (
-                getattr(purchase_order_item, purchase_field, 0.00)
+                getattr(purchase_order_item, purchase_field, Decimal(0.00))
                 if purchase_order_item
-                else 0.00
+                else Decimal(0.00)
             )
-            approval_amount = approval_amount if approval_amount is not None else 0.00
-            purchase_amount = purchase_amount if purchase_amount is not None else 0.00
+            approval_amount = approval_amount if approval_amount is not None else Decimal(0.00)
+            purchase_amount = purchase_amount if purchase_amount is not None else Decimal(0.00)
 
             combined_items[key]["sizeInfo"][f"{size_name_info[i]['label']}"][
                 "approvalAmount"
