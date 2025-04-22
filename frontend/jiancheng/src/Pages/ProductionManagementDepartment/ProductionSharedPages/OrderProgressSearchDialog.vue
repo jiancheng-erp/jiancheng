@@ -3,7 +3,7 @@
         <el-form>
             <el-form-item label="客户名称">
                 <el-select v-model="searchForm.customerNameSearch" value-key="" placeholder="例：37" clearable filterable>
-                    <el-option v-for="item in customerNameOptions" :value="item" />
+                    <el-option v-for="item in customerNameOptions" :value="item" :label="item" />
                 </el-select>
             </el-form-item>
             <el-form-item label="客户商标">
