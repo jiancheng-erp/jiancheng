@@ -22,6 +22,7 @@ import FinancialManager from '@/Pages/FinancialManager/views/FinancialManager.vu
 import FinancialClerk from '@/Pages/FinancialManager/views/FinancialClerk.vue'
 import WarehouseClerk from '@/Pages/TotalWarehouse/WarehouseClerk/views/WarehouseClerk.vue'
 import Administrator from '@/Pages/Administrator/views/Administrator.vue'
+import LaborCostReportClerk from '@/Pages/ProductionManagementDepartment/LaborCostReportClerk/views/LaborCostReportClerk.vue'
 
 //引入子路由
 import LogisticsRoutes from '../Pages/LogisticsControlDepartment/LogisticsControlManager/routers/logistics'
@@ -39,6 +40,7 @@ import BusinessManagerRoutes from '../Pages/BusinessManager/routers/business'
 import OrderConfirmDetailRoutes from '../Pages/CompanyManger/routers/OrderConfirmDetail'
 import ProductionClerkRoutes from '../Pages/ProductionManagementDepartment/ProductionClerk/routers/productionClerk'
 import HumanResourcesDepartmentRoutes from '@/Pages/HumanResourcesDepartment/routers/HumanResourcesDepartment'
+import LaborCostReportClerkRoutes from '../Pages/ProductionManagementDepartment/LaborCostReportClerk/routers/laborCostReportClerkRoutes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -259,6 +261,33 @@ const router = createRouter({
         role: 23
       }
     },
+    {
+      path :'/laborcostreportclerk',
+      name : 'laborcostreportclerk',
+      component: LaborCostReportClerk,
+      meta:{
+        requiresAuth: true,
+        role: 25
+      }
+    },
+    {
+      path :'/deputygeneral',
+      name : 'deputygeneral',
+      component: DeputyGeneral,
+      meta:{
+        requiresAuth: true,
+        role: 16
+      }
+    },
+    {
+      path :'/administrator',
+      name : 'administrator',
+      component: Administrator,
+      meta:{
+        requiresAuth: true,
+        role: 1
+      }
+    },
     ...LogisticsRoutes,
     ...ProductionRoutes,
     ...TechenicalDepartmentClerkRoutes,
@@ -273,7 +302,8 @@ const router = createRouter({
     ...BusinessManagerRoutes,
     ...OrderConfirmDetailRoutes,
     ...ProductionClerkRoutes,
-    ...HumanResourcesDepartmentRoutes
+    ...HumanResourcesDepartmentRoutes,
+    ...LaborCostReportClerkRoutes,
   ]
 })
 import axios from 'axios'

@@ -255,8 +255,8 @@
             <span>
                 <el-button @click="isScheduleDialogOpen = false">取消</el-button>
                 <el-button v-if="role == 6" type="primary" @click="modifyProductionSchedule">保存排期</el-button>
-                <!-- <el-button @click="startProduction">下发排期</el-button> -->
-                <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
+                <el-button @click="startProduction">下发排期</el-button>
+                <!-- <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
                     type="success" @click="startProduction" :disabled="currentRow.processSheetUploadStatus != 4">
                     <el-tooltip v-if="currentRow.processSheetUploadStatus != 4" effect="dark" content="工艺单未下发"
                         placement="bottom">
@@ -265,7 +265,7 @@
                     <span v-if="currentRow.processSheetUploadStatus == 4">
                         下发排期
                     </span>
-                </el-button>
+                </el-button> -->
             </span>
         </template>
     </el-dialog>
@@ -528,6 +528,7 @@ export default {
         }
     },
     async mounted() {
+        this.getAllCustomers()
         await this.getOrderDataTable()
     },
     computed: {
@@ -538,6 +539,10 @@ export default {
         }
     },
     methods: {
+        async getAllCustomers() {
+            const response = await axios.get(`${this.$apiBaseUrl}/customer/getallcustomers`)
+            this.customerNameOptions = response.data
+        },
         updateDialogVisible(newVal) {
             this.isSearchDialogVisible = newVal
         },

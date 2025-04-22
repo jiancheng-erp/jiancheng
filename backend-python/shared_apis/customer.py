@@ -12,15 +12,10 @@ IS_ACTIVE = '1'
 INACTIVE = '0'
 @customer_bp.route("/customer/getallcustomers", methods=["GET"])
 def get_all_customers():
-    customers = Customer.query.all()
+    customers = db.session.query(Customer.customer_name).order_by(Customer.customer_name).distinct().all()
     result = []
-    for customer in customers:
-        result.append(
-            {
-                "value": customer.customer_id,
-                "label": customer.customer_name,
-            }
-        )
+    for (customer_name,) in customers:
+        result.append(customer_name)
     return jsonify(result)
 
 @customer_bp.route("/customer/getcustomerdetails", methods=["GET"])

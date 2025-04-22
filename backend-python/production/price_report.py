@@ -47,58 +47,22 @@ def get_new_price_reports():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     status_name = request.args.get("statusName")
-    team = request.args.get("team")
-    if team == "裁断":
-        start_date = OrderShoeProductionInfo.cutting_start_date
-        end_date = OrderShoeProductionInfo.cutting_end_date
-    elif team == "针车":
-        pre_start_date = OrderShoeProductionInfo.pre_sewing_start_date
-        pre_end_date = OrderShoeProductionInfo.pre_sewing_end_date
-        start_date = OrderShoeProductionInfo.sewing_start_date
-        end_date = OrderShoeProductionInfo.sewing_end_date
-    elif team == "成型":
-        start_date = OrderShoeProductionInfo.molding_start_date
-        end_date = OrderShoeProductionInfo.molding_end_date
-    else:
-        return jsonify({"message": "invalid team name"}), 400
-    if team == "针车":
-        query = db.session.query(
-            Order,
-            OrderShoe,
-            Shoe,
-            Customer,
-            UnitPriceReport.status,
-            UnitPriceReport.rejection_reason,
-            pre_start_date,
-            pre_end_date,
-            start_date,
-            end_date,
-        )
-    else:
-        query = db.session.query(
-            Order,
-            OrderShoe,
-            Shoe,
-            Customer,
-            UnitPriceReport.status,
-            UnitPriceReport.rejection_reason,
-            start_date,
-            end_date,
-        )
+    teams = request.args.get("team")
+    team_list = teams.split(",")
+    query = db.session.query(
+        Order,
+        OrderShoe,
+        Shoe,
+        Customer,
+        UnitPriceReport,
+    )
     query = (
         query.join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
-        .join(
-            OrderShoeProductionInfo,
-            OrderShoeProductionInfo.order_shoe_id == OrderShoe.order_shoe_id,
-        )
-        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
         .join(UnitPriceReport, UnitPriceReport.order_shoe_id == OrderShoe.order_shoe_id)
         .filter(
-            OrderShoeStatus.current_status
-            >= PRICE_REPORT_REFERENCE[team]["status_number"],
-            UnitPriceReport.team == team,
+            UnitPriceReport.team.in_(team_list),
         )
     )
     if order_rid and order_rid != "":
@@ -113,45 +77,26 @@ def get_new_price_reports():
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
     for row in response:
-        if team == "针车":
-            (
-                order,
-                order_shoe,
-                shoe,
-                customer,
-                status,
-                rejection_reason,
-                pre_start_date_res,
-                pre_end_date_res,
-                start_date_res,
-                end_date_res,
-            ) = row
-        else:
-            (
-                order,
-                order_shoe,
-                shoe,
-                customer,
-                status,
-                rejection_reason,
-                start_date_res,
-                end_date_res,
-            ) = row
-        status_name = check_report_status(status)
+        (
+            order,
+            order_shoe,
+            shoe,
+            customer,
+            report,
+        ) = row
+        status_name = check_report_status(report.status)
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
             "orderShoeId": order_shoe.order_shoe_id,
             "shoeRId": shoe.shoe_rid,
-            "productionStartDate": format_date(start_date_res),
-            "productionEndDate": format_date(end_date_res),
+            "orderStartDate": format_date(order.start_date),
+            "orderEndDate": format_date(order.end_date),
             "customerName": customer.customer_name,
             "statusName": status_name,
-            "rejectionReason": rejection_reason,
+            "teamName": report.team,
+            "rejectionReason": report.rejection_reason,
         }
-        if team == "针车":
-            obj["preSewingProductionStartDate"] = format_date(pre_start_date_res)
-            obj["preSewingProductionEndDate"] = format_date(pre_end_date_res)
         result.append(obj)
     return {"result": result, "totalLength": count_result}
 
@@ -314,11 +259,14 @@ def get_price_report_detail_by_order_shoe_id():
 def get_all_procedures():
     teams = request.args.get("teams").split(",")
     procedure_name = request.args.get("procedureName")
+    team_name = request.args.get("teamName")
     query = ProcedureReference.query.filter(ProcedureReference.team.in_(teams))
     if procedure_name and procedure_name != "":
         query = query.filter(
             ProcedureReference.procedure_name.ilike(f"%{procedure_name}%")
         )
+    if team_name and team_name != "":
+        query = query.filter(ProcedureReference.team == team_name)
     response = query.all()
     result = []
     for row in response:

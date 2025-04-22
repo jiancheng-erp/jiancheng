@@ -27,20 +27,11 @@
                 <el-col :span="24">
                     <el-tabs v-model="currentTab" tab-position="top">
                         <el-tab-pane v-for="item in panes" :key="item" :label="item" :name="item">
-                            <h3>{{ `${currentTab}工序表` }}</h3>
                             <el-row :gutter="20">
                                 <el-col>
                                     <PriceReportTable :tableData="priceReportInfo[item]['tableData']"
                                         :procedureInfo="procedureInfo"
                                         :readOnly="readOnly" :team="currentTab" @update-items="handleUpdateItems" />
-                                </el-col>
-                            </el-row>
-                            <h3>{{ `${currentTab}外加工成本表` }}</h3>
-                            <el-row :gutter="20">
-                                <el-col>
-                                    <ExternalProcessingTable :tableData="externalProcessingData[item]['tableData']"
-                                        :supplierOptions="supplierOptions" :readOnly="readOnly"
-                                        @update-items="handleUpdateProcessing" />
                                 </el-col>
                             </el-row>
                         </el-tab-pane>
@@ -50,21 +41,13 @@
             <el-row :gutter="20">
                 <el-col>
                     <el-button-group>
-                        <el-button type="info" @click="saveAsTemplate">保存为模板</el-button>
-                        <el-button v-if="!readOnly" type="info" @click="loadTemplate">加载模板</el-button>
-                        <!-- <el-button type="primary" @click="">下载为Excel</el-button> -->
-                    </el-button-group>
-                </el-col>
-            </el-row>
-            <el-row :gutter="20">
-                <el-col :offset="20">
-                    <el-button-group>
+                        <el-button @click="saveAsTemplate">保存为模板</el-button>
+                        <el-button v-if="!readOnly" @click="loadTemplate">加载模板</el-button>
                         <el-button v-if="!readOnly" type="primary" @click="handleSaveData">保存</el-button>
-                        <el-button v-if="!readOnly" type="success" @click="handleSubmit">提交</el-button>
-                        <el-button type="info" @click="generateProductionForm">生产流程卡</el-button>
+                        <el-button v-if="!readOnly" type="warning" @click="handleSubmit">提交</el-button>
+                        <el-button type="success" @click="generateProductionForm">生产流程卡</el-button>
                     </el-button-group>
                 </el-col>
-
             </el-row>
         </el-main>
     </el-container>
@@ -74,7 +57,6 @@
 import { onMounted, ref, reactive, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 import PriceReportTable from './PriceReportTable.vue';
-import ExternalProcessingTable from './ExternalProcessingTable.vue';
 import AllHeader from '@/components/AllHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 const priceReportInfo = reactive({})
@@ -90,12 +72,10 @@ const teamsArr = ref([])
 const statusName = ref('')
 const rejectionReason = ref('')
 const currentTab = ref('')
-const externalProcessingData = reactive({})
 
 onMounted(async () => {
     setReportPanes()
     await getPriceReportDetail()
-    await getExternalProcessingData()
     getOrderInfo()
     getAllProcedures()
     getAllSuppliers()
@@ -105,16 +85,11 @@ const handleUpdateItems = (items) => {
     priceReportInfo[currentTab.value]['tableData'] = items
 };
 
-const handleUpdateProcessing = (items) => {
-    externalProcessingData.value = items
-};
-
 const setReportPanes = () => {
     teamsArr.value = props.teams.split(",")
     teamsArr.value.forEach(team => {
         panes.value.push(team)
         priceReportInfo[team] = { "tableData": [], reportId: null }
-        externalProcessingData[team] = { "tableData": [] }
     })
     currentTab.value = panes.value[0]
 }
@@ -165,22 +140,12 @@ const getPriceReportDetail = async () => {
     }
 }
 
-const getExternalProcessingData = async () => {
-    for (const team of teamsArr.value) {
-        let params = { "reportId": priceReportInfo[team]["reportId"] }
-        let response = await axios.get(`${apiBaseUrl}/production/getexternalprocessingcost`, { params })
-        externalProcessingData[team]["tableData"] = response.data
-    }
-}
-
 const handleSaveData = async () => {
     try {
         for (const [key, info] of Object.entries(priceReportInfo)) {
             console.log(key, info)
             await axios.post(`${apiBaseUrl}/production/storepricereportdetail`,
                 { reportId: info.reportId, newData: info.tableData })
-            await axios.post(`${apiBaseUrl}/production/saveexternalprocessingcost`,
-                { reportId: info.reportId, newData: externalProcessingData[key]["tableData"] })
         }
         ElMessage.success("保存成功")
     }
