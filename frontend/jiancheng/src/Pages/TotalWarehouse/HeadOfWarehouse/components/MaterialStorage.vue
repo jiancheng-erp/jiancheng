@@ -88,7 +88,7 @@
     </div>
     <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 60vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
-        <el-table-column type="selection" width="55" />
+        <el-table-column v-if="role == 23" type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
         <el-table-column prop="materialType" label="类型"></el-table-column>

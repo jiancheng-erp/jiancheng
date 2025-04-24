@@ -20,6 +20,9 @@
                 <!-- <el-menu-item index="5" @click="handleMenuOption('ProcedureManagement')">
                     <span>工序管理</span>
                 </el-menu-item> -->
+                <el-menu-item index="4" @click="handleMenuOption('LogisticInfo')">
+                    <span>物料信息</span>
+                </el-menu-item>
                 <el-menu-item index="6" @click="handleMenuOption('BatchInfo')">
                     <span>装箱配码</span>
                 </el-menu-item>
