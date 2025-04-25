@@ -87,7 +87,6 @@ def get_dev_orders_for_doc():
     _, staff, department = current_user_info()
 
     shoe_department = department.department_name
-    print("department" + shoe_department)
     status_val = DEV_ORDER_SHOE_STATUS
     t_s = time.time()
     status_val = request.args.get("ordershoestatus")
@@ -851,8 +850,6 @@ def get_display_orders_manager():
                       .all())
     for entity in staff_entities:
         department_staff_id_mapping[entity.staff_id] = entity.staff_name
-    print(department_staff_id_mapping)
-    print(department_staff_id_mapping[current_staff_id])
     
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
@@ -866,9 +863,6 @@ def get_display_orders_manager():
                     order_status_message += " \n" + msg_mapping[order_status.order_status_value]
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
-        print("debug")
-        print(order.salesman_id)
-        print(department_staff_id_mapping[order.salesman_id])
         result.append(
             {
                 "orderDbId": order.order_id,
@@ -913,7 +907,6 @@ def get_all_orders():
     staff_id_to_name_mapping = {}
     for staff in staff_entities:
         staff_id_to_name_mapping[staff.staff_id] = staff.staff_name
-    print(staff_id_to_name_mapping)
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")

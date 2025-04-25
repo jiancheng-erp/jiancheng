@@ -301,9 +301,9 @@ def get_warehouse_inbound_summery():
     if material_name_filter:
         response_query = response_query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
     if material_model_filter:
-        response_query = response_query.filter(time_period_subquery.c.material_model.ilike(f"%{material_model_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.spu_material_material_model.ilike(f"%{material_model_filter}%"))
     if material_specification_filter:
-        response_query = response_query.filter(time_period_subquery.c.material_specification.ilike(f"%{material_specification_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.spu_material_material_specification.ilike(f"%{material_specification_filter}%"))
     if material_color_filter:
         response_query = response_query.filter(time_period_subquery.c.color.ilike(f"%{material_color_filter}%"))
     total_count = response_query.distinct().count()
