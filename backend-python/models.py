@@ -1170,6 +1170,7 @@ class InboundRecordDetail(db.Model):
     size_45_inbound_amount = db.Column(db.Integer, nullable=True)
     size_46_inbound_amount = db.Column(db.Integer, nullable=True)
 
+    order_id = db.Column(db.BigInteger, nullable=True)
     material_storage_id = db.Column(db.BigInteger, nullable=True)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
@@ -1219,6 +1220,8 @@ class OutboundRecordDetail(db.Model):
     size_44_outbound_amount = db.Column(db.Integer, nullable=True)
     size_45_outbound_amount = db.Column(db.Integer, nullable=True)
     size_46_outbound_amount = db.Column(db.Integer, nullable=True)
+
+    order_id = db.Column(db.BigInteger, nullable=True)
     material_storage_id = db.Column(
         db.BigInteger,
         nullable=True,
