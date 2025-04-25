@@ -1,7 +1,7 @@
 <template>
     <el-dialog title="搜索条件设置" v-model="localVisible" @close="handleClose" width="30%">
         请选择仓库：
-        <el-select v-model="searchForm.warehouseId" filterable clearable>
+        <el-select v-model="searchForm.warehouseId" filterable clearable placeholder="例：楦头仓">
             <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :value="item.warehouseId"
                 :label="item.warehouseName"></el-option>
         </el-select>
@@ -25,7 +25,10 @@
         </el-select>
         <div style="display: block;" >
             搜索不带订单材料：
-            <el-switch v-model="searchForm.isNonOrderMaterial" :active-value="1" :inactive-value="0" />
+            <el-radio-group v-model="searchForm.isNonOrderMaterial">
+                <el-radio :label="0">是</el-radio>
+                <el-radio :label="1">否</el-radio>
+            </el-radio-group>
         </div>
         订单号筛选：
         <el-input v-model="searchForm.orderNumberSearch" placeholder="" clearable :disabled="searchForm.isNonOrderMaterial == 1" />

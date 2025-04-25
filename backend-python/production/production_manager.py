@@ -392,7 +392,7 @@ def get_all_order_production_progress():
     elif sort_condition == "数量最多":
         query = query.order_by(desc(order_shoe_info.c.order_shoe_amount))
     else:
-        query = query.order_by(asc(Order.end_date))
+        query = query.order_by(asc(Order.order_rid))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     res = []
@@ -495,6 +495,7 @@ def get_all_order_shoe_info():
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
+        .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))

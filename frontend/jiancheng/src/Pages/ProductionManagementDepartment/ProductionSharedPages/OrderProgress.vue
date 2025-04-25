@@ -45,27 +45,20 @@
                         </el-table>
                     </template>
                 </el-table-column>
-                <el-table-column prop="customerName" label="客户名称" width="80"></el-table-column>
-                <el-table-column prop="customerBrand" label="客户商标" width="80"></el-table-column>
+                <el-table-column prop="customerName" label="客户名" width="80"></el-table-column>
+                <el-table-column prop="customerBrand" label="商标" width="80"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
-                <el-table-column prop="orderStartDate" label="订单开始" width="110" sortable></el-table-column>
-                <el-table-column prop="orderEndDate" label="出货日期" width="110" sortable></el-table-column>
-                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
-                <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
+                <el-table-column prop="orderStartDate" label="订单开始" width="110"></el-table-column>
+                <el-table-column prop="orderEndDate" label="出货日期" width="110"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号" width="90"></el-table-column>
+                <el-table-column prop="customerProductName" label="客户鞋型" width="90"></el-table-column>
                 <el-table-column prop="status" label="状态"></el-table-column>
-                <el-table-column prop="orderShoeTotal" label="鞋型数量"></el-table-column>
+                <el-table-column prop="orderShoeTotal" label="数量"></el-table-column>
                 <el-table-column label="车间生产进度" header-align="center">
                     <el-table-column prop="totalCuttingAmount" label="裁断"></el-table-column>
                     <el-table-column prop="totalPreSewingAmount" label="预备"></el-table-column>
                     <el-table-column prop="totalSewingAmount" label="针车"></el-table-column>
                     <el-table-column prop="totalMoldingAmount" label="成型"></el-table-column>
-                </el-table-column>
-                <el-table-column label="生产信息">
-                    <template #default="scope">
-                        <el-button type="primary" size="small" @click="openProdDetailDialog(scope.row)">
-                            查看
-                        </el-button>
-                    </template>
                 </el-table-column>
                 <el-table-column label="排产">
                     <template #default="scope">
@@ -144,12 +137,14 @@
     </el-dialog>
 
     <el-dialog :title="`订单${currentRow.orderRId}-鞋型${currentRow.shoeRId}排产信息`" v-model="isScheduleDialogOpen"
-        width="95%">
+        fullscreen>
         <el-tabs v-model="activeTab" tab-position="top" @tab-click="">
             <el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
                 <el-row :gutter="20">
                     <el-col :span="4" v-for="subTab in tabs">
-                        {{ `${subTab.dateLabel}: ${subTab.dateValue[0] ? subTab.dateValue[0] + '至' + subTab.dateValue[1] : '未设置'}` }}
+                        {{ `${subTab.dateLabel}: ${subTab.dateValue[0] ? subTab.dateValue[0] + '至' + subTab.dateValue[1]
+                            :
+                            '未设置'}` }}
                     </el-col>
 
                 </el-row>
@@ -211,16 +206,18 @@
                 </el-row>
                 <el-row :gutter="20">
                     <el-col>
-                        <el-table v-loading="isLoading" :data="tab.productionAmountTable" border stripe :max-height="500">
+                        <el-table v-loading="isLoading" :data="tab.productionAmountTable" border stripe
+                            :max-height="500">
                             <el-table-column prop="colorName" label="颜色"></el-table-column>
                             <el-table-column prop="totalAmount" label="颜色总数"></el-table-column>
                             <!-- <el-table-column prop="" label="已设置外包数量"></el-table-column> -->
                             <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
                                 :label="column.label">
                                 <template v-slot="scope">
-                                    <el-input-number v-model="scope.row[column.prop]" v-if="role == 6" :min="0"
-                                        :step="1" />
-                                    <span v-if="role != 6"></span>
+                                    <el-input-number v-model="scope.row[column.prop]"
+                                        v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
+                                        :min="0" :step="1" />
+                                    <span v-else>{{ scope.row[column.prop] }}</span>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -231,7 +228,8 @@
         <el-row :gutter="20" style="margin-top: 20px">
             <el-col :span="24" :offset="0">
                 订单数量
-                <el-table v-loading="isLoading" :data="shoeBatchInfo" :span-method="spanMethod" border stripe :max-height="500">
+                <el-table v-loading="isLoading" :data="shoeBatchInfo" :span-method="spanMethod" border stripe
+                    :max-height="500">
                     <el-table-column prop="colorName" label="颜色"></el-table-column>
                     <el-table-column prop="totalAmount" label="颜色总数"></el-table-column>
                     <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
@@ -254,47 +252,19 @@
         <template #footer>
             <span>
                 <el-button @click="isScheduleDialogOpen = false">取消</el-button>
-                <el-button v-if="role == 6" type="primary" @click="modifyProductionSchedule">保存排期</el-button>
-                <el-button @click="startProduction">下发排期</el-button>
-                <!-- <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
-                    type="success" @click="startProduction" :disabled="currentRow.processSheetUploadStatus != 4">
-                    <el-tooltip v-if="currentRow.processSheetUploadStatus != 4" effect="dark" content="工艺单未下发"
-                        placement="bottom">
-                        下发排期
-                    </el-tooltip>
-                    <span v-if="currentRow.processSheetUploadStatus == 4">
-                        下发排期
-                    </span>
-                </el-button> -->
+                <el-button type="primary" @click="openProdDetailDialog(this.currentRow)">查看生产信息</el-button>
+                <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
+                    type="primary" @click="modifyProductionSchedule">保存排期</el-button>
+                <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
+                    type="success" @click="startProduction">下发排期</el-button>
             </span>
         </template>
     </el-dialog>
 
-    <el-dialog title="生产信息一览" v-model="isProdDetailDialogOpen" width="80%">
+    <el-dialog title="生产信息一览" v-model="isProdDetailDialogOpen" fullscreen @close="onDialogClose">
         <el-tabs v-model="currentProdDetailTab" tab-position="top">
             <el-tab-pane name="1" label="物料">
-                <el-row :gutter="20">
-                    <el-col :span="24" :offset="0">
-                        <el-table :data="logisticsMaterialData" border stripe>
-                            <el-table-column prop="materialType" label="材料类型"></el-table-column>
-                            <el-table-column prop="materialName" label="材料名称"></el-table-column>
-                            <el-table-column prop="colorName" label="颜色"></el-table-column>
-                            <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
-                            <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
-                            <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                            <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
-                            <el-table-column prop="currentAmount" label="库存"></el-table-column>
-                        </el-table>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-pagination @size-change="handleLogisticsSizeChange"
-                            @current-change="handleLogisticsPageChange" :current-page="logisticsCurrentPage"
-                            :page-sizes="[10, 20, 30, 40]" :page-size="logisticsPageSize"
-                            layout="total, sizes, prev, pager, next, jumper" :total="logisticsRows" />
-                    </el-col>
-                </el-row>
+                <OrderMaterialsPage v-if="showChild" :current-row="currentRow" />
             </el-tab-pane>
             <el-tab-pane name="2" label="工艺单">
                 <el-button v-if="currentRow.processSheetUploadStatus == 2" type="warning" size="small"
@@ -344,16 +314,14 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { shoeBatchInfoTableSpanMethod, getShoeSizesName } from '../utils';
 import OrderProgressSearchDialog from './OrderProgressSearchDialog.vue';
+import MaterialStorage from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/MaterialStorage.vue';
+import OrderMaterialsPage from './OrderMaterialsPage.vue';
 export default {
-    props: {
-        editable: {
-            type: Boolean,
-            default: false
-        }
-    },
     components: {
         AllHeader,
-        OrderProgressSearchDialog
+        OrderProgressSearchDialog,
+        MaterialStorage,
+        OrderMaterialsPage
     },
     data() {
         return {
@@ -524,7 +492,8 @@ export default {
             },
             isSelectedRowsEmpty: false,
             priceReportDict: {},
-            isLoading: true
+            isLoading: true,
+            showChild: false,
         }
     },
     async mounted() {
@@ -555,8 +524,7 @@ export default {
         },
         openProdDetailDialog(row) {
             this.currentRow = row
-            this.logisticsCurrentPage = 1
-            this.viewLogisticDetail()
+            this.showChild = true
             this.isProdDetailDialogOpen = true
         },
         async viewPriceReport(row) {
@@ -837,25 +805,12 @@ export default {
             url = `${window.location.origin}/processsheet/orderid=${this.currentRow.orderId}`
             window.open(url, '_blank')
         },
-        async viewLogisticDetail() {
-            const params = {
-                "page": this.logisticsCurrentPage,
-                "pageSize": this.logisticsPageSize,
-                "orderRId": this.currentRow.orderRId,
-                "shoeRId": this.currentRow.shoeRId
-            }
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
-            this.logisticsMaterialData = response.data.result
-            this.logisticsRows = response.data.total
-        },
-        async handleLogisticsSizeChange(val) {
-            this.logisticsPageSize = val
-            await this.viewLogisticDetail()
-        },
-        async handleLogisticsPageChange(val) {
-            this.logisticsCurrentPage = val
-            await this.viewLogisticDetail()
-        },
+        onDialogClose() {
+            // wait until dialog animation is done, then destroy child
+            this.$nextTick(() => {
+                this.showChild = false
+            })
+        }
     }
 }
 </script>
