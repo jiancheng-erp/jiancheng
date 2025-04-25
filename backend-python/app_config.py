@@ -60,6 +60,7 @@ def create_app(config_override=None):
     # Define open routes that do not require authentication.
     open_routes = [
         "/login",
+        "/favicon.ico",
         "/devproductionorder/download",
         "/orderimport/downloadorderdoc",
         "/processsheet/download",
