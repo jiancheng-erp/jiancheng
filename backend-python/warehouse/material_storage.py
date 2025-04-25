@@ -987,6 +987,7 @@ def _handle_purchase_inbound(data, next_group_id):
             inbound_record_id=inbound_record.inbound_record_id,
             inbound_amount=inbound_quantity,
             remark=item.get("remark", None),
+            order_id=storage.order_id,
             spu_material_id=storage.spu_material_id,
         )
 
@@ -1076,6 +1077,7 @@ def _handle_production_remain_inbound(data, next_group_id):
             inbound_record_id=inbound_record.inbound_record_id,
             inbound_amount=inbound_quantity,
             remark=item.get("remark", None),
+            order_id=storage.order_id,
             spu_material_id=storage.spu_material_id,
         )
 
@@ -1205,14 +1207,16 @@ def _handle_production_outbound(data, next_group_id):
             storage = db.session.query(SizeMaterialStorage).filter(SizeMaterialStorage.size_material_storage_id == storage_id).first()
 
         selected_order_rid = item.get("selectedOrderRId", None)
-        order_shoe_id = None
+        order_id, order_shoe_id = None, None
         if selected_order_rid:
             order, order_shoe = _find_order_shoe(selected_order_rid)
-            order_shoe_id = order_shoe.order_shoe_id if order_shoe else None
+            order_id = order.order_id
+            order_shoe_id = order_shoe.order_shoe_id
         record_detail = OutboundRecordDetail(
             outbound_record_id=outbound_record.outbound_record_id,
             outbound_amount=outbound_quantity,
             remark=item.get("remark", None),
+            order_id=order_id,
             order_shoe_id=order_shoe_id,
             unit_price=storage.average_price,
             item_total_price=outbound_quantity * storage.average_price,
@@ -1308,14 +1312,16 @@ def _handle_composite_outbound(data, next_group_id):
             abort(Response(error_message, 400))
 
         selected_order_rid = item.get("selectedOrderRId", None)
-        order_shoe_id = None
+        order_id, order_shoe_id = None
         if selected_order_rid:
             order, order_shoe = _find_order_shoe(selected_order_rid)
-            order_shoe_id = order_shoe.order_shoe_id if order_shoe else None
+            order_id = order.order_id
+            order_shoe_id = order_shoe.order_shoe_id
         record_detail = OutboundRecordDetail(
             outbound_record_id=outbound_record.outbound_record_id,
             outbound_amount=outbound_quantity,
             remark=item.get("remark", None),
+            order_id=order_id,
             order_shoe_id=order_shoe_id,
             spu_material_id=storage.spu_material_id,
         )
