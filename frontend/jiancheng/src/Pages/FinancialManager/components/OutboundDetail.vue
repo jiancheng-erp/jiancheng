@@ -20,7 +20,7 @@
         </el-col>
 
         <el-col :span="4" :offset="1">
-            <el-input v-model="supplierNameFilter" placeholder="供应商搜索" size="normal" clearable @change="updateInboundDisplayRecord"></el-input>
+            <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable @change="updateInboundDisplayRecord"></el-input>
         </el-col>
         
         <el-col :span="4" :offset="1">
@@ -55,8 +55,8 @@
     
     
     <el-row :gutter="20">
-        < <el-checkbox-group v-model="checkedColumnValues" size="normal"  @change="updateCheckBox">
-        <el-checkbox-button v-for="col in allColumns" :key="col.id" :label="col.id">
+        < <el-checkbox-group v-model="checkedColumnValues"  @change="updateCheckBox">
+        <el-checkbox-button v-for="col in allColumns" :key="col.id" :value="col.id">
             {{col.labelName}}
         </el-checkbox-button>
     </el-checkbox-group>

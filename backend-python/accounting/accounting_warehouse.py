@@ -36,7 +36,7 @@ SELECTABLE_ATTRNAMES = [INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES,SUPPLIER_SELEC
 name_en_cn_mapping_inbound = {
     "inbound_rid":"入库单据号",
     "inbound_datetime":"入库时间",
-    "material_warehouse":"入库仓库",
+    "material_warehouse":"仓库",
     "supplier_name":"供应商",
     "material_name":"材料名称",
     "material_model":"材料型号",
@@ -51,6 +51,7 @@ name_en_cn_mapping_inbound = {
     "remark":"入库备注",
     }
 name_mapping_inbound_summary = {
+    "material_warehouse":"仓库",
     "supplier_name":"供应商",
     "material_name":"材料名称",
     "material_model":"材料型号",
@@ -169,7 +170,11 @@ def get_warehouse_inbound_record():
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    inbound_rid_filter = request.args.get('inboundRIdFilter', type=str)
+    material_name_filter = request.args.get('materialNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
+    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
+    material_color_filter = request.args.get('materialColorFilter', type=str)
     # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
     # print(approval_status_filter)
     query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial)
@@ -186,8 +191,10 @@ def get_warehouse_inbound_record():
                 .join(Material, SizeMaterialStorage.material_id == Material.material_id)
                 .join(SPUMaterial, SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id))
 
-    query = query.union(sized_material_query)
+    query = query.union(sized_material_query).order_by(InboundRecord.inbound_datetime.desc())
 
+    if inbound_rid_filter:
+        query = query.filter(InboundRecord.inbound_rid.ilike(f"%{inbound_rid_filter}%"))
     if warehouse_filter:
         query = query.filter(InboundRecord.warehouse_id == warehouse_filter)
     if supplier_name_filter:
@@ -200,8 +207,14 @@ def get_warehouse_inbound_record():
         next_day_delta = timedelta(days=1)
         query_compare_date = format_date((input_date_time + next_day_delta))
         query = query.filter(InboundRecord.inbound_datetime <= query_compare_date)
+    if material_name_filter:
+        query = query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
     if material_model_filter:
         query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
+    if material_specification_filter:
+        query = query.filter(SPUMaterial.material_specification.ilike(f"%{material_specification_filter}%"))
+    if material_color_filter:
+        query = query.filter(SPUMaterial.color.ilike(f"%{material_color_filter}%"))
     # if approval_status_filter != []:
     #     query = query.filter(InboundRecord.approval_status.in_(approval_status_filter))
     warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
@@ -229,7 +242,10 @@ def get_warehouse_inbound_summery():
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    material_name_filter = request.args.get('materialNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
+    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
+    material_color_filter = request.args.get('materialColorFilter', type=str)
     # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
 
     inbound_records = (db.session.query(InboundRecord.inbound_record_id))
@@ -268,8 +284,10 @@ def get_warehouse_inbound_summery():
 
     query = query.union(sized_query)
     time_period_subquery = query.subquery()
-    response_query = (db.session.query(time_period_subquery, Material, Supplier)
+    response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
                       .join(Material, time_period_subquery.c.spu_material_material_id == Material.material_id)
+                      .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+                      .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
                       .join(Supplier, Material.material_supplier == Supplier.supplier_id)
                       )
     # inbound_record_summery_subquery = query.subquery()
@@ -280,12 +298,18 @@ def get_warehouse_inbound_summery():
     # print(response_query.all())
     if supplier_name_filter:
         response_query  = response_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
+    if material_name_filter:
+        response_query = response_query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
     if material_model_filter:
         response_query = response_query.filter(time_period_subquery.c.material_model.ilike(f"%{material_model_filter}%"))
+    if material_specification_filter:
+        response_query = response_query.filter(time_period_subquery.c.material_specification.ilike(f"%{material_specification_filter}%"))
+    if material_color_filter:
+        response_query = response_query.filter(time_period_subquery.c.color.ilike(f"%{material_color_filter}%"))
     total_count = response_query.distinct().count()
     response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_summary = []
-    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, inbound_amount_sum, material, supplier in response_entities:
+    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, inbound_amount_sum, material, warehouse_name, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = unit_price
@@ -295,6 +319,7 @@ def get_warehouse_inbound_summery():
         res['materialSpecification'] = m_specification
         res['materialColor'] = color
         res['spuRid'] = spu_rid
+        res['materialWarehouse'] = warehouse_name
         inbound_summary.append(res)
     return jsonify({"inboundSummary":inbound_summary, "total":total_count}), 200
 
