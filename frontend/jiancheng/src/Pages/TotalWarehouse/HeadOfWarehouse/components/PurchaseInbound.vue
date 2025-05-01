@@ -3,6 +3,7 @@
         <el-col :span="24">
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
+            <el-button type="primary" @click="saveInboundRecord">暂存入库单</el-button>
             <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
         </el-col>
     </el-row>
@@ -310,7 +311,7 @@ export default {
                 inboundRId: '',
                 remark: '',
                 shoeSize: null,
-                payMethod: '',
+                payMethod: '应付账款',
                 warehouseName: null,
                 warehouseId: null,
             },
@@ -373,7 +374,7 @@ export default {
         }
     },
     async mounted() {
-        this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
+        this.loadLocalStorageData()
         await this.getLogisticsShoeSizes()
     },
     computed: {
@@ -398,6 +399,25 @@ export default {
         }
     },
     methods: {
+        loadLocalStorageData() {
+            let inboundRecord = localStorage.getItem('inboundRecord')
+            if (inboundRecord) {
+                inboundRecord = JSON.parse(inboundRecord)
+                this.inboundForm = { ...inboundRecord.inboundForm }
+                this.materialTableData = [...inboundRecord.materialTableData]
+            } else {
+                this.inboundForm = { ...this.inboundFormTemplate }
+                this.materialTableData = []
+            }
+        },
+        saveInboundRecord() {
+            let inboundRecord = {
+                inboundForm: this.inboundForm,
+                materialTableData: this.materialTableData,
+            }
+            localStorage.setItem('inboundRecord', JSON.stringify(inboundRecord))
+            ElMessage.success('暂存成功')
+        },
         handleOrderRIdSelect(row, value) {
             row.shoeRId = this.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
         },
@@ -548,7 +568,7 @@ export default {
                 event.preventDefault(); // Prevent default Enter key behavior
                 this.currentKeyDownRow = scope.row; // Store the current row
                 this.currentIndex = scope.rowIndex; // Store the current row index
-                if (['大底', '中底'].includes(this.currentKeyDownRow.materialName)) {
+                if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
                     this.fetchSizeMaterialData()
                     this.isSizeMaterialSelectDialogVis = true
                 }
@@ -753,6 +773,7 @@ export default {
             this.previewData = []
             this.isInbounded = 0
             this.materialTableData = []
+            localStorage.removeItem('inboundRecord')
             this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
             this.inboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
             this.shoeSizeColumns = []
