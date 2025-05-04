@@ -138,6 +138,7 @@ def get_all_material_name():
                 "label": material.material_name,
                 "type": material.material_type_id,
                 "unit": material.material_unit,
+                "materialCategory": material.material_category,
                 "materialTypeName": material_type.material_type_name,
             }
     # Convert the dictionary values into a list
