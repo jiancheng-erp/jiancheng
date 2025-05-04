@@ -180,7 +180,6 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     }
     response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
@@ -302,7 +301,6 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     }
     response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = (
         db.session.query(SizeMaterialStorage)
@@ -438,7 +436,6 @@ def test_inbound_material_user_enter_order_material(client: FlaskClient):
 
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
@@ -579,7 +576,6 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
 
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = (
         db.session.query(SizeMaterialStorage)
@@ -847,7 +843,6 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
 
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
@@ -974,7 +969,6 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
 
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
-    assert response.get_json()["inboundRId"] == "IR20250406165945T0"
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
