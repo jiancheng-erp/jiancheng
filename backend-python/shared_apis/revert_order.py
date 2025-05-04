@@ -93,11 +93,6 @@ def get_revert_order_list():
             rid_number = extract_rid_number(order.order_rid)
             prefix = order.order_rid[0] if order.order_rid else ""
 
-            if staff_id == "15":
-                # show order_rid after k25-200, w25-200
-                if prefix in ("K", "W") and rid_number is not None and rid_number < 200:
-                    continue
-
             if staff_id == "7":
                 # show order_rid before/equal to 200 and only 开发一部
                 if prefix in ("K", "W") and rid_number is not None and rid_number > 200:
