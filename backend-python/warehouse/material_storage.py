@@ -1110,6 +1110,9 @@ def _handle_production_remain_inbound(data, next_group_id):
 def inbound_material():
     data = request.get_json()
     logger.debug(f"data: {data}")
+    # get current timestamp
+    current_timestamp = format_datetime(datetime.now())
+    data["currentDateTime"] = current_timestamp
     # Determine the next available group_id
     next_group_id = (
         db.session.query(
@@ -1121,7 +1124,6 @@ def inbound_material():
 
     # 检查数据
     items = data.get("items", [])
-    seen = set()
     for item in items:
         item: dict
         order_rid = item.get("orderRId", None)
@@ -1160,7 +1162,7 @@ def inbound_material():
         return jsonify({"message": "invalid inbound type"}), 400
 
     db.session.commit()
-    return jsonify({"message": "success", "inboundRId": inbound_rid})
+    return jsonify({"message": "success", "inboundRId": inbound_rid, "inboundTime": current_timestamp})
 
 
 def _handle_production_outbound(data, next_group_id):

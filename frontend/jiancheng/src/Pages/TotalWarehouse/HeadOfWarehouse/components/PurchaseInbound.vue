@@ -3,17 +3,12 @@
         <el-col :span="24">
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
-            <el-button type="primary" @click="saveInboundRecord">暂存入库单</el-button>
             <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="inboundForm" class="demo-form-inline" :rules="rules" ref="inboundForm">
-                <el-form-item prop="currentDateTime" label="日期">
-                    <el-date-picker v-model="inboundForm.currentDateTime" type="datetime"
-                        value-format="YYYY-MM-DD HH:mm:ss" clearable />
-                </el-form-item>
                 <el-form-item prop="supplierName" label="厂家名称">
                     <el-autocomplete v-model="inboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
                         @select="handleSupplierSelect" />
@@ -25,8 +20,7 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item prop="materialTypeId" label="材料类型">
-                    <el-select v-model="inboundForm.materialTypeId" filterable clearable
-                        @change="getMaterialNameOptions">
+                    <el-select v-model="inboundForm.materialTypeId" filterable clearable @change="getWarehouseName">
                         <el-option v-for="item in materialTypeOptions" :key="item.materialTypeId"
                             :value="item.materialTypeId" :label="item.materialTypeName"></el-option>
                     </el-select>
@@ -79,7 +73,7 @@
                     <template #edit="scope">
                         <el-select v-model="scope.row.materialName" :disabled="scope.row.disableEdit"
                             @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
-                            <el-option v-for="item in materialNameOptions" :key="item.value" :value="item.value"
+                            <el-option v-for="item in filteredMaterialNameOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
                         </el-select>
                     </template>
@@ -200,7 +194,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -275,6 +269,7 @@ import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
+import { debounce } from 'lodash';
 export default {
     components: {
         MaterialSearchDialog,
@@ -304,7 +299,6 @@ export default {
             previewInboundForm: {},
             inboundForm: {},
             inboundFormTemplate: {
-                currentDateTime: new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' '),
                 supplierName: null,
                 materialTypeId: null,
                 inboundType: 0,
@@ -336,9 +330,6 @@ export default {
             currentIndex: -1,
             isPreviewDialogVis: false,
             rules: {
-                currentDateTime: [
-                    { required: true, message: '此项为必填项', trigger: 'change' },
-                ],
                 supplierName: [
                     {
                         required: true,
@@ -374,8 +365,23 @@ export default {
         }
     },
     async mounted() {
+        this.getMaterialNameOptions()
         this.loadLocalStorageData()
         await this.getLogisticsShoeSizes()
+    },
+    watch: {
+        inboundForm: {
+            handler() {
+                this.updateCache();
+            },
+            deep: true
+        },
+        materialTableData: {
+            handler() {
+                this.updateCache();
+            },
+            deep: true
+        }
     },
     computed: {
         calculateInboundTotal() {
@@ -396,9 +402,19 @@ export default {
             return this.shoeSizeColumns.filter(column =>
                 this.previewData.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
             )
-        }
+        },
+        filteredMaterialNameOptions() {
+            return this.materialNameOptions.filter(item => item.type == this.inboundForm.materialTypeId)
+        },
     },
     methods: {
+        updateCache: debounce(function () {
+            const record = {
+                inboundForm: this.inboundForm,
+                materialTableData: this.materialTableData
+            };
+            localStorage.setItem('inboundRecord', JSON.stringify(record));
+        }, 300),
         loadLocalStorageData() {
             let inboundRecord = localStorage.getItem('inboundRecord')
             if (inboundRecord) {
@@ -409,14 +425,6 @@ export default {
                 this.inboundForm = { ...this.inboundFormTemplate }
                 this.materialTableData = []
             }
-        },
-        saveInboundRecord() {
-            let inboundRecord = {
-                inboundForm: this.inboundForm,
-                materialTableData: this.materialTableData,
-            }
-            localStorage.setItem('inboundRecord', JSON.stringify(inboundRecord))
-            ElMessage.success('暂存成功')
         },
         handleOrderRIdSelect(row, value) {
             row.shoeRId = this.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
@@ -460,13 +468,14 @@ export default {
             }
         },
         async getMaterialNameOptions() {
+            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
+            this.materialNameOptions = response.data
+        },
+        async getWarehouseName() {
             let params = {
                 materialTypeId: this.inboundForm.materialTypeId,
             }
-            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
-            this.materialNameOptions = response.data
-
-            response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
+            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
             this.inboundForm.warehouseName = response.data.warehouseName
             this.inboundForm.warehouseId = response.data.warehouseId
         },
@@ -651,11 +660,12 @@ export default {
             this.isSizeMaterialSelectDialogVis = false
         },
         async handleMaterialNameSelect(row, value) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
-            )
-            row.actualInboundUnit = response.data.unit
-            row.materialCategory = response.data.materialCategory
+            if (value == null || value == '') {
+                return
+            }
+            let temp = this.materialNameOptions.filter(item => item.value == value)[0]
+            row.actualInboundUnit = temp.unit
+            row.materialCategory = temp.materialCategory
             if (!(row.materialName === '大底')) {
                 this.shoeSizeColumns = []
             }
@@ -668,7 +678,6 @@ export default {
             }
             const params = {
                 inboundType: this.inboundForm.inboundType,
-                currentDateTime: this.inboundForm.currentDateTime,
                 supplierName: this.inboundForm.supplierName,
                 warehouseId: this.inboundForm.warehouseId,
                 remark: this.inboundForm.remark,
@@ -679,6 +688,7 @@ export default {
             }
             try {
                 const response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
+                this.previewInboundForm.currentDateTime = response.data.inboundTime
                 this.previewInboundForm.inboundRId = response.data.inboundRId
                 this.isInbounded = 1
                 ElMessage.success('入库成功')
@@ -775,7 +785,6 @@ export default {
             this.materialTableData = []
             localStorage.removeItem('inboundRecord')
             this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
-            this.inboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
             this.shoeSizeColumns = []
             this.isPreviewDialogVis = false;
         },
