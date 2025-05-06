@@ -50,18 +50,6 @@
                         </el-col>
                         <el-col :span="6" :offset="0">
                             <div style="display: flex; align-items: center; white-space: nowrap">
-                                厂家名称查询：<el-input
-                                    v-model="factoryNameSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialType"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                        <el-col :span="6" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
                                 材料类型查询：<el-input
                                     v-model="materialTypeSearch"
                                     placeholder=""
@@ -140,170 +128,12 @@
                             </el-pagination>
                         </el-col>
                         <el-col :span="3" :offset="12"
-                            ><el-button
-                                type="primary"
-                                size="default"
-                                @click="openNewMaterialTypeDialog"
-                                >添加新材料类型</el-button
-                            >
-                        </el-col>
-                        <el-col :span="3" :offset="0"
                             ><el-button type="primary" size="default" @click="openNewMaterialDialog"
                                 >添加新材料</el-button
                             >
                         </el-col>
                     </el-row>
-                </el-tab-pane>
-                <el-tab-pane label="材料库存查询" name="材料库存查询">
-                    <el-row :gutter="20" style="margin-top: 20px">
-                        <el-col :span="4">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                材料类型查询：<el-input
-                                    v-model="materialTypeSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                材料名称查询：<el-input
-                                    v-model="materialNameSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                材料规格查询：<el-input
-                                    v-model="specificationNameSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                材料所属库查询：
-                                <el-select
-                                    v-model="warehouseNameSearch"
-                                    placeholder=""
-                                    clearable
-                                    filterable
-                                    @change="filterMaterialStorage"
-                                >
-                                    <el-option
-                                        v-for="item in warehouseOptions"
-                                        :key="item.value"
-                                        :label="item.label"
-                                        :value="item.value"
-                                    >
-                                    </el-option>
-                                </el-select>
-                            </div>
-                        </el-col>
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                订单编号查询：<el-input
-                                    v-model="orderRIdSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20" style="margin-top: 20px">
-                        <el-col :span="4" :offset="0">
-                            <div style="display: flex; align-items: center; white-space: nowrap">
-                                鞋型编号查询：<el-input
-                                    v-model="inheritIdSearch"
-                                    placeholder=""
-                                    size="default"
-                                    :suffix-icon="Search"
-                                    clearable
-                                    @change="filterMaterialStorage"
-                                ></el-input>
-                            </div>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20" style="margin-top: 20px">
-                        <el-col :span="24" :offset="0">
-                            <el-table
-                                v-loading="datafinished"
-                                :data="materialStorageData"
-                                border
-                                style="height: 450px"
-                            >
-                                <el-table-column
-                                    prop="materialType"
-                                    label="材料类型"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="materialName"
-                                    label="材料名称"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="materialSpecification"
-                                    label="材料规格"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="warehouseName"
-                                    label="仓库名称"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="unit"
-                                    label="单位"
-                                    width="75"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="amountRemain"
-                                    label="剩余数量"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="unitPrice"
-                                    label="采购单价"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="valueRemain"
-                                    label="剩余价值"
-                                ></el-table-column>
-                                <el-table-column
-                                    prop="factoryName"
-                                    label="厂家名称"
-                                ></el-table-column>
-                                <el-table-column prop="OrderId" label="订单编号"></el-table-column>
-                                <el-table-column
-                                    prop="inheritId"
-                                    label="鞋型编号"
-                                ></el-table-column>
-                            </el-table>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20">
-                        <el-col :span="12" :offset="10">
-                            <el-pagination
-                                :total="materialStorageTotal"
-                                :page-size="10"
-                                :v-model:current-page="currentPage2"
-                                @current-change="handleCurrentChange2"
-                            >
-                            </el-pagination>
-                        </el-col>
-                    </el-row>
-                </el-tab-pane> </el-tabs
+                </el-tab-pane></el-tabs
         ></el-col>
     </el-row>
     <el-dialog title="添加新材料类型" v-model="isAddNewMaterialTypeDialogVisible" width="30%">
@@ -492,9 +322,9 @@
             <el-form-item label="更改材料单位">
                 <el-input v-model="editMaterialForm.materialUnit"></el-input>
             </el-form-item>
-            <el-form-item label="材料厂家">
+            <!-- <el-form-item label="材料厂家">
                 <el-text>{{ editMaterialForm.materialFactory }}</el-text>
-            </el-form-item>
+            </el-form-item> -->
             <el-form-item label="">
                 <el-button type="primary" size="default" @click="checkMaterialName"
                     >检查材料名称</el-button

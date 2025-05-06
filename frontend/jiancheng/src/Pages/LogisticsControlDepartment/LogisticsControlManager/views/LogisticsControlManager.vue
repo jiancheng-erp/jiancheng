@@ -31,9 +31,9 @@
                         <el-menu-item index="11" @click="handleMenuClick(11)">
                             <span>总仓库存</span>
                         </el-menu-item>
-                        <!-- <el-menu-item index="5" @click="handleMenuClick(5)">
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>材料管理</span>
-                        </el-menu-item> -->
+                        </el-menu-item>
                         <el-menu-item index="12" @click="handleMenuClick(12)">
                             <span>入/出库记录</span>
                         </el-menu-item>
