@@ -2,13 +2,16 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table :data="logisticsMaterialData" border stripe>
-                <el-table-column prop="materialType" label="材料类型"></el-table-column>
+                <el-table-column prop="orderRId" label="订单号" width="100"></el-table-column>
+                <!-- <el-table-column prop="materialType" label="材料类型"></el-table-column> -->
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
+                <el-table-column prop="materialModel" label="型号"></el-table-column>
+                <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
                 <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
                 <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
+                <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
                 <el-table-column prop="currentAmount" label="库存"></el-table-column>
             </el-table>
         </el-col>
