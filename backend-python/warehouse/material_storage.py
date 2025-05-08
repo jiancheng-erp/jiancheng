@@ -2520,12 +2520,12 @@ def update_inbound_record():
             .first()
         )
         if not inbound_record_detail:
-            return jsonify({"message": "inbound record detail not found"}), 404
+            return jsonify({"message": "入库记录不存在"}), 404
 
         if to_delete == 1:
             # cannot delete inbound record detail if there is only one record item
             if len(items) == 1:
-                return jsonify({"message": "cannot delete inbound record detail"}), 400
+                return jsonify({"message": "入库单里只有一项材料，请联系财务审核删除入库单"}), 400
             _handle_delete_inbound_record_detail(
                 inbound_record_detail, storage_id, is_sized_material
             )

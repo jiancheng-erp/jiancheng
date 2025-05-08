@@ -2,7 +2,7 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <el-button v-if="role == 23" type="success" @click="confirmOrderShoesToOutbound">
+            <el-button v-if="readonly === false" type="success" @click="confirmOrderShoesToOutbound">
                 出库
             </el-button>
         </el-col>
@@ -13,31 +13,31 @@
     <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
-                <el-form-item v-if="role == 23" prop="currentDateTime" label="日期">
+                <el-form-item v-if="readonly === false" prop="currentDateTime" label="日期">
                     <el-date-picker v-model="outboundForm.currentDateTime" type="datetime"
                         value-format="YYYY-MM-DD HH:mm:ss" clearable />
                 </el-form-item>
-                <el-form-item v-if="role == 23" prop="outboundType" label="出库类型">
+                <el-form-item v-if="readonly === false" prop="outboundType" label="出库类型">
                     <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
                         <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
                             :label="item.label"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="outboundForm.outboundType == 0 && role == 23" prop="departmentId" label="部门">
+                <el-form-item v-if="outboundForm.outboundType == 0 && readonly === false" prop="departmentId" label="部门">
                     <el-select v-model="outboundForm.departmentId" filterable clearable>
                         <el-option v-for="item in departmentOptions" :label="item.label"
                             :value="item.value"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType) && role == 23" prop="supplierName"
+                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType) && readonly === false" prop="supplierName"
                     label="出库厂家">
                     <el-autocomplete v-model="outboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
                         @select="handleSupplierSelect" />
                 </el-form-item>
-                <el-form-item v-if="role == 23" prop="picker" label="领料人">
+                <el-form-item v-if="readonly === false" prop="picker" label="领料人">
                     <el-input v-model="outboundForm.picker"></el-input>
                 </el-form-item>
-                <el-form-item v-if="role == 23" prop="remark" label="备注">
+                <el-form-item v-if="readonly === false" prop="remark" label="备注">
                     <el-input v-model="outboundForm.remark"></el-input>
                 </el-form-item>
             </el-form>
@@ -46,7 +46,7 @@
     </el-row>
     <div class="transfer-tables">
         <!-- Top Table -->
-        <el-table v-if="role == 23" ref="topTableData" :data="topTableData"
+        <el-table v-if="readonly === false" ref="topTableData" :data="topTableData"
             style="width: 100%; margin-bottom: 20px; height: 20vh" @selection-change="handleTopSelectionChange" border
             stripe>
             <el-table-column type="selection" width="55" />
@@ -73,7 +73,7 @@
         </el-table>
 
         <!-- Control Buttons -->
-        <div v-if="role == 23" class="transfer-buttons" style="text-align: center; margin-bottom: 20px;">
+        <div v-if="readonly === false" class="transfer-buttons" style="text-align: center; margin-bottom: 20px;">
             <el-button type="primary" @click="moveUp" :disabled="bottomSelected.length === 0">
                 选择 <el-icon>
                     <Top />
@@ -88,7 +88,7 @@
     </div>
     <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 60vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
-        <el-table-column v-if="role == 23" type="selection" width="55" />
+        <el-table-column v-if="readonly === false" type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
         <el-table-column prop="materialType" label="类型"></el-table-column>
@@ -221,6 +221,12 @@ import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import OutboundDialog from './OutboundDialog.vue';
 import { ElMessage } from 'element-plus';
 export default {
+    props: {
+        readonly: {
+            type: Boolean,
+            default: true,
+        },
+    },
     components: {
         MaterialSearchDialog,
         OutboundDialog
