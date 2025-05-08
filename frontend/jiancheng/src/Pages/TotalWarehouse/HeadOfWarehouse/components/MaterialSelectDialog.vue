@@ -1,5 +1,5 @@
 <template>
-    <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose">
+    <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose" destroy-on-close>
         <div v-if="selectionPage == 0">
             <el-table :data="searchedMaterials" border stripe height="600" @selection-change="handleSelectMaterials">
                 <el-table-column type="selection" width="55"></el-table-column>

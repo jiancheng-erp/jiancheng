@@ -4,6 +4,7 @@
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
             <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
+            <el-button type="primary" @click="openOrderMaterialQuery">订单材料查询</el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -145,7 +146,7 @@
     <MaterialSelectDialog :visible="isMaterialSelectDialogVis" :searchedMaterials="searchedMaterials"
         @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <el-dialog title="选择材料" v-model="isSizeMaterialSelectDialogVis" width="80%">
+    <el-dialog title="选择材料" v-model="isSizeMaterialSelectDialogVis" width="80%" destroy-on-close>
         <span>搜索订单号：</span>
         <el-input v-model="orderRIdSearch" @change="searchRecordByOrderRId"
             style="width: 200px; margin-bottom: 10px;"></el-input>
@@ -168,7 +169,7 @@
             <el-button @click="confirmSelection">确定</el-button>
         </template>
     </el-dialog>
-    <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false"
+    <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
         @closed="closePreviewDialog">
         <div id="printView">
             <table style="width:100%; border-collapse: collapse;">
@@ -261,6 +262,7 @@
             <el-button v-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
         </template>
     </el-dialog>
+    <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis"/>
 </template>
 <script>
 import axios from 'axios';
@@ -269,11 +271,13 @@ import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
+import OrderMaterialQuery from './OrderMaterialQuery.vue';
 import { debounce } from 'lodash';
 export default {
     components: {
         MaterialSearchDialog,
         MaterialSelectDialog,
+        OrderMaterialQuery,
     },
     props: {
         materialTypeOptions: {
@@ -362,6 +366,7 @@ export default {
             selectedSizeMaterials: [],
             orderRIdSearch: '',
             filteredOrders: [],
+            isOrderMaterialQueryVis: false,
         }
     },
     async mounted() {
@@ -408,6 +413,12 @@ export default {
         },
     },
     methods: {
+        openOrderMaterialQuery() {
+            this.isOrderMaterialQueryVis = true
+        },
+        updateOrderMaterialQueryVis(value) {
+            this.isOrderMaterialQueryVis = value
+        },
         updateCache: debounce(function () {
             const record = {
                 inboundForm: this.inboundForm,
@@ -515,7 +526,6 @@ export default {
             }
 
             this.shoeSizeColumns = [...tempTable]
-            console.log(this.shoeSizeColumns)
         },
         updateTotalShoes(row) {
             let total = 0
@@ -626,7 +636,6 @@ export default {
             if (this.selectedSizeMaterials[0].materialName === '大底') {
                 let firstOrderRId = this.selectedSizeMaterials[0].orderRId
                 for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
-                    console.log(firstOrderRId, this.selectedSizeMaterials[i].orderRId)
                     if (this.selectedSizeMaterials[i].orderRId != firstOrderRId) {
                         ElMessage.warning('请确保选择的材料属于同一生产订单')
                         return
@@ -708,14 +717,12 @@ export default {
             let seen = new Set()
             for (const obj of this.materialTableData) {
                 let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}-${obj.unitPrice}`
-                console.log(string)
                 if (seen.has(string)) {
                     duplicateCheck = true
                     break
                 }
                 seen.add(string)
             }
-            console.log(duplicateCheck)
             if (duplicateCheck) {
                 try {
                     await ElMessageBox.confirm('有材料信息重复，是否继续？', '确认', {
@@ -724,13 +731,9 @@ export default {
                         type: 'warning'
                     });
 
-                    // ✅ User clicked Yes (Confirm)
-                    console.log('User confirmed. Proceeding to next step...');
-                    // Proceed to next code block
                     this.openPreviewDialog();
 
                 } catch (error) {
-                    // ❌ User clicked No (Cancel) or closed the dialog
                     console.log('User cancelled. Stop here.');
                 }
             }
@@ -787,6 +790,7 @@ export default {
             this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
             this.shoeSizeColumns = []
             this.isPreviewDialogVis = false;
+            window.location.reload()
         },
         downloadPDF(title, domName) {
             htmlToPdf.getPdf(title, domName);
