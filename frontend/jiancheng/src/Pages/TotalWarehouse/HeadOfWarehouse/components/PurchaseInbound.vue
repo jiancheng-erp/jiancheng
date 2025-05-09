@@ -2,6 +2,7 @@
     <el-row :gutter="20">
         <el-col :span="24">
             <el-button type="primary" @click="addRow">新增一行</el-button>
+            <el-button type="warning" @click="copyRows">批量复制</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
             <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
             <el-button type="primary" @click="openOrderMaterialQuery">订单材料查询</el-button>
@@ -47,8 +48,17 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <vxe-table :data="materialTableData" ref="tableRef" border :edit-config="{ mode: 'row', trigger: 'click' }"
-                :column-config="{ resizable: true }" :row-config="{ resizable: true, isHover: true }" show-overflow>
+            <vxe-table :data="materialTableData" ref="tableRef" border :edit-config="{ mode: 'cell', trigger: 'click' }"
+                :row-config="{ keyField: 'id', isHover: true }" :column-config="{ resizable: true }" :keyboard-config="{
+                    isEdit: true,
+                    isArrow: true,
+                    isEnter: true,
+                    isTab: true,
+                    isDel: true,
+                    isBack: true,
+                    isEsc: true,
+                    isLastEnterAppendRow: true
+                }" :mouse-config="{ selected: true }" show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
@@ -63,8 +73,7 @@
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
                         <vxe-input v-model="scope.row.shoeRId" clearable
-                            @change="(event) => handleShoeRIdSelect(scope.row, event.value)"
-                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                            @change="(event) => handleShoeRIdSelect(scope.row, event.value)"></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
@@ -81,14 +90,12 @@
                 </vxe-column>
                 <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.inboundModel" clearable
-                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                        <vxe-input v-model="scope.row.inboundModel" clearable></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="inboundSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.inboundSpecification" clearable
-                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                        <vxe-input v-model="scope.row.inboundSpecification" clearable></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="materialColor" title="颜色" :edit-render="{ autoFocus: 'input' }" width="150">
@@ -137,6 +144,11 @@
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row[item.prop]" type="integer" clearable
                             @change="updateTotalShoes(row)" :min="0"></vxe-number-input>
+                    </template>
+                </vxe-column>
+                <vxe-column title="操作" fixed="right" width="100">
+                    <template #default="scope">
+                        <vxe-button status="primary" @click="handleSearchMaterial(scope)">搜索材料</vxe-button>
                     </template>
                 </vxe-column>
             </vxe-table>
@@ -262,7 +274,7 @@
             <el-button v-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
         </template>
     </el-dialog>
-    <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis"/>
+    <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis" />
 </template>
 <script>
 import axios from 'axios';
@@ -273,6 +285,7 @@ import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
 import OrderMaterialQuery from './OrderMaterialQuery.vue';
 import { debounce } from 'lodash';
+import XEUtils from 'xe-utils'
 export default {
     components: {
         MaterialSearchDialog,
@@ -369,7 +382,11 @@ export default {
             isOrderMaterialQueryVis: false,
         }
     },
+    // beforeUnmount() {
+    //     window.removeEventListener('keydown', this.handleKeydown)
+    // },
     async mounted() {
+        // window.addEventListener('keydown', this.handleKeydown)
         this.getMaterialNameOptions()
         this.loadLocalStorageData()
         await this.getLogisticsShoeSizes()
@@ -422,7 +439,8 @@ export default {
         updateCache: debounce(function () {
             const record = {
                 inboundForm: this.inboundForm,
-                materialTableData: this.materialTableData
+                materialTableData: this.materialTableData,
+                shoeSizeColumns: this.shoeSizeColumns
             };
             localStorage.setItem('inboundRecord', JSON.stringify(record));
         }, 300),
@@ -432,9 +450,11 @@ export default {
                 inboundRecord = JSON.parse(inboundRecord)
                 this.inboundForm = { ...inboundRecord.inboundForm }
                 this.materialTableData = [...inboundRecord.materialTableData]
+                this.shoeSizeColumns = [...inboundRecord.shoeSizeColumns]
             } else {
                 this.inboundForm = { ...this.inboundFormTemplate }
                 this.materialTableData = []
+                this.shoeSizeColumns = []
             }
         },
         handleOrderRIdSelect(row, value) {
@@ -550,8 +570,16 @@ export default {
             }
         },
         addRow() {
-            const newRow = JSON.parse(JSON.stringify(this.rowTemplate));
+            const newRow = { "id": XEUtils.uniqueId(), ...JSON.parse(JSON.stringify(this.rowTemplate)) };
             this.materialTableData.push(newRow)
+        },
+        copyRows() {
+            const selectedRows = this.$refs.tableRef.getCheckboxRecords();
+            const clones = selectedRows.map(row => {
+                const { id, ...rest } = row
+                return { ...rest, id: XEUtils.uniqueId() }
+            })
+            this.materialTableData.push(...clones)
         },
         deleteRows() {
             const selectedRows = this.$refs.tableRef.getCheckboxRecords();
@@ -574,27 +602,24 @@ export default {
         updateTotalPrice(row) {
             row.itemTotalPrice = updateTotalPriceHelper(row)
         },
-        handleKeydown(event, scope) {
-            if (event.code === 'Enter') {
-                if (this.inboundForm.inboundType != 1 && this.inboundForm.supplierName == null) {
-                    ElMessage.warning('请填写厂家名称')
-                    return
-                }
-                if (this.inboundForm.materialTypeId == null) {
-                    ElMessage.warning('请填写材料类型')
-                    return
-                }
-                event.preventDefault(); // Prevent default Enter key behavior
-                this.currentKeyDownRow = scope.row; // Store the current row
-                this.currentIndex = scope.rowIndex; // Store the current row index
-                if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
-                    this.fetchSizeMaterialData()
-                    this.isSizeMaterialSelectDialogVis = true
-                }
-                else {
-                    this.fetchMaterialData()
-                    this.isMaterialSelectDialogVis = true
-                }
+        handleSearchMaterial(scope) {
+            if (this.inboundForm.inboundType != 1 && this.inboundForm.supplierName == null) {
+                ElMessage.warning('请填写厂家名称')
+                return
+            }
+            if (this.inboundForm.materialTypeId == null) {
+                ElMessage.warning('请填写材料类型')
+                return
+            }
+            this.currentKeyDownRow = scope.row; // Store the current row
+            this.currentIndex = scope.rowIndex; // Store the current row index
+            if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
+                this.fetchSizeMaterialData()
+                this.isSizeMaterialSelectDialogVis = true
+            }
+            else {
+                this.fetchMaterialData()
+                this.isMaterialSelectDialogVis = true
             }
         },
         async fetchMaterialData() {
@@ -784,13 +809,15 @@ export default {
         },
         closePreviewDialog() {
             this.previewData = []
-            this.isInbounded = 0
-            this.materialTableData = []
-            localStorage.removeItem('inboundRecord')
-            this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
-            this.shoeSizeColumns = []
-            this.isPreviewDialogVis = false;
-            window.location.reload()
+            if (this.isInbounded == 1) {
+                this.isInbounded = 0
+                this.materialTableData = []
+                localStorage.removeItem('inboundRecord')
+                this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
+                this.shoeSizeColumns = []
+                this.isPreviewDialogVis = false;
+                window.location.reload()
+            }
         },
         downloadPDF(title, domName) {
             htmlToPdf.getPdf(title, domName);
