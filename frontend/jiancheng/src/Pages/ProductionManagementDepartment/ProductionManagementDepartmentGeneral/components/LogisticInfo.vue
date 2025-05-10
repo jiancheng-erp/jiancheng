@@ -16,6 +16,8 @@
             <el-table :data="logisticsOrderData" border stripe>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
+                <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
+                <el-table-column prop="orderStartDate" label="订单开始日期"></el-table-column>
                 <el-table-column prop="orderEndDate" label="订单截止日期"></el-table-column>
                 <el-table-column label="物流信息">
                     <template #default="scope">
