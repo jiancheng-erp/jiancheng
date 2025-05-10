@@ -1,7 +1,4 @@
 <template>
-    <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">物流信息一览</el-col>
-    </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
         <el-col :span="4" :offset="0" style="white-space: nowrap;">
             订单号筛选：
@@ -34,8 +31,8 @@
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
-    <el-dialog title="鞋型所有材料物流信息" v-model="isMaterialLogisticVis" fullscreen @close="onDialogClose">
-        <OrderMaterialsPage v-if="showChild" :current-row="currentRow" />
+    <el-dialog title="鞋型所有材料物流信息" v-model="isMaterialLogisticVis" fullscreen @close="onDialogClose" destroy-on-close>
+        <OrderMaterialsPage :current-row="currentRow" />
         <template #footer>
             <span>
                 <el-button type="primary" @click="isMaterialLogisticVis = false">返回</el-button>
@@ -69,7 +66,6 @@ export default {
             currentLogisticsPage: 1,
             logisticsPageSize: 10,
             currentRow: {},
-            showChild: false
         }
     },
     mounted() {
@@ -97,15 +93,8 @@ export default {
         },
         openLogisticsDialog(rowData) {
             this.currentRow = rowData
-            this.showChild = true
             this.isMaterialLogisticVis = true
         },
-        onDialogClose() {
-            // wait until dialog animation is done, then destroy child
-            this.$nextTick(() => {
-                this.showChild = false
-            })
-        }
     }
 }
 </script>
