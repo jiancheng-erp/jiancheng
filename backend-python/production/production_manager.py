@@ -490,11 +490,18 @@ def get_all_order_shoe_info():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     query = (
-        db.session.query(Order, OrderShoe, Shoe)
+        db.session.query(Order, OrderShoe, Shoe, func.sum(OrderShoeBatchInfo.total_amount))
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id
+            == OrderShoeType.order_shoe_type_id,
+        )
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
+        .group_by(Order.order_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
@@ -505,7 +512,7 @@ def get_all_order_shoe_info():
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
     for row in response:
-        order, order_shoe, shoe = row
+        order, order_shoe, shoe, order_amount = row
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -513,6 +520,7 @@ def get_all_order_shoe_info():
             "orderEndDate": format_date(order.end_date),
             "orderShoeId": order_shoe.order_shoe_id,
             "shoeRId": shoe.shoe_rid,
+            "orderAmount": order_amount,
             "customerProductName": order_shoe.customer_product_name,
         }
         result.append(obj)

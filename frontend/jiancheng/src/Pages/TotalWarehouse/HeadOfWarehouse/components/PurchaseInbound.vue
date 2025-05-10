@@ -57,10 +57,11 @@
                     isDel: true,
                     isBack: true,
                     isEsc: true,
-                    isLastEnterAppendRow: true
+                    isLastEnterAppendRow: true,
+                    editMode: 'insert'
                 }" :mouse-config="{ selected: true }" show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
-                <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
+                <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
                             @change="handleOrderRIdSelect(scope.row, $event)"
@@ -76,7 +77,7 @@
                             @change="(event) => handleShoeRIdSelect(scope.row, event.value)"></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{}">
+                <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{ autoFocus: true }">
                     <template #default="{ row }">
                         <span>{{ row.materialName }}</span>
                     </template>
@@ -104,7 +105,7 @@
                             :disabled="scope.row.disableEdit"></vxe-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="actualInboundUnit" title="计量单位" :edit-render="{ autoFocus: 'input' }" width="120">
+                <vxe-column field="actualInboundUnit" title="计量单位" :edit-render="{ autoFocus: true }" width="120">
                     <template #default="{ row }">
                         <span>{{ row.actualInboundUnit }}</span>
                     </template>
@@ -207,7 +208,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                        }}</td>
+                                    }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -458,7 +459,13 @@ export default {
             }
         },
         handleOrderRIdSelect(row, value) {
-            row.shoeRId = this.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
+            // console.log(value)
+            const resultShoeRIds = this.activeOrderShoes.filter(item => item.orderRId == value)
+            if (resultShoeRIds.length == 0) {
+                row.shoeRId = null
+                return
+            }
+            row.shoeRId = resultShoeRIds[0].shoeRId
         },
         handleShoeRIdSelect(row, value) {
             if (value == null || value == '') {
