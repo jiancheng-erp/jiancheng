@@ -17,23 +17,15 @@
 import AllHeader from '@/components/AllHeader.vue'
 import Sidebar from '../components/Sidebar.vue'
 import LaborPriceReport from '../components/LaborPriceReport.vue'
-import AmountProduced from '../components/AmountProduced.vue'
 import ProcedureManagement from '../components/ProcedureManagement.vue'
-import Dashboard from '../components/Dashboard.vue'
-import BatchInfo from '../components/BatchInfo.vue'
 import OrderProgress from '../../ProductionSharedPages/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
-import LogisticInfo from '../../ProductionManager/components/LogisticInfo.vue'
 import { ref } from 'vue'
 const components = {
-    Dashboard,
     LaborPriceReport,
-    AmountProduced,
-    BatchInfo,
     ProcedureManagement,
     OrderProgress,
-    PersonalInfo,
-    LogisticInfo
+    PersonalInfo
 }
 const currentTab = ref('LaborPriceReport')
 const optionFn = (option) => {

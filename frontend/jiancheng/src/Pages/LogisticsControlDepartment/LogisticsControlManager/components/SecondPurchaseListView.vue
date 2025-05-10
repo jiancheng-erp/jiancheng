@@ -12,6 +12,7 @@
     @backToList="changeToList"
     @changeToPend="changeToPend"
     @changeToProgress="changeToProgress"
+    @getAllData="getAllData"
   >
   </component>
 </template>

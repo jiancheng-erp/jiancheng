@@ -3,16 +3,12 @@
         <el-col :span="24">
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
-            <el-button type="success" @click="openPreviewDialog">确认入库</el-button>
+            <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="inboundForm" class="demo-form-inline" :rules="rules" ref="inboundForm">
-                <el-form-item prop="currentDateTime" label="日期">
-                    <el-date-picker v-model="inboundForm.currentDateTime" type="datetime"
-                        value-format="YYYY-MM-DD HH:mm:ss" clearable />
-                </el-form-item>
                 <el-form-item prop="supplierName" label="厂家名称">
                     <el-autocomplete v-model="inboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
                         @select="handleSupplierSelect" />
@@ -24,8 +20,7 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item prop="materialTypeId" label="材料类型">
-                    <el-select v-model="inboundForm.materialTypeId" filterable clearable
-                        @change="getMaterialNameOptions">
+                    <el-select v-model="inboundForm.materialTypeId" filterable clearable @change="getWarehouseName">
                         <el-option v-for="item in materialTypeOptions" :key="item.materialTypeId"
                             :value="item.materialTypeId" :label="item.materialTypeName"></el-option>
                     </el-select>
@@ -56,13 +51,18 @@
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.orderRId" clearable :disabled="scope.row.disableEdit"
-                            @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
+                        <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
+                            @change="handleOrderRIdSelect(scope.row, $event)"
+                            @focus="getFilteredShoes(scope.row, $event)" filterable clearable>
+                            <el-option v-for="item in filteredOrders" :key="item.orderId" :value="item.orderRId"
+                                :label="item.orderRId"></el-option>
+                        </el-select>
                     </template>
                 </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.shoeRId" clearable :disabled="true"
+                        <vxe-input v-model="scope.row.shoeRId" clearable
+                            @change="(event) => handleShoeRIdSelect(scope.row, event.value)"
                             @keydown="(event) => handleKeydown(event, scope)"></vxe-input>
                     </template>
                 </vxe-column>
@@ -73,7 +73,7 @@
                     <template #edit="scope">
                         <el-select v-model="scope.row.materialName" :disabled="scope.row.disableEdit"
                             @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
-                            <el-option v-for="item in materialNameOptions" :key="item.value" :value="item.value"
+                            <el-option v-for="item in filteredMaterialNameOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
                         </el-select>
                     </template>
@@ -269,6 +269,7 @@ import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
+import { debounce } from 'lodash';
 export default {
     components: {
         MaterialSearchDialog,
@@ -287,6 +288,10 @@ export default {
             type: Array,
             required: true
         },
+        activeOrderShoes: {
+            type: Array,
+            required: true
+        },
     },
     data() {
         return {
@@ -294,14 +299,13 @@ export default {
             previewInboundForm: {},
             inboundForm: {},
             inboundFormTemplate: {
-                currentDateTime: new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' '),
                 supplierName: null,
                 materialTypeId: null,
                 inboundType: 0,
                 inboundRId: '',
                 remark: '',
                 shoeSize: null,
-                payMethod: '',
+                payMethod: '应付账款',
                 warehouseName: null,
                 warehouseId: null,
             },
@@ -326,9 +330,6 @@ export default {
             currentIndex: -1,
             isPreviewDialogVis: false,
             rules: {
-                currentDateTime: [
-                    { required: true, message: '此项为必填项', trigger: 'change' },
-                ],
                 supplierName: [
                     {
                         required: true,
@@ -360,11 +361,27 @@ export default {
             materialNameOptions: [],
             selectedSizeMaterials: [],
             orderRIdSearch: '',
+            filteredOrders: [],
         }
     },
     async mounted() {
-        this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
+        this.getMaterialNameOptions()
+        this.loadLocalStorageData()
         await this.getLogisticsShoeSizes()
+    },
+    watch: {
+        inboundForm: {
+            handler() {
+                this.updateCache();
+            },
+            deep: true
+        },
+        materialTableData: {
+            handler() {
+                this.updateCache();
+            },
+            deep: true
+        }
     },
     computed: {
         calculateInboundTotal() {
@@ -385,28 +402,52 @@ export default {
             return this.shoeSizeColumns.filter(column =>
                 this.previewData.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
             )
-        }
+        },
+        filteredMaterialNameOptions() {
+            return this.materialNameOptions.filter(item => item.type == this.inboundForm.materialTypeId)
+        },
     },
     methods: {
+        updateCache: debounce(function () {
+            const record = {
+                inboundForm: this.inboundForm,
+                materialTableData: this.materialTableData
+            };
+            localStorage.setItem('inboundRecord', JSON.stringify(record));
+        }, 300),
+        loadLocalStorageData() {
+            let inboundRecord = localStorage.getItem('inboundRecord')
+            if (inboundRecord) {
+                inboundRecord = JSON.parse(inboundRecord)
+                this.inboundForm = { ...inboundRecord.inboundForm }
+                this.materialTableData = [...inboundRecord.materialTableData]
+            } else {
+                this.inboundForm = { ...this.inboundFormTemplate }
+                this.materialTableData = []
+            }
+        },
+        handleOrderRIdSelect(row, value) {
+            row.shoeRId = this.filteredOrders.filter(item => item.orderRId == value)[0].shoeRId
+        },
+        handleShoeRIdSelect(row, value) {
+            if (value == null || value == '') {
+                this.filteredOrders = [...this.activeOrderShoes]
+                return
+            }
+            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
+        },
+        getFilteredShoes(row, event) {
+            if (row.shoeRId == null || row.shoeRId == '') {
+                this.filteredOrders = [...this.activeOrderShoes]
+                return
+            }
+            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(row.shoeRId))
+        },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
             let seen = new Set()
             let temp = [...this.materialTableData, ...value]
             temp.splice(this.currentIndex, 1)
-            for (const obj of temp) {
-                if (!obj.orderRId) {
-                    continue
-                }
-                // create tuple of name, spec, model, color, and orderRId
-                let storageId = obj.storageId || ''
-                if (storageId !== '' && seen.has(obj.orderRId)) {
-                    ElMessage.error("入库单不能有重复数据")
-                    // 去掉新创建行
-                    this.currentIndex = null
-                    return
-                }
-                seen.add(obj.orderRId)
-            }
             this.materialTableData = [...temp]
             this.currentIndex = null
         },
@@ -427,13 +468,14 @@ export default {
             }
         },
         async getMaterialNameOptions() {
+            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
+            this.materialNameOptions = response.data
+        },
+        async getWarehouseName() {
             let params = {
                 materialTypeId: this.inboundForm.materialTypeId,
             }
-            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`, { params })
-            this.materialNameOptions = response.data
-
-            response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
+            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
             this.inboundForm.warehouseName = response.data.warehouseName
             this.inboundForm.warehouseId = response.data.warehouseId
         },
@@ -535,7 +577,7 @@ export default {
                 event.preventDefault(); // Prevent default Enter key behavior
                 this.currentKeyDownRow = scope.row; // Store the current row
                 this.currentIndex = scope.rowIndex; // Store the current row index
-                if (['大底', '中底'].includes(this.currentKeyDownRow.materialName)) {
+                if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
                     this.fetchSizeMaterialData()
                     this.isSizeMaterialSelectDialogVis = true
                 }
@@ -618,19 +660,24 @@ export default {
             this.isSizeMaterialSelectDialogVis = false
         },
         async handleMaterialNameSelect(row, value) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`
-            )
-            row.actualInboundUnit = response.data.unit
-            row.materialCategory = response.data.materialCategory
+            if (value == null || value == '') {
+                return
+            }
+            let temp = this.materialNameOptions.filter(item => item.value == value)[0]
+            row.actualInboundUnit = temp.unit
+            row.materialCategory = temp.materialCategory
             if (!(row.materialName === '大底')) {
                 this.shoeSizeColumns = []
             }
         },
         async submitInboundForm() {
+            for (let i = 0; i < this.materialTableData.length; i++) {
+                if (this.materialTableData[i].shoeSizeColumns == null) {
+                    this.materialTableData[i].shoeSizeColumns = this.materialTableData[0].shoeSizeColumns
+                }
+            }
             const params = {
                 inboundType: this.inboundForm.inboundType,
-                currentDateTime: this.inboundForm.currentDateTime,
                 supplierName: this.inboundForm.supplierName,
                 warehouseId: this.inboundForm.warehouseId,
                 remark: this.inboundForm.remark,
@@ -641,6 +688,7 @@ export default {
             }
             try {
                 const response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
+                this.previewInboundForm.currentDateTime = response.data.inboundTime
                 this.previewInboundForm.inboundRId = response.data.inboundRId
                 this.isInbounded = 1
                 ElMessage.success('入库成功')
@@ -653,6 +701,42 @@ export default {
                 }
                 ElMessage.error(this.errorMessage)
                 console.error("API Error:", error);
+            }
+        },
+        async confirmAndProceed() {
+            let duplicateCheck = false
+            let seen = new Set()
+            for (const obj of this.materialTableData) {
+                let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}-${obj.unitPrice}`
+                console.log(string)
+                if (seen.has(string)) {
+                    duplicateCheck = true
+                    break
+                }
+                seen.add(string)
+            }
+            console.log(duplicateCheck)
+            if (duplicateCheck) {
+                try {
+                    await ElMessageBox.confirm('有材料信息重复，是否继续？', '确认', {
+                        confirmButtonText: '是',
+                        cancelButtonText: '否',
+                        type: 'warning'
+                    });
+
+                    // ✅ User clicked Yes (Confirm)
+                    console.log('User confirmed. Proceeding to next step...');
+                    // Proceed to next code block
+                    this.openPreviewDialog();
+
+                } catch (error) {
+                    // ❌ User clicked No (Cancel) or closed the dialog
+                    console.log('User cancelled. Stop here.');
+                }
+            }
+            else {
+                // Proceed to next code block
+                this.openPreviewDialog();
             }
         },
         openPreviewDialog() {
@@ -699,8 +783,8 @@ export default {
             this.previewData = []
             this.isInbounded = 0
             this.materialTableData = []
+            localStorage.removeItem('inboundRecord')
             this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
-            this.inboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
             this.shoeSizeColumns = []
             this.isPreviewDialogVis = false;
         },

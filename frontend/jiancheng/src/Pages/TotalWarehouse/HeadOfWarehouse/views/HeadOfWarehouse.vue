@@ -43,13 +43,16 @@
                         <!-- <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>独立采购</span>
                         </el-menu-item> -->
+                        <el-menu-item index="8" @click="handleMenuClick(8)">
+                            <span>材料管理</span>
+                        </el-menu-item>
                         <el-menu-item index="7" @click="handleMenuClick(7)">
                             <span>码段管理</span>
                         </el-menu-item>
                         <el-menu-item index="12" @click="handleMenuClick(12)">
                             <span>个人信息</span>
                         </el-menu-item>
-                        <el-menu-item index="8" @click="logout">
+                        <el-menu-item index="14" @click="logout">
                             <span>退出系统</span>
                         </el-menu-item>
                     </el-menu>
@@ -82,6 +85,7 @@ import InOutboundRecords from '../components/InOutboundRecords.vue'
 import MultiPurchaseIssue from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MultiPurchaseIssue.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import OrderSearch from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/OrderSearch.vue'
+import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
 
 export default {
     components: {
@@ -99,7 +103,8 @@ export default {
         InOutboundRecords,
         MultiPurchaseIssue,
         PersonalInfo,
-        OrderSearch
+        OrderSearch,
+        MaterialManagementView
     },
     data() {
         return {
@@ -146,6 +151,9 @@ export default {
                     break
                 case 7:
                     this.currentComponent = 'LogisticsBatchTypeManagement'
+                    break
+                case 8:
+                    this.currentComponent = 'MaterialManagementView'
                     break
                 case 9:
                     this.currentComponent = 'InOutboundRecords'

@@ -125,6 +125,8 @@ const handleSubmit = () => {
                         window.location.href = 'financialclerk'
                     } else if (response.data.role === 1) {
                         window.location.href = 'administrator'
+                    } else if (response.data.role == 25) {
+                        window.location.href = 'laborcostreportclerk'
                     }
                     else {
                         console.log('Invalid role!')

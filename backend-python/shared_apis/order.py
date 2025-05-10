@@ -624,6 +624,7 @@ def get_order_info_business():
                         temp_obj["unitPerRatio"] = int(entity.OrderShoeBatchInfo.packaging_info_quantity)
                     else:
                         temp_obj["unitPerRatio"] = float(entity.OrderShoeBatchInfo.packaging_info_quantity)
+                temp_obj['total'] = int(temp_obj['unitPerRatio'] * temp_obj['totalQuantityRatio'])
                 response_order_shoe["shoeTypeBatchInfoList"].append(temp_obj)
 
             shoeTypeBatchData = {

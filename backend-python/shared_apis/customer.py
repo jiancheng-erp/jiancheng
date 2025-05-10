@@ -8,18 +8,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 customer_bp = Blueprint("customer_bp", __name__)
-
+IS_ACTIVE = '1'
+INACTIVE = '0'
 @customer_bp.route("/customer/getallcustomers", methods=["GET"])
 def get_all_customers():
-    customers = Customer.query.all()
+    customers = db.session.query(Customer.customer_name).order_by(Customer.customer_name).distinct().all()
     result = []
-    for customer in customers:
-        result.append(
-            {
-                "value": customer.customer_id,
-                "label": customer.customer_name,
-            }
-        )
+    for (customer_name,) in customers:
+        result.append(customer_name)
     return jsonify(result)
 
 @customer_bp.route("/customer/getcustomerdetails", methods=["GET"])
@@ -54,7 +50,7 @@ def get_customer_batch_info():
             if getattr(db_info_type, attr) != None:
                 info_type_response[to_camel(attr)] = getattr(db_info_type, attr) 
         batch_info_list = []
-        cur_entities = entities.filter(PackagingInfo.batch_info_type_id == db_info_type.batch_info_type_id).all()
+        cur_entities = entities.filter(PackagingInfo.batch_info_type_id == db_info_type.batch_info_type_id).filter(PackagingInfo.is_active == IS_ACTIVE).all()
         for batch_info in cur_entities:
             batch_info_response = {}
             for attr in batch_info_attrs:
@@ -127,7 +123,8 @@ def add_customer_batch_info():
             size_44_ratio = size_44_ratio,
             size_45_ratio = size_45_ratio,
             size_46_ratio = size_46_ratio,
-            total_quantity_ratio = total_quantity_ratio
+            total_quantity_ratio = total_quantity_ratio,
+            is_active = '1'
         )
         db.session.add(packaging_info_entity)
         db.session.commit()
@@ -240,8 +237,7 @@ def delete_customer_batch():
             PackagingInfo.packaging_info_id == packaging_info_id).first()
         if not batch_info_entity:
             return jsonify({"status":"error", "message":"packaging info doesnt exist"})
-
-        db.session.delete(batch_info_entity)
+        batch_info_entity.is_active = '0'
         db.session.commit()
         return jsonify({'status':'success'})
 

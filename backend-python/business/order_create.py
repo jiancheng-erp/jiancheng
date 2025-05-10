@@ -16,6 +16,7 @@ from app_config import db
 
 from flask import current_app
 from event_processor import EventProcessor
+from wechat_api.send_message_api import send_massage_to_users
 
 
 order_create_bp = Blueprint("order_create_bp", __name__)
@@ -326,11 +327,19 @@ def order_next_step():
 	entity = (db.session.query(Order)
 			.filter(Order.order_id == order_id)
 			.first())
+	order_rid = entity.order_rid
+	order_shoe_rid = (db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+		.filter(OrderShoe.order_id == order_id)
+		.first()).Shoe.shoe_rid
 	if entity:
 		cur_time = format_date(datetime.datetime.now())
 		new_event = Event(staff_id = staff_id, handle_time = cur_time, operation_id = NEW_ORDER_NEXT_STEP_OP, event_order_id = order_id)
 		processor: EventProcessor = current_app.config["event_processor"]
 		processor.processEvent(new_event)
+	message = f"订单已发出至总经理审核，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+	users = "070d09bbc28c2cec22535b7ec5d1316b"
+	send_massage_to_users(message, users)
 	db.session.commit()
 	return "Event Processed In Order Create API CALL", 200
 

@@ -155,7 +155,7 @@
                                             <el-table-column
                                                 prop="packagingInfoName"
                                                 label="配码名称"
-                                                width="200"
+                                                width="360"
                                             />
                                             <el-table-column
                                                 v-for="col in Object.keys(
@@ -163,23 +163,29 @@
                                                 ).filter((key) => this.batchInfoType[key] != '')"
                                                 :prop="attrMappingToRatio[col]"
                                                 :label="batchInfoType[col]"
-                                                width="90"
+                                                width="70"
                                             ></el-table-column>
                                             <el-table-column
                                                 prop="totalQuantityRatio"
                                                 label="对/件"
-                                                width="120"
+                                                width="90"
                                             />
-                                            <el-table-column prop="unitPerRatio" label="件数" />
+                                            <el-table-column prop="unitPerRatio" label="件数" 
+                                            width="90"/>
+                                            <el-table-column
+                                                prop="total"
+                                                label="配码总数"
+                                                width="120"></el-table-column>
                                         </el-table>
                                     </template>
                                 </el-table-column>
                                 <el-table-column
                                     prop="shoeTypeColorName"
                                     label="颜色名称"
-                                    width="100"
+                                    width="90"
                                 />
-                                <el-table-column>
+                                <el-table-column
+                                width="170">
                                     <template #default="scope">
                                     <el-image :src="scope.row.shoeTypeImgUrl"
                                         style="width: 150px; height: 100px" loading="eager" />
@@ -209,14 +215,14 @@
                                     )"
                                     :prop="`shoeTypeBatchData.${attrMappingToAmount[col]}`"
                                     :label="batchInfoType[col]"
-                                    width="90"
+                                    width="70"
                                 ></el-table-column>
                                 <el-table-column
                                     prop="shoeTypeBatchData.totalAmount"
                                     label="总数量"
-                                    width="120"
+                                    width="90"
                                 />
-                                <el-table-column label="金额" width="100">
+                                <el-table-column label="金额" width="80">
                                     <template #default="scope">
                                         <el-input
                                             size="small"

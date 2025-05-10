@@ -199,12 +199,10 @@ class MaterialStorage(db.Model):
     __table_args__ = (
         db.UniqueConstraint(
             "actual_inbound_material_id",
-            "actual_inbound_unit",
-            "material_model",
-            "material_specification",
-            "material_storage_color",
             "inbound_model",
             "inbound_specification",
+            "actual_inbound_unit",
+            "material_storage_color",
             "order_shoe_id",
             name="unq_material_storage",
         ),
@@ -373,7 +371,7 @@ class PackagingInfo(db.Model):
     size_45_ratio = db.Column(db.Integer, nullable=True)
     size_46_ratio = db.Column(db.Integer, nullable=True)
     total_quantity_ratio = db.Column(db.Integer, nullable=True)
-
+    is_active = db.Column(db.String(1), nullable=False, default='1')
     def __repr__(self):
         return f"<PackagingInfo(packaging_info_id={self.packaging_info_id})>"
 
@@ -863,6 +861,7 @@ class Staff(db.Model):
     id_number = db.Column(db.String(18), nullable=True)
     phone_number = db.Column(db.String(20), nullable=True)
     birth_date = db.Column(db.Date, nullable=True)
+    wechat_id = db.Column(db.String(50), nullable=True)
 
     def __repr__(self):
         return f"<Staff(staff_id={self.staff_id})>"
@@ -1171,6 +1170,7 @@ class InboundRecordDetail(db.Model):
     size_45_inbound_amount = db.Column(db.Integer, nullable=True)
     size_46_inbound_amount = db.Column(db.Integer, nullable=True)
 
+    order_id = db.Column(db.BigInteger, nullable=True)
     material_storage_id = db.Column(db.BigInteger, nullable=True)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
@@ -1220,6 +1220,8 @@ class OutboundRecordDetail(db.Model):
     size_44_outbound_amount = db.Column(db.Integer, nullable=True)
     size_45_outbound_amount = db.Column(db.Integer, nullable=True)
     size_46_outbound_amount = db.Column(db.Integer, nullable=True)
+
+    order_id = db.Column(db.BigInteger, nullable=True)
     material_storage_id = db.Column(
         db.BigInteger,
         nullable=True,

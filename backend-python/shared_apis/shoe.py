@@ -102,7 +102,7 @@ def get_all_shoes_new():
         shoe_type_res["colorName"] = color.color_name
         shoe_type_res["shoeRid"] = shoe.shoe_rid
         shoe_type_res["shoeImageUrl"] = (
-            IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+            IMAGE_STORAGE_PATH + shoe_type.shoe_image_url + "?" + str(time.time())
             if shoe_type.shoe_image_url
             else None
         )
@@ -235,7 +235,7 @@ def get_shoe_batch_by_size_table():
 def get_shoe_color_info():
     entities = (
         db.session.query(Color, func.count(ShoeType.shoe_type_id))
-        .join(ShoeType, ShoeType.color_id == Color.color_id)
+        .outerjoin(ShoeType, ShoeType.color_id == Color.color_id)
         .group_by(Color.color_id)
         .all()
     )

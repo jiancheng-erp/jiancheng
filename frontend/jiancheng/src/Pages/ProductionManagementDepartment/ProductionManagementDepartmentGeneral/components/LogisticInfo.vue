@@ -34,28 +34,8 @@
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
-    <el-dialog title="鞋型所有材料物流信息" v-model="isMaterialLogisticVis" width="80%">
-        <el-row :gutter="20">
-            <el-col :span="24" :offset="0">
-                <el-table :data="logisticsMaterialData" border stripe>
-                    <el-table-column prop="materialType" label="材料类型"></el-table-column>
-                    <el-table-column prop="materialName" label="材料名称"></el-table-column>
-                    <el-table-column prop="colorName" label="颜色"></el-table-column>
-                    <el-table-column prop="materialUnit" label="材料单位"></el-table-column>
-                    <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
-                    <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                    <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
-                    <el-table-column prop="currentAmount" label="库存"></el-table-column>
-                </el-table>
-            </el-col>
-        </el-row>
-        <el-row :gutter="20">
-            <el-col :span="12" :offset="15">
-                <el-pagination @size-change="handleLogisticsPageChange" @current-change="handleLogisticsPageChange"
-                    :current-page="currentLogisticsPage" :page-sizes="[10, 20, 30, 40]" :page-size="logisticsPageSize"
-                    layout="total, sizes, prev, pager, next, jumper" :total="logisticsRows" />
-            </el-col>
-        </el-row>
+    <el-dialog title="鞋型所有材料物流信息" v-model="isMaterialLogisticVis" fullscreen @close="onDialogClose">
+        <OrderMaterialsPage v-if="showChild" :current-row="currentRow" />
         <template #footer>
             <span>
                 <el-button type="primary" @click="isMaterialLogisticVis = false">返回</el-button>
@@ -67,7 +47,11 @@
 
 <script>
 import axios from 'axios'
+import OrderMaterialsPage from '../../ProductionSharedPages/OrderMaterialsPage.vue'
 export default {
+    components: {
+        OrderMaterialsPage
+    },
     data() {
         return {
             isMaterialLogisticVis: false,
@@ -85,6 +69,7 @@ export default {
             currentLogisticsPage: 1,
             logisticsPageSize: 10,
             currentRow: {},
+            showChild: false
         }
     },
     mounted() {
@@ -110,31 +95,17 @@ export default {
             this.currentPage = val
             this.getlogisticsOrderData()
         },
-        handleLogisticsPageChange(val) {
-            this.logisticsPageSize = val
-            this.viewLogisticDetail()
-        },
-        handleLogisticsPageChange(val) {
-            this.currentLogisticsPage = val
-            this.viewLogisticDetail()
-        },
         openLogisticsDialog(rowData) {
             this.currentRow = rowData
-            this.currentLogisticsPage = 1
-            this.viewLogisticDetail()
+            this.showChild = true
             this.isMaterialLogisticVis = true
         },
-        async viewLogisticDetail() {
-            const params = {
-                "page": this.currentLogisticsPage,
-                "pageSize": this.logisticsPageSize,
-                "orderRId": this.currentRow.orderRId,
-                "shoeRId": this.currentRow.shoeRId
-            }
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
-            this.logisticsMaterialData = response.data.result
-            this.logisticsRows = response.data.total
-        },
+        onDialogClose() {
+            // wait until dialog animation is done, then destroy child
+            this.$nextTick(() => {
+                this.showChild = false
+            })
+        }
     }
 }
 </script>

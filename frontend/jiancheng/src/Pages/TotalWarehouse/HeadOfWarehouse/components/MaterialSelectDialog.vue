@@ -26,18 +26,21 @@
                 </el-col>
                 <el-col :span="12">
                     <span style="margin-right: 50px;">订单入库数量：{{ selectedInboundQuantity }}</span>
-                    <span>剩余到货数量：{{ totalInboundQuantity - selectedInboundQuantity }}</span>
+                    <span>剩余到货数量：{{ (totalInboundQuantity - selectedInboundQuantity).toFixed(5) }}</span>
                 </el-col>
             </el-row>
 
             <div class="transfer-tables">
                 <!-- Top Table -->
-                <el-table ref="topTableData" :data="sortTopTableData" style="width: 100%; margin-bottom: 20px;"
+                <el-table ref="topTableData" :data="topTableData" style="width: 100%; margin-bottom: 20px;"
                     @selection-change="handleBottomSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
-                    <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                    <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
                     <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-                    <el-table-column prop="startDate" label="开始日期"></el-table-column>
+                    <el-table-column prop="materialName" label="订单号"></el-table-column>
+                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                    <el-table-column prop="materialColor" label="颜色"></el-table-column>
                     <el-table-column prop="endDate" label="结束日期"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
                     <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
@@ -71,13 +74,15 @@
                         clearable @change="searchOrderRId" @clear="searchOrderRId"></el-input> -->
 
                 <!-- Bottom Table -->
-                <el-table ref="bottomTableData" :data="sortBottomTableData" style="width: 100%;"
+                <el-table ref="bottomTableData" :data="bottomTableData" style="width: 100%;"
                     @selection-change="handleTopSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
-                    <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                    <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
                     <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-                    <el-table-column prop="startDate" label="开始日期"></el-table-column>
-                    <el-table-column prop="endDate" label="结束日期"></el-table-column>
+                    <el-table-column prop="materialName" label="订单号"></el-table-column>
+                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                    <el-table-column prop="materialColor" label="颜色"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
                     <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
                     <el-table-column prop="currentAmount" label="库存"></el-table-column>
@@ -94,6 +99,7 @@
 <script>
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import Decimal from 'decimal.js';
 export default {
     props: {
         visible: {
@@ -105,16 +111,7 @@ export default {
             required: true,
         },
     },
-    emits: ['update-visible'],
-    computed: {
-        sortTopTableData() {
-
-            return this.topTableData.sort(this.naturalSort);
-        },
-        sortBottomTableData() {
-            return this.bottomTableData.sort(this.naturalSort);
-        },
-    },
+    emits: ['confirm', 'update-visible'],
     data() {
         return {
             localVisible: this.visible,
@@ -127,7 +124,7 @@ export default {
             selectionPage: 0,
             bottomTableData: [],
             topTableData: [],
-            totalInboundQuantity: '',
+            totalInboundQuantity: 0,
             downSelected: [],
             topSelected: [],
             selectedInboundQuantity: 0,
@@ -171,16 +168,6 @@ export default {
             this.selectedInboundQuantity = this.topTableData.reduce((acc, item) => {
                 return acc + (item.inboundQuantity || 0);
             }, 0);
-        },
-        naturalSort(a, b) {
-            // Split the string into two parts: the prefix and the numeric part
-            const [prefixA, numA] = a.orderRId.split('-');
-            const [prefixB, numB] = b.orderRId.split('-');
-            // First compare the alphabetical prefixes
-            if (prefixA < prefixB) return -1;
-            if (prefixA > prefixB) return 1;
-            // If the prefixes are equal, compare the numeric parts
-            return parseInt(numA, 10) - parseInt(numB, 10);
         },
         // Capture selection change for the top table
         handleTopSelectionChange(selection) {
@@ -288,16 +275,19 @@ export default {
                 return
             }
             for (let i = 0; i < this.topTableData.length; i++) {
+                let formatItemTotalPrice = new Decimal(this.topTableData[i].inboundQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
+                let formatInboundQuantity = new Decimal(this.topTableData[i].inboundQuantity).toDecimalPlaces(5).toNumber()
                 this.topTableData[i] = {
                     ...this.topTableData[i],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
-                    inboundQuantity: this.topTableData[i].inboundQuantity,
-                    itemTotalPrice: (this.topTableData[i].inboundQuantity * this.unitPrice).toFixed(3),
+                    inboundQuantity: formatInboundQuantity,
+                    itemTotalPrice: formatItemTotalPrice,
                 }
                 console.log(this.topTableData[i])
             }
-            let remainTotalQuantity = this.totalInboundQuantity - this.selectedInboundQuantity
+            let remainTotalQuantity = new Decimal(this.totalInboundQuantity).minus(new Decimal(this.selectedInboundQuantity)).toDecimalPlaces(5).toNumber()
+            let remainTotalPrice = new Decimal(remainTotalQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
             if (remainTotalQuantity > 0) {
                 this.topTableData.push({
                     orderRId: null,
@@ -306,7 +296,7 @@ export default {
                     ...this.materialSelection[0],
                     disableEdit: true,
                     unitPrice: this.unitPrice,
-                    itemTotalPrice: (remainTotalQuantity * this.unitPrice).toFixed(3),
+                    itemTotalPrice: remainTotalPrice,
                     inboundModel: this.materialSelection[0].materialModel,
                     inboundSpecification: this.materialSelection[0].materialSpecification,
                 })

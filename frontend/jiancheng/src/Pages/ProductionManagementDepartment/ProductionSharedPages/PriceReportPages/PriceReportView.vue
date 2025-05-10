@@ -14,8 +14,8 @@
                         <el-descriptions-item label="订单号">{{ orderInfo.orderRId }}</el-descriptions-item>
                         <el-descriptions-item label="鞋型号">{{ orderInfo.shoeRId }}</el-descriptions-item>
                         <el-descriptions-item label="客户型号">{{ orderInfo.customerProductName }}</el-descriptions-item>
-                        <el-descriptions-item label="工段开始日期">{{ orderInfo.cuttingStartDate }}</el-descriptions-item>
-                        <el-descriptions-item label="工段结束日期">{{ orderInfo.cuttingEndDate }}</el-descriptions-item>
+                        <el-descriptions-item label="开始日期">{{ orderInfo.orderStartDate }}</el-descriptions-item>
+                        <el-descriptions-item label="结束日期">{{ orderInfo.orderEndDate }}</el-descriptions-item>
                         <el-descriptions-item label="工价单状态">{{ statusName }}</el-descriptions-item>
                     </el-descriptions>
                 </el-col>
@@ -27,20 +27,11 @@
                 <el-col :span="24">
                     <el-tabs v-model="currentTab" tab-position="top">
                         <el-tab-pane v-for="item in panes" :key="item" :label="item" :name="item">
-                            <h3>{{ `${currentTab}工序表` }}</h3>
                             <el-row :gutter="20">
                                 <el-col>
                                     <PriceReportTable :tableData="priceReportInfo[item]['tableData']"
-                                        :procedureInfo="procedureInfo"
-                                        :readOnly="readOnly" :team="currentTab" @update-items="handleUpdateItems" />
-                                </el-col>
-                            </el-row>
-                            <h3>{{ `${currentTab}外加工成本表` }}</h3>
-                            <el-row :gutter="20">
-                                <el-col>
-                                    <ExternalProcessingTable :tableData="externalProcessingData[item]['tableData']"
-                                        :supplierOptions="supplierOptions" :readOnly="readOnly"
-                                        @update-items="handleUpdateProcessing" />
+                                        :procedureInfo="procedureInfo" :readOnly="readOnly" :team="currentTab"
+                                        @update-items="handleUpdateItems" />
                                 </el-col>
                             </el-row>
                         </el-tab-pane>
@@ -50,21 +41,17 @@
             <el-row :gutter="20">
                 <el-col>
                     <el-button-group>
-                        <el-button type="info" @click="saveAsTemplate">保存为模板</el-button>
-                        <el-button v-if="!readOnly" type="info" @click="loadTemplate">加载模板</el-button>
-                        <!-- <el-button type="primary" @click="">下载为Excel</el-button> -->
-                    </el-button-group>
-                </el-col>
-            </el-row>
-            <el-row :gutter="20">
-                <el-col :offset="20">
-                    <el-button-group>
-                        <el-button v-if="!readOnly" type="primary" @click="handleSaveData">保存</el-button>
-                        <el-button v-if="!readOnly" type="success" @click="handleSubmit">提交</el-button>
-                        <el-button type="info" @click="generateProductionForm">生产流程卡</el-button>
-                    </el-button-group>
-                </el-col>
+                        <el-button @click="saveAsTemplate">保存为模板</el-button>
+                        <el-button v-if="!readOnly" @click="loadTemplate">加载模板</el-button>
 
+                        <el-button v-if="!readOnly" type="primary" @click="handleSaveData">保存</el-button>
+                        <el-button v-if="!readOnly" type="warning" @click="handleSubmit">提交</el-button>
+                        <el-button type="success" @click="generateProductionForm">生产流程卡</el-button>
+                    </el-button-group>
+                    <el-upload v-if="!readOnly" :show-file-list="false" :before-upload="handleBeforeUpload" style="display: inline;">
+                            <el-button type="primary">导入Excel</el-button>
+                        </el-upload>
+                </el-col>
             </el-row>
         </el-main>
     </el-container>
@@ -74,9 +61,9 @@
 import { onMounted, ref, reactive, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 import PriceReportTable from './PriceReportTable.vue';
-import ExternalProcessingTable from './ExternalProcessingTable.vue';
 import AllHeader from '@/components/AllHeader.vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import * as XLSX from 'xlsx';
 const priceReportInfo = reactive({})
 const supplierOptions = ref([])
 const procedureInfo = ref({})
@@ -90,12 +77,10 @@ const teamsArr = ref([])
 const statusName = ref('')
 const rejectionReason = ref('')
 const currentTab = ref('')
-const externalProcessingData = reactive({})
 
 onMounted(async () => {
     setReportPanes()
     await getPriceReportDetail()
-    await getExternalProcessingData()
     getOrderInfo()
     getAllProcedures()
     getAllSuppliers()
@@ -105,16 +90,11 @@ const handleUpdateItems = (items) => {
     priceReportInfo[currentTab.value]['tableData'] = items
 };
 
-const handleUpdateProcessing = (items) => {
-    externalProcessingData.value = items
-};
-
 const setReportPanes = () => {
     teamsArr.value = props.teams.split(",")
     teamsArr.value.forEach(team => {
         panes.value.push(team)
         priceReportInfo[team] = { "tableData": [], reportId: null }
-        externalProcessingData[team] = { "tableData": [] }
     })
     currentTab.value = panes.value[0]
 }
@@ -165,22 +145,12 @@ const getPriceReportDetail = async () => {
     }
 }
 
-const getExternalProcessingData = async () => {
-    for (const team of teamsArr.value) {
-        let params = { "reportId": priceReportInfo[team]["reportId"] }
-        let response = await axios.get(`${apiBaseUrl}/production/getexternalprocessingcost`, { params })
-        externalProcessingData[team]["tableData"] = response.data
-    }
-}
-
 const handleSaveData = async () => {
     try {
         for (const [key, info] of Object.entries(priceReportInfo)) {
             console.log(key, info)
             await axios.post(`${apiBaseUrl}/production/storepricereportdetail`,
                 { reportId: info.reportId, newData: info.tableData })
-            await axios.post(`${apiBaseUrl}/production/saveexternalprocessingcost`,
-                { reportId: info.reportId, newData: externalProcessingData[key]["tableData"] })
         }
         ElMessage.success("保存成功")
     }
@@ -260,5 +230,34 @@ const loadTemplate = async () => {
         ElMessage.info("已取消加载")
     });
 
+}
+
+const handleBeforeUpload = (file) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        /* 1) Read the file as an ArrayBuffer */
+        const data = new Uint8Array(e.target.result)
+        /* 2) Parse workbook */
+        const workbook = XLSX.read(data, { type: 'array' })
+        /* 3) Take first sheet */
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+        /* 4) Convert to JSON (uses first row as keys) */
+        const json = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+
+        if (json.length === 0) {
+            return
+        }
+        /* 5) Assign table data */
+        priceReportInfo[currentTab.value]['tableData'] = []
+        for (const item of json) {
+            let obj = { rowId: item["序号"], prodcutionSection: null, procedure: item["工序"], price: item["工价"], note: '' };
+            priceReportInfo[currentTab.value]['tableData'].push(obj)
+        }
+    }
+    reader.readAsArrayBuffer(file)
+
+    // Prevent <el-upload> from auto-posting to a server
+    return false
 }
 </script>

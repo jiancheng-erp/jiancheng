@@ -4,6 +4,11 @@
             <el-input v-model="procedureSearch" placeholder="搜索工序" clearable @keypress.enter="getProcedureData()"
                 @clear="getProcedureData" />
         </el-col>
+        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+            <el-select v-model="teamNameSearch" placeholder="选择工组" @change="getProcedureData()" filterable clearable>
+                <el-option v-for="item in teams" :key="item" :label="item" :value="item"></el-option>
+            </el-select>
+        </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
         <el-button @click="openNewProcedureDialog">
@@ -67,6 +72,7 @@ export default {
     data() {
         return {
             procedureSearch: '',
+            teamNameSearch: '',
             procedureData: [],
             isNewProcedureDialogOpen: false,
             newProcedureForm: {
@@ -101,7 +107,11 @@ export default {
             this.getProcedureData()
         },
         async getProcedureData() {
-            let params = { "teams": this.$props.teams.toString(), "procedureName": this.procedureSearch }
+            let params = { 
+                "teams": this.$props.teams.toString(), 
+                "procedureName": this.procedureSearch,
+                "teamName": this.teamNameSearch
+             }
             let response = await axios.get(`${this.$apiBaseUrl}/production/getallprocedures`, { params })
             this.procedureData = response.data
         },

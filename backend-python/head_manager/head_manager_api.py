@@ -6,6 +6,7 @@ from event_processor import EventProcessor
 import time
 from decimal import Decimal
 from collections import defaultdict
+from wechat_api.send_message_api import send_massage_to_users
 
 
 head_manager_bp = Blueprint("head_manager_bp", __name__)
@@ -792,6 +793,8 @@ def confirm_production_order():
     order = Order.query.filter(Order.order_id == order_id).first()
     if not order:
         return jsonify({"msg": "Order not found."}), 404
+    order_rid = order.order_rid
+    order_shoe_rid = db.session.query(OrderShoe, Shoe).join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id).filter(OrderShoe.order_id == order_id).first().Shoe.shoe_rid
     order_status = OrderStatus.query.filter(OrderStatus.order_id == order_id).first()
     if order_status.order_current_status == 7:
         processor = EventProcessor()
@@ -834,6 +837,9 @@ def confirm_production_order():
         )
         result = processor.processEvent(event)
         db.session.add(event)
+        message = f"订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        users = "YangShuYao"
+        send_massage_to_users(message, users)
         db.session.commit()
         return jsonify({"msg": "Production order confirmed."})
     else:
