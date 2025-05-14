@@ -25,6 +25,9 @@
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>库存</span>
                         </el-menu-item>
+                        <el-menu-item index="7" @click="handleMenuClick(7)">
+                            <span>订单查询</span>
+                        </el-menu-item>
                         <el-menu-item index="12" @click="handleMenuClick(12)">
                             <span>个人信息</span>
                         </el-menu-item>
@@ -52,6 +55,7 @@ import InboundView from '../../HeadOfWarehouse/components/InboundView.vue'
 import OutboundView from '../../HeadOfWarehouse/components/OutboundView.vue'
 import InOutboundRecords from '../../HeadOfWarehouse/components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue'
 
 export default {
     components: {
@@ -60,7 +64,8 @@ export default {
         InboundView,
         OutboundView,
         InOutboundRecords,
-        PersonalInfo
+        PersonalInfo,
+        GeneralOrderSearch
     },
     data() {
         return {
@@ -92,6 +97,9 @@ export default {
                     break
                 case 9:
                     this.currentComponent = 'InOutboundRecords'
+                    break
+                case 7:
+                    this.currentComponent = 'GeneralOrderSearch'
                     break
                 case 12:
                     this.currentComponent = 'PersonalInfo'
