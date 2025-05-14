@@ -83,6 +83,7 @@ def create_app(config_override=None):
         "/logistics/downloadassetzip",
         "/craftsheet/downloadcraftsheet",
         "/order/exportorder",
+        "/order/exportproductionorder",
         "/multiissue/downloadtotalpurchaseorder",
         "/logistics/downloadlastpurchaseorders",
         "/logistics/downloadpackagepurchaseorders",
