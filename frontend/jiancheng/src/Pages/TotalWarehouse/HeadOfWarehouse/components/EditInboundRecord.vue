@@ -4,7 +4,6 @@
             <el-button type="primary" @click="addRow">新增一行</el-button>
             <el-button type="warning" @click="copyRows">批量复制</el-button>
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
-            <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
             <el-button type="primary" @click="openOrderMaterialQuery">订单材料查询</el-button>
         </el-col>
     </el-row>
@@ -48,7 +47,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <vxe-table :data="materialTableData" ref="tableRef" border :edit-config="{ mode: 'cell', trigger: 'click' }"
+            <vxe-table :data="inboundForm.items" ref="tableRef" border :edit-config="{ mode: 'cell', trigger: 'click' }"
                 :row-config="{ keyField: 'id', isHover: true }" :column-config="{ resizable: true }" :keyboard-config="{
                     isEdit: true,
                     isArrow: true,
@@ -57,8 +56,8 @@
                     isDel: true,
                     isBack: true,
                     isEsc: true,
-                    editMode: 'insert',
-                    enterMethod: customeEnterMethod,
+                    isLastEnterAppendRow: true,
+                    editMode: 'insert'
                 }" :mouse-config="{ selected: true }" show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
@@ -182,99 +181,6 @@
             <el-button @click="confirmSelection">确定</el-button>
         </template>
     </el-dialog>
-    <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
-        @closed="closePreviewDialog">
-        <div id="printView">
-            <table style="width:100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <td>
-                            <div style="position: relative; padding: 5px;">
-                                <h2 style="margin: 0; text-align: center; font-size: 24px;">健诚鞋业入库单</h2>
-                                <span
-                                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
-                                    单据编号:{{ previewInboundForm.inboundRId }}
-                                </span>
-                            </div>
-                            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
-                                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                                <tr>
-                                    <td style="padding:5px; width: 150px;" align="left">供应商:{{
-                                        previewInboundForm.supplierName }}</td>
-                                    <td style="padding:5px; width: 150px;" align="left">仓库名称:{{
-                                        previewInboundForm.warehouseName }}</td>
-                                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{
-                                        previewInboundForm.currentDateTime }}
-                                    </td>
-                                    <td style="padding:5px; width: 150px;" align="left">结算方式:{{
-                                        previewInboundForm.payMethod
-                                        }}</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    <tr>
-                        <td>
-                            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                                style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
-                                <thead>
-                                    <tr>
-                                        <th width="100">材料名</th>
-                                        <th width="100">型号</th>
-                                        <th width="180">规格</th>
-                                        <th width="80">颜色</th>
-                                        <th width="55">单位</th>
-                                        <th width="100">订单号</th>
-                                        <th width="100">工厂鞋型</th>
-                                        <th width="90">数量</th>
-                                        <th width="90">单价</th>
-                                        <th width="100">金额</th>
-                                        <th>备注</th>
-                                    </tr>
-                                </thead>
-                                <tr v-for="(item, index) in previewData" :key="index" align="center">
-                                    <td>{{ item.materialName }}</td>
-                                    <td>{{ item.inboundModel }}</td>
-                                    <td>{{ item.inboundSpecification }}</td>
-                                    <td>{{ item.materialColor }}</td>
-                                    <td>{{ item.actualInboundUnit }}</td>
-                                    <td>{{ item.orderRId }}</td>
-                                    <td>{{ item.shoeRId }}</td>
-                                    <td>{{ item.inboundQuantity }}</td>
-                                    <td>{{ item.unitPrice }}</td>
-                                    <td>{{ item.itemTotalPrice }}</td>
-                                    <td>{{ item.remark }}</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td>
-                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;display: flex;">
-                                <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                                    calculateInboundTotal }}</span></span>
-                                <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                                    calculateTotalPriceSum }}</span></span>
-                                <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
-                                    previewInboundForm.remark }}</span></span>
-                            </div>
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <template #footer>
-            <el-button type="primary" v-print="'#printView'">打印</el-button>
-            <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业入库单${inboundForm.inboundRId}`, `printView`)">下载PDF</el-button>
-            <el-button v-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
-        </template>
-    </el-dialog>
     <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis" />
 </template>
 <script>
@@ -293,9 +199,23 @@ export default {
         MaterialSelectDialog,
         OrderMaterialQuery,
     },
+    props: {
+        inputInboundForm: {
+            type: Object,
+            required: true
+        },
+    },
+    emits: ['updateInboundForm'],
+    watch: {
+        inboundForm: {
+            handler(newVal) {
+                this.$emit('updateInboundForm', newVal);
+            },
+            deep: true,
+        },
+    },
     data() {
         return {
-            materialTableData: [],
             previewInboundForm: {},
             inboundForm: {},
             inboundFormTemplate: {
@@ -308,6 +228,7 @@ export default {
                 payMethod: '应付账款',
                 warehouseName: null,
                 warehouseId: null,
+                items: [],
             },
             rowTemplate: {
                 materialName: '',
@@ -369,32 +290,26 @@ export default {
             activeOrderShoes: [],
         }
     },
-    // beforeUnmount() {
-    //     window.removeEventListener('keydown', this.handleKeydown)
-    // },
     async mounted() {
-        // window.addEventListener('keydown', this.handleKeydown)
+        console.log(this.inputInboundForm)
+        this.inboundForm = JSON.parse(JSON.stringify(this.inputInboundForm))
+        if (this.inboundForm.items[0].shoeSizeColumns) {
+            for (let i = 0; i < this.inboundForm.items[0].shoeSizeColumns.length; i++) {
+                let obj = {
+                    "label": this.inboundForm.items[0].shoeSizeColumns[i],
+                    "prop": `amount${i}`
+                }
+                this.shoeSizeColumns.push(obj)
+            }
+        }
+
+        console.log(this.shoeSizeColumns)
         this.getMaterialNameOptions()
-        this.loadLocalStorageData()
         this.getMaterialTypeOptions();
         this.getMaterialSupplierOptions();
         this.getUnitOptions();
         this.getActiveOrderShoes();
         await this.getLogisticsShoeSizes()
-    },
-    watch: {
-        inboundForm: {
-            handler() {
-                this.updateCache();
-            },
-            deep: true
-        },
-        materialTableData: {
-            handler() {
-                this.updateCache();
-            },
-            deep: true
-        }
     },
     computed: {
         calculateInboundTotal() {
@@ -421,26 +336,10 @@ export default {
         },
     },
     methods: {
-        customeEnterMethod(params) {
-            const rowIndex = params.rowIndex;
-            const column = params.column;
-            if (rowIndex == this.materialTableData.length - 1) {
-                this.addRow()
-                // Assume you have a ref to the table
-                const $table = this.$refs.tableRef;
-
-                // Get current active cell
-                this.$nextTick(() => {
-                    const nextRow = $table.getData()[rowIndex + 1];
-                    $table.setEditCell(nextRow, column);
-                    $table.clearEdit();
-                });
-                return false
-            }
-        },
         async getMaterialTypeOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialtypes`)
             this.materialTypeOptions = response.data
+            console.log(this.materialTypeOptions)
         },
         async getMaterialSupplierOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallsuppliernames`)
@@ -459,27 +358,6 @@ export default {
         },
         updateOrderMaterialQueryVis(value) {
             this.isOrderMaterialQueryVis = value
-        },
-        updateCache: debounce(function () {
-            const record = {
-                inboundForm: this.inboundForm,
-                materialTableData: this.materialTableData,
-                shoeSizeColumns: this.shoeSizeColumns
-            };
-            localStorage.setItem('inboundRecord', JSON.stringify(record));
-        }, 300),
-        loadLocalStorageData() {
-            let inboundRecord = localStorage.getItem('inboundRecord')
-            if (inboundRecord) {
-                inboundRecord = JSON.parse(inboundRecord)
-                this.inboundForm = { ...inboundRecord.inboundForm }
-                this.materialTableData = [...inboundRecord.materialTableData]
-                this.shoeSizeColumns = [...inboundRecord.shoeSizeColumns]
-            } else {
-                this.inboundForm = { ...this.inboundFormTemplate }
-                this.materialTableData = []
-                this.shoeSizeColumns = []
-            }
         },
         handleOrderRIdSelect(row, value) {
             // console.log(value)
@@ -507,9 +385,9 @@ export default {
         updateMaterialTableData(value) {
             this.searchedMaterials = []
             let seen = new Set()
-            let temp = [...this.materialTableData, ...value]
+            let temp = [...this.inboundForm.items, ...value]
             temp.splice(this.currentIndex, 1)
-            this.materialTableData = [...temp]
+            this.inboundForm.items = [...temp]
             this.currentIndex = null
         },
         updateDialogVisible(value) {
@@ -539,6 +417,10 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
             this.inboundForm.warehouseName = response.data.warehouseName
             this.inboundForm.warehouseId = response.data.warehouseId
+
+            this.inboundForm.items.forEach(item => {
+                item.materialName = null
+            })
         },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
@@ -601,7 +483,7 @@ export default {
         },
         addRow() {
             const newRow = { "id": XEUtils.uniqueId(), ...JSON.parse(JSON.stringify(this.rowTemplate)) };
-            this.materialTableData.push(newRow)
+            this.inboundForm.items.push(newRow)
         },
         copyRows() {
             const selectedRows = this.$refs.tableRef.getCheckboxRecords();
@@ -609,7 +491,7 @@ export default {
                 const { id, ...rest } = row
                 return { ...rest, id: XEUtils.uniqueId() }
             })
-            this.materialTableData.push(...clones)
+            this.inboundForm.items.push(...clones)
         },
         deleteRows() {
             const selectedRows = this.$refs.tableRef.getCheckboxRecords();
@@ -623,7 +505,7 @@ export default {
                 cancelButtonText: '取消',
                 confirmButtonText: '确定',
             }).then(() => {
-                this.materialTableData = this.materialTableData.filter(row => !selectedRows.includes(row));
+                this.inboundForm.items = this.inboundForm.items.filter(row => !selectedRows.includes(row));
                 ElMessage.success('删除成功');
             }).catch(() => {
                 ElMessage.info('已取消删除');
@@ -698,7 +580,7 @@ export default {
                 }
             }
             let tempTable = []
-            this.materialTableData.splice(this.currentIndex, 1)
+            this.inboundForm.items.splice(this.currentIndex, 1)
             for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
                 let selectedMaterial = this.selectedSizeMaterials[i]
                 selectedMaterial.inboundModel = selectedMaterial.materialModel
@@ -716,11 +598,11 @@ export default {
                 }
                 selectedMaterial.inboundQuantity = selectedMaterial.estimatedInboundAmount - selectedMaterial.actualInboundAmount
                 selectedMaterial.itemTotalPrice = (selectedMaterial.inboundQuantity * selectedMaterial.unitPrice).toFixed(3)
-                this.materialTableData.push(selectedMaterial)
+                this.inboundForm.items.push(selectedMaterial)
             }
 
             this.shoeSizeColumns = tempTable
-            this.materialTableData = [...this.materialTableData]
+            this.inboundForm.items = [...this.inboundForm.items]
             this.isSizeMaterialSelectDialogVis = false
         },
         async handleMaterialNameSelect(row, value) {
@@ -733,124 +615,6 @@ export default {
             if (!(row.materialName === '大底')) {
                 this.shoeSizeColumns = []
             }
-        },
-        async submitInboundForm() {
-            for (let i = 0; i < this.materialTableData.length; i++) {
-                if (this.materialTableData[i].shoeSizeColumns == null) {
-                    this.materialTableData[i].shoeSizeColumns = this.materialTableData[0].shoeSizeColumns
-                }
-            }
-            const params = {
-                inboundType: this.inboundForm.inboundType,
-                supplierName: this.inboundForm.supplierName,
-                warehouseId: this.inboundForm.warehouseId,
-                remark: this.inboundForm.remark,
-                items: this.materialTableData,
-                batchInfoTypeId: this.inboundForm.shoeSize,
-                payMethod: this.inboundForm.payMethod,
-                materialTypeId: this.inboundForm.materialTypeId,
-            }
-            try {
-                const response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
-                this.previewInboundForm.currentDateTime = response.data.inboundTime
-                this.previewInboundForm.inboundRId = response.data.inboundRId
-                this.isInbounded = 1
-                ElMessage.success('入库成功')
-            } catch (error) {
-                if (error.response) {
-                    // Flask returns error in JSON format
-                    this.errorMessage = error.response.data.message || "An error occurred";
-                } else {
-                    this.errorMessage = "服务器异常";
-                }
-                ElMessage.error(this.errorMessage)
-                console.error("API Error:", error);
-            }
-        },
-        async confirmAndProceed() {
-            let duplicateCheck = false
-            let seen = new Set()
-            for (const obj of this.materialTableData) {
-                let string = `${obj.orderRId}-${obj.materialName}-${obj.inboundModel}-${obj.inboundSpecification}-${obj.materialColor}-${obj.actualInboundUnit}-${obj.unitPrice}`
-                if (seen.has(string)) {
-                    duplicateCheck = true
-                    break
-                }
-                seen.add(string)
-            }
-            if (duplicateCheck) {
-                try {
-                    await ElMessageBox.confirm('有材料信息重复，是否继续？', '确认', {
-                        confirmButtonText: '是',
-                        cancelButtonText: '否',
-                        type: 'warning'
-                    });
-
-                    this.openPreviewDialog();
-
-                } catch (error) {
-                    console.log('User cancelled. Stop here.');
-                }
-            }
-            else {
-                // Proceed to next code block
-                this.openPreviewDialog();
-            }
-        },
-        openPreviewDialog() {
-            this.$refs.inboundForm.validate((valid) => {
-                if (this.materialTableData.length == 0) {
-                    ElMessage.warning('请至少添加一行材料')
-                    return
-                }
-                for (let i = 0; i < this.materialTableData.length; i++) {
-                    if (this.materialTableData[i].materialName == null || this.materialTableData[i].materialName == '') {
-                        ElMessage.warning('请填写所有必填项')
-                        return
-                    }
-                }
-                if (valid) {
-                    this.previewData = JSON.parse(JSON.stringify(this.materialTableData))
-                    this.previewInboundForm = JSON.parse(JSON.stringify(this.inboundForm))
-                    for (let i = 0; i < this.previewData.length; i++) {
-                        let item = this.previewData[i]
-                        // trim and upper the orderRId
-                        if (item.orderRId != null) {
-                            item.orderRId = item.orderRId.trim().toUpperCase();
-                        }
-                        if (item.shoeRId != null) {
-                            item.shoeRId = item.shoeRId.trim().toUpperCase();
-                        }
-                        if (item.materialModel != null) {
-                            item.materialModel = item.materialModel.trim();
-                        }
-                        if (item.materialSpecification != null) {
-                            item.materialSpecification = item.materialSpecification.trim();
-                        }
-                        if (item.materialColor != null) {
-                            item.materialColor = item.materialColor.trim();
-                        }
-                    }
-                    this.isPreviewDialogVis = true;
-                } else {
-                    ElMessage.warning('请填写所有必填项')
-                }
-            })
-        },
-        closePreviewDialog() {
-            this.previewData = []
-            if (this.isInbounded == 1) {
-                this.isInbounded = 0
-                this.materialTableData = []
-                localStorage.removeItem('inboundRecord')
-                this.inboundForm = JSON.parse(JSON.stringify(this.inboundFormTemplate))
-                this.shoeSizeColumns = []
-                this.isPreviewDialogVis = false;
-                window.location.reload()
-            }
-        },
-        downloadPDF(title, domName) {
-            htmlToPdf.getPdf(title, domName);
         },
     },
 }
@@ -866,37 +630,5 @@ export default {
 
 .radio-class .el-radio__label {
     display: none;
-}
-</style>
-
-<style>
-/* 确保表头固定和分页逻辑 */
-/* Print styles */
-@media print {
-    @page {
-        margin: 20mm;
-    }
-
-    thead {
-        display: table-header-group;
-    }
-
-    tfoot {
-        display: table-footer-group;
-    }
-
-    /* Optional: Avoid breaking inside rows */
-    tr {
-        page-break-inside: avoid;
-    }
-}
-</style>
-
-<style scoped>
-#printView {
-    padding-left: 20px;
-    padding-right: 20px;
-    color: black;
-    font-family: SimHei;
 }
 </style>

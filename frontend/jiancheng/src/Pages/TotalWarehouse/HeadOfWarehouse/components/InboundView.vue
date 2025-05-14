@@ -1,9 +1,5 @@
 <template>
-    <PurchaseInbound :material-supplier-options="materialSupplierOptions"
-        :material-type-options="materialTypeOptions"
-        :unit-options="unitOptions"
-        :active-order-shoes="activeOrderShoes"
-        >
+    <PurchaseInbound>
     </PurchaseInbound>
 </template>
 <script>
