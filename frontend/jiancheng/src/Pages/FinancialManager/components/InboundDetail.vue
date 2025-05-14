@@ -39,6 +39,8 @@
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
                 <el-input v-model="materialColorFilter" placeholder="材料颜色搜索" clearable
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
+                <el-input v-model="orderRidFilter" placeholder="订单号搜索" clearable
+                @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
                 <el-button type="primary" @click="createAndDownloadInboundExcel">生成并下载excel</el-button>
             </div>
 
@@ -107,6 +109,7 @@ const materialNameFilter = ref('')
 const materialModelFilter = ref('')
 const materialSpecificationFilter = ref('')
 const materialColorFilter = ref('')
+const orderRidFilter = ref('')
 const detailOrSummary = ref(true)
 const currentApi = ref('')
 // const shortcuts: [
@@ -192,6 +195,7 @@ function getCurrentPageInfo() {
         'materialModelFilter': materialModelFilter.value,
         'materialSpecificationFilter': materialSpecificationFilter.value,
         'materialColorFilter': materialColorFilter.value,
+        'orderRidFilter': orderRidFilter.value
         // 'approvalStatusFilter':[0,1,2]
     }
 }
@@ -219,6 +223,7 @@ async function getSelectableColumns() {
 }
 async function updateInboundDisplayRecord() {
     const apiParams = getCurrentPageInfo()
+    console.log(apiParams)
     if (detailOrSummary.value == true) {
         const res = await axios.get($api_baseUrl + `/accounting/get_warehouse_inbound_record`
             , { params: apiParams }
