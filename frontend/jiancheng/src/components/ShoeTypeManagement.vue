@@ -53,8 +53,9 @@
                 <el-table-column prop="shoeDepartmentId" label="设计部门"></el-table-column>
                 <el-table-column label="操作">
                     <template #default="scope">
-                        <el-button type="primary" @click="openEditShoeDialog(scope.row)">编辑</el-button>
+                        <el-button type="primary" @click="openEditShoeDialog(scope.row)">编辑鞋型信息</el-button>
                         <el-button type="primary" size="default" @click="addShoeModel(scope.row)">添加鞋款</el-button>
+                        <el-button type="warning" size="default" @click="editShoeRId(scope.row)">编辑鞋型号</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -165,7 +166,7 @@
     <el-dialog title="编辑鞋型" v-model="editShoeDialogVis" width="50%">
         <el-form :model="shoeForm" label-width="120px" :inline="false">
             <el-form-item label="鞋型编号">
-                <el-input v-model="shoeForm.shoeRid" :disabled="this.userRole == 21 ? true : false"></el-input>
+                <el-input v-model="shoeForm.shoeRid" disabled></el-input>
             </el-form-item>
             <el-form-item label="设计师">
                 <el-input v-model="shoeForm.shoeDesigner" :disabled="this.userRole == 21 ? true : false"></el-input>
@@ -211,6 +212,34 @@
             <el-button type="primary" :disabled="!imageUrl" @click="uploadCroppedImage"> 确认上传 </el-button>
         </template>
     </el-dialog>
+    <el-dialog title="编辑鞋型编号" v-model="editShoeRIdDialogVis" width="50%">
+        <el-form :model="shoeForm" label-width="120px" :inline="false">
+            <el-form-item label="鞋型编号">
+                <el-input v-model="shoeForm.shoeRid"></el-input>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span>
+                <el-button @click="editShoeRIdDialogVis = false">取消</el-button>
+                <el-button type="primary" @click="openEditConfirmVis">确认修改</el-button>
+            </span>
+        </template>
+    </el-dialog>
+    <el-dialog title="修改鞋型编号确认界面" v-model="editShoeRIdDialogConfirmVis" width="50%">
+        <span>鞋型编号：{{ currentImageRow.shoeRid }}</span>
+        <el-table :data="orderAssociation" border>
+            <el-table-column prop="orderRid" label="订单编号" width="300px"></el-table-column>
+            <el-table-column prop="customerName" label="客户名称"></el-table-column>
+            <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+            <el-table-column prop="shoeName" label="客户型号"></el-table-column>
+        </el-table>
+        <template #footer>
+            <span>
+                <el-button @click="editShoeRIdDialogConfirmVis = false">取消</el-button>
+                <el-button type="primary" @click="confirmEditShoeRId">确认修改</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -249,6 +278,8 @@ export default {
                 colorNameSP: ''
             },
             reUploadImageDialogVis: false,
+            editShoeRIdDialogVis: false,
+            editShoeRIdDialogConfirmVis: false,
             editShoeDialogVis: false,
             addShoeDialogVis: false,
             addShoeColorDialogVis: false,
@@ -266,7 +297,8 @@ export default {
             idModel: '',
             currentImageRow: {},
             expandedRows: [],
-            imageUrl: ''
+            imageUrl: '',
+            orderAssociation: [],
         }
     },
     mounted() {
@@ -566,6 +598,53 @@ export default {
                         this.$message.error('上传失败')
                     })
             }, 'image/jpeg')
+        },
+        editShoeRId(row) {
+            this.shoeForm = row
+            this.editShoeRIdDialogVis = true
+        },
+        openEditConfirmVis() {
+            this.$confirm('确认修改鞋型编号？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                const response = await axios.get(`${this.$apiBaseUrl}/shoemanage/getorderassociation`, {
+                    params: { shoeRId: this.shoeForm.shoeRid, shoeId: this.shoeForm.shoeId }
+                })
+                this.orderAssociation = response.data
+                this.editShoeRIdDialogConfirmVis = true
+            })
+        },
+        confirmEditShoeRId() {
+            this.$confirm('确认修改鞋型编号,该操作无法撤销，且会影响所有关联订单？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/confirmeditshoerid`, {
+                        shoeRId: this.shoeForm.shoeRid,
+                        shoeId: this.shoeForm.shoeId
+                    });
+
+                    if (response.status === 200) {
+                        this.$message({
+                            type: 'success',
+                            message: '修改成功'
+                        });
+                    }
+                } catch (error) {
+                    this.$message({
+                        type: 'error',
+                        message: error?.response?.data?.message || '与其他已存在鞋型同名，请联系管理员更改'
+                    });
+                } finally {
+                    this.editShoeRIdDialogConfirmVis = false;
+                    this.editShoeRIdDialogVis = false;
+                    this.getAllShoes();
+                }
+            });
         }
     }
 }
