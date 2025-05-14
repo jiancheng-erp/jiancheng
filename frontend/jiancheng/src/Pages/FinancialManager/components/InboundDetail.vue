@@ -20,7 +20,7 @@
                 </el-select>
                 <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
-                <el-date-picker v-if="detailOrSummary == true" v-model="dateRangeFilter" type="daterange"
+                <el-date-picker v-model="dateRangeFilter" type="daterange"
                     value-format="YYYY-MM-DD" unlink-panels range-separator="至" start-placeholder="时间范围起始"
                     end-placeholder="时间范围结束" size="default" clearable @change="updateInboundDisplayRecord"
                     @clear="updateInboundDisplayRecord" style="width: 200px;" />
