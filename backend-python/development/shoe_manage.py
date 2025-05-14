@@ -191,3 +191,88 @@ def edit_shoe():
         return jsonify({"message": "edit shoe OK"}), 200
     else:
         return jsonify({"error": "shoe not found given shoe_id"}), 400
+    
+@shoe_manage_bp.route("/shoemanage/getorderassociation", methods=["GET"])
+def get_order_association():
+    shoe_rid = request.args.get("shoeRId")
+    shoe_id = request.args.get("shoeId")
+    order_association = db.session.query(Order, OrderShoe, Shoe, Customer).join(
+        OrderShoe, Order.order_id == OrderShoe.order_id
+    ).join(
+        Shoe, OrderShoe.shoe_id == Shoe.shoe_id
+    ).join(
+        Customer, Order.customer_id == Customer.customer_id
+    ).filter(Shoe.shoe_id == shoe_id).all()
+    if not order_association:
+        return jsonify([]), 200
+    result = []
+    for order, order_shoe, shoe, customer in order_association:
+        result.append({
+            "orderRid": order.order_rid,
+            "shoeName": order_shoe.customer_product_name,
+            "shoeRId": shoe.shoe_rid,
+            "customerName": customer.customer_name,
+        })
+        return jsonify(result), 200
+    
+@shoe_manage_bp.route("/shoemanage/confirmeditshoerid", methods=["POST"])
+def confirm_edit_shoe_rid():
+    shoe_rid = request.json.get("shoeRId")
+    shoe_id = request.json.get("shoeId")
+    existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
+    if existing_shoe:
+        old_shoe_rid = existing_shoe.shoe_rid
+        duplicate_shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == shoe_rid).first()
+        if duplicate_shoe:
+            return jsonify({"error": "shoe_rid already exists"}), 404
+        existing_shoe.shoe_rid = shoe_rid
+        db.session.flush()
+        #modify local path
+        is_image_path_exist = os.path.exists(os.path.join(IMAGE_UPLOAD_PATH, 'shoe', old_shoe_rid))
+        if is_image_path_exist:
+            old_path = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', old_shoe_rid)
+            new_path = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', shoe_rid)
+            os.rename(old_path, new_path)
+        order_association = db.session.query(Order, OrderShoe, CraftSheet).join(
+            OrderShoe, Order.order_id == OrderShoe.order_id
+        ).join(CraftSheet, CraftSheet.order_shoe_id == OrderShoe.order_shoe_id).filter(OrderShoe.shoe_id == shoe_id).all()
+        order_name_list = []
+        for order, order_shoe, craft_sheet in order_association:
+            order_name_list.append(order.order_rid)
+            # modify the craft sheet image path in db, the stynax is like http://192.168.16.100:12667/order_rid/shoe_rid/刀模图/xxx.jpg
+            # and http://192.168.16.100:12667/order_rid/shoe_rid/图样备注/xxx.jpg
+            old_cut_die_img_path = craft_sheet.cut_die_img_path
+            if old_cut_die_img_path:
+                new_cut_die_img_path = 'http://192.168.16.100:12667/'+ order.order_rid + '/' + shoe_rid + '/刀模图/' + old_cut_die_img_path.split('/')[-1]
+                craft_sheet.cut_die_img_path = new_cut_die_img_path
+                db.session.flush()
+            old_pic_note_img_path = craft_sheet.pic_note_img_path
+            if old_pic_note_img_path:
+                new_pic_note_img_path = 'http://192.168.16.100:12667/'+ order.order_rid + '/' + shoe_rid + '/图样备注/' + old_cut_die_img_path.split('/')[-1]
+                craft_sheet.pic_note_img_path = new_pic_note_img_path
+                db.session.flush()
+        for order_name in order_name_list:
+            is_img_order_path_exist = os.path.exists(os.path.join(IMAGE_UPLOAD_PATH, order_name, old_shoe_rid))
+            if is_img_order_path_exist:
+                old_order_path = os.path.join(IMAGE_UPLOAD_PATH, order_name, old_shoe_rid)
+                new_order_path = os.path.join(IMAGE_UPLOAD_PATH, order_name, shoe_rid)
+                os.rename(old_order_path, new_order_path)
+            is_file_path_exist = os.path.exists(os.path.join(FILE_STORAGE_PATH, order_name, old_shoe_rid))
+            if is_file_path_exist:
+                old_file_path = os.path.join(FILE_STORAGE_PATH, order_name, old_shoe_rid)
+                new_file_path = os.path.join(FILE_STORAGE_PATH, order_name, shoe_rid)
+                os.rename(old_file_path, new_file_path)
+        shoe_type = (
+            db.session.query(ShoeType).filter(ShoeType.shoe_id == shoe_id).all()
+        )
+        for shoe_type_entity in shoe_type:
+            if shoe_type_entity.shoe_image_url:
+                #modify the image path in db, the stynax is like shoe/shoe_rid/shoe_type_color/shoe_image.jpg
+                old_image_path = shoe_type_entity.shoe_image_url
+                new_image_path = 'shoe' + '/' + shoe_rid + '/' + old_image_path.split('/')[2]+ '/' + old_image_path.split('/')[-1]
+                shoe_type_entity.shoe_image_url = new_image_path
+                db.session.flush()
+        db.session.commit()
+        return jsonify({"message": "edit shoe rid OK"}), 200
+    else:
+        return jsonify({"error": "shoe not found given shoe_id"}), 400
