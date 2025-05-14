@@ -19,10 +19,6 @@ def main():
     register_blueprints(app)
 
     # Define routes if needed.
-    @app.route("/")
-    def hello_world():
-        return "Hello World"
-
     # Set additional configuration or attach objects.
     app.config['event_processor'] = EventProcessor()
     # sync_schema(app, db)
