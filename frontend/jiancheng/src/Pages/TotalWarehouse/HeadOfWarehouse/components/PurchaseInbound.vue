@@ -57,8 +57,8 @@
                     isDel: true,
                     isBack: true,
                     isEsc: true,
-                    isLastEnterAppendRow: true,
-                    editMode: 'insert'
+                    editMode: 'insert',
+                    enterMethod: customeEnterMethod,
                 }" :mouse-config="{ selected: true }" show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
@@ -208,7 +208,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -431,6 +431,23 @@ export default {
         },
     },
     methods: {
+        customeEnterMethod(params) {
+            const rowIndex = params.rowIndex;
+            const column = params.column;
+            if (rowIndex == this.materialTableData.length - 1) {
+                this.addRow()
+                // Assume you have a ref to the table
+                const $table = this.$refs.tableRef;
+
+                // Get current active cell
+                this.$nextTick(() => {
+                    const nextRow = $table.getData()[rowIndex + 1];
+                    $table.setEditCell(nextRow, column);
+                    $table.clearEdit();
+                });
+                return false
+            }
+        },
         openOrderMaterialQuery() {
             this.isOrderMaterialQueryVis = true
         },
