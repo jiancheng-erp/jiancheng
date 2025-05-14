@@ -18,14 +18,6 @@
                                     :disabled="editOrderInfoDisabled"
                                 >
                                 </el-input>
-                                
-                                <!-- <el-button
-                                    v-if="isShowBtn(orderData.orderCid)"
-                                    type="primary"
-                                    @click="updateCustomInfo('customOrderId', orderData.orderCid)"
-                                    style="margin-left: 15px"
-                                    >{{customerOrderBtn}}</el-button
-                                > -->
                             </el-descriptions-item>
                             <el-descriptions-item label="客户信息" align="center">{{
                                 orderData.customerInfo
@@ -33,12 +25,6 @@
                             <el-descriptions-item label="订单周期" align="center">{{
                                 orderData.dateInfo
                             }}</el-descriptions-item>
-                            <!-- <el-descriptions-item label="前序流程下发时间">{{ testOrderData.prevTime }}</el-descriptions-item>
-                                <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
-                                <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
-                            <!-- <el-descriptions-item label="订单预计截止日期" align="center">{{
-                                orderData.endDate
-                            }}</el-descriptions-item> -->
                         </el-descriptions>
                     </el-col>
                 </el-row>
@@ -83,25 +69,6 @@
                                 <el-button v-if="orderClerkEditable" @click="proceedOrder" type="primary">
                                     提交订单下发
                                 </el-button>
-                                <!-- <el-button
-                                    v-if="customerColorBtnVis"
-                                    @click="submitCustomerColorForm"
-                                    type="primary"
-                                    >保存客户颜色</el-button
-                                >
-                                <el-button
-                                    v-if="this.role == 4" @click="changeCustomerColorMgt">
-                                    修改客户颜色
-                                </el-button>
-                                <el-button
-                                    v-if="priceUpdateButtonVis"
-                                    @click="submitPriceForm"
-                                    type="primary"
-                                    >保存财务信息</el-button
-                                >
-                                <el-button v-if="this.role == 4" @click="toggleFinInfoChange">
-                                    财务信息修改权限
-                                </el-button> -->
                                 <el-button
                                     v-if="this.userIsManager && this.readyPending"
                                     type="warning"
@@ -257,18 +224,11 @@
                     <el-table-column label="客户鞋型编号">
                         <template #default="scope">
                             <el-input
-                                style="width: 100px"
+                                style="width: 200px"
                                 v-model="scope.row.shoeCid"
                                 :disabled="editOrderInfoDisabled"
                             >
                             </el-input>
-                            <!-- <el-button
-                                v-if="isShowBtn2(scope.row.shoeCid)"
-                                type="primary"
-                                @click="updateCustomInfo('customShoeId', scope.row)"
-                                style="margin-left: 15px"
-                                >{{customerShoeBtn}}</el-button
-                            > -->
                         </template>
                     </el-table-column>
                     <el-table-column prop="currentStatus" label="鞋型状态" />

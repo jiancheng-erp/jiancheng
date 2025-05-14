@@ -138,8 +138,6 @@ const handleSubmit = () => {
                         confirmButtonText: '确定',
                         type: 'error'
                     })
-
-                    console.log('Login failed!')
                     loading.close()
                 })
         } else {
