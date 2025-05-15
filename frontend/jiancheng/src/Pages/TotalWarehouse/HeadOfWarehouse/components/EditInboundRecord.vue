@@ -56,8 +56,8 @@
                     isDel: true,
                     isBack: true,
                     isEsc: true,
-                    isLastEnterAppendRow: true,
-                    editMode: 'insert'
+                    editMode: 'insert',
+                    enterMethod: customeEnterMethod,
                 }" :mouse-config="{ selected: true }" show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
@@ -235,7 +235,6 @@ export default {
                 materialModel: '',
                 materialSpecification: '',
                 materialColor: '',
-                materialCraftName: '',
                 inboundQuantity: 0,
                 unitPrice: 0,
                 disableEdit: false,
@@ -336,6 +335,23 @@ export default {
         },
     },
     methods: {
+        customeEnterMethod(params) {
+            const rowIndex = params.rowIndex;
+            const column = params.column;
+            if (rowIndex == this.inboundForm.items.length - 1) {
+                this.addRow()
+                // Assume you have a ref to the table
+                const $table = this.$refs.tableRef;
+
+                // Get current active cell
+                this.$nextTick(() => {
+                    const nextRow = $table.getData()[rowIndex + 1];
+                    $table.setEditCell(nextRow, column);
+                    $table.clearEdit();
+                });
+                return false
+            }
+        },
         async getMaterialTypeOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialtypes`)
             this.materialTypeOptions = response.data
