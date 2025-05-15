@@ -29,18 +29,20 @@ def generate_accounting_summary_excel(template_path, save_path, warehouse_name, 
         inbound_amount = data.get("totalAmount", 0)
         item_total_price = data.get("totalPrice", 0)
         spu_rid = data.get("spuRid", "")
+        order_rid = data.get("orderRid", "")
         
         # Fill the cells
-        sheet[f"A{index}"] = supplier_name
-        sheet[f"B{index}"] = material_name
-        sheet[f"C{index}"] = material_model
-        sheet[f"D{index}"] = material_storage_color
-        sheet[f"E{index}"] = material_specification
-        sheet[f"F{index}"] = unit_price
-        sheet[f"G{index}"] = material_unit
-        sheet[f"H{index}"] = str(inbound_amount)
-        sheet[f"I{index}"] = str(item_total_price)
-        sheet[f"J{index}"] = spu_rid
+        sheet[f"A{index}"] = order_rid
+        sheet[f"B{index}"] = supplier_name
+        sheet[f"C{index}"] = material_name
+        sheet[f"D{index}"] = material_model
+        sheet[f"E{index}"] = material_storage_color
+        sheet[f"F{index}"] = material_specification
+        sheet[f"G{index}"] = unit_price
+        sheet[f"H{index}"] = material_unit
+        sheet[f"I{index}"] = str(inbound_amount)
+        sheet[f"J{index}"] = str(item_total_price)
+        sheet[f"K{index}"] = spu_rid
 
     # Save the modified file
     workbook.save(save_path)
