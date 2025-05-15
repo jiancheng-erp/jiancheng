@@ -8,15 +8,16 @@
             <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-            <el-select v-model="warehouseNameSearch" @change="getInboundRecordsTable" placeholder="仓库名称搜索" 
+            <el-select v-model="warehouseNameSearch" @change="getInboundRecordsTable" placeholder="仓库名称搜索"
                 @clear="getInboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
-                <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label" :value="item.value"></el-option>
+                <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label"
+                    :value="item.value"></el-option>
             </el-select>
             <el-input v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-            <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable"
-                clearable style="width: 200px; margin-left: 20px;">
+            <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable
+                style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
                 <el-option label="待审核" :value="0"></el-option>
                 <el-option label="已批准" :value="1"></el-option>
@@ -122,7 +123,7 @@
                                     <td>{{ item.materialName }}</td>
                                     <td>{{ item.inboundModel }}</td>
                                     <td>{{ item.inboundSpecification }}</td>
-                                    <td>{{ item.colorName }}</td>
+                                    <td>{{ item.materialColor }}</td>
                                     <td>{{ item.actualInboundUnit }}</td>
                                     <td>{{ item.orderRId }}</td>
                                     <td>{{ item.shoeRId }}</td>
@@ -165,116 +166,8 @@
         </template>
     </el-dialog>
 
-    <el-dialog title="修改入库单" v-model="editDialogVisible" fullscreen>
-        <el-row>
-            <el-col :span="6">
-                <div style="display: flex; align-items: center;">
-                    <span style="margin-right: 8px; width: 80px">供货单位:</span>
-                    <el-autocomplete v-model="currentRow.newSupplierName" :fetch-suggestions="querySuppliers" clearable
-                        @select="handleSupplierSelect" />
-                </div>
-            </el-col>
-            <el-col :span="6" :offset="1">
-                <div style="display: flex; align-items: center;">
-                    <span style="margin-right: 8px; width: 80px">付款方式:</span>
-                    <el-select v-model="currentRow.newPayMethod" filterable>
-                        <el-option label="应付账款" value="应付账款"></el-option>
-                        <el-option label="现金" value="现金"></el-option>
-                    </el-select>
-                </div>
-            </el-col>
-            <el-col :span="6" :offset="1">
-                <div style="display: flex; align-items: center;">
-                    <span style="margin-right: 8px; width: 80px">入库备注:</span>
-                    <el-input v-model="currentRow.remark"></el-input>
-                </div>
-            </el-col>
-        </el-row>
-        <el-row>
-            <el-col>
-                <el-table :data="recordData.items" border stripe height="600" style="overflow-x: scroll;" id="editTable">
-                    <el-table-column label="材料名" width="150">
-                        <template #default="scope">
-                            <el-select v-model="scope.row.materialName" filterable clearable>
-                                <el-option v-for="(item, index) in materialNameOptions" :key="index" :label="item.label"
-                                    :value="item.value"></el-option>
-                            </el-select>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="型号" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.inboundModel"></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="规格" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.inboundSpecification" type="textarea" autosize></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="颜色" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.colorName"></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="单位" width="150">
-                        <template #default="scope">
-                            <el-select v-model="scope.row.actualInboundUnit" filterable clearable>
-                                <el-option v-for="item in unitOptions" :key="item.value" :value="item.value"
-                                    :label="item.label"></el-option>
-                            </el-select>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="订单号" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.orderRId"></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="工厂鞋型" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.shoeRId"></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="数量" width="150">
-                        <template #default="scope">
-                            <el-input-number v-model="scope.row.inboundQuantity" :step="0.001" :min="0" :precision="3"
-                                size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="单价" width="150">
-                        <template #default="scope">
-                            <el-input-number v-model="scope.row.unitPrice" :step="0.001" :min="0" :precision="3"
-                                size="small" @change="updateTotalPrice(scope.row)"></el-input-number>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="总价" width="150">
-                        <template #default="scope">
-                            <el-input-number v-model="scope.row.itemTotalPrice" :step="0.001" :min="0" :precision="3"
-                                size="small"></el-input-number>
-                        </template>
-                    </el-table-column>
-                    <!-- 每个鞋码数量 -->
-                    <template v-for="(item, index) in recordData.shoeSizeColumns" :key="index">
-                        <el-table-column :label="item.label" :prop="item.prop" width="150">
-                            <template #default="scope">
-                                <el-input-number v-model="scope.row[item.prop]" :step="0.001" :min="0" :precision="3"
-                                    size="small" @change="updateTotalShoes(scope.row)"></el-input-number>
-                            </template>
-                        </el-table-column>
-                    </template>
-                    <el-table-column label="备注" width="150">
-                        <template #default="scope">
-                            <el-input v-model="scope.row.remark"></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="删除" width="80" fixed="right">
-                        <template #default="scope">
-                            <el-switch v-model="scope.row.toDelete" :active-value="1" :inactive-value="0"
-                                @change="(value) => markDelete(scope.row, value)" />
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-col>
-        </el-row>
+    <el-dialog title="修改入库单" v-model="editDialogVisible" fullscreen destroy-on-close>
+        <EditInboundRecord :inputInboundForm="inboundForm" @update-inbound-form="updateInboundForm" />
         <template #footer>
             <el-button type="primary" @click="editDialogVisible = false">返回</el-button>
             <el-button type="primary" @click="updateInboundRecord">提交</el-button>
@@ -298,7 +191,11 @@ import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import Decimal from 'decimal.js';
+import EditInboundRecord from './EditInboundRecord.vue';
 export default {
+    components: {
+        EditInboundRecord
+    },
     directives: {
         print
     },
@@ -349,6 +246,14 @@ export default {
             rejectDialogVisible: false,
             rejectText: '',
             statusSearch: 0,
+            inboundForm: {
+                inboundRId: '',
+                supplierName: '',
+                warehouseName: '',
+                payMethod: '',
+                remark: '',
+                items: []
+            },
         }
     },
     mounted() {
@@ -432,35 +337,31 @@ export default {
             this.currentPage = val
             this.getInboundRecordsTable()
         },
-        async getInboundRecordDetail(row) {
+        async fetchRecordDetailByApi(row) {
             try {
-                let params = { "inboundBatchId": row.inboundBatchId, "isSizedMaterial": row.isSizedMaterial }
+                let params = { "inboundRecordId": row.inboundRecordId, "isSizedMaterial": row.isSizedMaterial }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
-                this.recordData["items"] = response.data
-                // convert decimal to number
-                for (let i = 0; i < this.recordData["items"].length; i++) {
-                    this.recordData["items"][i].inboundQuantity = Number(this.recordData["items"][i].inboundQuantity)
-                    this.recordData["items"][i].unitPrice = Number(this.recordData["items"][i].unitPrice)
-                    this.recordData["items"][i].itemTotalPrice = Number(this.recordData["items"][i].itemTotalPrice)
-                }
-                // if the material name is "大底", then get the shoe size columns
-                if (this.recordData["items"].length > 0 && this.recordData["items"][0].materialName === '大底') {
-                    let sizeColumns = []
-                    let tempTable = []
-                    let firstItem = this.recordData["items"][0]
-                    sizeColumns = firstItem.shoeSizeColumns
-                    for (let i = 0; i < sizeColumns.length; i++) {
-                        let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
-                        tempTable.push(obj)
-                    }
-                    this.recordData["shoeSizeColumns"] = tempTable
-                    console.log(this.recordData)
-                    console.log(typeof this.recordData["items"][0].itemTotalPrice)
-                }
+                return response.data
             }
             catch (error) {
                 console.log(error)
                 ElMessage.error('获取入库单详情失败')
+            }
+        },
+        async getInboundRecordDetail(row) {
+            const data = await this.fetchRecordDetailByApi(row)
+            this.recordData["items"] = data
+            // if the material name is "大底", then get the shoe size columns
+            if (this.recordData["items"].length > 0 && this.recordData["items"][0].materialName === '大底') {
+                let sizeColumns = []
+                let tempTable = []
+                let firstItem = this.recordData["items"][0]
+                sizeColumns = firstItem.shoeSizeColumns
+                for (let i = 0; i < sizeColumns.length; i++) {
+                    let obj = { "label": sizeColumns[i], "prop": `amount${i}` }
+                    tempTable.push(obj)
+                }
+                this.recordData["shoeSizeColumns"] = tempTable
             }
         },
         async handleView(row) {
@@ -468,13 +369,8 @@ export default {
             await this.getInboundRecordDetail(row)
             this.dialogVisible = true
         },
-        async getMaterialNameOptions() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
-            this.materialNameOptions = response.data
-        },
-        async getUnitOptions() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallunit`)
-            this.unitOptions = response.data
+        updateInboundForm(newForm) {
+            this.inboundForm = newForm
         },
         async handleEdit(row) {
             if (row.inboundType != 0) {
@@ -482,11 +378,17 @@ export default {
                 return
             }
             this.currentRow = row
-            this.currentRow.newSupplierName = row.supplierName
-            this.currentRow.newPayMethod = row.payMethod
-            await this.getInboundRecordDetail(row)
-            this.getMaterialNameOptions()
-            this.getUnitOptions()
+            this.inboundForm = {
+                "inboundRId": row.inboundRId,
+                "supplierName": row.supplierName,
+                "warehouseName": row.warehouseName,
+                "inboundType": row.inboundType,
+                "payMethod": row.payMethod,
+                "remark": row.remark,
+                "items": []
+            }
+            this.inboundForm.items = await this.fetchRecordDetailByApi(row)
+            this.inboundForm["materialTypeId"] = this.inboundForm.items[0].materialTypeId
             this.editDialogVisible = true
         },
         async handleApproval(row) {
@@ -521,16 +423,20 @@ export default {
                 type: 'warning'
             }).then(async () => {
                 try {
+                    console.log(this.inboundForm)
                     let params = {
-                        "inboundRecordId": this.currentRow.inboundRecordId,
-                        "supplierName": this.currentRow.newSupplierName,
-                        "inboundType": this.currentRow.inboundType,
-                        "remark": this.currentRow.remark,
-                        "payMethod": this.currentRow.newPayMethod,
-                        "isSizedMaterial": this.currentRow.isSizedMaterial,
-                        "items": this.recordData.items
+                        inboundRecordId: this.currentRow.inboundRecordId,
+                        inboundType: this.inboundForm.inboundType,
+                        supplierName: this.inboundForm.supplierName,
+                        warehouseId: this.inboundForm.warehouseId,
+                        remark: this.inboundForm.remark,
+                        batchInfoTypeId: this.inboundForm.shoeSize,
+                        payMethod: this.inboundForm.payMethod,
+                        materialTypeId: this.inboundForm.materialTypeId,
+                        isSizedMaterial: this.inboundForm.isSizedMaterial,
+                        items: this.inboundForm.items
                     }
-                    await axios.patch(`${this.$apiBaseUrl}/warehouse/updateinboundrecord`, params)
+                    await axios.put(`${this.$apiBaseUrl}/warehouse/updateinboundrecord`, params)
                     ElMessage.success('修改成功')
                     this.editDialogVisible = false
                     this.getInboundRecordsTable()
