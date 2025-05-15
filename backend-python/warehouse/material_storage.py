@@ -1413,6 +1413,7 @@ def get_material_inbound_records():
             "approvalStatus": inbound_record.approval_status,
             "rejectReason": inbound_record.reject_reason,
             "totalPrice": inbound_record.total_price,
+            "warehouseId": inbound_record.warehouse_id,
             "warehouseName": warehouse.material_warehouse_name,
         }
         result.append(obj)
@@ -1561,6 +1562,7 @@ def get_inbound_record_by_batch_id():
             "materialName": material.material_name,
             "materialModel": material_model,
             "materialSpecification": material_specification,
+            "materialCategory": material.material_category,
             "inboundModel": inbound_model,
             "inboundSpecification": inbound_specification,
             "materialColor": material_storage_color,

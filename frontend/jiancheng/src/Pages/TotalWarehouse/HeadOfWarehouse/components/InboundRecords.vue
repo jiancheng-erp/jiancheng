@@ -381,6 +381,7 @@ export default {
             this.inboundForm = {
                 "inboundRId": row.inboundRId,
                 "supplierName": row.supplierName,
+                "warehouseId": row.warehouseId,
                 "warehouseName": row.warehouseName,
                 "inboundType": row.inboundType,
                 "payMethod": row.payMethod,
