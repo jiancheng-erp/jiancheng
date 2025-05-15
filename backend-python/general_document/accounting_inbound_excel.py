@@ -11,9 +11,9 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
     
     # Insert metadata
     sheet["B2"] = warehouse_name if warehouse_name else "全部"
-    sheet["D2"] = supplier_name if supplier_name else "全部"
-    sheet["F2"] = material_model if material_model else "全部"
-    sheet["I2"] = time_range if time_range else "全部"
+    sheet["E2"] = supplier_name if supplier_name else "全部"
+    sheet["G2"] = material_model if material_model else "全部"
+    sheet["J2"] = time_range if time_range else "全部"
     
 
     # Insert materials data starting from row 3
@@ -31,19 +31,21 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         material_unit = data.get("materialUnit", "")
         inbound_amount = data.get("inboundAmount", 0)
         item_total_price = data.get("itemTotalPrice", 0)
+        order_rid = data.get("orderRid", "")
         
         # Fill the cells
         sheet[f"A{index}"] = str(inbound_rid)
-        sheet[f"B{index}"] = str(inbound_datetime)
-        sheet[f"C{index}"] = supplier_name
-        sheet[f"D{index}"] = material_name
-        sheet[f"E{index}"] = material_model
-        sheet[f"F{index}"] = material_specification
-        sheet[f"G{index}"] = material_storage_color
-        sheet[f"H{index}"] = unit_price
-        sheet[f"I{index}"] = material_unit
-        sheet[f"J{index}"] = str(inbound_amount)
-        sheet[f"K{index}"] = str(item_total_price)
+        sheet[f"B{index}"] = str(order_rid)
+        sheet[f"C{index}"] = str(inbound_datetime)
+        sheet[f"D{index}"] = supplier_name
+        sheet[f"E{index}"] = material_name
+        sheet[f"F{index}"] = material_model
+        sheet[f"G{index}"] = material_specification
+        sheet[f"H{index}"] = material_storage_color
+        sheet[f"I{index}"] = unit_price
+        sheet[f"J{index}"] = material_unit
+        sheet[f"K{index}"] = str(inbound_amount)
+        sheet[f"L{index}"] = str(item_total_price)
 
     # Save the modified file
     workbook.save(save_path)
