@@ -97,6 +97,22 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     测试用户选择订单非底材材料
     """
 
+    order = Order(
+        order_id=1,
+        order_rid="K25-001",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
+
     # insert supplier
     supplier = Supplier(
         supplier_id=1,
@@ -127,13 +143,13 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         order_shoe_id=1,
         material_id=1,
         actual_inbound_material_id=1,
-        material_model="Model A",
-        material_specification="Spec A",
-        material_storage_color="Color A",
-        inbound_model="Model A",
-        inbound_specification="Spec A",
+        material_model="测试型号",
+        material_specification="测试规格",
+        material_storage_color="黑",
+        inbound_model="测试型号",
+        inbound_specification="测试规格",
         actual_inbound_unit="米",
-        estimated_inbound_amount=100,
+        estimated_inbound_amount=20,
         spu_material_id=1,
     )
     db.session.add(supplier)
@@ -141,6 +157,8 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     db.session.add(material_storage)
     db.session.add(material_type)
     db.session.add(warehouse)
+    db.session.add(order)
+    db.session.add(order_shoe)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -156,16 +174,16 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
                 "actualInboundUnit": "米",
                 "currentAmount": "0.00000",
                 "estimatedInboundAmount": "20.00000",
-                "inboundModel": "1501-1",
-                "inboundSpecification": "",
+                "inboundModel": "测试型号",
+                "inboundSpecification": "测试规格",
                 "materialCategory": 0,
                 "materialColor": "黑",
-                "materialModel": "1501-1",
+                "materialModel": "测试型号",
                 "materialName": "PU里",
-                "materialSpecification": "",
+                "materialSpecification": "测试规格",
                 "materialStorageId": 1,
-                "orderId": 64,
-                "orderRId": "K25-008",
+                "orderId": 1,
+                "orderRId": "K25-001",
                 "shoeRId": "0E19533",
                 "inboundQuantity": 20,
                 "disableEdit": True,
@@ -183,6 +201,7 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.actual_inbound_amount == 20.0
+    assert storage.current_amount == 20.0
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -201,8 +220,8 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     # created new spu record
     spu_material = db.session.query(SPUMaterial).filter_by(spu_material_id=1).first()
     assert spu_material.spu_material_id == 1
-    assert spu_material.material_model == "1501-1"
-    assert spu_material.material_specification == ""
+    assert spu_material.material_model == "测试型号"
+    assert spu_material.material_specification == "测试规格"
     assert spu_material.color == "黑"
 
 
@@ -211,6 +230,22 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     """
     测试用户选择订单底材材料
     """
+
+    order = Order(
+        order_id=1,
+        order_rid="K25-001",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
 
     # insert supplier
     supplier = Supplier(
@@ -241,9 +276,9 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
         order_id=1,
         order_shoe_id=1,
         material_id=1,
-        size_material_model="Model A",
-        size_material_specification="Spec A",
-        size_material_color="Color A",
+        size_material_model="9166",
+        size_material_specification="棕/后跟喷棕",
+        size_material_color="",
         total_estimated_inbound_amount=600,
     )
     setattr(size_material_storage, f"size_35_estimated_inbound_amount", 50)
@@ -258,6 +293,8 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     db.session.add(size_material_storage)
     db.session.add(material_type)
     db.session.add(warehouse)
+    db.session.add(order)
+    db.session.add(order_shoe)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -276,7 +313,7 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
                 "materialSpecification": "棕/后跟喷棕",
                 "materialStorageId": 1,
                 "orderId": 1,
-                "orderRId": "W25-006",
+                "orderRId": "K25-001",
                 "shoeRId": "3E29515",
                 "supplierName": "日禾底材",
                 "unitPrice": "12.500",

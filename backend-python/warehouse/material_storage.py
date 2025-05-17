@@ -832,6 +832,7 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
     inbound_rid = "IR" + formatted_timestamp + "T0"
     supplier_name = data.get("supplierName", None)
     warehouse_id = data.get("warehouseId", None)
+    supplier_id = data.get("supplierId")
     batch_info_type_id = data.get("batchInfoTypeId", None)
     material_type_id = data.get("materialTypeId", None)
     remark = data.get("remark", None)
@@ -840,8 +841,6 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
     if not material_type_id:
         _empty_material_type()
 
-    supplier_obj = _handle_supplier_obj(supplier_name)
-
     # create inbound record
     inbound_record = InboundRecord(
         inbound_record_id=data.get("inboundRecordId", None),
@@ -849,7 +848,7 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
         inbound_type=0,
         inbound_rid=inbound_rid,
         inbound_batch_id=next_group_id,
-        supplier_id=supplier_obj.supplier_id,
+        supplier_id=supplier_id,
         warehouse_id=warehouse_id,
         remark=remark,
         pay_method=data.get("payMethod", None),
@@ -862,50 +861,9 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
         item: dict
         material_category = item.get("materialCategory", 0)
         storage_id = item.get("materialStorageId", None)
-        material_model = item.get("inboundModel")
-        material_specification = item.get("inboundSpecification")
-        material_color = item.get("materialColor")
-
-        # 用户手填材料或者更换仓库
-        if not storage_id or (storage_id and is_warehouse_changed):
-            logger.debug(storage_id)
-            logger.debug(is_warehouse_changed)
-            storage_id, storage = _find_storage_in_db(
-                item, material_type_id, supplier_obj.supplier_id, batch_info_type_id
-            )
-        # 用户选择了材料，直接使用material storage id
-        else:
-            if item["materialCategory"] == 0:
-                storage = (
-                    db.session.query(MaterialStorage)
-                    .filter(
-                        MaterialStorage.material_storage_id == storage_id,
-                    )
-                    .first()
-                )
-                # 修改实际入库的型号和规格
-                storage.inbound_model = material_model
-                storage.inbound_specification = material_specification
-                storage.material_storage_color = material_color
-                material_id = storage.actual_inbound_material_id
-            elif item["materialCategory"] == 1:
-                storage = (
-                    db.session.query(SizeMaterialStorage)
-                    .filter(
-                        SizeMaterialStorage.size_material_storage_id == storage_id,
-                    )
-                    .first()
-                )
-                material_id = storage.material_id
-                storage.size_material_model = material_model
-                storage.size_material_specification = material_specification
-                storage.size_material_color = material_color
-            else:
-                error_message = json.dumps({"message": "材料类型错误"})
-                abort(Response(error_message, 400))
-
-            spu_material_id = _create_spu_record(material_id, material_model, material_specification, material_color)
-            storage.spu_material_id = spu_material_id
+        storage_id, storage = _find_storage_in_db(
+            item, material_type_id, supplier_id, batch_info_type_id
+        )
 
         # set inbound quantity
         inbound_quantity = Decimal(item["inboundQuantity"])
@@ -1038,15 +996,8 @@ def create_inbound_record(data, is_warehouse_changed=False):
     # 2) you’ll need supplier_id in data for purchase flow
     if data.get("inboundType", 0) == 0:
         supplier = data.get("supplierName")
-        if not supplier:
-            abort(Response(json.dumps({"message": "供应商名称不能为空"}), 400))
-        # find or create supplier
-        sup = db.session.query(Supplier).filter_by(supplier_name=supplier).first()
-        if not sup:
-            sup = Supplier(supplier_name=supplier)
-            db.session.add(sup)
-            db.session.flush()
-        data["supplier_id"] = sup.supplier_id
+        supplier_obj = _handle_supplier_obj(supplier)
+        data["supplierId"] = supplier_obj.supplier_id
 
     # 3) sanitize items (strip spaces & validate materialName…)
     # 检查数据
