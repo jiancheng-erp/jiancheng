@@ -66,17 +66,15 @@
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
-                            @change="handleOrderRIdSelect(scope.row, $event)"
-                            @focus="getFilteredShoes(scope.row, $event)" filterable clearable>
-                            <el-option v-for="item in filteredOrders" :key="item.orderId" :value="item.orderRId"
+                            @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
+                            <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
                     </template>
                 </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.shoeRId" clearable
-                            @change="(event) => handleShoeRIdSelect(scope.row, event.value)"></vxe-input>
+                        <vxe-input v-model="scope.row.shoeRId" clearable></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{ autoFocus: true }">
@@ -278,7 +276,7 @@
         </template>
     </el-dialog>
     <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis" />
-    <el-dialog :title="`${currentRow.orderRId}材料数量信息`" v-model="isMaterialLogisticVis" fullscreen @close="onDialogClose" destroy-on-close>
+    <el-dialog :title="`${currentRow.orderRId}材料数量信息`" v-model="isMaterialLogisticVis" fullscreen destroy-on-close>
         <OrderStatusPage :order-info="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
         <OrderMaterialsPage :current-row="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
         <template #footer>
@@ -335,6 +333,8 @@ export default {
                 disableEdit: false,
                 inboundModel: '',
                 inboundSpecification: '',
+                orderRId: null,
+                shoeRId: null
             },
             isMaterialSelectDialogVis: false,
             isSizeMaterialSelectDialogVis: false,
@@ -441,6 +441,10 @@ export default {
         handleKeydown($event) {
             let activeCell = this.$refs.tableRef.getEditRecord()
             if ($event.key === 'F4' && activeCell && activeCell.row) {
+                if (!activeCell.row.orderRId) {
+                    ElMessage.warning("未输入订单号")
+                    return false
+                }
                 this.currentRow = activeCell.row
                 this.isMaterialLogisticVis = true
             }
@@ -515,20 +519,20 @@ export default {
             row.orderId = resultShoeRIds[0].orderId
             row.shoeRId = resultShoeRIds[0].shoeRId
         },
-        handleShoeRIdSelect(row, value) {
-            if (value == null || value == '') {
-                this.filteredOrders = [...this.activeOrderShoes]
-                return
-            }
-            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
-        },
-        getFilteredShoes(row, event) {
-            if (row.shoeRId == null || row.shoeRId == '') {
-                this.filteredOrders = [...this.activeOrderShoes]
-                return
-            }
-            this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(row.shoeRId))
-        },
+        // handleShoeRIdSelect(row, value) {
+        //     if (value == null || value == '') {
+        //         this.filteredOrders = [...this.activeOrderShoes]
+        //         return
+        //     }
+        //     this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(value))
+        // },
+        // getFilteredShoes(row, event) {
+        //     if (row.shoeRId == null || row.shoeRId == '') {
+        //         this.filteredOrders = [...this.activeOrderShoes]
+        //         return
+        //     }
+        //     this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(row.shoeRId))
+        // },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
             let seen = new Set()
