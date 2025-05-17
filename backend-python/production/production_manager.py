@@ -485,8 +485,8 @@ def get_production_departments():
 
 @production_manager_bp.route("/production/getallordershoeinfo", methods=["GET"])
 def get_all_order_shoe_info():
-    page = request.args.get("page", type=int)
-    page_size = request.args.get("pageSize", type=int)
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 10, type=int)
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     query = (
