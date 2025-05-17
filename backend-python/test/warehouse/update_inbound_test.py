@@ -48,7 +48,7 @@ def client(test_app):
 
 def test_update_inbound_record_model_specification_color(client: FlaskClient):
     """
-    测试更新入库单的材料型号/规格/颜色，不涉及创建新库存
+    测试更新入库单的材料型号/规格/颜色，创建新库存
     """
 
     order = Order(
@@ -121,15 +121,15 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         order_shoe_id=1,
         material_id=1,
         actual_inbound_material_id=1,
-        material_model="Model A",
-        material_specification="Spec A",
-        material_storage_color="Color A",
-        inbound_model="Model A",
-        inbound_specification="Spec A",
+        material_model="测试型号",
+        material_specification="测试规格",
+        material_storage_color="测试颜色",
+        inbound_model="测试型号",
+        inbound_specification="测试规格",
         actual_inbound_unit="米",
         estimated_inbound_amount=600,
-        actual_inbound_amount=10,
-        current_amount=10,
+        actual_inbound_amount=20,
+        current_amount=20,
     )
     db.session.add(order)
     db.session.add(order_shoe)
@@ -160,12 +160,12 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
                 "inboundRecordDetailId": 1,
                 "itemTotalPrice": 4848,
                 "materialName": "PU面",
-                "materialModel": "New Model A",
-                "materialSpecification": "New Spec A",
-                "inboundModel": "New Model A",
-                "inboundSpecification": "New Spec A",
+                "materialModel": "新型号",
+                "materialSpecification": "新规格",
+                "inboundModel": "新型号",
+                "inboundSpecification": "新规格",
                 "materialCategory": 0,
-                "materialColor": "New Color A",
+                "materialColor": "新颜色",
                 "materialStorageId": 1,
                 "materialUnit": "米",
                 "orderRId": "K25-031",
@@ -188,20 +188,30 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
     assert updated_record_detail.inbound_amount == 404.0
     assert updated_record_detail.item_total_price == 4848.0
 
-    assert updated_record_detail.material_storage_id == 1
+    assert updated_record_detail.material_storage_id == 2
 
     assert updated_record_detail.remark == "010"
 
-    updated_storage = (
+    old_storage = (
         db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
+    )
+
+    # storage amount - inbound_record_detail amount
+    assert old_storage.actual_inbound_amount == 10
+    assert old_storage.current_amount == 10
+
+    updated_storage = (
+        db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
     )
 
     assert updated_storage.order_id == 1
     assert updated_storage.order_shoe_id == 1
     assert updated_storage.actual_inbound_material_id == 1
-    assert updated_storage.inbound_model == "NewModelA"
-    assert updated_storage.inbound_specification == "NewSpecA"
-    assert updated_storage.material_storage_color == "NewColorA"
+    assert updated_storage.material_model == "新型号"
+    assert updated_storage.material_specification == "新规格"
+    assert updated_storage.inbound_model == "新型号"
+    assert updated_storage.inbound_specification == "新规格"
+    assert updated_storage.material_storage_color == "新颜色"
     assert updated_storage.actual_inbound_amount == 404
     assert updated_storage.current_amount == 404
 
@@ -354,6 +364,13 @@ def test_update_inbound_record_material_type(client: FlaskClient):
     assert updated_record_detail[0].material_storage_id == 2
     assert updated_record_detail[0].remark == "新备注"
 
+    old_storage = (
+        db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
+    )
+    # storage amount - inbound_record_detail amount
+    assert old_storage.actual_inbound_amount == 0
+    assert old_storage.current_amount == 0
+
     new_storage = (
         db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
     )
@@ -378,7 +395,7 @@ def test_update_inbound_record_material_type(client: FlaskClient):
 
 def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient):
     """
-    测试更新入库单
+    测试更新入库单的金额和单价，不涉及创建新库存
     """
 
     order = Order(
@@ -457,16 +474,16 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         size_material_specification="黑色/黑色沿条车灰线/后跟印灰",
         size_material_color="",
         total_estimated_inbound_amount=600,
-        total_actual_inbound_amount=10,
-        total_current_amount=10,
-        size_36_actual_inbound_amount=1,
-        size_37_actual_inbound_amount=2,
-        size_38_actual_inbound_amount=3,
-        size_39_actual_inbound_amount=4,
-        size_36_current_amount=1,
-        size_37_current_amount=2,
-        size_38_current_amount=3,
-        size_39_current_amount=4,
+        total_actual_inbound_amount=15,
+        total_current_amount=15,
+        size_36_actual_inbound_amount=2,
+        size_37_actual_inbound_amount=3,
+        size_38_actual_inbound_amount=4,
+        size_39_actual_inbound_amount=5,
+        size_36_current_amount=2,
+        size_37_current_amount=3,
+        size_38_current_amount=4,
+        size_39_current_amount=5,
         shoe_size_columns=["35", "36", "37", "38", "39", "40", "41", "42"],
     )
     db.session.add(order)
@@ -554,12 +571,13 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         .first()
     )
 
-    assert updated_storage.total_actual_inbound_amount == 404.0
-    assert updated_storage.total_current_amount == 404.0
-    assert updated_storage.size_36_actual_inbound_amount == 79.0
-    assert updated_storage.size_37_actual_inbound_amount == 125.0
-    assert updated_storage.size_38_actual_inbound_amount == 150.0
-    assert updated_storage.size_39_actual_inbound_amount == 50.0
+    # storage amount - old inbound_record_detail amount + new inbound_record_detail amount
+    assert updated_storage.total_actual_inbound_amount == 409.0
+    assert updated_storage.total_current_amount == 409.0
+    assert updated_storage.size_36_actual_inbound_amount == 80.0
+    assert updated_storage.size_37_actual_inbound_amount == 126.0
+    assert updated_storage.size_38_actual_inbound_amount == 151.0
+    assert updated_storage.size_39_actual_inbound_amount == 51.0
 
     assert updated_storage.shoe_size_columns == [
         "35",
