@@ -59,7 +59,9 @@
                     isEsc: true,
                     editMode: 'insert',
                     enterMethod: customeEnterMethod,
-                }" :mouse-config="{ selected: true }" show-overflow>
+                }" :mouse-config="{ selected: true }" 
+                @keydown="handleKeydown"
+                show-overflow>
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
@@ -208,7 +210,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                        }}</td>
+                                    }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -276,6 +278,15 @@
         </template>
     </el-dialog>
     <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis" />
+    <el-dialog :title="`${currentRow.orderRId}材料数量信息`" v-model="isMaterialLogisticVis" fullscreen @close="onDialogClose" destroy-on-close>
+        <OrderStatusPage :order-info="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
+        <OrderMaterialsPage :current-row="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
+        <template #footer>
+            <span>
+                <el-button type="primary" @click="isMaterialLogisticVis = false">返回</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 <script>
 import axios from 'axios';
@@ -285,13 +296,17 @@ import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
 import OrderMaterialQuery from './OrderMaterialQuery.vue';
+import OrderMaterialsPage from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderMaterialsPage.vue';
 import { debounce } from 'lodash';
+import OrderStatusPage from './OrderStatusPage.vue';
 import XEUtils from 'xe-utils'
 export default {
     components: {
         MaterialSearchDialog,
         MaterialSelectDialog,
         OrderMaterialQuery,
+        OrderMaterialsPage,
+        OrderStatusPage
     },
     data() {
         return {
@@ -367,6 +382,8 @@ export default {
             materialSupplierOptions: [],
             unitOptions: [],
             activeOrderShoes: [],
+            isMaterialLogisticVis: false,
+            currentRow: {},
         }
     },
     // beforeUnmount() {
@@ -421,6 +438,13 @@ export default {
         },
     },
     methods: {
+        handleKeydown($event) {
+            let activeCell = this.$refs.tableRef.getEditRecord()
+            if ($event.key === 'F4' && activeCell && activeCell.row) {
+                this.currentRow = activeCell.row
+                this.isMaterialLogisticVis = true
+            }
+        },
         customeEnterMethod(params) {
             const rowIndex = params.rowIndex;
             const column = params.column;
@@ -488,6 +512,7 @@ export default {
                 row.shoeRId = null
                 return
             }
+            row.orderId = resultShoeRIds[0].orderId
             row.shoeRId = resultShoeRIds[0].shoeRId
         },
         handleShoeRIdSelect(row, value) {

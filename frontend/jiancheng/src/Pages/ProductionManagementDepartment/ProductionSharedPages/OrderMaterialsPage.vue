@@ -1,4 +1,5 @@
 <template>
+    <h3>材料采购数量和入库数量一览</h3>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table :data="logisticsMaterialData" border stripe>
