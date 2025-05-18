@@ -2,6 +2,7 @@
     <div>
         <vxe-button v-if="editable" status="primary" @click="pushEvent">新增一行</vxe-button>
         <vxe-button v-if="editable" status="danger" @click="removeSelectEvent">批量删除</vxe-button>
+        <span style="margin-left: 10px;">单价总和：{{ priceSum }}</span>
         <vxe-grid ref="gridRef" v-bind="gridOptions">
         </vxe-grid>
     </div>
@@ -17,6 +18,13 @@ const gridRef = ref();
 
 const editable = computed(() => {
     return !props.readOnly;
+});
+
+const priceSum = computed(() => {
+    return props.tableData.reduce((sum, item) => {
+        const price = parseFloat(item.price) || 0; // Ensure price is a number
+        return sum + price;
+    }, 0).toFixed(2); // Format to two decimal places
 });
 
 const procedureEditRender = reactive({

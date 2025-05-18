@@ -41,9 +41,8 @@
             <el-row :gutter="20">
                 <el-col>
                     <el-button-group>
-                        <el-button @click="saveAsTemplate">保存为模板</el-button>
-                        <el-button v-if="!readOnly" @click="loadTemplate">加载模板</el-button>
-
+                        <!-- <el-button @click="saveAsTemplate">保存为模板</el-button>
+                        <el-button v-if="!readOnly" @click="loadTemplate">加载模板</el-button> -->
                         <el-button v-if="!readOnly" type="primary" @click="handleSaveData">保存</el-button>
                         <el-button v-if="!readOnly" type="warning" @click="handleSubmit">提交</el-button>
                         <el-button type="success" @click="generateProductionForm">生产流程卡</el-button>
@@ -137,7 +136,7 @@ const getPriceReportDetail = async () => {
         statusName.value = response.data.metaData.statusName
         rejectionReason.value = response.data.metaData.rejectionReason
     }
-    if (statusName.value === '已审批' || statusName.value === '已提交') {
+    if (statusName.value === '生产副总审核中' || statusName.value === '总经理审核中') {
         readOnly.value = true
     }
     else {

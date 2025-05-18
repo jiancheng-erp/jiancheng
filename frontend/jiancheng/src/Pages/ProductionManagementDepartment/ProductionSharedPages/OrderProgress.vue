@@ -253,7 +253,7 @@
             <span>
                 <el-button @click="isScheduleDialogOpen = false">取消</el-button>
                 <el-button type="primary" @click="openProdDetailDialog(this.currentRow)">查看生产信息</el-button>
-                <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
+                <el-button v-if="role == 6"
                     type="primary" @click="modifyProductionSchedule">保存排期</el-button>
                 <el-button v-if="(currentRow.status === '未排期' || currentRow.status === '已保存排期') && role == 6"
                     type="success" @click="startProduction">下发排期</el-button>

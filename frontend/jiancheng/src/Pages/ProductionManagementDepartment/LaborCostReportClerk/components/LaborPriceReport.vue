@@ -15,10 +15,7 @@
             <el-select v-model="statusNameSearch" filterable placeholder="搜索状态" @change="getOrderTableData()"
                 @clear="getOrderTableData()" clearable>
                 <el-option v-for="item in [
-                    '未提交',
-                    '已提交',
-                    '已审批',
-                    '被驳回',
+                    '未提交', '生产副总审核中', '生产副总驳回', '总经理审核中', '总经理驳回', '已审批'
                 ]" :key="item" :label="item" :value="item">
                 </el-option>
             </el-select>

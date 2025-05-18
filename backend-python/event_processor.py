@@ -51,15 +51,15 @@ ORDERSHOESTATUSNAMELIST = [
     "生产开始",
     "裁断材料出库",
     "裁断，批皮工价填报",
-    "财务部审核",
     "生产副总审核",
+    "总经理审核",
     "生产中",
     "裁断结束",
     "半成品中转入库",
     "半成品中转针车材料出库",
     "针车及预备工序填报",
-    "财务部审核",
     "生产副总审核",
+    "总经理审核",
     "针车预备开始",
     "针车预备结束",
     "针车开始",
@@ -68,8 +68,8 @@ ORDERSHOESTATUSNAMELIST = [
     "鞋包中转仓出库",
     "成型材料出库",
     "成型工价填报",
-    "财务部审核",
     "生产副总审核",
+    "总经理审核",
     "成型开始",
     "成型结束",
     "生产结束",
@@ -96,16 +96,16 @@ ORDERSHOESTATUSGRAPH = {
     17: {"outgoing": [18], "incoming": [1]},
     18: {"outgoing": [20, 23, 27, 37], "incoming": [17]},
     19: {"outgoing": [], "incoming": []},
-    20: {"outgoing": [22], "incoming": [18]},
-    21: {"outgoing": [], "incoming": []},
-    22: {"outgoing": [42], "incoming": [20]},
+    20: {"outgoing": [21], "incoming": [18]},
+    21: {"outgoing": [22], "incoming": [20]},
+    22: {"outgoing": [42], "incoming": [21]},
     23: {"outgoing": [42], "incoming": [18]},
     24: {"outgoing": [], "incoming": []},
     25: {"outgoing": [], "incoming": []},
     26: {"outgoing": [], "incoming": []},
-    27: {"outgoing": [29], "incoming": [18]},
-    28: {"outgoing": [], "incoming": []},
-    29: {"outgoing": [42], "incoming": [27]},
+    27: {"outgoing": [28], "incoming": [18]},
+    28: {"outgoing": [29], "incoming": [27]},
+    29: {"outgoing": [42], "incoming": [28]},
     30: {"outgoing": [], "incoming": []},
     31: {"outgoing": [], "incoming": []},
     32: {"outgoing": [], "incoming": []},
@@ -113,9 +113,9 @@ ORDERSHOESTATUSGRAPH = {
     34: {"outgoing": [], "incoming": []},
     35: {"outgoing": [], "incoming": []},
     36: {"outgoing": [], "incoming": []},
-    37: {"outgoing": [39], "incoming": [18]},
-    38: {"outgoing": [], "incoming": []},
-    39: {"outgoing": [42], "incoming": [37]},
+    37: {"outgoing": [38], "incoming": [18]},
+    38: {"outgoing": [39], "incoming": [37]},
+    39: {"outgoing": [42], "incoming": [38]},
     40: {"outgoing": [], "incoming": []},
     41: {"outgoing": [], "incoming": []},
     42: {"outgoing": [], "incoming": [22, 23, 29, 39]},
@@ -391,6 +391,9 @@ class EventProcessor:
         return result
 
     def processRejectEvent(self, event, current_status):
+        logger.debug(f"processing reject event for order_shoe_id {event.event_order_shoe_id}")
+        logger.debug(f"current status is {current_status}")
+        logger.debug(f"needs to perform operation id {event.operation_id}")
         if self.validateEvent(event):
             operation = self.dbQueryOperation(event.operation_id)
             if operation.operation_type == 2:

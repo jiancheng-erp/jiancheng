@@ -48,6 +48,9 @@
                         <el-menu-item index="10" @click="handleMenuClick('OutboundProduct')">
                             <span>订单出库</span>
                         </el-menu-item>
+                        <el-menu-item index="12" @click="handleMenuClick('WagesApproval')">
+                            <span>工价审核</span>
+                        </el-menu-item>
                         <el-menu-item index="11" @click="handleMenuClick('PersonalInfo')">
                             <span>个人信息</span>
                         </el-menu-item>
@@ -79,6 +82,7 @@ import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components
 import RevertEventAnalyse from '../components/RevertEventAnalyse/RevertEventAnalyse.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import WagesApproval from '@/Pages/ProductionManagementDepartment/ProductionManager/components/WagesApproval.vue'
 import { useRouter } from "vue-router";
 
 const components = {
@@ -90,7 +94,8 @@ const components = {
     OutboundProduct,
     PersonalInfo,
     OrderImportantStatus,
-    RevertEventAnalyse
+    RevertEventAnalyse,
+    WagesApproval
 }
 let currentComponent = ref('CostCalcAndProfitAnalysis')
 let userName = ref('')

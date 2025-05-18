@@ -70,7 +70,6 @@ OUTBOUND_TYPE_MAPPING = {
     3: "复合出库",
     4: "材料退回",
 }
-DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE = "3"
 
 BOM_STATUS = {
     "1": "材料已保存",
@@ -102,3 +101,9 @@ PO_STATUS_TO_INT = {
     "已保存": "1",
     "已提交": "2",
 }
+PRICE_REPORT_NOT_SUBMITTED = '未提交'
+PRICE_REPORT_PM_PENDING = '生产副总审核中'
+PRICE_REPORT_PM_REJECTED = '生产副总驳回'
+PRICE_REPORT_GM_PENDING = '总经理审核中'
+PRICE_REPORT_GM_REJECTED = '总经理驳回'
+PRICE_REPORT_GM_APPROVED = '已审批'

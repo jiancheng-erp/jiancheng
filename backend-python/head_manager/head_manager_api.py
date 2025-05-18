@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from models import *
 from sqlalchemy import func
 from datetime import datetime
@@ -7,6 +7,8 @@ import time
 from decimal import Decimal
 from collections import defaultdict
 from wechat_api.send_message_api import send_massage_to_users
+from login.login import current_user_info
+from constants import *
 
 
 head_manager_bp = Blueprint("head_manager_bp", __name__)
@@ -864,3 +866,100 @@ def get_all_revert_event():
             }
         )
     return jsonify(result)
+
+
+@head_manager_bp.route("/headmanager/approvepricereportbyheadmanager", methods=["PATCH"])
+def approve_price_report_by_head_manager():
+    data = request.get_json()
+    order_shoe_id = data["orderShoeId"]
+    report_id = data["reportId"]
+    flag = True
+    _, staff, department = current_user_info()
+    report = db.session.query(UnitPriceReport).get(report_id)
+    # if it is sewing or pre-sewing report, check if either one is approved
+    if report.team == "针车预备" or report.team == "针车":
+        query = db.session.query(UnitPriceReport).filter_by(order_shoe_id=order_shoe_id)
+        if report.team == "针车预备":
+            report2 = query.filter_by(team="针车").first()
+        else:
+            report2 = query.filter_by(team="针车预备").first()
+        if report2.status != PRICE_REPORT_GM_APPROVED:
+            flag = False
+    # sum up the price
+    value = (
+        db.session.query(func.sum(UnitPriceReportDetail.price))
+        .filter_by(report_id=report_id)
+        .group_by(UnitPriceReportDetail.report_id)
+        .scalar()
+    )
+    report.price_sum = value
+    report.status = PRICE_REPORT_GM_APPROVED
+    report.rejection_reason = None
+    if flag:
+        processor: EventProcessor = current_app.config["event_processor"]
+        if report.team == "裁断":
+            operation_arr = [82, 83]
+        elif report.team == "针车" or report.team == "针车预备":
+            operation_arr = [96, 97]
+        elif report.team == "成型":
+            operation_arr = [116, 117]
+        else:
+            return jsonify({"message": "Cannot change current status"}), 403
+        try:
+            for operation in operation_arr:
+                event = Event(
+                    staff_id=staff.staff_id,
+                    handle_time=datetime.now(),
+                    operation_id=operation,
+                    event_order_id=data["orderId"],
+                    event_order_shoe_id=data["orderShoeId"],
+                )
+                processor.processEvent(event)
+                db.session.add(event)
+        except Exception as e:
+            print(e)
+            return jsonify({"message": "failed"}), 400
+    db.session.commit()
+    return jsonify({"message": "审批成功"}), 200
+
+
+@head_manager_bp.route("/headmanager/rejectpricereportbyheadmanager", methods=["PATCH"])
+def reject_price_report_by_head_manager():
+    data = request.get_json()
+    report_id_arr = data["reportIdArr"]
+
+    processor: EventProcessor = current_app.config["event_processor"]
+    _, staff, department = current_user_info()
+    team = None
+    # find order shoe current status
+    for report_id in report_id_arr:
+        report = db.session.query(UnitPriceReport).get(report_id)
+        report.status = PRICE_REPORT_GM_REJECTED
+        report.rejection_reason = data["rejectionReason"]
+        team = report.team
+    
+    if team == "裁断":
+        operation = 78
+        current_status = 22
+    elif team == "针车" or team == "预备":
+        operation = 92
+        current_status = 29
+    elif team == "成型":
+        operation = 112
+        current_status = 39
+    else:
+        return jsonify({"message": "Cannot change current status"}), 403
+    try:
+        event = Event(
+            staff_id=staff.staff_id,
+            handle_time=datetime.now(),
+            operation_id=operation,
+            event_order_id=data["orderId"],
+            event_order_shoe_id=data["orderShoeId"],
+        )
+        processor.processRejectEvent(event, current_status)
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "failed"}), 400
+    db.session.commit()
+    return jsonify({"message": "success"})

@@ -65,9 +65,9 @@
         <template #footer>
             <span>
                 <el-button @click="isWagesApprovalVis = false">关闭</el-button>
-                <el-button v-if="currentRow.reportStatus === '未审批'" type="danger"
+                <el-button v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')" type="danger"
                     @click="openRefusalDialog">驳回请求</el-button>
-                <el-button v-if="currentRow.reportStatus === '未审批'" type="primary"
+                <el-button v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')" type="primary"
                     @click="approveReport">审批通过</el-button>
             </span>
         </template>
@@ -101,6 +101,7 @@ export default {
     props: ["orderShoeId", "orderId"],
     data() {
         return {
+            role: localStorage.getItem('role'),
             rejectionReason: '',
             isRefuseApprovalVis: false,
             reportDetail: [],
@@ -164,7 +165,12 @@ export default {
             ).then(async () => {
                 const data = { "orderId": this.$props.orderId, "orderShoeId": this.$props.orderShoeId, "reportId": this.currentRow.reportId }
                 try {
-                    await axios.patch(`${this.$apiBaseUrl}/production/productionmanager/approvepricereport`, data)
+                    if (this.role == 2) {
+                        await axios.patch(`${this.$apiBaseUrl}/headmanager/approvepricereportbyheadmanager`, data)
+                    }
+                    else if (this.role == 3) {
+                        await axios.patch(`${this.$apiBaseUrl}/production/productionmanager/approvepricereport`, data)
+                    }
                     ElMessage.success('审批成功')
                 }
                 catch (error) {
@@ -198,7 +204,12 @@ export default {
                 }
                 const data = { "orderId": this.$props.orderId, "orderShoeId": this.$props.orderShoeId, "reportIdArr": reportIdArr, "rejectionReason": this.rejectionReason }
                 try {
-                    await axios.patch(`${this.$apiBaseUrl}/production/productionmanager/rejectpricereport`, data)
+                    if (this.role == 2) {
+                        await axios.patch(`${this.$apiBaseUrl}/headmanager/rejectpricereportbyheadmanager`, data)
+                    }
+                    else if (this.role == 3) {
+                        await axios.patch(`${this.$apiBaseUrl}/production/productionmanager/rejectpricereport`, data)
+                    }
                     ElMessage.success('驳回成功')
                 }
                 catch (error) {

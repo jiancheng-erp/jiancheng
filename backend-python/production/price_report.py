@@ -12,20 +12,9 @@ from sqlalchemy.dialects.mysql import insert
 from general_document.procedure_form import generate_excel_file
 import os
 from file_locations import FILE_STORAGE_PATH
+from login.login import current_user_info
 
 price_report_bp = Blueprint("price_report_bp", __name__)
-
-
-def check_report_status(number):
-    if number == 0:
-        status_name = "未提交"
-    elif number == 1:
-        status_name = "已提交"
-    elif number == 2:
-        status_name = "已审批"
-    else:
-        status_name = "被驳回"
-    return status_name
 
 
 def report_status_to_number(status_name):
@@ -71,7 +60,7 @@ def get_new_price_reports():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if status_name and status_name != "":
         query = query.filter(
-            UnitPriceReport.status == report_status_to_number(status_name)
+            UnitPriceReport.status == status_name,
         )
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
@@ -84,7 +73,6 @@ def get_new_price_reports():
             customer,
             report,
         ) = row
-        status_name = check_report_status(report.status)
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -93,7 +81,7 @@ def get_new_price_reports():
             "orderStartDate": format_date(order.start_date),
             "orderEndDate": format_date(order.end_date),
             "customerName": customer.customer_name,
-            "statusName": status_name,
+            "statusName": report.status,
             "teamName": report.team,
             "rejectionReason": report.rejection_reason,
         }
@@ -135,21 +123,6 @@ def store_price_report_detail():
         ~UnitPriceReportDetail.row_id.in_(row_id_arr),
     ).delete()
 
-    # get order_shoe status
-    response = (
-        db.session.query(UnitPriceReport, OrderShoeStatus)
-        .join(
-            OrderShoeStatus,
-            UnitPriceReport.order_shoe_id == OrderShoeStatus.order_shoe_id,
-        )
-        .filter(UnitPriceReport.report_id == report_id)
-        .all()
-    )
-
-    for row in response:
-        _, status_obj = row
-        status_obj.current_status_value = 1
-
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -158,25 +131,37 @@ def store_price_report_detail():
 def submit_price_report():
     data = request.get_json()
     report_id_arr = data["reportIdArr"]
+    _, staff, _ = current_user_info()
     processor: EventProcessor = current_app.config["event_processor"]
+    operation_arr = []
+    team = None 
     for report_id in report_id_arr:
         report = db.session.query(UnitPriceReport).get(report_id)
         report.submission_date = format_date(datetime.now())
-        report.status = 1
+        report.status = 2
+        team = report.team
+    if team == '裁断':
+        operation_arr = [78, 79]
+    elif team == '针车预备' or team == '针车':
+        operation_arr = [92, 93]
+    elif team == '成型':
+        operation_arr = [112, 113]
+    else:
+        return jsonify({"message": "team not found"}), 400
     try:
-        for operation in PRICE_REPORT_REFERENCE[report.team]["operation_id"]:
+        for operation in operation_arr:
             event = Event(
-                staff_id=1,
+                staff_id=staff.staff_id,
                 handle_time=datetime.now(),
                 operation_id=operation,
                 event_order_id=data["orderId"],
                 event_order_shoe_id=data["orderShoeId"],
             )
             processor.processEvent(event)
+            db.session.add(event)
     except Exception as e:
         print(e)
         return jsonify({"message": "failed"}), 400
-    db.session.add(event)
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -222,10 +207,9 @@ def get_price_report_detail_by_order_shoe_id():
     report = query.first()
     if not report:
         return jsonify({"message": "Report not found"}), 400
-    status_name = check_report_status(report.status)
     meta_data = {
         "reportId": report.report_id,
-        "statusName": status_name,
+        "statusName": report.status,
         "rejectionReason": report.rejection_reason,
     }
     response = (
