@@ -15,15 +15,9 @@
             <el-table :data="tableData" border stripe>
                 <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
-                <el-table-column label="出库类型">
-                    <template #default="scope">
-                        {{ determineOutboundType(scope.row.outboundType) }}
-                    </template>
+                <el-table-column prop="outboundType" label="出库类型">
                 </el-table-column>
-                <el-table-column label="出库至">
-                    <template #default="scope">
-                        {{ determineDestination(scope.row, scope.row.outboundType) }}
-                    </template>
+                <el-table-column prop="destination" label="出库至">
                 </el-table-column>
                 <el-table-column label="查看">
                     <template #default="scope">
@@ -42,15 +36,15 @@
     </el-row>
 
     <el-dialog title="出库单详情" v-model="dialogVisible" width="80%">
-        <el-descriptions border>
+        <!-- <el-descriptions border>
             <template #extra>
                 <span style="font-weight: bolder;font-size: 16px;">
                     单据编号：{{ currentRow.outboundRId }}
                 </span>
             </template>
-            <el-descriptions-item label="出库类型">{{ determineOutboundType(currentRow.outboundType)
-                }}</el-descriptions-item>
-            <el-descriptions-item label="出库至">{{ determineDestination(currentRow, currentRow.outboundType)
+            <el-descriptions-item label="出库类型">{{ currentRow.outboundType
+            }}</el-descriptions-item>
+            <el-descriptions-item label="出库至">{{
                 }}</el-descriptions-item>
             <el-descriptions-item label="出库时间">{{ currentRow.timestamp }}</el-descriptions-item>
         </el-descriptions>
@@ -74,19 +68,102 @@
             <el-table-column prop="unitPrice" label="平均价"></el-table-column>
             <el-table-column prop="outboundQuantity" label="数量"></el-table-column>
             <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
-        </el-table>
+        </el-table> -->
+        <div id="printView" v-show="true">
+            <table style="width:100%; border-collapse: collapse;">
+                <!-- Header repeated on each page -->
+                <thead>
+                    <tr>
+                        <td>
+                            <div style="position: relative; padding: 5px;">
+                                <h1 style="margin: 0; text-align: center;">健诚鞋业出库单</h1>
+                                <span
+                                    style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px;">
+                                    单据编号: {{ currentRow.outboundRId }}
+                                </span>
+                            </div>
+                            <table class="table" border="0" cellspacing="0" align="left" width="100%"
+                                style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <tr>
+                                    <td style="padding:5px; width: 150px;" align="left">出库至: {{
+                                        currentRow.destination }}</td>
+                                    <td style="padding:5px; width: 300px;" align="left">出库时间: {{
+                                        currentRow.timestamp }}
+                                    </td>
+                                    <td style="padding:5px; width: 150px;" align="left">领料人: {{
+                                        currentRow.picker }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </thead>
+
+                <!-- Main body content -->
+                <tbody>
+                    <tr>
+                        <td>
+                            <table class="yk-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="max-height:360px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <thead>
+                                    <tr>
+                                        <th width="100">材料名</th>
+                                        <th width="100">型号</th>
+                                        <th width="180">规格</th>
+                                        <th width="80">颜色</th>
+                                        <th width="55">单位</th>
+                                        <th width="100">订单号</th>
+                                        <th width="100">工厂鞋型</th>
+                                        <th width="100">数量</th>
+                                        <th width="100">单价</th>
+                                        <th width="100">金额</th>
+                                        <th>备注</th>
+                                    </tr>
+                                </thead>
+
+                                <tr v-for="(item, index) in recordData" :key="index" align="center">
+                                    <td>{{ item.materialName }}</td>
+                                    <td>{{ item.materialModel }}</td>
+                                    <td>{{ item.materialSpecification }}</td>
+                                    <td>{{ item.materialColor }}</td>
+                                    <td>{{ item.actualInboundUnit }}</td>
+                                    <td>{{ item.orderRId }}</td>
+                                    <td>{{ item.shoeRId }}</td>
+                                    <td>{{ item.outboundQuantity }}</td>
+                                    <td>{{ item.unitPrice }}</td>
+                                    <td>{{ item.itemTotalPrice }}</td>
+                                    <td>{{ item.remark }}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+
+                <!-- Footer repeated on each page -->
+                <tfoot>
+                    <tr>
+                        <td>
+                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold; display: flex;">
+                                <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
+                                    currentRow.totalPrice
+                                        }}</span></span>
+                                <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
+                                    currentRow.remark }}</span></span>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
-            <!-- <el-button type="primary" v-print="'#printView'">打印</el-button>
-            <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业出库单${currentRow.outboundRId}`, `printView`)">下载PDF</el-button> -->
+            <el-button type="primary" v-print="'#printView'">打印</el-button>
         </template>
     </el-dialog>
 </template>
 <script>
 import axios from 'axios'
 import { ElMessage } from 'element-plus';
-import htmlToPdf from '@/Pages/utils/htmlToPdf';
 export default {
     data() {
         return {
@@ -105,43 +182,6 @@ export default {
         this.getOutboundRecordsTable()
     },
     methods: {
-        determineDestination(row, type) {
-            if (type == 0) {
-                return row.departmentName
-            }
-            else if (type == 1) {
-                return "废料处理"
-            }
-            else if (type == 2) {
-                return row.outboundAddress
-            }
-            else if (type == 3) {
-                return row.compositeSupplierName
-            }
-            else {
-                return "未知"
-            }
-        },
-        determineOutboundType(type) {
-            if (type == 0) {
-                return "自产出库"
-            }
-            else if (type == 1) {
-                return "废料处理"
-            }
-            else if (type == 2) {
-                return "外包发货"
-            }
-            else if (type == 3) {
-                return "外发复合"
-            }
-            else {
-                return "未知"
-            }
-        },
-        downloadPDF(title, domName) {
-            htmlToPdf.getPdf(title, domName);
-        },
         async getOutboundRecordsTable() {
             console.log(this.dateRange)
             if (this.dateRange === null) {
@@ -174,8 +214,8 @@ export default {
         async handleView(row) {
             this.currentRow = row
             try {
-                let params = { "outboundBatchId": row.outboundBatchId }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordbybatchid`, { params })
+                let params = { "outboundRecordId": row.outboundRecordId }
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getoutboundrecordbyrecordid`, { params })
                 this.recordData = response.data
                 for (let i = 0; i < this.recordData.length; i++) {
                     let tempColumns = this.recordData[i].shoeSizeColumns
@@ -188,7 +228,6 @@ export default {
                         this.recordData[i]["displayShoeSizes"].push(obj)
                     }
                 }
-                console.log(this.recordData)
                 this.dialogVisible = true
             }
             catch (error) {

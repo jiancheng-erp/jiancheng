@@ -57,3 +57,12 @@ ACCOUNT_TYPE_CASH = '2'
 MATERIAL_PURCHASE_PAYABLE_ID = 14
 DEFAULT_TRANSACTION_UNIT = 1
 DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE = '3'
+
+
+OUTBOUND_TYPE_MAPPING = {
+    0: "生产出库",
+    1: "废料处理",
+    2: "外包出库",
+    3: "复合出库",
+    4: "材料退回",
+}
