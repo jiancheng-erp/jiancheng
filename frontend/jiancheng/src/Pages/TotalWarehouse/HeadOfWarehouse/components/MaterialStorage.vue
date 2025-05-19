@@ -13,10 +13,6 @@
     <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
-                <el-form-item v-if="readonly === false" prop="currentDateTime" label="日期">
-                    <el-date-picker v-model="outboundForm.currentDateTime" type="datetime"
-                        value-format="YYYY-MM-DD HH:mm:ss" clearable />
-                </el-form-item>
                 <el-form-item v-if="readonly === false" prop="outboundType" label="出库类型">
                     <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
                         <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
@@ -29,7 +25,7 @@
                             :value="item.value"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="[2, 3].includes(outboundForm.outboundType) && readonly === false" prop="supplierName"
+                <el-form-item v-if="[2, 3, 4].includes(outboundForm.outboundType) && readonly === false" prop="supplierName"
                     label="出库厂家">
                     <el-autocomplete v-model="outboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
                         @select="handleSupplierSelect" />
@@ -121,7 +117,7 @@
         </el-table-column>
     </el-table>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[20, 40, 60, 100]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
@@ -272,7 +268,6 @@ export default {
             selectedRowsCopy: [],
             outboundForm: {},
             formItemTemplate: {
-                currentDateTime: new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' '),
                 outboundType: 0,
                 outboundQuantity: 0,
                 departmentId: null,
@@ -298,9 +293,9 @@ export default {
                 { label: '废料处理', value: 1 },
                 { label: '外包发货', value: 2 },
                 { label: '外发复合', value: 3 },
+                { label: '材料退回', value: 4 },
             ],
             rules: {
-                currentDateTime: [{ required: true, message: '请选择日期', trigger: 'blur' }],
                 outboundType: [{ required: true, message: '请选择出库类型', trigger: 'blur' }],
                 supplierName: [{ required: true, message: '请输入出库厂家', trigger: 'blur' }],
                 departmentId: [{ required: true, message: '请选择部门', trigger: 'blur' }],
@@ -371,7 +366,6 @@ export default {
             this.topTableData = []
             this.bottomTableData = []
             this.outboundForm = { ...this.formItemTemplate }
-            this.outboundForm.currentDateTime = new Date((new Date()).getTime() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ')
             this.getMaterialTableData()
         },
         openSizeMaterialQuantityDialog(row) {
