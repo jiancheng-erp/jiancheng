@@ -270,7 +270,7 @@ export default {
                 total = total.plus(new Decimal(row[this.recordData.shoeSizeColumns[i].prop]))
             }
             row.inboundQuantity = total.toDecimalPlaces(3).toNumber()
-            row.itemTotalPrice = (total.times(row.unitPrice)).toDecimalPlaces(3).toNumber()
+            row.itemTotalPrice = (total.times(row.unitPrice)).toDecimalPlaces(4).toNumber()
         },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
