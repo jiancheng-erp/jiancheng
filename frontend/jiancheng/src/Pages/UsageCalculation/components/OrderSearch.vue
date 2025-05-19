@@ -5,7 +5,7 @@
         >
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="6" :offset="0" style="white-space: nowrap">
+        <el-col :span="4" :offset="0" style="white-space: nowrap">
             订单号搜索：
             <el-input
                 v-model="orderSearch"
@@ -16,7 +16,7 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col :span="4" :offset="2" style="white-space: nowrap">
             客人名称搜索：
             <el-input
                 v-model="customerSearch"
@@ -27,10 +27,34 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col :span="4" :offset="2" style="white-space: nowrap">
             工厂型号搜索：
             <el-input
                 v-model="shoeRIdSearch"
+                placeholder=""
+                size=""
+                :suffix-icon="Search"
+                clearable
+                @change="tableFilter"
+            ></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20">
+        <el-col :span="4" :offset="0" style="white-space: nowrap">
+            客户订单号搜索：
+            <el-input
+                v-model="orderCIdSearch"
+                placeholder=""
+                size=""
+                :suffix-icon="Search"
+                clearable
+                @change="tableFilter"
+            ></el-input>
+        </el-col>
+        <el-col :span="4" :offset="2" style="white-space: nowrap">
+            客户型号搜索：
+            <el-input
+                v-model="shoeCIdSearch"
                 placeholder=""
                 size=""
                 :suffix-icon="Search"
@@ -99,14 +123,15 @@
                 </template>
             </el-table-column>
             <el-table-column prop="orderRid" label="订单号"></el-table-column>
+            <el-table-column prop="orderCid" label="客户订单号"></el-table-column>
             <el-table-column prop="customerName" label="客人名称"></el-table-column>
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
-            <el-table-column label="操作" width="350">
+            <el-table-column label="操作" width="400">
                 <template #default="scope">
-                    <el-button type="primary" size="default" @click="handleRowClick(scope.row)">查看用量填写页面</el-button>
-                    <el-button type="primary" size="default" @click="handleRowClickForSecondBOM(scope.row)">查看生产BOM</el-button>
+                    <el-button type="primary" size="default" @click="handleRowClick(scope.row)" :disabled="buttonDisable(scope.row)">查看用量填写页面</el-button>
+                    <el-button type="primary" size="default" @click="handleRowClickForSecondBOM(scope.row)" :disabled="buttonDisable(scope.row)">查看生产BOM</el-button>
                 </template>
             </el-table-column>
             
@@ -137,6 +162,8 @@ export default {
             Search,
             orderSearch: '',
             shoeRIdSearch: '',
+            orderCIdSearch: '',
+            shoeCIdSearch: '',
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
@@ -144,12 +171,12 @@ export default {
             pageSize: 10,
             totalPages: 0,
             totalData: 0,
-            viewPastTasks: 0, // 0 for all orders, 1 for completed orders
+            viewPastTasks: 0,
         }
     },
     async mounted() {
         this.$setAxiosToken()
-        this.getOrderData()
+        await this.getOrderData(this.currentPage)
     },
     methods: {
         async getOrderData() {
@@ -161,6 +188,8 @@ export default {
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
                         shoeRIdSearch: this.shoeRIdSearch,
+                        orderCIdSearch: this.orderCIdSearch,
+                        shoeCIdSearch: this.shoeCIdSearch,
                         viewPastTasks: this.viewPastTasks
                     },
                 })
@@ -173,6 +202,9 @@ export default {
         handlePageChange(page) {
             this.currentPage = page
             this.getOrderData()
+        },
+        buttonDisable(row) {
+            return row.status === '生产订单创建' || row.status === '生产订单总经理确认'
         },
         tableFilter() {
             // Reset to the first page on filter
