@@ -46,14 +46,35 @@ ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND = 2
 ACCOUNTING_PAYEE_EXISTING = 3
 
 
-PAYABLE_EVENT_TO_TEXT = {"I":"材料采购入库产生应付", "C":"委外加工入库产生应付"
-                         ,"M":"其他类型入库产生应付"}
+PAYABLE_EVENT_TO_TEXT = {
+    "I": "材料采购入库产生应付",
+    "C": "委外加工入库产生应付",
+    "M": "其他类型入库产生应付",
+}
 PAYABLE_EVENT_INBOUND = "I"
 PAYABLE_EVENT_COMPOSITE_INBOUND = "C"
 PAYABLE_EVENT_MISC_INBOUND = "M"
-ACCOUNT_TYPE_RECIEVABLE = '0'
-ACCOUNT_TYPE_PAYABLE = '1'
-ACCOUNT_TYPE_CASH = '2'
+ACCOUNT_TYPE_RECIEVABLE = "0"
+ACCOUNT_TYPE_PAYABLE = "1"
+ACCOUNT_TYPE_CASH = "2"
 MATERIAL_PURCHASE_PAYABLE_ID = 14
 DEFAULT_TRANSACTION_UNIT = 1
-DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE = '3'
+DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE = "3"
+
+BOM_STATUS = {
+    "1": "材料已保存",
+    "2": "材料已提交",
+    "3": "等待用量填写",
+    "4": "用量填写已保存",
+    "5": "用量填写已提交",
+    "6": "用量填写已下发",
+}
+
+BOM_STATUS_TO_INT = {
+    "材料已保存": "1",
+    "材料已提交": "2",
+    "等待用量填写": "3",
+    "用量填写已保存": "4",
+    "用量填写已提交": "5",
+    "用量填写已下发": "6",
+}
