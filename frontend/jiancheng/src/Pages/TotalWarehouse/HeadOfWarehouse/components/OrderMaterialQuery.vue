@@ -1,13 +1,26 @@
 <template>
-    <el-dialog title="订单材料查询" v-model="localVisible" fullscreen destroy-on-close>
-        <LogisticInfo></LogisticInfo>
+    <el-dialog title="材料查询" v-model="localVisible" fullscreen destroy-on-close>
+        <el-tabs :v-model="currentTab">
+            <el-tab-pane label="BOM材料查询" lazy>
+                <BOMInfo></BOMInfo>
+            </el-tab-pane>
+            <el-tab-pane label="采购单材料查询" lazy>
+                <LogisticInfo></LogisticInfo>
+            </el-tab-pane>
+            <!-- <el-tab-pane label="仓库材料查询" lazy>
+                <LogisticInfo></LogisticInfo>
+            </el-tab-pane> -->
+        </el-tabs>
+
     </el-dialog>
 </template>
 <script>
 import LogisticInfo from '@/Pages/ProductionManagementDepartment/ProductionManagementDepartmentGeneral/components/LogisticInfo.vue';
+import BOMInfo from './BOMInfo.vue';
 export default {
     components: {
         LogisticInfo,
+        BOMInfo
     },
     props: {
         visible: {
@@ -22,6 +35,7 @@ export default {
             isOrderMaterialQueryVis: false,
             orderRIdSearch: '',
             orderMaterialData: [],
+            currentTab: '1'
         }
     },
     watch: {
@@ -34,9 +48,6 @@ export default {
 
     },
     methods: {
-        searchMaterialByOrderRId() {
-            console.log(this.orderRIdSearch);
-        },
         handleClose() {
             this.$emit("update-visible", false);
         },
