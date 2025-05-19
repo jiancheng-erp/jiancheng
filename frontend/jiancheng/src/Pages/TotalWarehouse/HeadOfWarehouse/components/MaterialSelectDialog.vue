@@ -237,7 +237,13 @@ export default {
                 let params = {
                     "data": JSON.stringify(this.materialSelection),
                 }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbymaterialinfo`, { params })
+                let response
+                if (this.materialSelection[0].materialCategory == 0) {
+                    response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbymaterialinfo`, { params })
+                }
+                else {
+                    response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbysizematerialinfo`, { params })
+                }
                 this.originTableData = response.data
                 this.bottomTableData = response.data
                 this.selectionPage = 1

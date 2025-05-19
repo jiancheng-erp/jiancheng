@@ -753,7 +753,7 @@ export default {
             this.currentIndex = scope.rowIndex; // Store the current row index
             if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
                 this.fetchSizeMaterialData()
-                this.isSizeMaterialSelectDialogVis = true
+                this.isMaterialSelectDialogVis = true
             }
             else {
                 this.fetchMaterialData()
@@ -785,10 +785,10 @@ export default {
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
-                "orderRId": this.currentKeyDownRow.orderRId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
             this.orriginalSizeMaterials = response.data
+            this.searchedMaterials = response.data
             this.searchedSizeMaterials = response.data
         },
         confirmSelection() {

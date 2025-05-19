@@ -311,7 +311,6 @@ def get_size_materials():
         "material_model": request.args.get("materialModel", ""),
         "material_color": request.args.get("materialColor", ""),
         "supplier": request.args.get("supplier", ""),
-        "order_rid": request.args.get("orderRId", ""),
     }
     material_filter_map = {
         "material_name": Material.material_name,
@@ -319,18 +318,21 @@ def get_size_materials():
         "material_model": SizeMaterialStorage.size_material_model,
         "material_color": SizeMaterialStorage.size_material_color,
         "supplier": Supplier.supplier_name,
-        "order_rid": Order.order_rid,
     }
 
     query = (
-        db.session.query(SizeMaterialStorage, Material, Supplier, Order, Shoe)
+        db.session.query(
+            Material.material_name,
+            SizeMaterialStorage.size_material_model,
+            SizeMaterialStorage.size_material_specification,
+            SizeMaterialStorage.size_material_color,
+            Material.material_category,
+            Material.material_unit,
+            Supplier.supplier_name
+        )
         .join(Material, SizeMaterialStorage.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .join(Order, SizeMaterialStorage.order_id == Order.order_id)
-        .join(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
-        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
-        .filter(OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER)
+        .distinct()
     )
     for key, value in filters.items():
         if value and value != "":
@@ -338,36 +340,16 @@ def get_size_materials():
     response = query.all()
     result = []
     for row in response:
-        (storage, material, supplier, order, shoe) = row
+        (material_name, material_model, material_spec, material_color, category, unit, supplier_name) = row
         obj = {
-            "materialStorageId": storage.size_material_storage_id,
-            "materialName": material.material_name,
-            "materialModel": storage.size_material_model,
-            "materialSpecification": storage.size_material_specification,
-            "materialColor": storage.size_material_color,
-            "actualInboundUnit": material.material_unit,
-            "materialCategory": material.material_category,
-            "supplierName": supplier.supplier_name,
-            "orderId": order.order_id,
-            "orderRId": order.order_rid,
-            "shoeRId": shoe.shoe_rid,
-            "estimatedInboundAmount": storage.total_estimated_inbound_amount,
-            "actualInboundAmount": storage.total_actual_inbound_amount,
-            "currentAmount": storage.total_current_amount,
-            "unitPrice": storage.unit_price,
-            "shoeSizeColumns": storage.shoe_size_columns,
+            "materialName": material_name,
+            "materialModel": material_model,
+            "materialSpecification": material_spec,
+            "materialColor": material_color,
+            "actualInboundUnit": unit,
+            "materialCategory": category,
+            "supplierName": supplier_name,
         }
-        for i, shoe_size in enumerate(SHOESIZERANGE):
-            estimated_inbound_amount = getattr(
-                storage, f"size_{shoe_size}_estimated_inbound_amount"
-            )
-            actual_inbound_amount = getattr(
-                storage, f"size_{shoe_size}_actual_inbound_amount"
-            )
-            current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
-            obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
-            obj[f"actualInboundAmount{i}"] = actual_inbound_amount
-            obj[f"currentAmount{i}"] = current_amount
         result.append(obj)
     return result
 
@@ -434,6 +416,93 @@ def get_materials():
         result.append(obj)
     return result
 
+@material_storage_bp.route("/warehouse/getordersbysizematerialinfo", methods=["GET"])
+def get_orders_by_size_material_info():
+    """
+    根据材料信息查找买这个材料的订单号
+    """
+    data = request.args.get("data", None)
+    data_list = json.loads(data)
+    result = []
+    for input_row in data_list:
+        material_name = input_row.get("materialName", None)
+        material_specification = input_row.get("materialSpecification", None)
+        material_model = input_row.get("materialModel", None)
+        material_color = input_row.get("materialColor", None)
+        supplier_name = input_row.get("supplierName", None)
+        material_category = input_row.get("materialCategory", 0)
+        unit = input_row.get("actualInboundUnit", None)
+
+        target_material = (
+            db.session.query(Material)
+            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+            .filter(
+                Material.material_name == material_name,
+                Supplier.supplier_name == supplier_name,
+            )
+            .first()
+        )
+
+        if not target_material:
+            return jsonify({"message": "没有该材料"}), 404
+
+        material_storages = (
+            db.session.query(SizeMaterialStorage, Order, Shoe)
+            .outerjoin(Order, Order.order_id == SizeMaterialStorage.order_id)
+            .outerjoin(
+                OrderShoe, OrderShoe.order_shoe_id == SizeMaterialStorage.order_shoe_id
+            )
+            .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(
+                SizeMaterialStorage.material_id
+                == target_material.material_id,
+                SizeMaterialStorage.size_material_specification == material_specification,
+                SizeMaterialStorage.size_material_model == material_model,
+                SizeMaterialStorage.size_material_color == material_color,
+                or_(
+                    OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER,
+                    OrderStatus.order_current_status == None,
+                ),
+            )
+            .order_by(
+                Order.order_rid
+            )
+            .all()
+        )
+        for row in material_storages:
+            storage, order, shoe = row
+            obj = {
+                "materialStorageId": storage.size_material_storage_id,
+                "materialName": target_material.material_name,
+                "materialModel": storage.size_material_model,
+                "materialSpecification": storage.size_material_specification,
+                "materialColor": storage.size_material_color,
+                "actualInboundUnit": target_material.material_unit,
+                "inboundModel": storage.size_material_model,
+                "inboundSpecification": storage.size_material_specification,
+                "orderId": storage.order_id,
+                "orderRId": order.order_rid if order else None,
+                "shoeRId": shoe.shoe_rid if shoe else None,
+                "estimatedInboundAmount": storage.total_estimated_inbound_amount,
+                "actualInboundAmount": storage.total_actual_inbound_amount,
+                "currentAmount": storage.total_current_amount,
+                "materialCategory": material_category,
+                "shoeSizeColumns": storage.shoe_size_columns,
+            }
+            for i, shoe_size in enumerate(SHOESIZERANGE):
+                estimated_inbound_amount = getattr(
+                    storage, f"size_{shoe_size}_estimated_inbound_amount"
+                )
+                actual_inbound_amount = getattr(
+                    storage, f"size_{shoe_size}_actual_inbound_amount"
+                )
+                current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
+                obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
+                obj[f"actualInboundAmount{i}"] = actual_inbound_amount
+                obj[f"currentAmount{i}"] = current_amount
+            result.append(obj)
+    return result
 
 @material_storage_bp.route("/warehouse/getordersbymaterialinfo", methods=["GET"])
 def get_orders_by_material_info():
