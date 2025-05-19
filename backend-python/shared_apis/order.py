@@ -1116,6 +1116,8 @@ def get_order_full_info():
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
     shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
+    shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
+    order_cid_search = request.args.get("orderCIdSearch", "", type=str)
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
 
     character, staff, department = current_user_info()
@@ -1177,6 +1179,8 @@ def get_order_full_info():
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
+            OrderShoe.customer_product_name.like(f"%{shoe_cid_search}%"),
+            Order.order_cid.like(f"%{order_cid_search}%"),
         )
         .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_id.desc())
@@ -1234,6 +1238,7 @@ def get_order_full_info():
             orders_dict[order.order_id] = {
                 "orderId": order.order_id if order.order_id else "N/A",
                 "orderRid": order.order_rid if order.order_rid else "N/A",
+                "orderCid": order.order_cid if order.order_cid else "N/A",
                 "shoeRid": shoe.shoe_rid if shoe else "N/A",
                 "customerName": customer.customer_name if customer else "N/A",
                 "createTime": formatted_start_date,
