@@ -7,7 +7,7 @@
         </el-table-column>
         <el-table-column prop="itemCost" label="单价">
             <template #default="scope">
-                <el-input-number v-model="scope.row.itemCost" :min="0" :precision="2" :step="0.01" clearable type="number" @input="handleInputChange(scope.row)"></el-input-number>
+                <el-input-number v-model="scope.row.itemCost" :min="0" :precision="4" :step="0.0001" clearable type="number" @input="handleInputChange(scope.row)"></el-input-number>
             </template>
         </el-table-column>
         <el-table-column prop="itemTotalCost" label="总价">
