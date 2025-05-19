@@ -8,7 +8,7 @@
                     size="default"
                     :suffix-icon="Search"
                     clearable
-                    @input="filterByRid()"
+                    @input="dataPagination"
                 ></el-input>
             </el-col>
             <el-col :span="4" :offset="0"
@@ -18,7 +18,7 @@
                     size="default"
                     :suffix-icon="Search"
                     clearable
-                    @input="filterByCid()"
+                    @input="dataPagination"
                 ></el-input>
             </el-col>
             <el-col :span="4" :offset="0">
@@ -28,7 +28,7 @@
                     size="default"
                     :suffix-icon="Search"
                     clearable
-                    @input="filterByCustomerName()"
+                    @input="dataPagination"
                 ></el-input>
             </el-col>
             <el-col :span="4" :offset="0">
@@ -38,7 +38,7 @@
                     size="default"
                     :suffix-icon="Search"
                     clearable
-                    @input="filterByShoeRid()"
+                    @input="dataPagination"
                 ></el-input>
             </el-col>
             <el-col :span="4" :offset="0">
@@ -48,7 +48,7 @@
                     size="default"
                     :suffix-icon="Search"
                     clearable
-                    @input="filterByShoeCid()"
+                    @input="dataPagination"
                 ></el-input>
             </el-col>
             <el-col :span="6" :offset="0">
@@ -164,27 +164,32 @@ async function getAllOrders() {
 }
 
 function dataPagination() {
-    orderRidFilter.value = ''
-    orderCidFilter.value = ''
+    // Don't reset filters here
+    let baseData = []
     if (radio.value == 'all') {
-        displayData.value = allData.value.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = allData.value.length
+        baseData = allData.value
     } else if (radio.value == '待审批') {
-        displayData.value = examineData.value.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = examineData.value.length
+        baseData = examineData.value
     } else {
-        displayData.value = approvedData.value.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = approvedData.value.length
+        baseData = approvedData.value
     }
+
+    // Apply active filters
+    baseData = baseData.filter((task) => {
+        return (
+            (!orderRidFilter.value || task.orderRid?.toLowerCase().includes(orderRidFilter.value.toLowerCase())) &&
+            (!orderCidFilter.value || task.orderCid?.toLowerCase().includes(orderCidFilter.value.toLowerCase())) &&
+            (!customerIdFilter.value || task.customerName?.toLowerCase().includes(customerIdFilter.value.toLowerCase())) &&
+            (!shoeRidFilter.value || task.shoeRId?.toLowerCase().includes(shoeRidFilter.value.toLowerCase())) &&
+            (!shoeCidFilter.value || task.shoeCid?.toLowerCase().includes(shoeCidFilter.value.toLowerCase()))
+        )
+    })
+
+    currentTotalRows.value = baseData.length
+    displayData.value = baseData.slice(
+        (currentPage.value - 1) * currentPageSize.value,
+        currentPage.value * currentPageSize.value
+    )
 }
 
 async function deleteOrder(value) {
@@ -203,177 +208,6 @@ function openOrderDetail(orderId) {
     let url = ''
     url = `${window.location.origin}/companyManager/orderConfirmDetail/orderid=${orderId}`
     window.open(url, '_blank')
-}
-function filterByRid() {
-    if (radio.value == 'all') {
-        const arr = allData.value.filter((task) => {
-                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = arr.length
-    } else if (radio.value == '待审批') {
-        const arr = examineData.value.filter((task) => {
-                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.orderRid.toLowerCase().includes(orderRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
-}
-function filterByCid() {
-    if (radio.value == 'all') {
-        const arr = allData.value.filter((task) => {
-                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = arr.length
-    } else if (radio.value == '待审批') {
-        const arr = examineData.value.filter((task) => {
-                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.orderCid.toLowerCase().includes(orderCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
-
-}
-function filterByCustomerName() {
-    if (radio.value == 'all') {
-        const arr = allData.value.filter((task) => {
-                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = arr.length
-    } else if (radio.value == '待审批') {
-        const arr = examineData.value.filter((task) => {
-                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.customerName.toLowerCase().includes(customerIdFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
-}
-function filterByShoeRid() {
-    if (radio.value == 'all') {
-        const arr = allData.value.filter((task) => {
-                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = arr.length
-    } else if (radio.value == '待审批') {
-        const arr = examineData.value.filter((task) => {
-                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.shoeRId.toLowerCase().includes(shoeRidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
-}
-function filterByShoeCid() {
-    if (radio.value == 'all') {
-        const arr = allData.value.filter((task) => {
-                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-        currentTotalRows.value = arr.length
-    } else if (radio.value == '待审批') {
-        const arr = examineData.value.filter((task) => {
-                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    } else {
-        const arr = approvedData.value.filter((task) => {
-                const filterMatch = task.shoeCid.toLowerCase().includes(shoeCidFilter.value.toLowerCase())
-                return filterMatch
-            })
-        currentTotalRows.value = arr.length
-        displayData.value = arr.slice(
-            (currentPage.value - 1) * currentPageSize.value,
-            currentPageSize.value * currentPage.value
-        )
-    }
 }
 
 function chageCurrentPageSize(val) {

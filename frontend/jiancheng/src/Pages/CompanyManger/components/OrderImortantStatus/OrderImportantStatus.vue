@@ -77,9 +77,11 @@ export default {
             orderShoeStatus: '全部',
             orderStatusOptions: [
                 { value: '全部', label: '全部'},
+                { value: '投产指令单创建', label: '投产指令单创建' },
                 { value: '面料单位用量计算', label: '面料用量填写' },
                 { value: '技术部调版分配', label: '工艺单创建' },
-                { value: '一次采购订单创建', label: '一次采购订单创建' }
+                { value: '一次采购订单创建', label: '一次采购订单创建' },
+                { value: '总仓采购订单创建', label: '总仓采购订单创建' },
             ],
             Download: 'el-icon-download',
         }
