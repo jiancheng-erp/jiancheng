@@ -6,6 +6,7 @@ import shutil
 from app_config import db
 from constants import BOM_STATUS, BOM_STATUS_TO_INT
 from flask import Blueprint, jsonify, request, current_app
+from sqlalchemy import func
 from models import *
 from event_processor import EventProcessor
 from general_document.bom import generate_excel_file
@@ -830,12 +831,24 @@ def get_all_bom_items():
     material_name = request.args.get("materialName")
     material_model = request.args.get("materialModel")
     material_specification = request.args.get("materialSpecification")
-    color = request.args.get("color")
+    material_color = request.args.get("materialColor")
     supplier_name = request.args.get("supplierName")
     status = request.args.get("status")
 
+    order_amount_query = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_amount"),
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(OrderShoeBatchInfo, OrderShoeType.order_shoe_type_id == OrderShoeBatchInfo.order_shoe_type_id)
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
     query = (
-        db.session.query(BomItem, Bom, Order, Shoe, Material, Supplier)
+        db.session.query(BomItem, Bom, Order, Shoe, Material, Supplier, order_amount_query.c.total_amount)
         .join(
             Bom, BomItem.bom_id == Bom.bom_id
         )
@@ -849,6 +862,7 @@ def get_all_bom_items():
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .join(Material, BomItem.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(order_amount_query, Order.order_id == order_amount_query.c.order_id)
         .filter(Bom.bom_type == 0)
         .order_by(Order.order_rid)
     )
@@ -869,8 +883,8 @@ def get_all_bom_items():
                 f"%{material_specification}%"
             )
         )
-    if color:
-        query = query.filter(BomItem.bom_item_color.ilike(f"%{color}%"))
+    if material_color:
+        query = query.filter(BomItem.bom_item_color.ilike(f"%{material_color}%"))
     if supplier_name:
         query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
     if status:
@@ -882,7 +896,7 @@ def get_all_bom_items():
 
     result = []
     for row in response:
-        item, bom, order, shoe, material, supplier = row
+        item, bom, order, shoe, material, supplier, order_amount = row
         obj = {
             "orderRId": order.order_rid,
             "shoeRId": shoe.shoe_rid,
@@ -893,6 +907,10 @@ def get_all_bom_items():
             "supplierName": supplier.supplier_name,
             "bomRId": bom.bom_rid,
             "bomStatus": BOM_STATUS.get(bom.bom_status, "未填写"),
+            "orderAmount": order_amount,
+            "unitUsage": item.unit_usage,
+            "totalUsage": item.total_usage,
+            "materialUnit": material.material_unit,
         }
         result.append(obj)
     return {"result": result, "totalLength": count_result}
