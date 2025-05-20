@@ -2,23 +2,23 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0" style="white-space: nowrap;">
             <div class="search-bar">
-                <el-input v-model="orderRIdSearch" placeholder="订单号筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="shoeRIdSearch" placeholder="鞋型号筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="materialNameSearch" placeholder="材料名称筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="materialModelSearch" placeholder="型号筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="materialSpecSearch" placeholder="规格筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="materialColorSearch" placeholder="颜色筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-input v-model="supplierNameSearch" placeholder="供应商筛选" clearable @keypress.enter="getBOMData()"
-                    @clear="getBOMData" />
-                <el-select v-model="statusSearch" placeholder="BOM状态筛选" filterable clearable @change="getBOMData()"
-                    @clear="getBOMData">
-                    <el-option v-for="item in ['材料已保存', '材料已提交', '等待用量填写', '用量填写已保存', '用量填写已提交', '用量填写已下发']"
+                <el-input v-model="orderRIdSearch" placeholder="订单号筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="shoeRIdSearch" placeholder="鞋型号筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="materialNameSearch" placeholder="材料名称筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="materialModelSearch" placeholder="型号筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="materialSpecSearch" placeholder="规格筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="materialColorSearch" placeholder="颜色筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-input v-model="supplierNameSearch" placeholder="供应商筛选" clearable @keypress.enter="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData" />
+                <el-select v-model="statusSearch" placeholder="采购单状态筛选" filterable clearable @change="getPurchaseOrderData()"
+                    @clear="getPurchaseOrderData">
+                    <el-option v-for="item in ['未填写', '已保存', '已提交']"
                         :label="item" :value="item">
                     </el-option>
                 </el-select>
@@ -26,10 +26,9 @@
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="24" :offset="0">
-            <el-table :data="bomData" border stripe height="500">
-                <el-table-column prop="bomRId" label="BOM编号" width="100" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="bomStatus" label="BOM状态"></el-table-column>
+            <el-table :data="purchaseOrderData" border stripe height="500">
+                <!-- <el-table-column prop="bomRId" label="BOM编号" width="100" show-overflow-tooltip></el-table-column> -->
+                <el-table-column prop="purchaseOrderStatus" label="采购单状态"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
                 <el-table-column prop="supplierName" label="供应商"></el-table-column>
@@ -38,11 +37,8 @@
                 <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                 <el-table-column prop="materialColor" label="颜色"></el-table-column>
                 <el-table-column prop="materialUnit" label="单位"></el-table-column>
-                <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
-                <el-table-column prop="unitUsage" label="单位用量"></el-table-column>
-                <el-table-column prop="totalUsage" label="核定用量"></el-table-column>
+                <el-table-column prop="purchaseAmount" label="采购数量"></el-table-column>
             </el-table>
-        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col>
@@ -70,7 +66,7 @@ export default {
             supplierNameSearch: null,
             statusSearch: null,
             logisticsShoeData: [],
-            bomData: [],
+            purchaseOrderData: [],
             logisticsMaterialData: [],
             totalRows: 0,
             currentPage: 1,
@@ -82,10 +78,10 @@ export default {
         }
     },
     mounted() {
-        this.getBOMData()
+        this.getPurchaseOrderData()
     },
     methods: {
-        async getBOMData() {
+        async getPurchaseOrderData() {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
@@ -98,17 +94,17 @@ export default {
                 "supplierName": this.supplierNameSearch,
                 "status": this.statusSearch,
             }
-            const response = await axios.get(`${this.$apiBaseUrl}/usagecalculation/getallbomitems`, { params })
-            this.bomData = response.data.result
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallpurchaseorderitems`, { params })
+            this.purchaseOrderData = response.data.result
             this.totalRows = response.data.totalLength
         },
         handleSizeChange(val) {
             this.pageSize = val
-            this.getBOMData()
+            this.getPurchaseOrderData()
         },
         handlePageChange(val) {
             this.currentPage = val
-            this.getBOMData()
+            this.getPurchaseOrderData()
         },
         openLogisticsDialog(rowData) {
             this.currentRow = rowData
