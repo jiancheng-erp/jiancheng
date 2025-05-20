@@ -87,8 +87,8 @@
                             </el-table-column>
                             <el-table-column label="复合单价" width="150">
                                 <template #default="scope">
-                                    <el-input-number v-model="scope.row.compositeUnitCost" :min="0" :precision="4"
-                                        size="small" :step="0.0001"></el-input-number>
+                                    <el-input-number v-model="scope.row.compositeUnitCost" :min="0" :precision="2"
+                                        size="small" :step="0.01"></el-input-number>
                                 </template>
                             </el-table-column>
                             <el-table-column label="总价" width="100">
