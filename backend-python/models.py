@@ -1192,7 +1192,7 @@ class OutboundRecord(db.Model):
     outbound_address = db.Column(db.String(100), nullable=True)
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
-    composite_supplier_id = db.Column(db.Integer, nullable=True)
+    supplier_id = db.Column(db.Integer, nullable=True)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
     total_price = db.Column(db.DECIMAL(12,3), nullable=True)
 

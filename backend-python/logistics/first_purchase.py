@@ -10,7 +10,7 @@ from decimal import Decimal
 from api_utility import randomIdGenerater
 from app_config import db
 from business.batch_info_type import get_order_batch_type_helper
-from constants import SHOESIZERANGE
+from constants import SHOESIZERANGE, PO_STATUS, PO_STATUS_TO_INT
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from flask import Blueprint, jsonify, request, send_file, current_app
@@ -1771,3 +1771,79 @@ def get_all_unit():
     units = db.session.query(Unit).all()
     result = [{"label": unit.unit_name, "value": unit.unit_name} for unit in units]
     return jsonify(result)
+
+
+
+@first_purchase_bp.route("/logistics/getallpurchaseorderitems", methods=["GET"])
+def get_all_purchase_order_items():
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+    order_rid = request.args.get("orderRId")
+    shoe_rid = request.args.get("shoeRId")
+    material_name = request.args.get("materialName")
+    material_model = request.args.get("materialModel")
+    material_specification = request.args.get("materialSpecification")
+    material_color = request.args.get("materialColor")
+    supplier_name = request.args.get("supplierName")
+    status = request.args.get("status")
+
+    query = (
+        db.session.query(PurchaseOrderItem, PurchaseOrder, Order, Shoe, Material, Supplier)
+        .join(
+            PurchaseDivideOrder, PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id
+        )
+        .join(PurchaseOrder, PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id)
+        .join(OrderShoe, PurchaseOrder.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(Order, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(Material, PurchaseOrderItem.material_id == Material.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .order_by(Order.order_rid)
+    )
+
+    if order_rid:
+        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+    if shoe_rid:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if material_name:
+        query = query.filter(Material.material_name.ilike(f"%{material_name}%"))
+    if material_model:
+        query = query.filter(
+            PurchaseOrderItem.material_model.ilike(f"%{material_model}%")
+        )
+    if material_specification:
+        query = query.filter(
+            PurchaseOrderItem.material_specification.ilike(
+                f"%{material_specification}%"
+            )
+        )
+    if material_color:
+        query = query.filter(PurchaseOrderItem.color.ilike(f"%{material_color}%"))
+    if supplier_name:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+    if status:
+        query = query.filter(PurchaseOrder.purchase_order_status == PO_STATUS_TO_INT.get(status, 0))
+
+    # Pagination
+    count_result = query.distinct().count()
+    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
+
+    result = []
+    for row in response:
+        item, purchase_order, order, shoe, material, supplier = row
+        obj = {
+            "orderRId": order.order_rid,
+            "shoeRId": shoe.shoe_rid,
+            "materialName": material.material_name,
+            "materialModel": item.material_model,
+            "materialSpecification": item.material_specification,
+            "materialColor": item.color,
+            "supplierName": supplier.supplier_name,
+            "purchaseAmount": item.purchase_amount,
+            "materialUnit": material.material_unit,
+            "purchaseOrderStatus": PO_STATUS.get(
+                purchase_order.purchase_order_status, "未填写"
+            ),
+        }
+        result.append(obj)
+    return {"result": result, "totalLength": count_result}

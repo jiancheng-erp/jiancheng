@@ -4,7 +4,9 @@ from html import entities
 import os
 import shutil
 from app_config import db
+from constants import BOM_STATUS, BOM_STATUS_TO_INT
 from flask import Blueprint, jsonify, request, current_app
+from sqlalchemy import func
 from models import *
 from event_processor import EventProcessor
 from general_document.bom import generate_excel_file
@@ -816,3 +818,99 @@ def are_material_models_similar(model1, model2):
         return True
 
     return False  # If no clear similarity pattern found
+
+
+@usage_calculation_bp.route(
+    "/usagecalculation/getallbomitems", methods=["GET"]
+)
+def get_all_bom_items():
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+    order_rid = request.args.get("orderRId")
+    shoe_rid = request.args.get("shoeRId")
+    material_name = request.args.get("materialName")
+    material_model = request.args.get("materialModel")
+    material_specification = request.args.get("materialSpecification")
+    material_color = request.args.get("materialColor")
+    supplier_name = request.args.get("supplierName")
+    status = request.args.get("status")
+
+    order_amount_query = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_amount"),
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(OrderShoeBatchInfo, OrderShoeType.order_shoe_type_id == OrderShoeBatchInfo.order_shoe_type_id)
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    query = (
+        db.session.query(BomItem, Bom, Order, Shoe, Material, Supplier, order_amount_query.c.total_amount)
+        .join(
+            Bom, BomItem.bom_id == Bom.bom_id
+        )
+        .join(
+            OrderShoeType,
+            Bom.order_shoe_type_id
+            == OrderShoeType.order_shoe_type_id,
+        )
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(Order, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(order_amount_query, Order.order_id == order_amount_query.c.order_id)
+        .filter(Bom.bom_type == 0)
+        .order_by(Order.order_rid)
+    )
+
+    if order_rid:
+        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+    if shoe_rid:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if material_name:
+        query = query.filter(Material.material_name.ilike(f"%{material_name}%"))
+    if material_model:
+        query = query.filter(
+            BomItem.material_model.ilike(f"%{material_model}%")
+        )
+    if material_specification:
+        query = query.filter(
+            BomItem.material_specification.ilike(
+                f"%{material_specification}%"
+            )
+        )
+    if material_color:
+        query = query.filter(BomItem.bom_item_color.ilike(f"%{material_color}%"))
+    if supplier_name:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+    if status:
+        query = query.filter(Bom.bom_status == BOM_STATUS_TO_INT.get(status, 1))
+
+    # Pagination
+    count_result = query.distinct().count()
+    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
+
+    result = []
+    for row in response:
+        item, bom, order, shoe, material, supplier, order_amount = row
+        obj = {
+            "orderRId": order.order_rid,
+            "shoeRId": shoe.shoe_rid,
+            "materialName": material.material_name,
+            "materialModel": item.material_model,
+            "materialSpecification": item.material_specification,
+            "materialColor": item.bom_item_color,
+            "supplierName": supplier.supplier_name,
+            "bomRId": bom.bom_rid,
+            "bomStatus": BOM_STATUS.get(bom.bom_status, "未填写"),
+            "orderAmount": order_amount,
+            "unitUsage": item.unit_usage,
+            "totalUsage": item.total_usage,
+            "materialUnit": material.material_unit,
+        }
+        result.append(obj)
+    return {"result": result, "totalLength": count_result}

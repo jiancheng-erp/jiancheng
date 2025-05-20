@@ -22,7 +22,7 @@
                 <el-col :span="6">
                     <span>材料单价：</span>
                     <el-input-number v-model="unitPrice" style="width: 200px;" :min="0"
-                        :precision="3" :step="0.001" size="small"></el-input-number>
+                        :precision="4" :step="0.0001" size="small"></el-input-number>
                 </el-col>
                 <el-col :span="12">
                     <span style="margin-right: 50px;">订单入库数量：{{ selectedInboundQuantity }}</span>
@@ -275,7 +275,7 @@ export default {
                 return
             }
             for (let i = 0; i < this.topTableData.length; i++) {
-                let formatItemTotalPrice = new Decimal(this.topTableData[i].inboundQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
+                let formatItemTotalPrice = new Decimal(this.topTableData[i].inboundQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(4).toNumber()
                 let formatInboundQuantity = new Decimal(this.topTableData[i].inboundQuantity).toDecimalPlaces(5).toNumber()
                 this.topTableData[i] = {
                     ...this.topTableData[i],
@@ -287,7 +287,7 @@ export default {
                 console.log(this.topTableData[i])
             }
             let remainTotalQuantity = new Decimal(this.totalInboundQuantity).minus(new Decimal(this.selectedInboundQuantity)).toDecimalPlaces(5).toNumber()
-            let remainTotalPrice = new Decimal(remainTotalQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(3).toNumber()
+            let remainTotalPrice = new Decimal(remainTotalQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(4).toNumber()
             if (remainTotalQuantity > 0) {
                 this.topTableData.push({
                     orderRId: null,

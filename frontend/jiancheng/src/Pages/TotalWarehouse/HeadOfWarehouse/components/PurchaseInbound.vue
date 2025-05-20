@@ -125,13 +125,13 @@
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.unitPrice" type="amount" :min="0" :step="0.001" :digits="3"
+                        <vxe-number-input v-model="row.unitPrice" type="amount" :min="0" :step="0.0001" :digits="4"
                             :disabled="inboundForm.inboundType == 1" @blur="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="itemTotalPrice" title="采购金额" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
-                        <vxe-number-input v-model="row.itemTotalPrice" type="amount" :min="0" :step="0.001" :digits="3"
+                        <vxe-number-input v-model="row.itemTotalPrice" type="amount" :min="0" :step="0.0001" :digits="4"
                             :disabled="inboundForm.inboundType == 1"></vxe-number-input>
                     </template>
                 </vxe-column>
@@ -426,7 +426,7 @@ export default {
             const total = this.previewData.reduce((total, item) => {
                 return total + (Number(item.itemTotalPrice) || 0);
             }, 0);
-            return Number(total).toFixed(3);
+            return Number(total).toFixed(4);
         },
         filteredShoeSizeColumns() {
             return this.shoeSizeColumns.filter(column =>
@@ -615,7 +615,7 @@ export default {
                 total += Number(row[this.shoeSizeColumns[i].prop])
             }
             row.inboundQuantity = total
-            row.itemTotalPrice = (total * row.unitPrice).toFixed(3)
+            row.itemTotalPrice = (total * row.unitPrice).toFixed(4)
         },
         determineInboundName(type) {
             if (type == 0) {
@@ -744,7 +744,7 @@ export default {
                     selectedMaterial["amount" + j] = estimatedInboundAmount - actualInboundAmount
                 }
                 selectedMaterial.inboundQuantity = selectedMaterial.estimatedInboundAmount - selectedMaterial.actualInboundAmount
-                selectedMaterial.itemTotalPrice = (selectedMaterial.inboundQuantity * selectedMaterial.unitPrice).toFixed(3)
+                selectedMaterial.itemTotalPrice = (selectedMaterial.inboundQuantity * selectedMaterial.unitPrice).toFixed(4)
                 this.materialTableData.push(selectedMaterial)
             }
 
