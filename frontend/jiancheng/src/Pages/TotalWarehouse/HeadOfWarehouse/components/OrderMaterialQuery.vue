@@ -7,10 +7,9 @@
             <el-tab-pane label="采购材料查询" lazy>
                 <PurchaseOrderInfo></PurchaseOrderInfo>
             </el-tab-pane>
-            <!-- TODO
             <el-tab-pane label="订单状态查询" lazy>
-                <LogisticInfo></LogisticInfo>
-            </el-tab-pane> -->
+                <GeneralOrderSearch></GeneralOrderSearch>
+            </el-tab-pane>
         </el-tabs>
 
     </el-dialog>
@@ -19,11 +18,13 @@
 import PurchaseOrderInfo from './PurchaseOrderInfo.vue';
 import LogisticInfo from '@/Pages/ProductionManagementDepartment/ProductionManagementDepartmentGeneral/components/LogisticInfo.vue';
 import BOMInfo from './BOMInfo.vue';
+import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue';
 export default {
     components: {
         LogisticInfo,
         BOMInfo,
-        PurchaseOrderInfo
+        PurchaseOrderInfo,
+        GeneralOrderSearch
     },
     props: {
         visible: {
