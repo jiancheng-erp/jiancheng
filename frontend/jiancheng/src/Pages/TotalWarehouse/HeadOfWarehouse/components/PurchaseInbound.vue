@@ -61,12 +61,12 @@
                     enterMethod: customeEnterMethod,
                 }" :mouse-config="{ selected: true }" 
                 @keydown="handleKeydown"
-                show-overflow>
+                show-overflow
+                height="500">
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
-                        <el-select v-model="scope.row.orderRId" :disabled="scope.row.disableEdit"
-                            @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
+                        <el-select v-model="scope.row.orderRId" @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
                             <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
@@ -82,8 +82,7 @@
                         <span>{{ row.materialName }}</span>
                     </template>
                     <template #edit="scope">
-                        <el-select v-model="scope.row.materialName" :disabled="scope.row.disableEdit"
-                            @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
+                        <el-select v-model="scope.row.materialName" @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
                             <el-option v-for="item in filteredMaterialNameOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
                         </el-select>
@@ -101,8 +100,7 @@
                 </vxe-column>
                 <vxe-column field="materialColor" title="颜色" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.materialColor" clearable
-                            :disabled="scope.row.disableEdit"></vxe-input>
+                        <vxe-input v-model="scope.row.materialColor" clearable></vxe-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="actualInboundUnit" title="计量单位" :edit-render="{ autoFocus: true }" width="120">
@@ -110,8 +108,7 @@
                         <span>{{ row.actualInboundUnit }}</span>
                     </template>
                     <template #edit="scope">
-                        <el-select v-model="scope.row.actualInboundUnit" filterable clearable
-                            :disabled="scope.row.disableEdit">
+                        <el-select v-model="scope.row.actualInboundUnit" filterable clearable>
                             <el-option v-for="item in unitOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
                         </el-select>
@@ -330,7 +327,6 @@ export default {
                 materialCraftName: '',
                 inboundQuantity: 0,
                 unitPrice: 0,
-                disableEdit: false,
                 inboundModel: '',
                 inboundSpecification: '',
                 orderRId: null,

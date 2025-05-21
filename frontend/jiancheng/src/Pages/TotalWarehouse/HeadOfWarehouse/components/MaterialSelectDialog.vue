@@ -279,7 +279,6 @@ export default {
                 let formatInboundQuantity = new Decimal(this.topTableData[i].inboundQuantity).toDecimalPlaces(5).toNumber()
                 this.topTableData[i] = {
                     ...this.topTableData[i],
-                    disableEdit: true,
                     unitPrice: this.unitPrice,
                     inboundQuantity: formatInboundQuantity,
                     itemTotalPrice: formatItemTotalPrice,
@@ -294,7 +293,6 @@ export default {
                     shoeRId: null,
                     inboundQuantity: remainTotalQuantity,
                     ...this.materialSelection[0],
-                    disableEdit: true,
                     unitPrice: this.unitPrice,
                     itemTotalPrice: remainTotalPrice,
                     inboundModel: this.materialSelection[0].materialModel,
