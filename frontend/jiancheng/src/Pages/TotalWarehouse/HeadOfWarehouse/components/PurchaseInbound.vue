@@ -123,7 +123,7 @@
                 <vxe-column field="inboundQuantity" title="入库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.inboundQuantity" :digits="3" :step="0.001" :min="0"
-                            @blur="updateTotalPrice(row)" :disabled="row.materialName === '大底'"></vxe-number-input>
+                            @blur="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
