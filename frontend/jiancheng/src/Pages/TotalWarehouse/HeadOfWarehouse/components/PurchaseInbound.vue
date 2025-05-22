@@ -6,6 +6,12 @@
             <el-button type="danger" @click="deleteRows">批量删除</el-button>
             <el-button type="success" @click="confirmAndProceed">确认入库</el-button>
             <el-button type="primary" @click="openOrderMaterialQuery">订单材料查询</el-button>
+            <el-button type="warning" @click="loadReject">加载驳回入库单</el-button>
+            <el-input v-if="inboundForm.inboundRecordId" v-model="inboundForm.inboundRId" disabled style="width:250px">
+                <template #append>
+                    <el-button @click="clearRejectRecord">取消编辑</el-button>
+                </template>
+            </el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -201,11 +207,11 @@
                                     <td style="padding:5px; width: 150px;" align="left">仓库名称:{{
                                         previewInboundForm.warehouseName }}</td>
                                     <td style="padding:5px; width: 300px;" align="left">入库时间:{{
-                                        previewInboundForm.currentDateTime }}
+                                        previewInboundForm.timestamp }}
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -267,18 +273,31 @@
         </div>
         <template #footer>
             <el-button type="primary" v-print="'#printView'">打印</el-button>
-            <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业入库单${inboundForm.inboundRId}`, `printView`)">下载PDF</el-button>
-            <el-button v-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
+            <!-- <el-button type="primary"
+                @click="downloadPDF(`健诚鞋业入库单${inboundForm.inboundRId}`, `printView`)">下载PDF</el-button> -->
+            <el-button v-if="isInbounded == 0 && inboundForm.inboundRecordId" type="primary"
+                @click="submitInboundForm">确认修改</el-button>
+            <el-button v-else-if="isInbounded == 0" type="primary" @click="submitInboundForm">入库</el-button>
         </template>
     </el-dialog>
     <OrderMaterialQuery :visible="isOrderMaterialQueryVis" @update-visible="updateOrderMaterialQueryVis" />
     <el-dialog :title="`${currentRow.orderRId}材料数量信息`" v-model="isMaterialLogisticVis" fullscreen destroy-on-close>
-        <OrderStatusPage :order-info="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
-        <OrderMaterialsPage :current-row="{'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId}" />
+        <OrderStatusPage :order-info="{ 'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId }" />
+        <OrderMaterialsPage :current-row="{ 'orderRId': currentRow.orderRId, 'shoeRId': currentRow.shoeRId }" />
         <template #footer>
             <span>
                 <el-button type="primary" @click="isMaterialLogisticVis = false">返回</el-button>
+            </span>
+        </template>
+    </el-dialog>
+
+    <el-dialog title="选择入库单" v-model="rejectedPage" fullscreen destroy-on-close>
+        <InboundRecords :material-supplier-options="materialSupplierOptions" :warehouse-options="warehouseOptions"
+            :load-reject="true" @update-selected-row="onUpdateSelectedRow" />
+        <template #footer>
+            <span>
+                <el-button type="primary" @click="rejectedPage = false">返回</el-button>
+                <el-button type="primary" @click="loadRejectRecord">确认</el-button>
             </span>
         </template>
     </el-dialog>
@@ -292,8 +311,9 @@ import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
 import OrderMaterialQuery from './OrderMaterialQuery.vue';
 import OrderMaterialsPage from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderMaterialsPage.vue';
-import { debounce } from 'lodash';
+import { debounce, reject } from 'lodash';
 import OrderStatusPage from './OrderStatusPage.vue';
+import InboundRecords from './InboundRecords.vue';
 import XEUtils from 'xe-utils'
 export default {
     components: {
@@ -301,7 +321,8 @@ export default {
         MaterialSelectDialog,
         OrderMaterialQuery,
         OrderMaterialsPage,
-        OrderStatusPage
+        OrderStatusPage,
+        InboundRecords
     },
     data() {
         return {
@@ -380,6 +401,10 @@ export default {
             activeOrderShoes: [],
             isMaterialLogisticVis: false,
             currentRow: {},
+            rejectedPage: false,
+            rejectedRecordId: null,
+            rejectRecordData: [],
+            warehouseOptions: [],
         }
     },
     // beforeUnmount() {
@@ -388,6 +413,7 @@ export default {
     async mounted() {
         // window.addEventListener('keydown', this.handleKeydown)
         this.getMaterialNameOptions()
+        this.getWarehouseOptions()
         this.loadLocalStorageData()
         this.getMaterialTypeOptions();
         this.getMaterialSupplierOptions();
@@ -434,6 +460,44 @@ export default {
         },
     },
     methods: {
+        clearRejectRecord() {
+            this.rejectedRecordId = null
+            this.inboundForm = { ...this.inboundFormTemplate }
+            this.materialTableData = []
+            this.shoeSizeColumns = []
+        },
+        onUpdateSelectedRow(selectedRow) {
+            this.rejectedRecordId = selectedRow
+        },
+        async loadRejectRecord() {
+            try {
+                let params = { "inboundRecordId": this.rejectedRecordId }
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbyid`, { params })
+                console.log(response.data)
+                this.inboundForm = response.data.metadata
+                this.materialTableData = response.data.items
+                let firstItem = response.data.items[0]
+                let sizeColumns = []
+                for (let i = 0; i < firstItem.shoeSizeColumns.length; i++) {
+                    let obj = { "label": firstItem.shoeSizeColumns[i], "prop": `amount${i}` }
+                    sizeColumns.push(obj)
+                }
+                this.shoeSizeColumns = sizeColumns
+            }
+            catch (error) {
+                console.log(error)
+                ElMessage.error('获取入库单详情失败')
+            }
+            this.rejectedPage = false
+            console.log(this.rejectedRecordId)
+        },
+        async getWarehouseOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allwarehousenames`)
+            this.warehouseOptions = response.data
+        },
+        loadReject() {
+            this.rejectedPage = true
+        },
         handleKeydown($event) {
             let activeCell = this.$refs.tableRef.getEditRecord()
             if ($event.key === 'F4' && activeCell && activeCell.row) {
@@ -766,6 +830,7 @@ export default {
                 }
             }
             const params = {
+                inboundRecordId: this.inboundForm.inboundRecordId,
                 inboundType: this.inboundForm.inboundType,
                 supplierName: this.inboundForm.supplierName,
                 warehouseId: this.inboundForm.warehouseId,
@@ -776,8 +841,14 @@ export default {
                 materialTypeId: this.inboundForm.materialTypeId,
             }
             try {
-                const response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
-                this.previewInboundForm.currentDateTime = response.data.inboundTime
+                let response = null
+                if (this.inboundForm.inboundRecordId) {
+                    response = await axios.put(`${this.$apiBaseUrl}/warehouse/updateinboundrecord`, params)
+                }
+                else {
+                    response = await axios.post(`${this.$apiBaseUrl}/warehouse/inboundmaterial`, params)
+                }
+                this.previewInboundForm.timestamp = response.data.inboundTime
                 this.previewInboundForm.inboundRId = response.data.inboundRId
                 this.isInbounded = 1
                 ElMessage.success('入库成功')
