@@ -65,14 +65,12 @@
                     isEsc: true,
                     editMode: 'insert',
                     enterMethod: customeEnterMethod,
-                }" :mouse-config="{ selected: true }" 
-                @keydown="handleKeydown"
-                show-overflow
-                height="500">
+                }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow height="500">
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
-                        <el-select v-model="scope.row.orderRId" @change="handleOrderRIdSelect(scope.row, $event)" filterable clearable>
+                        <el-select v-model="scope.row.orderRId" @change="handleOrderRIdSelect(scope.row, $event)"
+                            filterable clearable>
                             <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
                                 :label="item.orderRId"></el-option>
                         </el-select>
@@ -88,17 +86,21 @@
                         <span>{{ row.materialName }}</span>
                     </template>
                     <template #edit="scope">
-                        <el-select v-model="scope.row.materialName" @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
+                        <el-select v-model="scope.row.materialName"
+                            @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
                             <el-option v-for="item in filteredMaterialNameOptions" :key="item.value" :value="item.value"
                                 :label="item.label"></el-option>
                         </el-select>
                     </template>
                 </vxe-column>
-                <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
+                <vxe-column field="inboundModel" title="材料型号" :edit-render="inboundModelRender" width="150">
+
+                </vxe-column>
+                <!-- <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
                     <template #edit="scope">
                         <vxe-input v-model="scope.row.inboundModel" clearable></vxe-input>
                     </template>
-                </vxe-column>
+                </vxe-column> -->
                 <vxe-column field="inboundSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
                     <template #edit="scope">
                         <vxe-input v-model="scope.row.inboundSpecification" clearable></vxe-input>
@@ -211,7 +213,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                        }}</td>
+                                    }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -405,6 +407,23 @@ export default {
             rejectedRecordId: null,
             rejectRecordData: [],
             warehouseOptions: [],
+            inboundModelRender: {
+                name: 'ElAutocomplete',
+                props: {
+                    fetchSuggestions: async function (queryString, cb) {
+                        let params = {
+                            materialModel: queryString,
+                        }
+                        const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialmodels`, { params });
+                        cb(response.data);
+                    }.bind(this)
+                },
+                events: {
+                    change: function (row, selected) {
+                        row.inboundModel = selected;
+                    }
+                }
+            }
         }
     },
     // beforeUnmount() {
