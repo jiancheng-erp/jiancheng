@@ -132,7 +132,7 @@ def get_all_material_info():
             Material.material_category,
             Supplier.supplier_name,
             MaterialStorage.material_storage_color,
-            cast(literal("{}"), JSON).label("shoe_size_columns"),
+            cast(literal("[]"), JSON).label("shoe_size_columns"),
         )
         .join(
             Material, Material.material_id == MaterialStorage.actual_inbound_material_id
@@ -1332,7 +1332,7 @@ def get_inbound_record_by_id():
                 MaterialStorage.inbound_specification,
                 MaterialStorage.material_storage_color,
                 MaterialStorage.actual_inbound_unit,
-                literal(None).label("shoe_size_columns"),
+                cast(literal("[]"), JSON).label("shoe_size_columns"),
                 Material,
                 MaterialType,
                 MaterialWarehouse,
@@ -1606,7 +1606,7 @@ def get_outbound_record_by_record_id():
             MaterialStorage.inbound_specification,
             MaterialStorage.material_storage_color,
             MaterialStorage.actual_inbound_unit,
-            cast(literal("{}"), JSON).label("shoe_size_columns"),
+            cast(literal("[]"), JSON).label("shoe_size_columns"),
             Material.material_name,
             Order,
             Shoe,
@@ -2213,3 +2213,27 @@ def delete_inbound_record():
     db.session.delete(inbound_record)
     db.session.commit()
     return jsonify({"message": "success"})
+
+
+
+@material_storage_bp.route("/warehouse/getallmaterialmodels", methods=["GET"])
+def get_all_material_models():
+    material_model = request.args.get("materialModel")
+    if not material_model or material_model == "":
+        return jsonify([])
+    # get all material models from material storage
+    material_models = (
+        db.session.query(
+            MaterialStorage.material_model,
+        )
+        .filter(MaterialStorage.material_model.ilike(f"%{material_model}%"))
+        .distinct()
+    )
+    result = []
+    for model in material_models:
+        obj = {
+            "value": model[0],
+            "name": model[0]
+        }
+        result.append(obj)
+    return jsonify(result)
