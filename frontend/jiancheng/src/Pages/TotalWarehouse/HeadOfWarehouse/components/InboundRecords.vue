@@ -16,7 +16,7 @@
             <el-input v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-            <el-select v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable
+            <el-select v-if="loadReject == false" v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable
                 style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
                 <el-option label="待审核" :value="0"></el-option>
@@ -28,6 +28,13 @@
     <el-row :gutter="20">
         <el-col :span="24">
             <el-table :data="tableData" border height="600" stripe>
+                <el-table-column v-if="loadReject" width="55">
+                    <template #default="scope">
+                        <el-radio v-model="selectedRow" :label="scope.row.inboundRecordId"
+                            @change="() => handleRowClick(scope.row.inboundRecordId)">
+                        </el-radio>
+                    </template>
+                </el-table-column>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="warehouseName" label="仓库名称">
@@ -44,8 +51,8 @@
                                 @click="handleApproval(scope.row)">批准</el-button>
                             <el-button v-if="role == 24 && scope.row.approvalStatus === 0" type="warning"
                                 @click="openRejectDialog(scope.row)">驳回</el-button>
-                            <el-button v-if="role == 23 && scope.row.approvalStatus === 2" type="warning"
-                                @click="handleEdit(scope.row)">编辑</el-button>
+                            <!-- <el-button v-if="role == 23 && scope.row.approvalStatus === 2" type="warning"
+                                @click="handleEdit(scope.row)">编辑</el-button> -->
                             <el-button v-if="role == 24 && scope.row.approvalStatus !== 1" type="danger"
                                 @click="handleDelete(scope.row)">删除</el-button>
                         </el-button-group>
@@ -55,7 +62,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="10">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="total" />
@@ -166,14 +173,6 @@
         </template>
     </el-dialog>
 
-    <el-dialog title="修改入库单" v-model="editDialogVisible" fullscreen destroy-on-close>
-        <EditInboundRecord :inputInboundForm="inboundForm" @update-inbound-form="updateInboundForm" />
-        <template #footer>
-            <el-button type="primary" @click="editDialogVisible = false">返回</el-button>
-            <el-button type="primary" @click="updateInboundRecord">提交</el-button>
-        </template>
-    </el-dialog>
-
     <el-dialog title="驳回确认" v-model="rejectDialogVisible" width="40%">
         <!-- Textarea with character limit -->
         <el-input type="textarea" v-model="rejectText" :maxlength="255" show-word-limit>
@@ -186,16 +185,10 @@
 </template>
 <script>
 import axios from 'axios'
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
-import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
-import Decimal from 'decimal.js';
-import EditInboundRecord from './EditInboundRecord.vue';
 export default {
-    components: {
-        EditInboundRecord
-    },
     directives: {
         print
     },
@@ -208,7 +201,12 @@ export default {
             type: Array,
             required: true
         },
+        loadReject: {
+            type: Boolean,
+            default: false
+        }
     },
+    emits: ['update-selected-row'],
     data() {
         return {
             role: localStorage.getItem('role'),
@@ -240,50 +238,21 @@ export default {
             inboundRIdSearch: null,
             supplierNameSearch: null,
             warehouseNameSearch: null,
-            editDialogVisible: false,
             materialNameOptions: [],
             unitOptions: [],
             rejectDialogVisible: false,
             rejectText: '',
-            statusSearch: 0,
-            inboundForm: {
-                inboundRId: '',
-                supplierName: '',
-                warehouseName: '',
-                payMethod: '',
-                remark: '',
-                items: []
-            },
+            statusSearch: this.loadReject ? 2 : 0,
+            selectedRow: null,
         }
     },
     mounted() {
         this.getInboundRecordsTable()
     },
     methods: {
-        updateTotalShoes(row) {
-            console.log(row)
-            let total = new Decimal(0)
-            for (let i = 0; i < this.recordData.shoeSizeColumns.length; i++) {
-                if (row[this.recordData.shoeSizeColumns[i].prop] === undefined) {
-                    row[this.recordData.shoeSizeColumns[i].prop] = 0
-                }
-                total = total.plus(new Decimal(row[this.recordData.shoeSizeColumns[i].prop]))
-            }
-            row.inboundQuantity = total.toDecimalPlaces(3).toNumber()
-            row.itemTotalPrice = (total.times(row.unitPrice)).toDecimalPlaces(4).toNumber()
-        },
-        querySuppliers(queryString, callback) {
-            const results = this.materialSupplierOptions
-                .filter((item) => item.toLowerCase().includes(queryString.toLowerCase()))
-                .map((item) => ({ value: item }));
-
-            callback(results);
-        },
-        handleSupplierSelect(item) {
-            this.currentRow.newSupplierName = item.value;
-        },
-        updateTotalPrice(row) {
-            row.itemTotalPrice = updateTotalPriceHelper(row)
+        handleRowClick(row) {
+            this.selectedRow = row
+            this.$emit('update-selected-row', row)
         },
         calculateInboundTotal() {
             // Calculate the total inbound quantity
@@ -340,7 +309,7 @@ export default {
         async fetchRecordDetailByApi(row) {
             try {
                 let params = { "inboundRecordId": row.inboundRecordId, "isSizedMaterial": row.isSizedMaterial }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbybatchid`, { params })
+                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getinboundrecordbyid`, { params })
                 return response.data
             }
             catch (error) {
@@ -350,7 +319,7 @@ export default {
         },
         async getInboundRecordDetail(row) {
             const data = await this.fetchRecordDetailByApi(row)
-            this.recordData["items"] = data
+            this.recordData["items"] = data.items
             // if the material name is "大底", then get the shoe size columns
             if (this.recordData["items"].length > 0 && this.recordData["items"][0].materialName === '大底') {
                 let sizeColumns = []
@@ -368,29 +337,6 @@ export default {
             this.currentRow = row
             await this.getInboundRecordDetail(row)
             this.dialogVisible = true
-        },
-        updateInboundForm(newForm) {
-            this.inboundForm = newForm
-        },
-        async handleEdit(row) {
-            if (row.inboundType != 0) {
-                ElMessage.error('只能编辑采购入库单')
-                return
-            }
-            this.currentRow = row
-            this.inboundForm = {
-                "inboundRId": row.inboundRId,
-                "supplierName": row.supplierName,
-                "warehouseId": row.warehouseId,
-                "warehouseName": row.warehouseName,
-                "inboundType": row.inboundType,
-                "payMethod": row.payMethod,
-                "remark": row.remark,
-                "items": []
-            }
-            this.inboundForm.items = await this.fetchRecordDetailByApi(row)
-            this.inboundForm["materialTypeId"] = this.inboundForm.items[0].materialTypeId
-            this.editDialogVisible = true
         },
         async handleApproval(row) {
             this.$confirm('是否批准该入库单？', '提示', {
@@ -416,45 +362,6 @@ export default {
             }).catch(() => {
                 ElMessage.info('已取消批准')
             })
-        },
-        async updateInboundRecord() {
-            ElMessageBox.confirm('是否提交修改？', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning'
-            }).then(async () => {
-                try {
-                    console.log(this.inboundForm)
-                    let params = {
-                        inboundRecordId: this.currentRow.inboundRecordId,
-                        inboundType: this.inboundForm.inboundType,
-                        supplierName: this.inboundForm.supplierName,
-                        warehouseId: this.inboundForm.warehouseId,
-                        remark: this.inboundForm.remark,
-                        batchInfoTypeId: this.inboundForm.shoeSize,
-                        payMethod: this.inboundForm.payMethod,
-                        materialTypeId: this.inboundForm.materialTypeId,
-                        isSizedMaterial: this.inboundForm.isSizedMaterial,
-                        items: this.inboundForm.items
-                    }
-                    await axios.put(`${this.$apiBaseUrl}/warehouse/updateinboundrecord`, params)
-                    ElMessage.success('修改成功')
-                    this.editDialogVisible = false
-                    this.getInboundRecordsTable()
-                } catch (error) {
-                    if (error.response) {
-                        // Flask returns error in JSON format
-                        this.errorMessage = error.response.data.message || "An error occurred";
-                    } else {
-                        this.errorMessage = "服务器异常";
-                    }
-                    ElMessage.error(this.errorMessage)
-                    console.error("API Error:", error);
-                }
-            }).catch(() => {
-                ElMessage.info('已取消修改')
-            })
-
         },
         openRejectDialog(row) {
             this.currentRow = row
@@ -486,9 +393,6 @@ export default {
             }).catch(() => {
                 ElMessage.info('已取消驳回')
             })
-        },
-        markDelete(row, newVal) {
-            row.toDelete = newVal
         },
         handleDelete(row) {
             this.$confirm('是否删除该入库单？', '提示', {
