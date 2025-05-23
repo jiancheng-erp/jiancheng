@@ -29,148 +29,55 @@ def _update_financial_record(supplier_name, total_price, inbound_record_id):
         abort(Response(error_message, 400))
 
 
-def update_average_price(storage_id_list, type=0):
-    if type == 0:
-        inbound_subq = (
-            db.session.query(
-                InboundRecordDetail.material_storage_id,
-                func.sum(InboundRecordDetail.item_total_price).label(
-                    "in_total_price"
-                ),
-                func.sum(InboundRecordDetail.inbound_amount).label("in_amount"),
-            )
-            .join(
-                InboundRecord,
-                InboundRecordDetail.inbound_record_id
-                == InboundRecord.inbound_record_id,
-            )
-            .filter(
-                InboundRecord.approval_status == 1,
-                InboundRecordDetail.material_storage_id.in_(
-                    storage[0] for storage in storage_id_list
-                ),
-            )
-            .group_by(
-                InboundRecordDetail.material_storage_id,
-            )
-            .subquery()
-        )
+def _update_average_price(inbound_record):
+    inbound_record_id = inbound_record.inbound_record_id
+    storage_id_list = (
+        db.session.query(InboundRecordDetail.material_storage_id)
+        .filter(InboundRecordDetail.inbound_record_id == inbound_record_id)
+        .all()
+    )
 
-        outbound_subq = (
-            db.session.query(
-                OutboundRecordDetail.material_storage_id,
-                func.sum(OutboundRecordDetail.item_total_price).label("out_total_price"),
-                func.sum(OutboundRecordDetail.outbound_amount).label("out_amount"),
-            )
-            .join(OutboundRecord, OutboundRecordDetail.outbound_record_id == OutboundRecord.outbound_record_id)
-            .filter(
-                OutboundRecord.approval_status == 1,
-                OutboundRecordDetail.material_storage_id.in_(
-                    storage[0] for storage in storage_id_list
-                ),
-            )
-            .group_by(OutboundRecordDetail.material_storage_id)
-            .subquery()
+    total_query = (
+        db.session.query(
+            InboundRecordDetail.material_storage_id,
+            func.sum(InboundRecordDetail.item_total_price).label(
+                "item_total_price"
+            ),
+            func.sum(InboundRecordDetail.inbound_amount).label("inbound_amount"),
         )
-
-        final_query = (
-            db.session.query(
-                inbound_subq.c.material_storage_id,
-                (inbound_subq.c.in_total_price - func.coalesce(outbound_subq.c.out_total_price, 0)).label("net_total_price"),
-                (inbound_subq.c.in_amount - func.coalesce(outbound_subq.c.out_amount, 0)).label("net_total_amount"),
-                (
-                    (inbound_subq.c.in_total_price - func.coalesce(outbound_subq.c.out_total_price, 0)) /
-                    func.nullif((inbound_subq.c.in_amount - func.coalesce(outbound_subq.c.out_amount, 0)), 0)
-                ).label("average_unit_price")
-            )
-            .outerjoin(outbound_subq, inbound_subq.c.material_storage_id == outbound_subq.c.material_storage_id)
-            .subquery()
+        .join(
+            InboundRecord,
+            InboundRecordDetail.inbound_record_id
+            == InboundRecord.inbound_record_id,
         )
-        avg_prices = (
-            db.session.query(
-                MaterialStorage,
-                final_query.c.average_unit_price,
-            )
-            .join(
-                final_query,
-                MaterialStorage.material_storage_id
-                == final_query.c.material_storage_id,
-            )
-            .all()
+        .filter(
+            InboundRecord.approval_status == 1,
+            InboundRecordDetail.material_storage_id.in_(
+                storage[0] for storage in storage_id_list
+            ),
         )
-        for material_storage, avg_price in avg_prices:
-            material_storage.average_price = avg_price
-
-    # update average price of size material
-    else:
-        inbound_subq = (
-            db.session.query(
-                InboundRecordDetail.size_material_storage_id,
-                func.sum(InboundRecordDetail.item_total_price).label(
-                    "in_total_price"
-                ),
-                func.sum(InboundRecordDetail.inbound_amount).label("in_amount"),
-            )
-            .join(
-                InboundRecord,
-                InboundRecordDetail.inbound_record_id
-                == InboundRecord.inbound_record_id,
-            )
-            .filter(
-                InboundRecord.approval_status == 1,
-                InboundRecordDetail.size_material_storage_id.in_(
-                    storage[0] for storage in storage_id_list
-                ),
-            )
-            .group_by(
-                InboundRecordDetail.size_material_storage_id,
-            )
-            .subquery()
+        .group_by(
+            InboundRecordDetail.material_storage_id,
         )
-        outbound_subq = (
-            db.session.query(
-                OutboundRecordDetail.size_material_storage_id,
-                func.sum(OutboundRecordDetail.item_total_price).label("out_total_price"),
-                func.sum(OutboundRecordDetail.outbound_amount).label("out_amount"),
-            )
-            .join(OutboundRecord, OutboundRecordDetail.outbound_record_id == OutboundRecord.outbound_record_id)
-            .filter(
-                OutboundRecord.approval_status == 1,
-                OutboundRecordDetail.size_material_storage_id.in_(
-                    storage[0] for storage in storage_id_list
-                ),
-            )
-            .group_by(OutboundRecordDetail.size_material_storage_id)
-            .subquery()
+        .subquery()
+    )
+    avg_prices = (
+        db.session.query(
+            MaterialStorage,
+            func.coalesce(
+                total_query.c.item_total_price / total_query.c.inbound_amount,
+                0,
+            ),
         )
-
-        final_query = (
-            db.session.query(
-                inbound_subq.c.size_material_storage_id,
-                (inbound_subq.c.in_total_price - func.coalesce(outbound_subq.c.out_total_price, 0)).label("net_total_price"),
-                (inbound_subq.c.in_amount - func.coalesce(outbound_subq.c.out_amount, 0)).label("net_total_amount"),
-                (
-                    (inbound_subq.c.in_total_price - func.coalesce(outbound_subq.c.out_total_price, 0)) /
-                    func.nullif((inbound_subq.c.in_amount - func.coalesce(outbound_subq.c.out_amount, 0)), 0)
-                ).label("average_unit_price")
-            )
-            .outerjoin(outbound_subq, inbound_subq.c.size_material_storage_id == outbound_subq.c.size_material_storage_id)
-            .subquery()
+        .join(
+            total_query,
+            MaterialStorage.material_storage_id
+            == total_query.c.material_storage_id,
         )
-        avg_prices = (
-            db.session.query(
-                SizeMaterialStorage,
-                final_query.c.average_unit_price,
-            )
-            .join(
-                final_query,
-                SizeMaterialStorage.size_material_storage_id
-                == final_query.c.size_material_storage_id,
-            )
-            .all()
-        )
-        for material_storage, avg_price in avg_prices:
-            material_storage.average_price = avg_price
+        .all()
+    )
+    for material_storage, avg_price in avg_prices:
+        material_storage.average_price = avg_price
 
 
 @audit_material_inbound_bp.route("/accounting/approveinboundrecord", methods=["PATCH"])
