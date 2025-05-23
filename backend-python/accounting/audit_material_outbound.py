@@ -49,20 +49,12 @@ def approve_outbound_record():
     
     if outbound_record.outbound_type == 4:  # 如果是材料退回
         _update_financial_record(supplier_name, total_price, outbound_record_id)
-        if outbound_record.is_sized_material == 0:
-            storage_id_list = (
-                db.session.query(OutboundRecordDetail.material_storage_id)
-                .filter(OutboundRecordDetail.outbound_record_id == outbound_record_id)
-                .all()
-            )
-            update_average_price(storage_id_list, type=0)
-        else:
-            storage_id_list = (
-                db.session.query(OutboundRecordDetail.size_material_storage_id)
-                .filter(OutboundRecordDetail.outbound_record_id == outbound_record_id)
-                .all()
-            )
-            update_average_price(storage_id_list, type=1)
+        storage_id_list = (
+            db.session.query(OutboundRecordDetail.material_storage_id)
+            .filter(OutboundRecordDetail.outbound_record_id == outbound_record_id)
+            .all()
+        )
+        update_average_price(storage_id_list, type=0)
 
     db.session.commit()
     return jsonify({"message": "success"})

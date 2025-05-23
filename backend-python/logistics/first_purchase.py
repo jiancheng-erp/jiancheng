@@ -541,7 +541,7 @@ def save_purchase():
             if items[0]["materialCategory"] == 0:
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
-                purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
+                # purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
             else:
                 material_quantity = 0
                 approval_quantity = 0
@@ -554,11 +554,11 @@ def save_purchase():
                         f"size_{name}_purchase_amount",
                         item["sizeInfo"][i]["purchaseAmount"],
                     )
-                    setattr(
-                        purchase_order_item,
-                        f"size_{name}_estimated_amount",
-                        item["sizeInfo"][i]["purchaseAmount"],
-                    )
+                    # setattr(
+                    #     purchase_order_item,
+                    #     f"size_{name}_estimated_amount",
+                    #     item["sizeInfo"][i]["purchaseAmount"],
+                    # )
                 setattr(purchase_order_item, "purchase_amount", material_quantity)
                 setattr(purchase_order_item, "approval_amount", approval_quantity)
 
@@ -765,18 +765,18 @@ def edit_purchase_items():
         )
         purchase_order_item, material = entities
         purchase_order_item.purchase_amount = item["purchaseAmount"]
-        purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
+        # purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
         for i in range(len(item["sizeInfo"])):
             setattr(
                 purchase_order_item,
                 f"size_{i}_purchase_amount",
                 item["sizeInfo"][i]["purchaseAmount"],
             )
-            setattr(
-                purchase_order_item,
-                f"size_{i}_estimated_amount",
-                item["sizeInfo"][i]["purchaseAmount"],
-            )
+            # setattr(
+            #     purchase_order_item,
+            #     f"size_{i}_estimated_amount",
+            #     item["sizeInfo"][i]["purchaseAmount"],
+            # )
         purchase_order_item.material_specification = item["materialSpecification"]
         purchase_order_item.material_model = item["materialModel"]
         purchase_order_item.color = item["color"]
