@@ -1,4 +1,5 @@
 from app_config import db
+from sqlalchemy.dialects.mysql import BIGINT, DECIMAL, TINYINT, CHAR, JSON, DATE, INTEGER, VARCHAR
 
 
 class User(db.Model):
@@ -194,59 +195,58 @@ class Event(db.Model):
 
 
 class MaterialStorage(db.Model):
-    __tablename__ = "material_storage"
+    __tablename__ = 'material_storage'
+
+    material_storage_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    order_id = db.Column(BIGINT, nullable=True)
+    order_shoe_id = db.Column(BIGINT, nullable=True)
+    inbound_amount = db.Column(DECIMAL(13, 5), default=0)
+    current_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0)
+    unit_price = db.Column(DECIMAL(13, 4), default=0)
+    material_outsource_status = db.Column(TINYINT, nullable=False, default=0)
+    material_outsource_outbound_date = db.Column(DATE, nullable=True)
+    material_estimated_arrival_date = db.Column(DATE, nullable=True)
+    actual_inbound_unit = db.Column(CHAR(5), nullable=True)
+    spu_material_id = db.Column(INTEGER, nullable=True)
+    average_price = db.Column(DECIMAL(13, 4), default=0)
+    purchase_order_item_id = db.Column(BIGINT, nullable=True)
+    batch_info_type_id = db.Column(INTEGER, nullable=True)
+    material_storage_status = db.Column(CHAR(1), nullable=True)
+    shoe_size_columns = db.Column(JSON, nullable=True)
+
+    # Current amounts per size
+    size_34_current_amount = db.Column(INTEGER, nullable=True)
+    size_35_current_amount = db.Column(INTEGER, nullable=True)
+    size_36_current_amount = db.Column(INTEGER, nullable=True)
+    size_37_current_amount = db.Column(INTEGER, nullable=True)
+    size_38_current_amount = db.Column(INTEGER, nullable=True)
+    size_39_current_amount = db.Column(INTEGER, nullable=True)
+    size_40_current_amount = db.Column(INTEGER, nullable=True)
+    size_41_current_amount = db.Column(INTEGER, nullable=True)
+    size_42_current_amount = db.Column(INTEGER, nullable=True)
+    size_43_current_amount = db.Column(INTEGER, nullable=True)
+    size_44_current_amount = db.Column(INTEGER, nullable=True)
+    size_45_current_amount = db.Column(INTEGER, nullable=True)
+    size_46_current_amount = db.Column(INTEGER, nullable=True)
+
+    # Inbound amounts per size
+    size_34_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_35_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_36_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_37_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_38_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_39_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_40_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_41_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_42_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_43_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_44_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_45_inbound_amount = db.Column(INTEGER, nullable=True)
+    size_46_inbound_amount = db.Column(INTEGER, nullable=True)
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "actual_inbound_material_id",
-            "inbound_model",
-            "inbound_specification",
-            "actual_inbound_unit",
-            "material_storage_color",
-            "order_shoe_id",
-            name="unq_material_storage",
-        ),
+        db.UniqueConstraint('spu_material_id', 'order_shoe_id', 'actual_inbound_unit', name='unq_material_storage_0'),
     )
-
-    material_storage_id = db.Column(
-        db.BigInteger, primary_key=True, autoincrement=True, nullable=False
-    )
-    material_model = db.Column(db.String(50), default="", nullable=True)
-    order_id = db.Column(db.BigInteger)
-    order_shoe_id = db.Column(db.BigInteger)
-    material_id = db.Column(db.BigInteger, nullable=False)
-    estimated_inbound_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    actual_purchase_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    actual_inbound_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    current_amount = db.Column(db.DECIMAL(12, 5), default=0, nullable=False)
-    unit_price = db.Column(db.DECIMAL(13, 4), nullable=True, default=0.00)
-    average_price = db.Column(db.DECIMAL(13, 4), nullable=True, default=0.00)
-    material_specification = db.Column(db.String(100), default="", nullable=True)
-    material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
-    material_outsource_outbound_date = db.Column(db.Date)
-    material_storage_color = db.Column(db.String(40), default="", nullable=True)
-    total_purchase_order_id = db.Column(db.BigInteger, nullable=True)
-    material_estimated_arrival_date = db.Column(db.Date)
-    material_storage_status = db.Column(db.SmallInteger, default=0)
-    department_id = db.Column(db.Integer)
-
-    craft_name = db.Column(db.String(200), nullable=True)
-    composite_unit_cost = db.Column(db.DECIMAL(12, 3), default=0.00)
-    production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
-    actual_inbound_unit = db.Column(db.String(5), nullable=True)
-    actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
-    inbound_model = db.Column(db.String(50), nullable=True)
-    inbound_specification = db.Column(db.String(100), nullable=True)
-    spu_material_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"
@@ -581,7 +581,7 @@ class ProcedureReference(db.Model):
     procedure_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     procedure_name = db.Column(db.String(100), nullable=False)
     team = db.Column(db.String(10), nullable=True)
-    current_price = db.Column(db.Float, nullable=True)
+    current_price = db.Column(DECIMAL(13, 4), nullable=True)
 
     def __repr__(self):
         return f"<ProcedureReference(procedure_id={self.procedure_id})>"
@@ -591,43 +591,48 @@ class ProcedureReference(db.Model):
 
 
 class PurchaseOrderItem(db.Model):
-    __tablename__ = "purchase_order_item"
-    purchase_order_item_id = db.Column(
-        db.BigInteger, primary_key=True, autoincrement=True
+    __tablename__ = 'purchase_order_item'
+
+    purchase_order_item_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    bom_item_id = db.Column(BIGINT, nullable=False)
+    purchase_divide_order_id = db.Column(BIGINT, nullable=False)
+    
+    purchase_amount = db.Column(DECIMAL(12, 5), default=0.00000)
+    adjust_purchase_amount = db.Column(DECIMAL(12, 5), default=0.00000)
+    approval_amount = db.Column(DECIMAL(12, 5), default=0.00000)
+
+    # Size-specific purchase amounts
+    size_34_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_35_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_36_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_37_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_38_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_39_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_40_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_41_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_42_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_43_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_44_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_45_purchase_amount = db.Column(INTEGER, nullable=True)
+    size_46_purchase_amount = db.Column(INTEGER, nullable=True)
+
+    inbound_material_id = db.Column(BIGINT, nullable=True)
+    inbound_unit = db.Column(VARCHAR(5), nullable=True)
+    material_id = db.Column(BIGINT, nullable=True)
+    material_specification = db.Column(VARCHAR(100), nullable=True)
+    material_model = db.Column(VARCHAR(50), nullable=True)
+    color = db.Column(VARCHAR(40), nullable=True)
+    size_type = db.Column(CHAR(10), nullable=True)
+    craft_name = db.Column(VARCHAR(200), nullable=True)
+    remark = db.Column(VARCHAR(100), nullable=True)
+
+    related_selected_material_storage = db.Column(JSON, nullable=True)
+    estimated_inbound_amount = db.Column(DECIMAL(12, 5), nullable=True)
+
+    __table_args__ = (
+        db.Index('fk_purchase_order_items_bom_item_0', 'bom_item_id'),
+        db.Index('fk_purchase_order_items_0', 'purchase_divide_order_id'),
     )
-    bom_item_id = db.Column(
-        db.BigInteger,
-    )
-    purchase_divide_order_id = db.Column(
-        db.BigInteger,
-        nullable=False,
-    )
-    purchase_amount = db.Column(db.Numeric(10, 5), default=0)
-    approval_amount = db.Column(db.Numeric(10, 5), default=0)
-    size_34_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_35_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_36_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_37_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_38_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_39_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_40_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_41_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_42_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_43_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_44_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_45_purchase_amount = db.Column(db.Integer, nullable=True)
-    size_46_purchase_amount = db.Column(db.Integer, nullable=True)
-    inbound_material_id = db.Column(db.BigInteger, nullable=True)
-    inbound_unit = db.Column(db.String(5), nullable=True)
-    adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
-    material_id = db.Column(db.BigInteger, nullable=True)
-    material_specification = db.Column(db.String(100), nullable=True)
-    material_model = db.Column(db.String(50), nullable=True)
-    color = db.Column(db.String(40), nullable=True)
-    size_type = db.Column(db.String(1), nullable=False, default="E")
-    craft_name = db.Column(db.String(100), nullable=True)
-    remark = db.Column(db.String(100), nullable=True)
-    related_selected_material_storage = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return (
