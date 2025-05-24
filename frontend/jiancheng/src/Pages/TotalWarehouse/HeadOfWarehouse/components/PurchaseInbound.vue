@@ -164,9 +164,10 @@
     <MaterialSelectDialog :visible="isMaterialSelectDialogVis" :searchedMaterials="searchedMaterials"
         @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <el-dialog title="选择材料" v-model="isSizeMaterialSelectDialogVis" width="80%" destroy-on-close>
+    <el-dialog title="选择材料" v-model="isSizeMaterialSelectDialogVis" width="80%" destroy-on-close @closed="closeSizeMaterialSelectDialog">
         <span>搜索订单号：</span>
-        <el-input v-model="orderRIdSearch" @change="searchRecordByOrderRId"
+        <el-input v-model="orderRIdSearch" @change="searchRecordByOrderRId" clearable
+            @clear="searchRecordByOrderRId"
             style="width: 200px; margin-bottom: 10px;"></el-input>
         <el-table ref="searchedSizeMaterials" :data="searchedSizeMaterials" border stripe
             @selection-change="handleSizeMaterialSelect" height="600">
@@ -359,7 +360,7 @@ export default {
             isSizeMaterialSelectDialogVis: false,
             searchedMaterials: [],
             searchedSizeMaterials: [],
-            orriginalSizeMaterials: [],
+            originalSizeMaterials: [],
             currentKeyDownRow: null,
             currentIndex: -1,
             isPreviewDialogVis: false,
@@ -394,7 +395,7 @@ export default {
             logisticsShoeSizes: [],
             materialNameOptions: [],
             selectedSizeMaterials: [],
-            orderRIdSearch: '',
+            orderRIdSearch: null,
             filteredOrders: [],
             isOrderMaterialQueryVis: false,
             materialTypeOptions: [],
@@ -479,6 +480,11 @@ export default {
         },
     },
     methods: {
+        closeSizeMaterialSelectDialog() {
+            this.isSizeMaterialSelectDialogVis = false
+            this.searchedSizeMaterials = []
+            this.orderRIdSearch = ''
+        },
         clearRejectRecord() {
             this.rejectedRecordId = null
             this.inboundForm = { ...this.inboundFormTemplate }
@@ -773,7 +779,7 @@ export default {
         },
         searchRecordByOrderRId(queryString) {
             this.$refs.searchedSizeMaterials.clearSelection()
-            this.searchedSizeMaterials = [...this.orriginalSizeMaterials]
+            this.searchedSizeMaterials = [...this.originalSizeMaterials]
             if (queryString) {
                 this.searchedSizeMaterials = this.searchedSizeMaterials.filter(item => item.orderRId.includes(queryString))
             }
@@ -788,7 +794,7 @@ export default {
                 "orderRId": this.currentKeyDownRow.orderRId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
-            this.orriginalSizeMaterials = response.data
+            this.originalSizeMaterials = response.data
             this.searchedSizeMaterials = response.data
         },
         confirmSelection() {
@@ -820,7 +826,7 @@ export default {
 
             this.shoeSizeColumns = tempTable
             this.materialTableData = [...this.materialTableData]
-            this.isSizeMaterialSelectDialogVis = false
+            this.closeSizeMaterialSelectDialog()
         },
         async handleMaterialNameSelect(row, value) {
             if (value == null || value == '') {
