@@ -796,15 +796,6 @@ export default {
                 ElMessage.warning('请至少选择一行材料')
                 return
             }
-            if (this.selectedSizeMaterials[0].materialName === '大底') {
-                let firstOrderRId = this.selectedSizeMaterials[0].orderRId
-                for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
-                    if (this.selectedSizeMaterials[i].orderRId != firstOrderRId) {
-                        ElMessage.warning('请确保选择的材料属于同一生产订单')
-                        return
-                    }
-                }
-            }
             let tempTable = []
             this.materialTableData.splice(this.currentIndex, 1)
             for (let i = 0; i < this.selectedSizeMaterials.length; i++) {

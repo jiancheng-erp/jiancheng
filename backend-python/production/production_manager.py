@@ -11,6 +11,7 @@ from sqlalchemy.dialects.mysql import insert
 from general_document.batch_info import generate_excel_file
 from business.batch_info_type import get_order_batch_type_helper
 import os
+from login.login import current_user_info
 
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
@@ -504,6 +505,7 @@ def get_all_order_shoe_info():
         .group_by(Order.order_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_rid)
     )
+    print(query)
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
@@ -972,7 +974,7 @@ def get_submitted_quantity_reports():
         .filter(
             OrderShoeProductionInfo.order_shoe_id == order_shoe_id,
         )
-        .filter(QuantityReport.status.in_([1, 2, 3]))
+        .filter(QuantityReport.status.in_([1, 2, PRICE_REPORT_PM_REJECTED]))
     )
     if search_start_date and search_end_date:
         try:
@@ -1063,7 +1065,7 @@ def approve_quantity_report():
 def reject_quantity_report():
     data = request.get_json()
     report = db.session.query(QuantityReport).get(data["reportId"])
-    report.status = 3
+    report.status = PRICE_REPORT_PM_REJECTED
     report.rejection_reason = data["rejectionReason"]
     db.session.commit()
     return jsonify({"message": "success"})
@@ -1078,44 +1080,37 @@ def get_price_report_approval_overview():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     team = request.args.get("team")
+    status = request.args.get("status")
+
+    character, staff, department = current_user_info()
     query = (
-        db.session.query(Order, OrderShoe, Customer, Shoe, OrderShoeStatus)
+        db.session.query(Order, OrderShoe, Customer, Shoe, UnitPriceReport)
         .join(
             OrderShoe,
             Order.order_id == OrderShoe.order_id,
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(UnitPriceReport, UnitPriceReport.order_shoe_id == OrderShoe.order_shoe_id)
         .filter(
-            OrderShoeStatus.current_status.in_([22, 29, 39]),
-            OrderShoeStatus.current_status_value.in_([0, 1]),
+            UnitPriceReport.status > 1,
         )
     )
+
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if team and team != "":
-        if team == "裁断":
-            query = query.filter(OrderShoeStatus.current_status == 22)
-        elif team == "针车":
-            query = query.filter(OrderShoeStatus.current_status == 29)
-        elif team == "成型":
-            query = query.filter(OrderShoeStatus.current_status == 39)
-        else:
-            return jsonify({"message": "invalid team name"}), 400
+        query = query.filter(UnitPriceReport.team == team)
+
+    if status and status != "":
+        query = query.filter(UnitPriceReport.status == status)
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
     for row in response:
-        order, order_shoe, customer, shoe, status_obj = row
-        if status_obj.current_status == 22:
-            team = "裁断"
-        elif status_obj.current_status == 29:
-            team = "针车"
-        else:
-            team = "成型"
+        order, order_shoe, customer, shoe, report = row
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -1124,7 +1119,9 @@ def get_price_report_approval_overview():
             "shoeRId": shoe.shoe_rid,
             "customerName": customer.customer_name,
             "customerProductName": order_shoe.customer_product_name,
-            "team": team,
+            "reportId": report.report_id,
+            "team": report.team,
+            "status": report.status,
         }
         result.append(obj)
     return {"result": result, "totalLength": count_result}
@@ -1143,7 +1140,7 @@ def get_all_price_reports_for_order_shoe():
         )
         .filter(
             OrderShoeProductionInfo.order_shoe_id == order_shoe_id,
-            UnitPriceReport.status.in_([1, 2, 3]),
+            UnitPriceReport.status > 1,
         )
         .all()
     )
@@ -1155,25 +1152,18 @@ def get_all_price_reports_for_order_shoe():
             end_date = production_info.cutting_end_date
         elif report.team == "针车预备":
             start_date = production_info.pre_sewing_start_date
-            end_date = production_info.pre_sewing_start_date
+            end_date = production_info.pre_sewing_end_date
         elif report.team == "针车":
             start_date = production_info.sewing_start_date
-            end_date = production_info.sewing_start_date
+            end_date = production_info.sewing_end_date
         else:
             start_date = production_info.molding_start_date
             end_date = production_info.molding_end_date
-        if report.status == 1:
-            status = "未审批"
-
-        elif report.status == 2:
-            status = "已审批"
-        else:
-            status = "已驳回"
         obj = {
             "productionStartDate": format_date(start_date),
             "productionEndDate": format_date(end_date),
             "reportId": report.report_id,
-            "reportStatus": status,
+            "reportStatus": report.status,
             "team": report.team,
         }
         result.append(obj)
@@ -1188,6 +1178,7 @@ def approve_price_report():
     order_shoe_id = data["orderShoeId"]
     report_id = data["reportId"]
     flag = True
+    _, staff, department = current_user_info()
     report = db.session.query(UnitPriceReport).get(report_id)
     # if it is sewing or pre-sewing report, check if either one is approved
     if report.team == "针车预备" or report.team == "针车":
@@ -1196,7 +1187,7 @@ def approve_price_report():
             report2 = query.filter_by(team="针车").first()
         else:
             report2 = query.filter_by(team="针车预备").first()
-        if report2.status != 2:
+        if report2.status != PRICE_REPORT_GM_PENDING:
             flag = False
     # sum up the price
     value = (
@@ -1206,28 +1197,30 @@ def approve_price_report():
         .scalar()
     )
     report.price_sum = value
-    report.status = 2
+    report.status = PRICE_REPORT_GM_PENDING
     report.rejection_reason = None
     if flag:
+        print(123)
         processor: EventProcessor = current_app.config["event_processor"]
         if report.team == "裁断":
-            operation_arr = [82, 83]
-        elif report.team == "针车" or report.team == "预备":
-            operation_arr = [96, 97]
+            operation_arr = [80, 81]
+        elif report.team == "针车" or report.team == "针车预备":
+            operation_arr = [94, 95]
         elif report.team == "成型":
-            operation_arr = [116, 117]
+            operation_arr = [114, 115]
         else:
             return jsonify({"message": "Cannot change current status"}), 403
         try:
             for operation in operation_arr:
                 event = Event(
-                    staff_id=1,
+                    staff_id=staff.staff_id,
                     handle_time=datetime.now(),
                     operation_id=operation,
                     event_order_id=data["orderId"],
                     event_order_shoe_id=data["orderShoeId"],
                 )
                 processor.processEvent(event)
+                db.session.add(event)
         except Exception as e:
             print(e)
             return jsonify({"message": "failed"}), 400
@@ -1241,37 +1234,31 @@ def approve_price_report():
 def reject_price_report():
     data = request.get_json()
     report_id_arr = data["reportIdArr"]
+
     processor: EventProcessor = current_app.config["event_processor"]
+    _, staff, department = current_user_info()
+    team = None
     # find order shoe current status
-    current_status_str = (
-        db.session.query(
-            func.group_concat(OrderShoeStatus.current_status).label(
-                "current_status_str"
-            ),
-        )
-        .filter_by(order_shoe_id=data["orderShoeId"])
-        .group_by(OrderShoeStatus.order_shoe_id)
-        .first()
-    )
-    current_status_arr = current_status_str[0].split(",")
-    if "22" in current_status_arr:
+    for report_id in report_id_arr:
+        report = db.session.query(UnitPriceReport).get(report_id)
+        report.status = PRICE_REPORT_PM_REJECTED
+        report.rejection_reason = data["rejectionReason"]
+        team = report.team
+    
+    if team == "裁断":
         operation = 78
-        current_status = 22
-    elif "29" in current_status_arr:
+        current_status = 21
+    elif team == "针车" or team == "预备":
         operation = 92
-        current_status = 29
-    elif "39" in current_status_arr:
+        current_status = 28
+    elif team == "成型":
         operation = 112
-        current_status = 39
+        current_status = 38
     else:
         return jsonify({"message": "Cannot change current status"}), 403
     try:
-        for report_id in report_id_arr:
-            report = db.session.query(UnitPriceReport).get(report_id)
-            report.status = 3
-            report.rejection_reason = data["rejectionReason"]
         event = Event(
-            staff_id=1,
+            staff_id=staff.staff_id,
             handle_time=datetime.now(),
             operation_id=operation,
             event_order_id=data["orderId"],

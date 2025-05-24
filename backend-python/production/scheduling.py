@@ -184,9 +184,7 @@ def start_production():
     )
     for shoe_size in SHOESIZERANGE:
         column = OrderShoeBatchInfo.__table__.columns.get(f"size_{shoe_size}_amount")
-        query = query.add_columns(
-            func.sum(column).label(f"size_{shoe_size}_amount")
-        )
+        query = query.add_columns(func.sum(column).label(f"size_{shoe_size}_amount"))
     order_shoe_type_ids = query.all()
     arr = []
     for row in order_shoe_type_ids:
@@ -206,7 +204,9 @@ def start_production():
             finished_estimated_amount=color_total_amount,
         )
         for i, amount in enumerate(size_amount):
-            setattr(finished_entity, f"size_{SHOESIZERANGE[i]}_estimated_amount", amount)
+            setattr(
+                finished_entity, f"size_{SHOESIZERANGE[i]}_estimated_amount", amount
+            )
         arr.append(finished_entity)
     db.session.add_all(arr)
 
@@ -242,20 +242,14 @@ def start_production():
         amount, team = row
 
         if team == 0 and amount != 0:
-            report1 = UnitPriceReport(
-                order_shoe_id=order_shoe_id, team="裁断", status=0
-            )
+            report1 = UnitPriceReport(order_shoe_id=order_shoe_id, team="裁断")
             db.session.add(report1)
             db.session.flush()
             _create_report_item(report1.report_id, "裁断", shoe_id)
 
         elif team == 1 and amount != 0:
-            report1 = UnitPriceReport(
-                order_shoe_id=order_shoe_id, team="针车预备", status=0
-            )
-            report2 = UnitPriceReport(
-                order_shoe_id=order_shoe_id, team="针车", status=0
-            )
+            report1 = UnitPriceReport(order_shoe_id=order_shoe_id, team="针车预备")
+            report2 = UnitPriceReport(order_shoe_id=order_shoe_id, team="针车")
             report_arr.append(report1)
             report_arr.append(report2)
             db.session.add(report1)
@@ -264,9 +258,7 @@ def start_production():
             _create_report_item(report1.report_id, "针车预备", shoe_id)
             _create_report_item(report2.report_id, "针车", shoe_id)
         elif team == 2:
-            report1 = UnitPriceReport(
-                order_shoe_id=order_shoe_id, team="成型", status=0
-            )
+            report1 = UnitPriceReport(order_shoe_id=order_shoe_id, team="成型")
             report_arr.append(report1)
             _create_report_item(report1.report_id, "成型", shoe_id)
 
