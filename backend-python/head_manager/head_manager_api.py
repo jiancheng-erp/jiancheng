@@ -214,7 +214,9 @@ def get_order_status_info():
     order_type = request.args.get("orderType")
 
     # Get orders
-    orders = Order.query.all() if not order_rid else Order.query.filter_by(order_rid=order_rid).all()
+    # orders = Order.query.all() if not order_rid else Order.query.filter_by(order_rid=order_rid).all()
+    orders = db.session.query(Order).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(OrderStatus.order_current_status >= 9).all()\
+        if not order_rid else db.session.query(Order, OrderStatus).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(Order.order_rid.like(f"%{order_rid}%"), OrderStatus.order_current_status >= 9).all()
     if not orders:
         return jsonify({"msg": "No order found."}), 404
 
