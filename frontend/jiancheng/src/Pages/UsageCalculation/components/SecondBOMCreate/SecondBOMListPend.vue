@@ -7,8 +7,10 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="4" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
-        <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        <el-col :span="4" :offset="11"><el-input v-model="searchOrder" placeholder="请输入订单号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
+        <el-col :span="4" :offset="0"><el-input v-model="searchShoe" placeholder="请输入鞋型号" size="" :suffix-icon="Search" clearable @input="filterData"></el-input>
+        </el-col> 
     </el-row>
     
     <el-row :gutter="20" style="margin-top: 20px;">
@@ -34,6 +36,7 @@ export default {
         return {
             Search,
             searchOrder:"",
+            searchShoe:"",
             displayData:this.pendingTaskData,
             pendingAmount: 0
         }
@@ -56,10 +59,10 @@ export default {
             this.$emit('backToList')
         }, 
         filterData() {
-            if (!this.searchOrder) {
-                this.displayData = this.pendingTaskData
-            }
-            this.displayData = this.pendingTaskData.filter(task => task.orderRid.toLowerCase().includes(this.searchOrder.toLowerCase()));
+            this.displayData = this.pendingTaskData.filter(task => {
+                return task.orderRid.toLowerCase().includes(this.searchOrder.toLowerCase()) && task.shoeRId.toLowerCase().includes(this.searchShoe.toLowerCase());
+            });
+            this.pendingAmount = this.displayData.length;
         },
         handleRowClick(row) {
             let url;
