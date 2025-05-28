@@ -16,8 +16,8 @@
             <el-input v-model="supplierNameSearch" placeholder="供货单位搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-            <el-select v-if="loadReject == false" v-model="statusSearch" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable
-                style="width: 200px; margin-left: 20px;">
+            <el-select v-if="loadReject == false" v-model="statusSearch" @change="getInboundRecordsTable"
+                @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
                 <el-option label="待审核" :value="0"></el-option>
                 <el-option label="已批准" :value="1"></el-option>
@@ -88,7 +88,7 @@
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">供应商: {{
                                         currentRow.supplierName
-                                    }}</td>
+                                        }}</td>
                                     <td style="padding:5px; width: 150px;" align="left">仓库名称: {{
                                         currentRow.warehouseName }}</td>
                                     <td style="padding:5px; width: 300px;" align="left">入库时间: {{
@@ -423,31 +423,35 @@ export default {
 }
 </script>
 <style scoped>
+/* 确保表头固定和分页逻辑 */
+/* Print styles */
+@media print {
+
+    @page {
+        @bottom-center {
+            content: "第" counter(page) "页 / 共" counter(pages)"页";
+            font-size: 12px;
+            color: black;
+            font-family: SimHei;
+        }
+    }
+
+    tfoot {
+        display: table-row-group;
+    }
+
+    /* Optional: Avoid breaking inside rows */
+    tr {
+        break-after: avoid;
+    }
+}
+</style>
+
+<style scoped>
 #printView {
     padding-left: 20px;
     padding-right: 20px;
     color: black;
     font-family: SimHei;
-}
-
-/* 确保表头固定和分页逻辑 */
-/* Print styles */
-@media print {
-    @page {
-        margin: 20mm;
-    }
-
-    thead {
-        display: table-header-group;
-    }
-
-    tfoot {
-        display: table-footer-group;
-    }
-
-    /* Optional: Avoid breaking inside rows */
-    tr {
-        page-break-inside: avoid;
-    }
 }
 </style>
