@@ -164,8 +164,7 @@
     <MaterialSelectDialog :visible="isMaterialSelectDialogVis" :searchedMaterials="searchedMaterials"
         @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis"
-        :searched-size-materials="searchedSizeMaterials"
+    <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis" :searched-size-materials="searchedSizeMaterials"
         @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
@@ -194,7 +193,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -204,7 +203,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
+                            <table border="1pm" cellspacing="0" align="center" width="100%"
                                 style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
                                 <thead>
                                     <tr>
@@ -424,7 +423,6 @@ export default {
         inboundForm: {
             handler() {
                 this.updateCache();
-                this.clearShoeSizeColumns();
             },
             deep: true
         },
@@ -641,6 +639,11 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
             this.inboundForm.warehouseName = response.data.warehouseName
             this.inboundForm.warehouseId = response.data.warehouseId
+
+            if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
+                this.inboundForm.shoeSizes = null
+                this.shoeSizeColumns = []
+            }
         },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
@@ -791,9 +794,6 @@ export default {
             let temp = this.materialNameOptions.filter(item => item.value == value)[0]
             row.actualInboundUnit = temp.unit
             row.materialCategory = temp.materialCategory
-            if (!(row.materialName === '大底')) {
-                this.shoeSizeColumns = []
-            }
         },
         async submitInboundForm() {
             for (let i = 0; i < this.materialTableData.length; i++) {
@@ -937,25 +937,27 @@ export default {
 }
 </style>
 
-<style>
+<style scoped>
 /* 确保表头固定和分页逻辑 */
 /* Print styles */
 @media print {
     @page {
-        margin: 20mm;
-    }
-
-    thead {
-        display: table-header-group;
+        @bottom-center {
+            content: "第" counter(page) "页 / 共" counter(pages)"页";
+            font-size: 12px;
+            color: black;
+            font-family: SimHei;
+        }
     }
 
     tfoot {
-        display: table-footer-group;
+        display: table-row-group;
+        ;
     }
 
     /* Optional: Avoid breaking inside rows */
     tr {
-        page-break-inside: avoid;
+        break-after: avoid;
     }
 }
 </style>

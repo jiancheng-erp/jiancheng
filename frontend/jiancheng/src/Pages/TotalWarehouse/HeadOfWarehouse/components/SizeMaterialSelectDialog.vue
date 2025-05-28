@@ -289,6 +289,7 @@ export default {
             );
         },
         resetVariables() {
+            this.searchOrderRId = null
             this.orderSelection = []
             this.selectionPage = 0
             this.bottomTableData = []
