@@ -203,8 +203,8 @@
                 <tbody>
                     <tr>
                         <td>
-                            <table border="1pm" cellspacing="0" align="center" width="100%"
-                                style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                            <table class="inner-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="border-collapse: collapse; border-spacing: 0; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
@@ -937,10 +937,11 @@ export default {
 }
 </style>
 
-<style scoped>
+<style>
 /* 确保表头固定和分页逻辑 */
 /* Print styles */
 @media print {
+
     @page {
         @bottom-center {
             content: "第" counter(page) "页 / 共" counter(pages)"页";
@@ -950,19 +951,40 @@ export default {
         }
     }
 
-    tfoot {
-        display: table-row-group;
-        ;
+    .inner-table {
+        border-collapse: collapse;
+        border-spacing: 0;
     }
 
-    /* Optional: Avoid breaking inside rows */
-    tr {
-        break-after: avoid;
+    .inner-table th,
+    .inner-table td {
+        border: 1px solid #000;
+        padding: 4px;
+    }
+
+    .inner-table tr {
+        page-break-inside: avoid !important;
+        -webkit-page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-row-group;
     }
 }
 </style>
 
-<style scoped>
+<style>
+.inner-table th,
+.inner-table td {
+    border: 1px solid #000;
+    padding: 4px;
+}
+
 #printView {
     padding-left: 20px;
     padding-right: 20px;

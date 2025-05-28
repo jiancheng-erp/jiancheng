@@ -107,8 +107,8 @@
                 <tbody>
                     <tr>
                         <td>
-                            <table class="yk-table" border="1" cellspacing="0" align="center" width="100%"
-                                style="max-height:360px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                            <table class="inner-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="border-collapse: collapse; border-spacing: 0; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
@@ -422,36 +422,3 @@ export default {
     }
 }
 </script>
-<style scoped>
-/* 确保表头固定和分页逻辑 */
-/* Print styles */
-@media print {
-
-    @page {
-        @bottom-center {
-            content: "第" counter(page) "页 / 共" counter(pages)"页";
-            font-size: 12px;
-            color: black;
-            font-family: SimHei;
-        }
-    }
-
-    tfoot {
-        display: table-row-group;
-    }
-
-    /* Optional: Avoid breaking inside rows */
-    tr {
-        break-after: avoid;
-    }
-}
-</style>
-
-<style scoped>
-#printView {
-    padding-left: 20px;
-    padding-right: 20px;
-    color: black;
-    font-family: SimHei;
-}
-</style>
