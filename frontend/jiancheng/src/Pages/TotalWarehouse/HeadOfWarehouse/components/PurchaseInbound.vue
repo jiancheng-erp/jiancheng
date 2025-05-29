@@ -161,7 +161,7 @@
         </el-col>
     </el-row>
 
-    <MaterialSelectDialog :visible="isMaterialSelectDialogVis" :searchedMaterials="searchedMaterials"
+    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis" :searchParams="searchParams"
         @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
     <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis" :searched-size-materials="searchedSizeMaterials"
@@ -402,7 +402,16 @@ export default {
                         row.inboundModel = selected;
                     }
                 }
-            }
+            },
+            searchParams: {
+                orderId: null,
+                materialName: null,
+                materialSpec: null,
+                materialModel: null,
+                materialColor: null,
+                supplier: null
+            },
+            showMaterialSelectDialog: false,
         }
     },
     // beforeUnmount() {
@@ -613,6 +622,7 @@ export default {
             this.shoeSizeColumns = sizeColumns
         },
         updateDialogVisible(value) {
+            this.showMaterialSelectDialog = value
             this.isMaterialSelectDialogVis = value
         },
         updateSizeMaterialDialogVisible(value) {
@@ -754,23 +764,20 @@ export default {
             }
             else {
                 this.fetchMaterialData()
+                this.showMaterialSelectDialog = true
                 this.isMaterialSelectDialogVis = true
             }
         },
         async fetchMaterialData() {
             const params = {
+                "orderRId": this.currentKeyDownRow.orderRId,
                 "materialName": this.currentKeyDownRow.materialName,
                 "materialSpec": this.currentKeyDownRow.inboundSpecification,
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
             }
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterials`, { params })
-            this.searchedMaterials = response.data
-            // add unique id to each row
-            this.searchedMaterials.forEach(item => {
-                item.id = XEUtils.uniqueId()
-            })
+            this.searchParams = params; // Update search parameters
         },
         async fetchSizeMaterialData() {
             const params = {
