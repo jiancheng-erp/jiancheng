@@ -1,15 +1,46 @@
 <template>
     <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose" destroy-on-close>
         <div v-if="selectionPage == 0">
-            <el-table :data="searchedMaterials" border stripe height="600" @selection-change="handleSelectMaterials">
+            <el-input v-model="orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-input v-model="materialNameSearch" placeholder="搜索名称" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-input v-model="materialModelSearch" placeholder="搜索型号" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-input v-model="materialSpecificationSearch" placeholder="搜索规格" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-input v-model="materialColorSearch" placeholder="搜索颜色" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-input v-model="supplierNameSearch" placeholder="搜索供应商" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
+            <el-switch v-model="showUnfinishedOrders"
+                active-text="仅显示未入库订单" inactive-text="显示所有订单" style="margin-bottom: 10px;"
+                @change="fetchMaterialData"></el-switch>
+
+            <div style="display:flex; flex-wrap: wrap; gap: 10px;">
+                <div style="font-size: medium">已选择订单：{{orderSelection.map(item => item.orderRId)}}</div>
+                <el-button type="primary" @click="resetSelectedOrders" style="margin-bottom: 10px;">重置</el-button>
+            </div>
+            <el-table :data="originTableData" border stripe height="600" @selection-change="handleSelectMaterials">
                 <el-table-column type="selection" width="55"></el-table-column>
+                <el-table-column prop="orderRId" label="订单号"></el-table-column>
+                <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                 <el-table-column prop="materialColor" label="颜色"></el-table-column>
                 <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
+                <el-table-column prop="remainingAmount" label="剩余入库数量"></el-table-column>
             </el-table>
+            <el-pagination
+                :current-page="currentPage"
+                :page-size="pageSize"
+                :total="totalRows"
+                layout="total, sizes, prev, pager, next, jumper"
+                @current-change="pageChange"
+                @size-change="PageSizeChange">
+            </el-pagination>
         </div>
         <div v-else-if="selectionPage == 1">
             <el-row :gutter="20" style="margin-bottom: 20px;">
@@ -24,10 +55,10 @@
                     <el-input-number v-model="unitPrice" style="width: 200px;" :min="0"
                         :precision="4" :step="0.0001" size="small"></el-input-number>
                 </el-col>
-                <el-col :span="12">
+                <!-- <el-col :span="12">
                     <span style="margin-right: 50px;">订单入库数量：{{ selectedInboundQuantity }}</span>
                     <span>剩余到货数量：{{ (totalInboundQuantity - selectedInboundQuantity).toFixed(5) }}</span>
-                </el-col>
+                </el-col> -->
             </el-row>
 
             <div class="transfer-tables">
@@ -36,19 +67,18 @@
                     @selection-change="handleBottomSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
-                    <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-                    <el-table-column prop="materialName" label="订单号"></el-table-column>
-                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                    <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                    <el-table-column prop="materialName" label="材料名"></el-table-column>
+                    <el-table-column prop="materialModel" label="型号"></el-table-column>
+                    <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
-                    <el-table-column prop="endDate" label="结束日期"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
                     <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
                     <el-table-column prop="currentAmount" label="库存"></el-table-column>
-                    <el-table-column label="操作">
+                    <el-table-column label="入库数量">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.inboundQuantity" :min="0" size="small" :precision="5"
-                                :step="0.0001"></el-input-number>
+                                :step="0.0001" @change="updateSelectedInboundQuantity"></el-input-number>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -68,20 +98,15 @@
                     </el-button>
                 </div>
 
-                <!-- Search Input for Bottom Table -->
-
-                <!-- <el-input v-model="totalInboundQuantity" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;"
-                        clearable @change="searchOrderRId" @clear="searchOrderRId"></el-input> -->
-
                 <!-- Bottom Table -->
                 <el-table ref="bottomTableData" :data="bottomTableData" style="width: 100%;"
                     @selection-change="handleTopSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
-                    <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-                    <el-table-column prop="materialName" label="订单号"></el-table-column>
-                    <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-                    <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+                    <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                    <el-table-column prop="materialName" label="材料名"></el-table-column>
+                    <el-table-column prop="materialModel" label="型号"></el-table-column>
+                    <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
                     <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
                     <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
@@ -100,14 +125,15 @@
 import axios from 'axios';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import Decimal from 'decimal.js';
+import XEUtils from 'xe-utils';
 export default {
     props: {
         visible: {
             type: Boolean,
             required: true,
         },
-        searchedMaterials: {
-            type: Array,
+        searchParams: {
+            type: Object,
             required: true,
         },
     },
@@ -115,14 +141,10 @@ export default {
     data() {
         return {
             localVisible: this.visible,
-            materialSelection: [],
-            orderSelection: {},
-            currentIndex: -1,
-            selectionIndex: null,
-            selectionIndex2: null,
-            shoeSizeColumns: [],
+            orderSelection: [],
             selectionPage: 0,
             bottomTableData: [],
+            bottomTableDataCopy: [],
             topTableData: [],
             totalInboundQuantity: 0,
             downSelected: [],
@@ -130,6 +152,17 @@ export default {
             selectedInboundQuantity: 0,
             unitPrice: 0,
             originTableData: [],
+            orderRIdSearch: null,
+            materialNameSearch: null,
+            materialModelSearch: null,
+            materialSpecificationSearch: null,
+            materialColorSearch: null,
+            supplierNameSearch: null,
+            searchedMaterials: [],
+            currentPage: 1,
+            pageSize: 20,
+            totalRows: 0,
+            showUnfinishedOrders: true,
         }
     },
     watch: {
@@ -139,16 +172,57 @@ export default {
         localVisible(newVal) {
             this.$emit("update-visible", newVal);
         },
-
+    },
+    async mounted() {
+        this.materialNameSearch = this.searchParams.materialName || null;
+        this.materialModelSearch = this.searchParams.materialModel || null;
+        this.materialSpecificationSearch = this.searchParams.materialSpec || null;
+        this.materialColorSearch = this.searchParams.materialColor || null;
+        this.orderRIdSearch = this.searchParams.orderRId || null;
+        this.supplierNameSearch = this.searchParams.supplierName || null;
+        await this.fetchMaterialData();
     },
     methods: {
+        resetSelectedOrders() {
+            this.orderSelection = [];
+            this.originTableData = this.searchedMaterials;
+        },
+        pageChange(page) {
+            this.currentPage = page
+            this.fetchMaterialData()
+        },
+        PageSizeChange(size) {
+            this.pageSize = size
+            this.fetchMaterialData()
+        },
+        async fetchMaterialData() {
+            const params = {
+                "orderRId": this.orderRIdSearch,
+                "materialName": this.materialNameSearch,
+                "materialSpec": this.materialSpecificationSearch,
+                "materialModel": this.materialModelSearch,
+                "materialColor": this.materialColorSearch,
+                "supplier": this.supplierNameSearch,
+                "page": this.currentPage,
+                "pageSize": this.pageSize,
+                "showUnfinishedOrders": this.showUnfinishedOrders,
+            }
+            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterials`, { params })
+            this.searchedMaterials = response.data.result
+            this.totalRows = response.data.total
+            // add unique id to each row
+            this.searchedMaterials.forEach(item => {
+                item.id = XEUtils.uniqueId()
+            })
+            this.originTableData = this.searchedMaterials
+        },
         autoSelectOrders() {
             if (this.totalInboundQuantity <= 0) {
                 ElMessage.warning('请先输入到货数量')
                 return
             }
             this.topTableData = []
-            this.bottomTableData = [...this.originTableData]
+            this.bottomTableData = JSON.parse(JSON.stringify(this.bottomTableDataCopy))
             let remainTotalQuantity = this.totalInboundQuantity
             for (let i = 0; i < this.bottomTableData.length; i++) {
                 let remain = this.bottomTableData[i].estimatedInboundAmount - this.bottomTableData[i].actualInboundAmount
@@ -182,6 +256,11 @@ export default {
                 return acc + (item.inboundQuantity || 0);
             }, 0);
         },
+        updateTotalInboundQuantity() {
+            this.totalInboundQuantity = this.topTableData.reduce((acc, item) => {
+                return acc + (item.inboundQuantity || 0);
+            }, 0);
+        },
         // Move selected items from top to bottom
         moveDown() {
             this.bottomTableData = this.bottomTableData.concat(this.topSelected);
@@ -190,22 +269,18 @@ export default {
             );
             this.$refs.topTableData.clearSelection();
             this.topSelected = [];
+            this.updateTotalInboundQuantity();
             this.updateSelectedInboundQuantity();
         },
         // Move selected items from bottom to top
         moveUp() {
-            let remainTotalQuantity = this.totalInboundQuantity - this.selectedInboundQuantity
-            if (remainTotalQuantity <= 0) {
-                ElMessage.warning('剩余到货数量不足，请重新选择')
+            if (this.downSelected.length === 0) {
+                ElMessage.warning('请先选择一行材料')
                 return
             }
             for (let i = 0; i < this.downSelected.length; i++) {
                 let remain = this.downSelected[i].estimatedInboundAmount - this.downSelected[i].actualInboundAmount
-                this.downSelected[i].inboundQuantity = remain > remainTotalQuantity ? remainTotalQuantity : remain
-                remainTotalQuantity -= this.downSelected[i].inboundQuantity
-                if (remainTotalQuantity <= 0) {
-                    break
-                }
+                this.downSelected[i].inboundQuantity = remain
             }
             this.topTableData = this.topTableData.concat(this.downSelected);
             this.bottomTableData = this.bottomTableData.filter(
@@ -213,10 +288,11 @@ export default {
             );
             this.$refs.bottomTableData.clearSelection();
             this.downSelected = [];
+            this.updateTotalInboundQuantity();
             this.updateSelectedInboundQuantity();
         },
         handleSelectMaterials(selection) {
-            this.materialSelection = selection;
+            this.orderSelection = [...new Set([...this.orderSelection, ...selection])];
         },
         previousPage() {
             this.selectionPage = 0
@@ -226,20 +302,16 @@ export default {
             this.downSelected = []
             this.selectedInboundQuantity = 0
             this.totalInboundQuantity = 0
+            this.unitPrice = 0
         },
         async nextPage() {
-            if (this.materialSelection.length === 0) {
+            if (this.orderSelection.length === 0) {
                 ElMessage.warning('请先选择一行材料')
                 return
             }
             try {
-                console.log(this.materialSelection)
-                let params = {
-                    "data": JSON.stringify(this.materialSelection),
-                }
-                let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getordersbymaterialinfo`, { params })
-                this.originTableData = response.data
-                this.bottomTableData = response.data
+                this.bottomTableData = JSON.parse(JSON.stringify(this.orderSelection))
+                this.bottomTableDataCopy = JSON.parse(JSON.stringify(this.orderSelection))
                 this.selectionPage = 1
             }
             catch (error) {
@@ -252,22 +324,6 @@ export default {
                 ElMessage.error(errorMessage)
 
             }
-        },
-        resetVariables() {
-            this.materialSelection = []
-            this.orderSelection = {}
-            this.currentIndex = -1
-            this.selectionIndex = null
-            this.selectionIndex2 = null
-            this.shoeSizeColumns = []
-            this.selectionPage = 0
-            this.bottomTableData = []
-            this.topTableData = []
-            this.totalInboundQuantity = ''
-            this.downSelected = []
-            this.topSelected = []
-            this.selectedInboundQuantity = 0,
-            this.localVisible = false
         },
         confirmSelection() {
             if (this.topTableData.length === 0) {
@@ -283,29 +339,28 @@ export default {
                     inboundQuantity: formatInboundQuantity,
                     itemTotalPrice: formatItemTotalPrice,
                 }
-                console.log(this.topTableData[i])
             }
             let remainTotalQuantity = new Decimal(this.totalInboundQuantity).minus(new Decimal(this.selectedInboundQuantity)).toDecimalPlaces(5).toNumber()
             let remainTotalPrice = new Decimal(remainTotalQuantity).times(new Decimal(this.unitPrice)).toDecimalPlaces(4).toNumber()
             if (remainTotalQuantity > 0) {
                 this.topTableData.push({
+                    ...this.orderSelection[0],
+                    id: XEUtils.uniqueId(),
                     orderRId: null,
                     shoeRId: null,
                     inboundQuantity: remainTotalQuantity,
-                    ...this.materialSelection[0],
                     unitPrice: this.unitPrice,
                     itemTotalPrice: remainTotalPrice,
-                    inboundModel: this.materialSelection[0].materialModel,
-                    inboundSpecification: this.materialSelection[0].materialSpecification,
+                    inboundModel: this.orderSelection[0].materialModel,
+                    inboundSpecification: this.orderSelection[0].materialSpecification,
                 })
             }
             this.$emit("confirm", this.topTableData);
-            this.$emit("update-visible", false);
-            this.resetVariables()
+            this.handleClose();
         },
         handleClose() {
             this.$emit("update-visible", false);
-            this.resetVariables()
+            this.localVisible = false;
         },
     },
 }
