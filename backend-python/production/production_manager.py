@@ -1,6 +1,12 @@
 import traceback
 from datetime import datetime, timedelta, date
-from api_utility import format_date, format_line_group, status_converter, to_camel
+from api_utility import (
+    format_date,
+    format_line_group,
+    estimate_status_converter,
+    scheduling_status_converter,
+    to_camel,
+)
 from app_config import db
 from constants import *
 from event_processor import EventProcessor
@@ -13,6 +19,7 @@ from business.batch_info_type import get_order_batch_type_helper
 import os
 from login.login import current_user_info
 from logger import logger
+
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
 
@@ -240,9 +247,8 @@ PROGRESS_STATUS_MAPPING = {
     "生产结束": [42],
 }
 
-
 @production_manager_bp.route(
-    "/production/productionmanager/getallorderproductionprogress", methods=["GET"]
+    "/production/getallorderproductionprogress", methods=["GET"]
 )
 def get_all_order_production_progress():
     page = request.args.get("page", type=int)
@@ -256,8 +262,12 @@ def get_all_order_production_progress():
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
     sort_condition = request.args.get("sortCondition")
+    mode = request.args.get("mode", "false")
     # check order status >= 生产流程
-    stmt = select(OrderStatus.order_id).where(OrderStatus.order_current_status >= 9)
+    if mode == "true":
+        stmt = select(OrderStatus.order_id).where(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
+    else:
+        stmt = select(OrderStatus.order_id).where(OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER)
     order_ids = db.session.execute(stmt).scalars().all()
 
     # order shoe status
@@ -343,6 +353,12 @@ def get_all_order_production_progress():
         .join(
             order_shoe_info, order_shoe_info.c.order_shoe_id == OrderShoe.order_shoe_id
         )
+        .filter(
+            and_(
+                OrderShoeProductionInfo.cutting_start_date.isnot(None),
+                OrderShoeProductionInfo.cutting_end_date.isnot(None),
+            )
+        )  # 不显示没排期的订单
         .filter(Order.order_id.in_(order_ids))
     )
     if order_rid and order_rid != "":
@@ -412,9 +428,7 @@ def get_all_order_production_progress():
             total_molding_amount,
             order_shoe_amount,
         ) = row
-        status_arr = [int(item) for item in current_status_str.split(",")]
-        status_value_arr = [int(item) for item in current_status_value_str.split(",")]
-        status = status_converter(status_arr, status_value_arr)
+        estimated_status = estimate_status_converter(production_info)
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -426,7 +440,7 @@ def get_all_order_production_progress():
             "orderStartDate": format_date(order.start_date),
             "orderEndDate": format_date(order.end_date),
             "processSheetUploadStatus": order_shoe.process_sheet_upload_status,
-            "status": status,
+            "status": estimated_status,
             "technicalRemark": order_shoe.business_technical_remark,
             "materialRemark": order_shoe.business_material_remark,
             "cuttingStartDate": format_date(production_info.cutting_start_date),
@@ -491,15 +505,16 @@ def get_all_order_shoe_info():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     query = (
-        db.session.query(Order, OrderShoe, Shoe, func.sum(OrderShoeBatchInfo.total_amount))
+        db.session.query(
+            Order, OrderShoe, Shoe, func.sum(OrderShoeBatchInfo.total_amount)
+        )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(
             OrderShoeBatchInfo,
-            OrderShoeBatchInfo.order_shoe_type_id
-            == OrderShoeType.order_shoe_type_id,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
         .group_by(Order.order_id, OrderShoe.order_shoe_id)
@@ -1244,7 +1259,7 @@ def reject_price_report():
         report.status = PRICE_REPORT_PM_REJECTED
         report.rejection_reason = data["rejectionReason"]
         team = report.team
-    
+
     if team == "裁断":
         operation = 78
         current_status = 21

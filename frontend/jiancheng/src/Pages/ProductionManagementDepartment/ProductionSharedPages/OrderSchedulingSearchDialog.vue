@@ -1,31 +1,19 @@
 <template>
     <el-form :inline="true">
-        <el-form-item label="客户名称">
-            <el-select v-model="localSearchForm.customerNameSearch" value-key="" placeholder="例：37" clearable filterable
-                @change="handleConfirm">
-                <el-option v-for="item in customerNameOptions" :value="item" :label="item" />
-            </el-select>
-        </el-form-item>
-        <el-form-item label="客户商标">
-            <el-input v-model="localSearchForm.customerBrandSearch" placeholder="例：CLOWSE" @change="handleConfirm" clearable />
-        </el-form-item>
         <el-form-item label="订单号">
             <el-input v-model="localSearchForm.orderRIdSearch" placeholder="例：K24-001" @change="handleConfirm" clearable />
         </el-form-item>
         <el-form-item label="工厂型号">
             <el-input v-model="localSearchForm.shoeRIdSearch" placeholder="例：3E1122" @change="handleConfirm" clearable />
         </el-form-item>
-        <el-form-item label="客户型号">
-            <el-input v-model="localSearchForm.customerProductNameSearch" placeholder="例：CL-B001" @change="handleConfirm" clearable />
-        </el-form-item>
         <el-form-item label="状态点">
-            <el-select v-model="localSearchForm.statusNodeSearch" placeholder="例：生产中" @change="handleConfirm" clearable style="width: 150px;">
+            <el-select v-model="localSearchForm.statusNodeSearch" placeholder="例：裁断未排期" @change="handleConfirm" clearable style="width: 150px;">
                 <el-option v-for="item in [
-                    '未排期',
-                    '已保存排期',
-                    '生产前确认',
-                    '生产中',
-                    '生产结束',
+                    '裁断未排期',
+                    '预备未排期',
+                    '针车未排期',
+                    '成型未排期',
+                    '已排期',
                 ]" :key="item" :label="item" :value="item">
                 </el-option>
             </el-select>
@@ -46,21 +34,11 @@
                 </el-option>
             </el-select>
         </el-form-item>
-        <el-form-item label="显示订单模式">
-            <el-switch v-model="localSearchForm.mode" inactive-text="进行中的订单" active-text="所有订单" @change="handleConfirm"></el-switch>
-        </el-form-item>
     </el-form>
 </template>
 <script>
-import axios from 'axios'
-import { markRaw } from 'vue'
-import { Search } from '@element-plus/icons-vue'
 export default {
     props: {
-        customerNameOptions: {
-            type: Array,
-            required: true,
-        },
         searchForm: {
             type: Object,
             required: true
