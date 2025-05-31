@@ -28,6 +28,8 @@ def get_all_suppliers():
 def create_supplier():
     supplier_name = request.json.get("supplierName")
     supplier_type = request.json.get("supplierField")
+    if supplier_name is None or supplier_name == "":
+        return jsonify({"message": "供应商名称不能为空"}), 400
     supplier = Supplier(supplier_name=supplier_name, supplier_type=supplier_type)
     db.session.add(supplier)
     db.session.commit()

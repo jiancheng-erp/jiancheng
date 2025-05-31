@@ -64,7 +64,7 @@
             <el-button v-if="page != 1" @click="prevPage()">上一页</el-button>
             <el-button v-if="page != 2" @click="nextPage()">下一页</el-button>
             <el-button v-else-if="page == 2" type="primary" @click="submitOutboundForm">出库</el-button>
-            <el-button @click="test">123</el-button>
+            <!-- <el-button @click="test">123</el-button> -->
         </template>
     </el-dialog>
 

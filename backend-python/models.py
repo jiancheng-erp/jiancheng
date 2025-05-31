@@ -1012,7 +1012,7 @@ class UnitPriceReport(db.Model):
     )
     submission_date = db.Column(db.Date, nullable=True)
     team = db.Column(db.String(10), nullable=True)
-    status = db.Column(db.SmallInteger, nullable=False)
+    status = db.Column(db.SmallInteger, nullable=False, default=1)
     rejection_reason = db.Column(db.String(40), nullable=True)
     price_sum = db.Column(db.DECIMAL(13, 4), default=0)
 

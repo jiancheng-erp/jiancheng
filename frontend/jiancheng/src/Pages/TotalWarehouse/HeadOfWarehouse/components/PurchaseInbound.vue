@@ -36,8 +36,8 @@
                 <el-form-item prop="remark" label="备注">
                     <el-input v-model="inboundForm.remark"></el-input>
                 </el-form-item>
-                <el-form-item prop="shoeSize" label="码段">
-                    <el-select v-model="inboundForm.shoeSize" filterable clearable @change="insertShoeSizeColumns">
+                <el-form-item prop="shoeSizes" label="码段">
+                    <el-select v-model="inboundForm.shoeSizes" filterable clearable @change="insertShoeSizeColumns">
                         <el-option v-for="item in logisticsShoeSizes" :key="item.batchInfoTypeId"
                             :value="item.batchInfoTypeId" :label="item.batchInfoTypeName">
                         </el-option>
@@ -161,32 +161,12 @@
         </el-col>
     </el-row>
 
-    <MaterialSelectDialog :visible="isMaterialSelectDialogVis" :searchedMaterials="searchedMaterials"
+    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis" :searchParams="searchParams"
         @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <el-dialog title="选择材料" v-model="isSizeMaterialSelectDialogVis" width="80%" destroy-on-close>
-        <span>搜索订单号：</span>
-        <el-input v-model="orderRIdSearch" @change="searchRecordByOrderRId"
-            style="width: 200px; margin-bottom: 10px;"></el-input>
-        <el-table ref="searchedSizeMaterials" :data="searchedSizeMaterials" border stripe
-            @selection-change="handleSizeMaterialSelect" height="600">
-            <el-table-column type="selection" width="55"></el-table-column>
-            <el-table-column prop="orderRId" label="生产订单号"></el-table-column>
-            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-            <el-table-column prop="materialName" label="材料名称"></el-table-column>
-            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
-            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-            <el-table-column prop="materialColor" label="颜色"></el-table-column>
-            <el-table-column prop="unitPrice" label="单价"></el-table-column>
-            <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
-            <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-            <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
-            <el-table-column prop="currentAmount" label="库存"></el-table-column>
-        </el-table>
-        <template #footer>
-            <el-button @click="confirmSelection">确定</el-button>
-        </template>
-    </el-dialog>
+    <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis" :searched-size-materials="searchedSizeMaterials"
+        @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
+
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
         @closed="closePreviewDialog">
         <div id="printView">
@@ -213,7 +193,7 @@
                                     </td>
                                     <td style="padding:5px; width: 150px;" align="left">结算方式:{{
                                         previewInboundForm.payMethod
-                                    }}</td>
+                                        }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -223,8 +203,8 @@
                 <tbody>
                     <tr>
                         <td>
-                            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                                style="max-height: 360px; font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                            <table class="inner-table" border="1" cellspacing="0" align="center" width="100%"
+                                style="border-collapse: collapse; border-spacing: 0; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
                                 <thead>
                                     <tr>
                                         <th width="100">材料名</th>
@@ -313,9 +293,10 @@ import { updateTotalPriceHelper } from '@/Pages/utils/warehouseFunctions';
 import MaterialSelectDialog from './MaterialSelectDialog.vue';
 import OrderMaterialQuery from './OrderMaterialQuery.vue';
 import OrderMaterialsPage from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderMaterialsPage.vue';
-import { debounce, reject } from 'lodash';
+import { debounce, reject, update } from 'lodash';
 import OrderStatusPage from './OrderStatusPage.vue';
 import InboundRecords from './InboundRecords.vue';
+import SizeMaterialSelectDialog from './SizeMaterialSelectDialog.vue';
 import XEUtils from 'xe-utils'
 export default {
     components: {
@@ -324,7 +305,8 @@ export default {
         OrderMaterialQuery,
         OrderMaterialsPage,
         OrderStatusPage,
-        InboundRecords
+        InboundRecords,
+        SizeMaterialSelectDialog
     },
     data() {
         return {
@@ -337,7 +319,7 @@ export default {
                 inboundType: 0,
                 inboundRId: '',
                 remark: '',
-                shoeSize: null,
+                shoeSizes: null,
                 payMethod: '应付账款',
                 warehouseName: null,
                 warehouseId: null,
@@ -359,7 +341,6 @@ export default {
             isSizeMaterialSelectDialogVis: false,
             searchedMaterials: [],
             searchedSizeMaterials: [],
-            orriginalSizeMaterials: [],
             currentKeyDownRow: null,
             currentIndex: -1,
             isPreviewDialogVis: false,
@@ -393,8 +374,6 @@ export default {
             previewData: [],
             logisticsShoeSizes: [],
             materialNameOptions: [],
-            selectedSizeMaterials: [],
-            orderRIdSearch: '',
             filteredOrders: [],
             isOrderMaterialQueryVis: false,
             materialTypeOptions: [],
@@ -423,7 +402,16 @@ export default {
                         row.inboundModel = selected;
                     }
                 }
-            }
+            },
+            searchParams: {
+                orderId: null,
+                materialName: null,
+                materialSpec: null,
+                materialModel: null,
+                materialColor: null,
+                supplier: null
+            },
+            showMaterialSelectDialog: false,
         }
     },
     // beforeUnmount() {
@@ -469,16 +457,16 @@ export default {
             }, 0);
             return Number(total).toFixed(4);
         },
-        filteredShoeSizeColumns() {
-            return this.shoeSizeColumns.filter(column =>
-                this.previewData.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-            )
-        },
         filteredMaterialNameOptions() {
             return this.materialNameOptions.filter(item => item.type == this.inboundForm.materialTypeId)
         },
     },
     methods: {
+        clearShoeSizeColumns() {
+            if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
+                this.shoeSizeColumns = []
+            }
+        },
         clearRejectRecord() {
             this.rejectedRecordId = null
             this.inboundForm = { ...this.inboundFormTemplate }
@@ -614,17 +602,31 @@ export default {
         // },
         updateMaterialTableData(value) {
             this.searchedMaterials = []
-            let seen = new Set()
             let temp = [...this.materialTableData, ...value]
             temp.splice(this.currentIndex, 1)
             this.materialTableData = [...temp]
             this.currentIndex = null
         },
+        updateSizeMaterialTableData(value) {
+            this.searchedSizeMaterials = []
+            let temp = [...this.materialTableData, ...value]
+            temp.splice(this.currentIndex, 1)
+            this.materialTableData = [...temp]
+            this.currentIndex = null
+            let firstItem = this.materialTableData[0]
+            let sizeColumns = []
+            for (let i = 0; i < firstItem.shoeSizeColumns.length; i++) {
+                let obj = { "label": firstItem.shoeSizeColumns[i], "prop": `amount${i}` }
+                sizeColumns.push(obj)
+            }
+            this.shoeSizeColumns = sizeColumns
+        },
         updateDialogVisible(value) {
+            this.showMaterialSelectDialog = value
             this.isMaterialSelectDialogVis = value
         },
-        handleSizeMaterialSelect(value) {
-            this.selectedSizeMaterials = value
+        updateSizeMaterialDialogVisible(value) {
+            this.isSizeMaterialSelectDialogVis = value
         },
         handleInboundType(value) {
             this.inboundForm.inboundType = value
@@ -647,6 +649,11 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
             this.inboundForm.warehouseName = response.data.warehouseName
             this.inboundForm.warehouseId = response.data.warehouseId
+
+            if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
+                this.inboundForm.shoeSizes = null
+                this.shoeSizeColumns = []
+            }
         },
         querySuppliers(queryString, callback) {
             const results = this.materialSupplierOptions
@@ -663,7 +670,7 @@ export default {
             this.logisticsShoeSizes = response.data.batchDataTypes
         },
         insertShoeSizeColumns() {
-            let selectedShoeSize = this.logisticsShoeSizes.filter((item) => item.batchInfoTypeId == this.inboundForm.shoeSize)[0]
+            let selectedShoeSize = this.logisticsShoeSizes.filter((item) => item.batchInfoTypeId == this.inboundForm.shoeSizes)[0]
             let tempTable = []
 
             if (selectedShoeSize) {
@@ -740,7 +747,7 @@ export default {
         updateTotalPrice(row) {
             row.itemTotalPrice = updateTotalPriceHelper(row)
         },
-        handleSearchMaterial(scope) {
+        async handleSearchMaterial(scope) {
             if (this.inboundForm.inboundType != 1 && this.inboundForm.supplierName == null) {
                 ElMessage.warning('请填写厂家名称')
                 return
@@ -752,31 +759,25 @@ export default {
             this.currentKeyDownRow = scope.row; // Store the current row
             this.currentIndex = scope.rowIndex; // Store the current row index
             if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
-                this.fetchSizeMaterialData()
+                await this.fetchSizeMaterialData()
                 this.isSizeMaterialSelectDialogVis = true
             }
             else {
                 this.fetchMaterialData()
+                this.showMaterialSelectDialog = true
                 this.isMaterialSelectDialogVis = true
             }
         },
         async fetchMaterialData() {
             const params = {
+                "orderRId": this.currentKeyDownRow.orderRId,
                 "materialName": this.currentKeyDownRow.materialName,
                 "materialSpec": this.currentKeyDownRow.inboundSpecification,
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
             }
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterials`, { params })
-            this.searchedMaterials = response.data
-        },
-        searchRecordByOrderRId(queryString) {
-            this.$refs.searchedSizeMaterials.clearSelection()
-            this.searchedSizeMaterials = [...this.orriginalSizeMaterials]
-            if (queryString) {
-                this.searchedSizeMaterials = this.searchedSizeMaterials.filter(item => item.orderRId.includes(queryString))
-            }
+            this.searchParams = params; // Update search parameters
         },
         async fetchSizeMaterialData() {
             const params = {
@@ -785,51 +786,13 @@ export default {
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplier": this.inboundForm.supplierName,
-                "orderRId": this.currentKeyDownRow.orderRId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
-            this.orriginalSizeMaterials = response.data
             this.searchedSizeMaterials = response.data
-        },
-        confirmSelection() {
-            if (this.selectedSizeMaterials.length == 0) {
-                ElMessage.warning('请至少选择一行材料')
-                return
-            }
-            if (this.selectedSizeMaterials[0].materialName === '大底') {
-                let firstOrderRId = this.selectedSizeMaterials[0].orderRId
-                for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
-                    if (this.selectedSizeMaterials[i].orderRId != firstOrderRId) {
-                        ElMessage.warning('请确保选择的材料属于同一生产订单')
-                        return
-                    }
-                }
-            }
-            let tempTable = []
-            this.materialTableData.splice(this.currentIndex, 1)
-            for (let i = 0; i < this.selectedSizeMaterials.length; i++) {
-                let selectedMaterial = this.selectedSizeMaterials[i]
-                selectedMaterial.inboundModel = selectedMaterial.materialModel
-                selectedMaterial.inboundSpecification = selectedMaterial.materialSpecification
-                let sizeColumns = selectedMaterial.shoeSizeColumns
-                for (let j = 0; j < sizeColumns.length; j++) {
-                    if (i == 0 && selectedMaterial.materialName === '大底') {
-                        let obj = { "label": sizeColumns[j], "prop": `amount${j}` }
-                        tempTable.push(obj)
-
-                    }
-                    let estimatedInboundAmount = selectedMaterial[`estimatedInboundAmount${j}`]
-                    let actualInboundAmount = selectedMaterial[`actualInboundAmount${j}`]
-                    selectedMaterial["amount" + j] = estimatedInboundAmount - actualInboundAmount
-                }
-                selectedMaterial.inboundQuantity = selectedMaterial.estimatedInboundAmount - selectedMaterial.actualInboundAmount
-                selectedMaterial.itemTotalPrice = (selectedMaterial.inboundQuantity * selectedMaterial.unitPrice).toFixed(4)
-                this.materialTableData.push(selectedMaterial)
-            }
-
-            this.shoeSizeColumns = tempTable
-            this.materialTableData = [...this.materialTableData]
-            this.isSizeMaterialSelectDialogVis = false
+            // add unique id to each row
+            this.searchedSizeMaterials.forEach(item => {
+                item.id = XEUtils.uniqueId()
+            })
         },
         async handleMaterialNameSelect(row, value) {
             if (value == null || value == '') {
@@ -838,9 +801,6 @@ export default {
             let temp = this.materialNameOptions.filter(item => item.value == value)[0]
             row.actualInboundUnit = temp.unit
             row.materialCategory = temp.materialCategory
-            if (!(row.materialName === '大底')) {
-                this.shoeSizeColumns = []
-            }
         },
         async submitInboundForm() {
             for (let i = 0; i < this.materialTableData.length; i++) {
@@ -855,7 +815,7 @@ export default {
                 warehouseId: this.inboundForm.warehouseId,
                 remark: this.inboundForm.remark,
                 items: this.materialTableData,
-                batchInfoTypeId: this.inboundForm.shoeSize,
+                batchInfoTypeId: this.inboundForm.shoeSizes,
                 payMethod: this.inboundForm.payMethod,
                 materialTypeId: this.inboundForm.materialTypeId,
             }
@@ -988,8 +948,31 @@ export default {
 /* 确保表头固定和分页逻辑 */
 /* Print styles */
 @media print {
+
     @page {
-        margin: 20mm;
+        @bottom-center {
+            content: "第" counter(page) "页 / 共" counter(pages)"页";
+            font-size: 12px;
+            color: black;
+            font-family: SimHei;
+        }
+    }
+
+    .inner-table {
+        border-collapse: collapse;
+        border-spacing: 0;
+    }
+
+    .inner-table th,
+    .inner-table td {
+        border: 1px solid #000;
+        padding: 4px;
+    }
+
+    .inner-table tr {
+        page-break-inside: avoid !important;
+        -webkit-page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     thead {
@@ -997,17 +980,18 @@ export default {
     }
 
     tfoot {
-        display: table-footer-group;
-    }
-
-    /* Optional: Avoid breaking inside rows */
-    tr {
-        page-break-inside: avoid;
+        display: table-row-group;
     }
 }
 </style>
 
-<style scoped>
+<style>
+.inner-table th,
+.inner-table td {
+    border: 1px solid #000;
+    padding: 4px;
+}
+
 #printView {
     padding-left: 20px;
     padding-right: 20px;
