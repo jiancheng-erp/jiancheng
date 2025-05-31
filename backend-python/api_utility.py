@@ -3,6 +3,7 @@
 # from event_processor import *
 import random
 import string
+from datetime import datetime
 
 
 # ### check if a shoe exists in DB
@@ -132,6 +133,29 @@ def status_converter(current_status_arr, current_status_value_arr):
     elif 42 in current_status_arr:
         status = "生产结束"
     return status
+
+
+def estimate_status_converter(production_info):
+    interval1 = [production_info.cutting_start_date, production_info.cutting_end_date]
+    interval2 = [production_info.pre_sewing_start_date, production_info.pre_sewing_end_date]
+    interval3 = [production_info.sewing_start_date, production_info.sewing_end_date]
+    interval4 = [production_info.molding_start_date, production_info.molding_end_date]
+    
+    today = datetime.now().date()
+    result = []
+    if interval1[0] and interval1[0] > today:
+        result.append("未开始")
+    if interval1[0] and interval1[1] and interval1[0] <= today <= interval1[1]:
+        result.append("裁断中")
+    if interval2[0] and interval2[1] and interval2[0] <= today <= interval2[1]:
+        result.append("预备中")
+    if interval3[0] and interval3[1] and interval3[0] <= today <= interval3[1]:
+        result.append("针车中")
+    if interval4[0] and interval4[1] and interval4[0] <= today <= interval4[1]:
+        result.append("成型中")
+    if interval4[1] and today > interval4[1]:
+        result.append("已结束")
+    return result
 
 
 def outsource_status_converter(status_val):

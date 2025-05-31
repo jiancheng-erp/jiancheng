@@ -1,6 +1,6 @@
 import traceback
 from datetime import datetime, timedelta, date
-from api_utility import format_date, format_line_group, status_converter, to_camel
+from api_utility import format_date, format_line_group, estimate_status_converter, to_camel
 from app_config import db
 from constants import *
 from event_processor import EventProcessor
@@ -412,9 +412,7 @@ def get_all_order_production_progress():
             total_molding_amount,
             order_shoe_amount,
         ) = row
-        status_arr = [int(item) for item in current_status_str.split(",")]
-        status_value_arr = [int(item) for item in current_status_value_str.split(",")]
-        status = status_converter(status_arr, status_value_arr)
+        estimated_status = estimate_status_converter(production_info)
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -426,7 +424,7 @@ def get_all_order_production_progress():
             "orderStartDate": format_date(order.start_date),
             "orderEndDate": format_date(order.end_date),
             "processSheetUploadStatus": order_shoe.process_sheet_upload_status,
-            "status": status,
+            "status": estimated_status,
             "technicalRemark": order_shoe.business_technical_remark,
             "materialRemark": order_shoe.business_material_remark,
             "cuttingStartDate": format_date(production_info.cutting_start_date),

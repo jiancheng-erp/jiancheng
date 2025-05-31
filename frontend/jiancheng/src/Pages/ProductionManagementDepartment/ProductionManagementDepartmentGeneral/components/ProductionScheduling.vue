@@ -12,7 +12,7 @@
                 排产
             </el-button>
             <el-button type="primary" v-if="role == 6" @click="toggleSelectionMode">
-                {{ isMultipleSelection ? "退出" : "选择鞋型" }}
+                {{ isMultipleSelection ? "退出" : "多选鞋型排产" }}
             </el-button>
             <p v-if="isSelectedRowsEmpty">未选择鞋型</p>
         </el-col>
@@ -52,14 +52,6 @@
                 <el-table-column prop="orderEndDate" label="出货日期" width="100"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号" width="90"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户鞋型" width="90"></el-table-column>
-                <el-table-column prop="status" label="生产状态" width="100"></el-table-column>
-                <el-table-column prop="orderShoeTotal" label="数量"></el-table-column>
-                <el-table-column label="车间生产进度" header-align="center">
-                    <el-table-column prop="totalCuttingAmount" label="裁断"></el-table-column>
-                    <el-table-column prop="totalPreSewingAmount" label="预备"></el-table-column>
-                    <el-table-column prop="totalSewingAmount" label="针车"></el-table-column>
-                    <el-table-column prop="totalMoldingAmount" label="成型"></el-table-column>
-                </el-table-column>
                 <el-table-column label="排产">
                     <template #default="scope">
                         <el-button type="primary" size="small" @click="openScheduleDialog(scope.row)">
@@ -236,68 +228,17 @@
             </span>
         </template>
     </el-dialog>
-
-    <el-dialog title="生产信息一览" v-model="isProdDetailDialogOpen" fullscreen @close="onDialogClose">
-        <el-tabs v-model="currentProdDetailTab" tab-position="top">
-            <el-tab-pane name="1" label="物料">
-                <OrderMaterialsPage v-if="showChild" :current-row="currentRow" />
-            </el-tab-pane>
-            <el-tab-pane name="2" label="工艺单">
-                <el-button v-if="currentRow.processSheetUploadStatus == 2" type="warning" size="small"
-                    @click="openCraftSheet()">
-                    已下发，用量未填写
-                </el-button>
-                <el-button v-else-if="currentRow.processSheetUploadStatus != 4" type="warning" size="small"
-                    @click="openCraftSheet()">
-                    未下发
-                </el-button>
-                <el-button v-else-if="currentRow.processSheetUploadStatus == 4" type="success" size="small"
-                    @click="openCraftSheet()">
-                    已下发
-                </el-button>
-            </el-tab-pane>
-            <el-tab-pane name="3" label="装箱配码">
-                <el-button type="primary" @click="downloadBatchInfo">下载配码</el-button>
-            </el-tab-pane>
-            <el-tab-pane name="4" label="包装资料">
-                <el-button type="primary" size="small" @click="downloadPackagingInfo">
-                    下载
-                </el-button>
-            </el-tab-pane>
-            <el-tab-pane name="5" label="工价单">
-                <el-tabs v-model="currentPriceReportTab" tab-position="top">
-                    <el-tab-pane v-for="item in reportPanes" :key="item.key" :label="item.label" :name="item.key">
-                        <el-row v-if="priceReportDict[item.key] === undefined">
-                            尚未有工价单
-                        </el-row>
-                        <el-row v-else>
-                            <el-table :data="priceReportDict[item.key]" border stripe max-height="500">
-                                <el-table-column prop="rowId" label="序号" />
-                                <el-table-column prop="procedure" label="工序"></el-table-column>
-                                <el-table-column prop="price" label="单位价格"></el-table-column>
-                                <el-table-column prop="note" label="备注"></el-table-column>
-                            </el-table>
-                        </el-row>
-                    </el-tab-pane>
-                </el-tabs>
-            </el-tab-pane>
-        </el-tabs>
-    </el-dialog>
 </template>
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { shoeBatchInfoTableSpanMethod, getShoeSizesName } from '../utils';
-import OrderProgressSearchDialog from './OrderProgressSearchDialog.vue';
-import MaterialStorage from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/MaterialStorage.vue';
-import OrderMaterialsPage from './OrderMaterialsPage.vue';
+import { shoeBatchInfoTableSpanMethod, getShoeSizesName } from '../../utils'
+import OrderProgressSearchDialog from '../../ProductionSharedPages/OrderProgressSearchDialog.vue';
 export default {
     components: {
         AllHeader,
         OrderProgressSearchDialog,
-        MaterialStorage,
-        OrderMaterialsPage
     },
     data() {
         return {
@@ -743,16 +684,6 @@ export default {
             this.pageSize = val
             await this.getOrderDataTable()
         },
-        downloadPackagingInfo() {
-            window.open(
-                `${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${this.currentRow.orderRId}&filetype=2`
-            )
-        },
-        downloadBatchInfo() {
-            window.open(
-                `${this.$apiBaseUrl}/production/downloadbatchinfo?orderId=${this.currentRow.orderId}&orderShoeId=${this.currentRow.orderShoeId}&orderRId=${this.currentRow.orderRId}&shoeRId=${this.currentRow.shoeRId}`
-            )
-        },
         async getOrderDataTable() {
             let startDate = null, endDate = null
             if (this.searchForm.orderDateRangeSearch) {
@@ -775,11 +706,6 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getallorderproductionprogress`, { params })
             this.orderTableData = response.data.result
             this.orderTotalRows = response.data.totalLength
-        },
-        openCraftSheet() {
-            let url = ''
-            url = `${window.location.origin}/processsheet/orderid=${this.currentRow.orderId}`
-            window.open(url, '_blank')
         },
         onDialogClose() {
             // wait until dialog animation is done, then destroy child
