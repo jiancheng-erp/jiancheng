@@ -5,7 +5,7 @@
     
     <el-row :gutter="20" style="margin-top: 20px;">
         <el-col :span="24">
-            <el-table :data="paginatedSupplierData" border style="height: 500px;" v-loading="datafinished">
+            <el-table :data="paginatedSupplierData" border style="height: 500px;">
                 <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
                 <el-table-column prop="supplierField" label="供应商供货类型"></el-table-column>
             </el-table>
@@ -56,7 +56,7 @@
 
 <script>
 import axios from 'axios'
-import { ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 export default {
     data() {
@@ -92,7 +92,7 @@ export default {
             try {
                 const response = await axios.get(`${this.$apiBaseUrl}/logistics/allsuppliers`);
                 this.supplierData = response.data;
-                this.datafinished = false;
+                // this.datafinished = false;
             } catch (error) {
                 console.error("Error fetching supplier data:", error);
                 this.datafinished = false;
@@ -104,8 +104,15 @@ export default {
                 await axios.post(`${this.$apiBaseUrl}/logistics/createsupplier`, this.addSupplierData);
                 this.isCreateSupplierDialogVisible = false;
                 this.getSupplierData();
+                ElMessage.success('创建成功');
             } catch (error) {
                 console.error("Error creating supplier:", error);
+                if (error.response) {
+                    ElMessage.error(error.response.data.message);
+                }
+                else {
+                    ElMessage.error('创建供应商失败');
+                }
             }
         },
         cancelCreateSupplier() {
