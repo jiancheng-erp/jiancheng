@@ -43,6 +43,9 @@
                         <!-- <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>独立采购</span>
                         </el-menu-item> -->
+                        <el-menu-item index="15" @click="handleMenuClick(15)">
+                            <span>供货商管理</span>
+                        </el-menu-item>
                         <el-menu-item index="8" @click="handleMenuClick(8)">
                             <span>材料管理</span>
                         </el-menu-item>
@@ -86,6 +89,7 @@ import MultiPurchaseIssue from '@/Pages/LogisticsControlDepartment/LogisticsCont
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import OrderSearch from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/OrderSearch.vue'
 import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
+import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SupplierManagementView.vue'
 
 export default {
     components: {
@@ -104,7 +108,8 @@ export default {
         MultiPurchaseIssue,
         PersonalInfo,
         OrderSearch,
-        MaterialManagementView
+        MaterialManagementView,
+        SupplierManagement
     },
     data() {
         return {
@@ -163,6 +168,9 @@ export default {
                     break
                 case 13:
                     this.currentComponent = 'OrderSearch'
+                    break
+                case 15:
+                    this.currentComponent = 'SupplierManagement'
                     break
             }
         }
