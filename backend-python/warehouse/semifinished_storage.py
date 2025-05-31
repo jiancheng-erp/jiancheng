@@ -19,9 +19,9 @@ semifinished_storage_bp = Blueprint("semifinished_storage_bp", __name__)
 
 
 @semifinished_storage_bp.route(
-    "/warehouse/warehousemanager/getsemifinishedinoutoverview", methods=["GET"]
+    "/warehouse/getsemifinishedstorages", methods=["GET"]
 )
-def get_semifinished_in_out_overview():
+def get_semifinished_storages():
     """
     showAll: 0 means show all orders, 1 means show active orders
     """
@@ -40,6 +40,7 @@ def get_semifinished_in_out_overview():
             Shoe,
             SemifinishedShoeStorage,
             Color,
+            BatchInfoType
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -52,7 +53,8 @@ def get_semifinished_in_out_overview():
         )
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Color, Color.color_id == ShoeType.color_id)
-        .group_by(OrderShoe.order_shoe_id, SemifinishedShoeStorage.semifinished_shoe_id)
+        .join(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
+        .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
@@ -60,15 +62,15 @@ def get_semifinished_in_out_overview():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if customer_name and customer_name != "":
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
-    # if show_all != 0:
-    #     query = query.join(OrderStatus, OrderStatus.order_id == Order.order_id).filter(
-    #         OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER
-    #     )
+    if show_all == 0:
+        query = query.filter(
+            SemifinishedShoeStorage.semifinished_status == 0
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
     for row in response:
-        (order, customer, order_shoe, shoe, storage_obj, color) = row
+        (order, customer, order_shoe, shoe, storage_obj, color, batch_info) = row
         if storage_obj.semifinished_status == 0:
             status_name = "未完成入库"
         elif storage_obj.semifinished_status == 1:
@@ -88,7 +90,14 @@ def get_semifinished_in_out_overview():
             "currentAmount": storage_obj.semifinished_amount,
             "statusName": status_name,
             "colorName": color.color_name,
+            "shoeSizeColumns": []
         }
+        for i in range(len(SHOESIZERANGE)):
+            shoe_size_db_name = i + 34
+            obj[f"size{shoe_size_db_name}EstimatedAmount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_estimated_amount")
+            obj[f"size{shoe_size_db_name}ActualAmount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_actual_amount")
+            obj[f"size{shoe_size_db_name}Amount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_amount")
+            obj["shoeSizeColumns"].append(getattr(batch_info, f"size_{shoe_size_db_name}_name"))
         result.append(obj)
     return {"result": result, "total": count_result}
 
@@ -121,76 +130,92 @@ def get_shoe_size_columns():
         result.append(obj)
     return result
 
+def _determine_status(storage):
+    for i in range(len(SHOESIZERANGE)):
+        db_name = i + 34
+        estimated_column = f"size_{db_name}_estimated_amount"
+        estimated_amount = getattr(storage, estimated_column)
+        actual_column = f"size_{db_name}_actual_amount"
+        actual_amount = getattr(storage, actual_column)
+        if estimated_amount > actual_amount:
+            return False
+    return True
+
 
 @semifinished_storage_bp.route(
     "/warehouse/warehousemanager/inboundsemifinished", methods=["POST", "PATCH"]
 )
 def inbound_semifinished():
     data = request.get_json()
-    # Determine the next available group_id
-    next_group_id = (
-        db.session.query(
-            func.coalesce(func.max(ShoeInboundRecord.inbound_batch_id), 0)
-        ).scalar()
-        + 1
+    operation_purpose = data["operationPurpose"]
+    outsource_info_id = data.get("outsourceInfoId", None)
+    remark = data.get("remark")
+    items = data.get("items", [])
+    timestamp = format_datetime(datetime.now())
+    formatted_timestamp = (
+        timestamp.replace("-", "").replace(" ", "").replace(":", "")
     )
-    for row in data:
-        outsource_info_id = row.get("outsourceInfoId", None)
-        operation_purpose = row["operationPurpose"]
-        timestamp = row["timestamp"]
-        formatted_timestamp = (
-            timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    rid = "SIR" + formatted_timestamp + "T" + str(operation_purpose)
+    inbound_record = ShoeInboundRecord(
+        shoe_inbound_rid=rid,
+        inbound_datetime=timestamp,
+        inbound_type=operation_purpose,
+        remark=remark,
+    )
+    if operation_purpose == 1 and not outsource_info_id:
+        return jsonify({"message": "外包入库需选厂家"}), 400
+        
+    if operation_purpose == 1:
+        outsource_info = db.session.query(OutsourceInfo).get(outsource_info_id)
+        if not outsource_info:
+            return jsonify({"message": "无外包信息"}), 400
+        if outsource_info.outsource_status == 5:
+            outsource_info.outsource_status = 6
+        inbound_record.outsource_info_id = outsource_info_id
+
+    db.session.add(inbound_record)
+    db.session.flush()
+    total_amount = 0
+
+    for item in items:
+        storage_id = item["storageId"]
+        remark = item["remark"]
+        amount_list = item["amountList"]
+        
+        storage = db.session.query(SemifinishedShoeStorage).get(storage_id)
+        if not storage:
+            return jsonify({"message": "该库存不存在"}), 400
+
+        for i in range(len(amount_list)):
+            db_name = i + 34
+            column_name1 = f"size_{db_name}_actual_amount"
+            actual_amount = getattr(storage, column_name1) + int(amount_list[i])
+            column_name2 = f"size_{db_name}_amount"
+            current_amount = getattr(storage, column_name2) + int(amount_list[i])
+            setattr(storage, column_name1, actual_amount)
+            setattr(storage, column_name2, current_amount)
+            storage.semifinished_actual_amount += int(amount_list[i])
+            storage.semifinished_amount += int(amount_list[i])
+
+        sub_total_amount = sum([int(x) for x in amount_list])
+        
+        record_detail = ShoeInboundRecordDetail(
+            shoe_inbound_record_id=inbound_record.shoe_inbound_record_id,
+            inbound_amount=sub_total_amount,
+            semifinished_shoe_storage_id=storage_id,
+            remark=remark,
         )
-        items = row["items"]
-        for item in items:
-            storage_id = item["storageId"]
-            remark = item["remark"]
-            amount_list = item["amountList"]
-            rid = "SIR" + formatted_timestamp + "C" + str(next_group_id)
-            storage = SemifinishedShoeStorage.query.get(storage_id)
-            if not storage:
-                return jsonify({"message": "failed"}), 400
+        for i in range(len(amount_list)):
+            db_name = i + 34
+            column_name = f"size_{db_name}_amount"
+            setattr(record_detail, column_name, int(amount_list[i]))
 
-            if operation_purpose == 1 and not outsource_info_id:
-                return jsonify({"message": "failed"}), 400
-            elif operation_purpose == 1:
-                outsource_info = OutsourceInfo.query.get(outsource_info_id)
-                if not outsource_info:
-                    return jsonify({"message": "failed"}), 400
-                if outsource_info.outsource_status == 5:
-                    outsource_info.outsource_status = 6
-
-            for i in range(len(amount_list)):
-                db_name = i + 34
-                column_name1 = f"size_{db_name}_actual_amount"
-                actual_amount = getattr(storage, column_name1) + int(amount_list[i])
-                column_name2 = f"size_{db_name}_amount"
-                current_amount = getattr(storage, column_name2) + int(amount_list[i])
-                setattr(storage, column_name1, actual_amount)
-                setattr(storage, column_name2, current_amount)
-                storage.semifinished_actual_amount += int(amount_list[i])
-                storage.semifinished_amount += int(amount_list[i])
-
-            storage.semifinished_inbound_datetime = timestamp
-            total_amount = sum([int(x) for x in amount_list])
-            record = ShoeInboundRecord(
-                inbound_amount=total_amount,
-                inbound_datetime=timestamp,
-                inbound_type=operation_purpose,
-                semifinished_shoe_storage_id=storage_id,
-                remark=remark,
-                subsequent_stock=storage.semifinished_amount,
-                outsource_info_id=outsource_info_id,
-                inbound_batch_id=next_group_id,
-            )
-            for i in range(len(amount_list)):
-                db_name = i + 34
-                column_name = f"size_{db_name}_amount"
-                setattr(record, column_name, int(amount_list[i]))
-
-            db.session.add(record)
-            record.shoe_inbound_rid = rid
-        next_group_id += 1
+        db.session.add(record_detail)
+        total_amount += sub_total_amount
+        if _determine_status(storage):
+            storage.semifinished_status = 1
+    inbound_record.inbound_amount = total_amount
+        
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -401,24 +426,29 @@ def get_semi_inbound_records():
             Order.order_id,
             Order.order_rid,
             Shoe.shoe_rid,
-            ShoeInboundRecord.shoe_inbound_rid,
-            ShoeInboundRecord.inbound_datetime,
-            ShoeInboundRecord.inbound_batch_id,
-            ShoeInboundRecord.inbound_type,
+            ShoeInboundRecord,
+            ShoeInboundRecordDetail,
             OutsourceFactory.factory_name,
+            Color.color_name,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             SemifinishedShoeStorage,
             SemifinishedShoeStorage.order_shoe_type_id
             == OrderShoeType.order_shoe_type_id,
         )
         .join(
+            ShoeInboundRecordDetail,
+            ShoeInboundRecordDetail.semifinished_shoe_storage_id == SemifinishedShoeStorage.semifinished_shoe_id
+        )
+        .join(
             ShoeInboundRecord,
-            ShoeInboundRecord.semifinished_shoe_storage_id
-            == SemifinishedShoeStorage.semifinished_shoe_id,
+            ShoeInboundRecord.shoe_inbound_record_id
+            == ShoeInboundRecordDetail.shoe_inbound_record_id,
         )
         .outerjoin(
             OutsourceInfo,
@@ -428,7 +458,6 @@ def get_semi_inbound_records():
             OutsourceFactory,
             OutsourceFactory.factory_id == OutsourceInfo.factory_id,
         )
-        .distinct(ShoeInboundRecord.inbound_batch_id)
     )
 
     if start_date:
@@ -450,21 +479,21 @@ def get_semi_inbound_records():
             order_id,
             order_rid,
             shoe_rid,
-            shoe_inbound_rid,
-            inbound_datetime,
-            inbound_batch_id,
-            inbound_type,
+            inbound_record,
+            inbound_detail,
             factory_name,
+            color_name,
         ) = row
         obj = {
             "orderId": order_id,
             "orderRId": order_rid,
             "shoeRId": shoe_rid,
-            "inboundRId": shoe_inbound_rid,
-            "inboundBatchId": inbound_batch_id,
-            "timestamp": format_datetime(inbound_datetime),
-            "inboundType": inbound_type,
+            "inboundRId": inbound_record.shoe_inbound_rid,
+            "timestamp": format_datetime(inbound_record.inbound_datetime),
+            "inboundType": inbound_record.inbound_type,
             "factoryName": factory_name,
+            "detailAmount": inbound_detail.inbound_amount,
+            "colorName": color_name,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
