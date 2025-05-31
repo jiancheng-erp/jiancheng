@@ -110,3 +110,12 @@ PRICE_REPORT_GM_APPROVED = "已审批"
 
 
 ACCOUNTING_AUDIT_ROLE = 24
+
+
+SCHEDULING_STATUS_TO_INT = {
+    "裁断未排期": 0,
+    "预备未排期": 1,
+    "针车未排期": 2,
+    "成型未排期": 3,
+    "已排期": 4,
+}

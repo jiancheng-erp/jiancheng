@@ -4,6 +4,8 @@
 import random
 import string
 from decimal import Decimal
+from datetime import datetime
+
 
 # ### check if a shoe exists in DB
 # def check_shoe_exists(shoe_rid):
@@ -131,6 +133,58 @@ def status_converter(current_status_arr, current_status_value_arr):
         status = "生产中"
     elif 42 in current_status_arr:
         status = "生产结束"
+    return status
+
+
+def estimate_status_converter(production_info):
+    interval1 = [production_info.cutting_start_date, production_info.cutting_end_date]
+    interval2 = [production_info.pre_sewing_start_date, production_info.pre_sewing_end_date]
+    interval3 = [production_info.sewing_start_date, production_info.sewing_end_date]
+    interval4 = [production_info.molding_start_date, production_info.molding_end_date]
+
+    interval1 = [d if d is not None else datetime.max.date() for d in interval1]
+    interval2 = [d if d is not None else datetime.max.date() for d in interval2]
+    interval3 = [d if d is not None else datetime.max.date() for d in interval3]
+    interval4 = [d if d is not None else datetime.max.date() for d in interval4]
+    
+    today = datetime.now().date()
+    result = "未排期"
+    if today < interval1[0]:
+        result = "裁断未开始"
+    elif interval1[0] <= today <= interval1[1]:
+        result = "裁断进行中"
+    elif interval1[1] < today < interval2[0]:
+        result = "预备未开始"
+    elif interval2[0] <= today <= interval2[1]:
+        result = "预备进行中"
+    elif interval2[1] < today < interval3[0]:
+        result = "针车未开始"
+    elif interval3[0] <= today <= interval3[1]:
+        result = "针车进行中"
+    elif interval3[1] < today < interval4[0]:
+        result = "成型未开始"
+    elif interval4[0] <= today <= interval4[1]:
+        result = "成型进行中"
+    elif interval4[1] < today:
+        result = "生产已结束"
+    return result
+
+def scheduling_status_converter(production_info):
+    cutting = [production_info.cutting_start_date, production_info.cutting_end_date]
+    pre_sewing = [production_info.pre_sewing_start_date, production_info.pre_sewing_end_date]
+    sewing = [production_info.sewing_start_date, production_info.sewing_end_date]
+    molding = [production_info.molding_start_date, production_info.molding_end_date]
+
+    if cutting == [None, None]:
+        status = '裁断未排期'
+    elif pre_sewing == [None, None]:
+        status = '预备未排期'
+    elif sewing == [None, None]:
+        status = '针车未排期'
+    elif molding == [None, None]:
+        status = '成型未排期'
+    else:
+        status = '已排期'
     return status
 
 

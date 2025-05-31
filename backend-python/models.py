@@ -592,6 +592,7 @@ class OrderShoeProductionInfo(db.Model):
     pre_sewing_start_date = db.Column(db.Date, nullable=True)
     pre_sewing_end_date = db.Column(db.Date, nullable=True)
     is_material_arrived = db.Column(db.Boolean, nullable=False)
+    scheduling_status = db.Column(db.SmallInteger, nullable=False, default=0)
     order_shoe_id = db.Column(
         db.BigInteger,
     )

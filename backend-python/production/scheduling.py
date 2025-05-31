@@ -1,7 +1,7 @@
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
-from api_utility import format_date, format_line_group, status_converter
+from api_utility import *
 from app_config import db
 from constants import *
 from event_processor import EventProcessor
@@ -171,6 +171,17 @@ def _create_report_item(report_id, team, shoe_id):
 def start_production():
     data = request.get_json()
     order_shoe_id = data["orderShoeId"]
+    # check if order shoe status is 17
+    order_shoe_status = (
+        db.session.query(OrderShoeStatus)
+        .filter(
+            OrderShoeStatus.order_shoe_id == order_shoe_id,
+            OrderShoeStatus.current_status == 17,
+        )
+        .first()
+    )
+    if not order_shoe_status:
+        return jsonify({"message": "已开始生产"}), 200
     query = (
         db.session.query(
             func.sum(OrderShoeBatchInfo.total_amount), OrderShoeType.order_shoe_type_id
@@ -192,7 +203,6 @@ def start_production():
         semi_entity = SemifinishedShoeStorage(
             order_shoe_type_id=id,
             semifinished_status=0,
-            semifinished_object=1,
             semifinished_estimated_amount=color_total_amount,
         )
         for i, amount in enumerate(size_amount):
@@ -277,9 +287,9 @@ def start_production():
             processor.processEvent(event)
     except Exception as e:
         logger.debug(e)
-        return jsonify({"message": "failed"}), 400
+        return jsonify({"message": "下发失败"}), 400
     db.session.commit()
-    return jsonify({"message": "success"}), 200
+    return jsonify({"message": "下发成功"}), 200
 
 
 @production_scheduling_bp.route(
@@ -378,3 +388,65 @@ def save_production_amount():
         db.session.execute(stmt)
     db.session.commit()
     return jsonify({"message": "success"})
+
+
+@production_scheduling_bp.route(
+    "/production/getorderschedulingprogress", methods=["GET"]
+)
+def get_order_scheduling_progress():
+    page = request.args.get("page", type=int)
+    number = request.args.get("pageSize", type=int)
+    order_rid = request.args.get("orderRId")
+    shoe_rid = request.args.get("shoeRId")
+    customer_product_name = request.args.get("customerProductName")
+    status_node = request.args.get("statusNode")
+    start_date_search = request.args.get("orderStartDate")
+    end_date_search = request.args.get("orderEndDate")
+    customer_name = request.args.get("customerName")
+    customer_brand = request.args.get("customerBrand")
+    query = (
+        db.session.query(Order, OrderShoe, Shoe, OrderShoeProductionInfo)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(
+            OrderShoeProductionInfo,
+            OrderShoeProductionInfo.order_shoe_id == OrderShoe.order_shoe_id,
+        )
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
+        .filter(
+            OrderShoeStatus.current_status >= 17
+        )
+        .order_by(Order.order_rid)
+    )
+    if status_node and status_node != "":
+        query = query.filter(
+            OrderShoeProductionInfo.scheduling_status == SCHEDULING_STATUS_TO_INT[status_node]
+        )
+    count_result = query.distinct().count()
+    response = query.distinct().limit(number).offset((page - 1) * number).all()
+    result = []
+    for row in response:
+        order, order_shoe, shoe, production_info = row
+        order_attrs = Order.__table__.columns.keys()
+        order_shoes_attrs = OrderShoe.__table__.columns.keys()
+        shoe_attrs = Shoe.__table__.columns.keys()
+        production_info_attrs = OrderShoeProductionInfo.__table__.columns.keys()
+        scheduling_status = scheduling_status_converter(production_info)
+        obj = {}
+        for attr in order_attrs:
+            obj[to_camel(attr)] = getattr(order, attr)
+        for attr in order_shoes_attrs:
+            obj[to_camel(attr)] = getattr(order_shoe, attr)
+        for attr in shoe_attrs:
+            obj[to_camel(attr)] = getattr(shoe, attr)
+        for attr in production_info_attrs:
+            attr_value = getattr(production_info, attr)
+            if attr_value and isinstance(attr_value, (datetime, date)):
+                obj[to_camel(attr)] = format_date(attr_value)
+            else:
+                obj[to_camel(attr)] = attr_value
+        obj["schedulingStatus"] = scheduling_status
+        result.append(obj)
+    return jsonify({"result": result, "totalLength": count_result}), 200
