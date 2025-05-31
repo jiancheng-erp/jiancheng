@@ -44,13 +44,13 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
-    <el-dialog :title="operationLabels.dialogTitle[currentOperation]" v-model="isMultiInboundDialogVisible" width="70%">
+    <el-dialog :title="operationLabels.dialogTitle[currentOperation]" v-model="isMultiInboundDialogVisible" width="70%" destroy-on-close>
         <el-tabs v-model="activeTab">
             <el-tab-pane v-for="(group, index) in operationForm.groupedSelectedRows" :key="group.orderShoeId"
                 :label="`订单鞋型 ${group.items[0].orderRId} - ${group.items[0].shoeRId}`" :name="group.orderShoeId">
@@ -280,10 +280,11 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoesizecolumns`, { params })
                 newItem["shoesInboundTable"] = response.data
                 newItem["shoesInboundTable"].forEach(row => {
-                    row.operationQuantity = 0
+                    row.operationQuantity = row.predictQuantity - row.actualQuantity
                 })
                 newItem.shoesInboundTable.forEach((element, index) => {
                     newItem[`amount${index}`] = element.operationQuantity
+                    newItem.operationQuantity += element.operationQuantity
                 })
                 // insert shoe size columns into current row
                 newItem.shoesInboundTable.forEach((element, index) => {
@@ -379,7 +380,7 @@ export default {
                         console.log(error)
                         ElMessage.error("操作异常")
                     }
-                    // this.semiInboundDialogVisible = false
+                    this.semiInboundDialogVisible = false
                     this.getTableData()
                 } else {
                     console.log("Form has validation errors.");
