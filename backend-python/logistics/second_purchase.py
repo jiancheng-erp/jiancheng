@@ -918,11 +918,6 @@ def submit_purchase_divide_orders():
     order_shoe_rid = order_info.Shoe.shoe_rid
     order_size_table = order_info.Order.order_size_table
     order_size_dict = json.loads(order_size_table)
-    is_craft_existed = (
-        db.session.query(CraftSheet)
-        .filter(CraftSheet.order_shoe_id == order_shoe_id)
-        .first()
-    )
     batch_info_type_name = (
         db.session.query(BatchInfoType)
         .join(Order, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
@@ -937,7 +932,6 @@ def submit_purchase_divide_orders():
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
-            CraftSheetItem,
             Material,
             MaterialType,
             Supplier,
@@ -957,10 +951,6 @@ def submit_purchase_divide_orders():
             BomItem.production_instruction_item_id
             == ProductionInstructionItem.production_instruction_item_id,
         )
-        .outerjoin(
-            CraftSheetItem,
-            ProductionInstructionItem.production_instruction_item_id == CraftSheetItem.production_instruction_item_id,
-        )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
@@ -972,7 +962,6 @@ def submit_purchase_divide_orders():
         purchase_order,
         purchase_order_item,
         bom_item,
-        craft_sheet_item,
         material,
         material_type,
         supplier,
@@ -1016,10 +1005,6 @@ def submit_purchase_divide_orders():
         color = purchase_order_item.color
         remark = purchase_order_item.remark
         size_type = purchase_order_item.size_type
-        if is_craft_existed:
-            craft_name = craft_sheet_item.craft_name if craft_sheet_item else ""
-        else:
-            craft_name = bom_item.craft_name
         # don't create material storage if the quantity is 0
         if material_quantity == 0:
             continue
@@ -1041,7 +1026,7 @@ def submit_purchase_divide_orders():
                 inbound_specification=material_specification,
                 material_storage_color=color,
                 total_purchase_order_id=total_purchase_order.total_purchase_order_id,
-                craft_name=craft_name,
+                craft_name="", # 暂时空置，重构后删除
                 production_instruction_item_id=bom_item.production_instruction_item_id,
                 actual_inbound_material_id=purchase_order_item.inbound_material_id,
                 actual_inbound_unit=purchase_order_item.inbound_unit,
@@ -1073,7 +1058,7 @@ def submit_purchase_divide_orders():
                 size_material_color=color,
                 total_purchase_order_id=total_purchase_order.total_purchase_order_id,
                 size_storage_type=batch_info_type_name,
-                craft_name=craft_name,
+                craft_name="",
                 production_instruction_item_id=bom_item.production_instruction_item_id,
                 shoe_size_columns=material_size_table,
             )
