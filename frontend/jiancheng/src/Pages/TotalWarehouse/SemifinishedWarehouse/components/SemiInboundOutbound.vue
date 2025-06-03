@@ -1,15 +1,13 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="getTableData()"
+        <el-col>
+            <el-input v-model="orderNumberSearch" placeholder="订单号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
-        </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="shoeNumberSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getTableData()"
+            <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
-        </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-input v-model="customerNameSearch" placeholder="请输入客户号" clearable @keypress.enter="getTableData()"
+            <el-input v-model="customerNameSearch" placeholder="客户号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
+                @clear="getTableData" />
+            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
         </el-col>
     </el-row>
@@ -32,7 +30,7 @@
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="customerName" label="客户号"></el-table-column>
-                <el-table-column prop="customerProductName" label="客户型号"></el-table-column>
+                <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
                 <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
@@ -157,6 +155,7 @@ export default {
             orderNumberSearch: '',
             shoeNumberSearch: '',
             customerNameSearch: '',
+            customerProductNameSearch: '',
             currentRow: {},
             rules: {
                 items: [
@@ -280,6 +279,7 @@ export default {
                 "orderRId": this.orderNumberSearch,
                 "shoeRId": this.shoeNumberSearch,
                 "customerName": this.customerNameSearch,
+                "customerProductName": this.customerProductNameSearch,
                 "showAll": 0,
                 "status": this.statusSearch
             }
