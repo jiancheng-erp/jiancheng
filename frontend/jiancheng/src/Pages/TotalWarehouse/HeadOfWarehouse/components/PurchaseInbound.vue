@@ -601,22 +601,23 @@ export default {
         //     this.filteredOrders = this.activeOrderShoes.filter(item => item.shoeRId.includes(row.shoeRId))
         // },
         updateMaterialTableData(value) {
-            this.searchedMaterials = []
-            let temp = [...this.materialTableData, ...value]
+            let temp = JSON.parse(JSON.stringify(this.materialTableData))
+            temp.push(...value)
             temp.splice(this.currentIndex, 1)
-            this.materialTableData = [...temp]
+            this.materialTableData = JSON.parse(JSON.stringify(temp))
             this.currentIndex = null
         },
         updateSizeMaterialTableData(value) {
-            this.searchedSizeMaterials = []
-            let temp = [...this.materialTableData, ...value]
+            // deep copy materialTableData and append value
+            let temp = JSON.parse(JSON.stringify(this.materialTableData))
+            temp.push(...value)
             temp.splice(this.currentIndex, 1)
-            this.materialTableData = [...temp]
+            this.materialTableData = JSON.parse(JSON.stringify(temp))
             this.currentIndex = null
-            let firstItem = this.materialTableData[0]
+            let firstAutoAssignItem = value[0]
             let sizeColumns = []
-            for (let i = 0; i < firstItem.shoeSizeColumns.length; i++) {
-                let obj = { "label": firstItem.shoeSizeColumns[i], "prop": `amount${i}` }
+            for (let i = 0; i < firstAutoAssignItem.shoeSizeColumns.length; i++) {
+                let obj = { "label": firstAutoAssignItem.shoeSizeColumns[i], "prop": `amount${i}` }
                 sizeColumns.push(obj)
             }
             this.shoeSizeColumns = sizeColumns

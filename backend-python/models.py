@@ -295,8 +295,12 @@ class Order(db.Model):
     last_status = db.Column(db.String(1), nullable=False, default=0)
     cutting_model_status = db.Column(db.String(1), nullable=False, default=0)
     order_size_table = db.Column(db.JSON, nullable=True)
-    order_paper_production_instruction_status = db.Column(db.String(1), nullable=False, default='0')
-    order_paper_color_document_status = db.Column(db.String(1), nullable=False, default='0')
+    order_paper_production_instruction_status = db.Column(
+        db.String(1), nullable=False, default="0"
+    )
+    order_paper_color_document_status = db.Column(
+        db.String(1), nullable=False, default="0"
+    )
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
@@ -371,7 +375,8 @@ class PackagingInfo(db.Model):
     size_45_ratio = db.Column(db.Integer, nullable=True)
     size_46_ratio = db.Column(db.Integer, nullable=True)
     total_quantity_ratio = db.Column(db.Integer, nullable=True)
-    is_active = db.Column(db.String(1), nullable=False, default='1')
+    is_active = db.Column(db.String(1), nullable=False, default="1")
+
     def __repr__(self):
         return f"<PackagingInfo(packaging_info_id={self.packaging_info_id})>"
 
@@ -400,7 +405,7 @@ class OrderShoeBatchInfo(db.Model):
     size_45_amount = db.Column(db.Integer, nullable=True)
     size_46_amount = db.Column(db.Integer, nullable=True)
     packaging_info_id = db.Column(db.Integer, nullable=True)
-    packaging_info_quantity = db.Column(db.DECIMAL(12,3), nullable=True)
+    packaging_info_quantity = db.Column(db.DECIMAL(12, 3), nullable=True)
     order_shoe_type_id = db.Column(
         db.BigInteger,
     )
@@ -682,9 +687,7 @@ class PurchaseDivideOrder(db.Model):
     purchase_order_id = db.Column(
         db.BigInteger,
     )
-    purchase_divide_order_rid = db.Column(
-        db.String(50), nullable=False, unique=True
-    )
+    purchase_divide_order_rid = db.Column(db.String(50), nullable=False, unique=True)
     purchase_divide_order_type = db.Column(db.String(1), nullable=False)
     purchase_order_remark = db.Column(db.String(100), nullable=True)
     purchase_order_environmental_request = db.Column(db.String(100), nullable=True)
@@ -717,7 +720,6 @@ class SemifinishedShoeStorage(db.Model):
     semifinished_shoe_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True, nullable=False
     )
-    semifinished_inbound_datetime = db.Column(db.DateTime)
     order_shoe_type_id = db.Column(db.BigInteger, nullable=False)
     semifinished_estimated_amount = db.Column(db.Integer, default=0, nullable=False)
     size_34_estimated_amount = db.Column(db.Integer, default=0)
@@ -762,7 +764,6 @@ class SemifinishedShoeStorage(db.Model):
     size_45_amount = db.Column(db.Integer, default=0)
     size_46_amount = db.Column(db.Integer, default=0)
     semifinished_status = db.Column(db.SmallInteger)
-    semifinished_object = db.Column(db.SmallInteger)
 
 
 class Shoe(db.Model):
@@ -781,23 +782,32 @@ class Shoe(db.Model):
 
 class ShoeInboundRecord(db.Model):
     __tablename__ = "shoe_inbound_record"
+
     shoe_inbound_record_id = db.Column(
         db.BigInteger, primary_key=True, autoincrement=True
     )
-    inbound_batch_id = db.Column(db.BigInteger)
     shoe_inbound_rid = db.Column(db.String(60), nullable=True)
     inbound_amount = db.Column(db.Integer, nullable=True)
-    inbound_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
+    inbound_revenue = db.Column(db.DECIMAL(13, 4), nullable=True)
     subsequent_stock = db.Column(db.Integer, nullable=True)
-    subsequent_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
+    subsequent_revenue = db.Column(db.Numeric(13, 4), nullable=True)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
     inbound_type = db.Column(
         db.SmallInteger, nullable=False, default=0, comment="0: 自产\n1: 外包"
     )
-    semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
-    finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
+    def __repr__(self):
+        return f"<ShoeInboundRecord(id={self.shoe_inbound_record_id}, rid={self.shoe_inbound_rid})>"
+
+
+class ShoeInboundRecordDetail(db.Model):
+    __tablename__ = "shoe_inbound_record_detail"
+
+    record_detail_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_inbound_record_id = db.Column(db.BigInteger, nullable=False)
+    inbound_amount = db.Column(db.Integer, nullable=True)
+
     size_34_amount = db.Column(db.Integer, default=0)
     size_35_amount = db.Column(db.Integer, default=0)
     size_36_amount = db.Column(db.Integer, default=0)
@@ -811,6 +821,10 @@ class ShoeInboundRecord(db.Model):
     size_44_amount = db.Column(db.Integer, default=0)
     size_45_amount = db.Column(db.Integer, default=0)
     size_46_amount = db.Column(db.Integer, default=0)
+
+    remark = db.Column(db.String(40), nullable=True)
+    semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
+    finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
 
 
 class ShoeOutboundRecord(db.Model):
@@ -1194,11 +1208,11 @@ class OutboundRecord(db.Model):
     remark = db.Column(db.String(40), nullable=True)
     supplier_id = db.Column(db.Integer, nullable=True)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
-    total_price = db.Column(db.DECIMAL(12,3), nullable=True)
+    total_price = db.Column(db.DECIMAL(12, 3), nullable=True)
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"
-    
+
 
 class OutboundRecordDetail(db.Model):
     __tablename__ = "outbound_record_detail"
@@ -1410,7 +1424,9 @@ class SecondGradeAccount(db.Model):
     account_name = db.Column(db.String(20), nullable=False)
     account_belongs_fg = db.Column(db.Integer, nullable=False)
     account_payable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
-    account_recievable_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
+    account_recievable_balance = db.Column(
+        db.DECIMAL(13, 3), nullable=True, default=0.000
+    )
     account_cash_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
 
 
@@ -1423,7 +1439,7 @@ class ThirdGradeAccount(db.Model):
     account_type = db.Column(db.String(1), nullable=False)
     account_bound_event = db.Column(db.String(1), nullable=True)
 
-   
+
 class Unit(db.Model):
     __tablename__ = "unit"
     unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1447,6 +1463,7 @@ class AccountingPayableAccount(db.Model):
         db.Integer, nullable=False, comment="AccountPayeePayer表的主键"
     )
 
+
 # class AccountingPayableTransaction(db.Model):
 #     __tablename__="accounting_payable_transaction"
 #     transaction_id = db.Column(
@@ -1463,7 +1480,7 @@ class AccountingPayableAccount(db.Model):
 class AccountingPayableTransaction(db.Model):
     __tablename__ = "accounting_payable_transaction"
     transaction_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    transaction_amount = db.Column(db.DECIMAL(13,4), nullable=False)
+    transaction_amount = db.Column(db.DECIMAL(13, 4), nullable=False)
     transaction_unit = db.Column(db.BigInteger, nullable=False)
     transaction_date = db.Column(db.DateTime, nullable=False)
     from_account_grade = db.Column(db.BigInteger, nullable=False)
@@ -1512,8 +1529,6 @@ class AccountingForeignAccountEvent(db.Model):
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
 
 
-
-
 class AccountingCurrencyUnit(db.Model):
     __tablename__ = "accounting_currency_unit"
     unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1553,7 +1568,8 @@ class AccountingThirdGradeRecord(db.Model):
     record_is_processed = db.Column(db.Integer, nullable=False)
     # 记录id
     record_id = db.Column(db.Integer, primary_key=True, nullable=False)
-    
+
+
 class RevertEvent(db.Model):
     __tablename__ = "revert_event"
     revert_event_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
@@ -1562,7 +1578,8 @@ class RevertEvent(db.Model):
     initialing_department = db.Column(db.String(10), nullable=True)
     event_time = db.Column(db.DateTime, nullable=True)
     order_id = db.Column(db.BigInteger, nullable=True)
-    
+
+
 class DefaultBom(db.Model):
     __tablename__ = "default_bom"
     default_bom_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1570,20 +1587,17 @@ class DefaultBom(db.Model):
     shoe_type_id = db.Column(db.BigInteger, nullable=False)
     bom_status = db.Column(db.String(1), nullable=False)
     bom_id = db.Column(db.BigInteger, nullable=True)
-    
-    __table_args__ = (
-        db.UniqueConstraint('shoe_type_id', name='unq_default_bom'),
-    )
-    
+
+    __table_args__ = (db.UniqueConstraint("shoe_type_id", name="unq_default_bom"),)
+
+
 class DefaultCraftSheet(db.Model):
     __tablename__ = "default_craft_sheet"
     default_craft_sheet_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     shoe_id = db.Column(db.Integer, nullable=False)
     craft_sheet_id = db.Column(db.BigInteger, nullable=True)
-    
-    __table_args__ = (
-        db.UniqueConstraint('shoe_id', name='unq_default_craft_sheet'),
-    )
+
+    __table_args__ = (db.UniqueConstraint("shoe_id", name="unq_default_craft_sheet"),)
 
 
 class SPUMaterial(db.Model):
@@ -1594,4 +1608,3 @@ class SPUMaterial(db.Model):
     material_specification = db.Column(db.String(100), nullable=True)
     color = db.Column(db.String(40), nullable=True)
     spu_rid = db.Column(db.String(50), nullable=True)
-    
