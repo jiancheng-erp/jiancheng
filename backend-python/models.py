@@ -828,24 +828,29 @@ class ShoeInboundRecordDetail(db.Model):
 
 
 class ShoeOutboundRecord(db.Model):
-    __tablename__ = "shoe_outbound_record"
-    shoe_outbound_record_id = db.Column(
-        db.BigInteger, primary_key=True, autoincrement=True
-    )
-    outbound_batch_id = db.Column(db.BigInteger)
-    shoe_outbound_rid = db.Column(db.String(60), nullable=True)
-    outbound_amount = db.Column(db.Integer, nullable=True)
-    outbound_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
-    subsequent_stock = db.Column(db.Integer, nullable=True)
-    subsequent_revenue = db.Column(db.DECIMAL(12, 3), nullable=True)
+    __tablename__ = 'shoe_outbound_record'
+
+    shoe_outbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_outbound_rid = db.Column(db.String(60), default=None)
+    outbound_amount = db.Column(db.Integer, default=None)
+    outbound_revenue = db.Column(db.DECIMAL(10, 3), default=None)
+    subsequent_stock = db.Column(db.Integer, default=None)
+    subsequent_revenue = db.Column(db.DECIMAL(10, 3), default=None)
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
-    outbound_department = db.Column(db.String(15), nullable=True)
-    picker = db.Column(db.String(15), nullable=True)
-    semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
-    finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
-    outsource_info_id = db.Column(db.Integer, nullable=True)
-    remark = db.Column(db.String(40), nullable=True)
+    picker = db.Column(db.String(15), default=None)
+    semifinished_shoe_storage_id = db.Column(db.BigInteger, index=True)
+    finished_shoe_storage_id = db.Column(db.BigInteger, index=True)
+    remark = db.Column(db.String(40), default=None)
+
+
+class ShoeOutboundRecordDetail(db.Model):
+    __tablename__ = 'shoe_outbound_record_detail'
+
+    record_detail_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_outbound_record_id = db.Column(db.BigInteger, nullable=False)
+    outbound_amount = db.Column(db.Integer, default=0)
+
     size_34_amount = db.Column(db.Integer, default=0)
     size_35_amount = db.Column(db.Integer, default=0)
     size_36_amount = db.Column(db.Integer, default=0)
@@ -859,6 +864,10 @@ class ShoeOutboundRecord(db.Model):
     size_44_amount = db.Column(db.Integer, default=0)
     size_45_amount = db.Column(db.Integer, default=0)
     size_46_amount = db.Column(db.Integer, default=0)
+
+    remark = db.Column(db.String(40), default=None)
+    semifinished_shoe_storage_id = db.Column(db.BigInteger, default=None)
+    finished_shoe_storage_id = db.Column(db.BigInteger, default=None)
 
 
 class Staff(db.Model):

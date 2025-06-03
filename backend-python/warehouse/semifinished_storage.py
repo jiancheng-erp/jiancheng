@@ -30,6 +30,7 @@ def get_semifinished_storages():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
+    customer_product_name = request.args.get("customerProductName")
     show_all = request.args.get("showAll", default=0, type=int)
 
     query = (
@@ -62,6 +63,10 @@ def get_semifinished_storages():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if customer_name and customer_name != "":
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_product_name and customer_product_name != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
     if show_all == 0:
         query = query.filter(
             SemifinishedShoeStorage.semifinished_status == 0
@@ -289,62 +294,60 @@ def finish_outsource_outbound():
 
 
 @semifinished_storage_bp.route(
-    "/warehouse/warehousemanager/outboundsemifinished", methods=["POST", "PATCH"]
+    "/warehouse/outboundsemifinished", methods=["POST", "PATCH"]
 )
 def outbound_semifinished():
     data = request.get_json()
-    # Determine the next available group_id
-    next_group_id = (
-        db.session.query(
-            func.coalesce(func.max(ShoeOutboundRecord.outbound_batch_id), 0)
-        ).scalar()
-        + 1
+    picker = data.get("picker", None)
+    remark = data.get("remark", None)
+    items = data.get("items", [])
+    timestamp = format_datetime(datetime.now())
+    formatted_timestamp = (
+        timestamp.replace("-", "").replace(" ", "").replace(":", "")
     )
-    for row in data:
-        outsource_info_id = row.get("outsourceInfoId", None)
-        operation_purpose = row.get("operationPurpose", None)
-        picker = row.get("picker", None)
-        timestamp = row["timestamp"]
-        formatted_timestamp = (
-            timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    rid = "SOR" + formatted_timestamp + "T0"
+    outbound_record = ShoeOutboundRecord(
+        shoe_outbound_rid=rid,
+        outbound_datetime=timestamp,
+        outbound_type=0,
+        remark=remark,
+        picker=picker,
+    )
+    db.session.add(outbound_record)
+    db.session.flush()
+    total_amount = 0
+    for item in items:
+        storage_id = item["storageId"]
+        remark = item.get("remark", None)
+        amount_list = item["amountList"]
+        storage = db.session.query(SemifinishedShoeStorage).get(storage_id)
+        if not storage:
+            return jsonify({"message": "failed"}), 400
+
+        for i in range(len(amount_list)):
+            db_name = i + 34
+            column_name = f"size_{db_name}_amount"
+            current_amount = getattr(storage, column_name) - int(amount_list[i])
+            if current_amount < 0:
+                return jsonify({"message": "出库数量大于库存"}), 400
+            setattr(storage, column_name, current_amount)
+            storage.semifinished_amount -= int(amount_list[i])
+
+        sub_total_amount = sum([int(x) for x in amount_list])
+        record = ShoeOutboundRecordDetail(
+            shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
+            outbound_amount=sub_total_amount,
+            semifinished_shoe_storage_id=storage_id,
+            remark=remark
         )
-        items = row["items"]
-        for item in items:
-            storage_id = item["storageId"]
-            remark = item["remark"]
-            amount_list = item["amountList"]
-            rid = "SOR" + formatted_timestamp + "C" + str(next_group_id)
-            storage = SemifinishedShoeStorage.query.get(storage_id)
-            if not storage:
-                return jsonify({"message": "failed"}), 400
+        for i in range(len(amount_list)):
+            db_name = i + 34
+            column_name = f"size_{db_name}_amount"
+            setattr(record, column_name, int(amount_list[i]))
 
-            for i in range(len(amount_list)):
-                db_name = i + 34
-                column_name = f"size_{db_name}_amount"
-                current_amount = getattr(storage, column_name) - int(amount_list[i])
-                if current_amount < 0:
-                    return jsonify({"message": "出库数量大于库存"}), 400
-                setattr(storage, column_name, current_amount)
-                storage.semifinished_amount -= int(amount_list[i])
-
-            total_amount = sum([int(x) for x in amount_list])
-            record = ShoeOutboundRecord(
-                outbound_amount=total_amount,
-                outbound_datetime=timestamp,
-                semifinished_shoe_storage_id=storage_id,
-                remark=remark,
-                subsequent_stock=storage.semifinished_amount,
-                outbound_batch_id=next_group_id,
-                picker=picker,
-            )
-            for i in range(len(amount_list)):
-                db_name = i + 34
-                column_name = f"size_{db_name}_amount"
-                setattr(record, column_name, int(amount_list[i]))
-
-            db.session.add(record)
-            record.shoe_outbound_rid = rid
-        next_group_id += 1
+        db.session.add(record)
+        total_amount += sub_total_amount
+    outbound_record.outbound_amount = total_amount
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -572,25 +575,29 @@ def get_semi_outbound_records():
             Order.order_id,
             Order.order_rid,
             Shoe.shoe_rid,
-            ShoeOutboundRecord.shoe_outbound_rid,
-            ShoeOutboundRecord.outbound_datetime,
-            ShoeOutboundRecord.outbound_batch_id,
-            ShoeOutboundRecord.picker,
+            ShoeOutboundRecord,
+            ShoeOutboundRecordDetail,
+            Color.color_name,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             SemifinishedShoeStorage,
             SemifinishedShoeStorage.order_shoe_type_id
             == OrderShoeType.order_shoe_type_id,
         )
         .join(
-            ShoeOutboundRecord,
-            ShoeOutboundRecord.semifinished_shoe_storage_id
-            == SemifinishedShoeStorage.semifinished_shoe_id,
+            ShoeOutboundRecordDetail,
+            ShoeOutboundRecordDetail.semifinished_shoe_storage_id == SemifinishedShoeStorage.semifinished_shoe_id
         )
-        .distinct(ShoeOutboundRecord.outbound_batch_id)
+        .join(
+            ShoeOutboundRecord,
+            ShoeOutboundRecord.shoe_outbound_record_id
+            == ShoeOutboundRecordDetail.shoe_outbound_record_id,
+        )
     )
 
     if start_date:
@@ -602,9 +609,7 @@ def get_semi_outbound_records():
             ShoeOutboundRecord.outbound_datetime <= datetime.strptime(end_date, "%Y-%m-%d")
         )
     if outbound_rid:
-        query = query.filter(
-            ShoeOutboundRecord.shoe_outbound_rid.ilike(f"%{outbound_rid}%")
-        )
+        query = query.filter(ShoeOutboundRecord.shoe_outbound_rid.ilike(f"%{outbound_rid}%"))
     query = query.order_by(desc(ShoeOutboundRecord.outbound_datetime))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
@@ -614,19 +619,21 @@ def get_semi_outbound_records():
             order_id,
             order_rid,
             shoe_rid,
-            shoe_outbound_rid,
-            outbound_datetime,
-            outbound_batch_id,
-            picker
+            outbound_record,
+            outbound_detail,
+            color_name,
         ) = row
         obj = {
             "orderId": order_id,
             "orderRId": order_rid,
             "shoeRId": shoe_rid,
-            "outboundRId": shoe_outbound_rid,
-            "outboundBatchId": outbound_batch_id,
-            "timestamp": format_datetime(outbound_datetime),
-            "picker": picker,
+            "outboundRId": outbound_record.shoe_outbound_rid,
+            "timestamp": format_datetime(outbound_record.outbound_datetime),
+            "outboundType": outbound_record.outbound_type,
+            "detailAmount": outbound_detail.outbound_amount,
+            "colorName": color_name,
+            "picker": outbound_record.picker,
+            "remark": outbound_detail.remark,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
