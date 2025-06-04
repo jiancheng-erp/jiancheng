@@ -105,6 +105,7 @@ def edit_revert_production_instruction():
         }.items():
             for material in material_data:
                 item_id = material.get("productionInstructionItemId")
+                print(f"Processing item_id: {item_id} for material_type: {material_type}")
                 uploaded_item_ids.add(item_id)
 
                 # Ensure material & supplier exist
@@ -158,7 +159,7 @@ def edit_revert_production_instruction():
 
                 # Update/Add Craft Sheet Items
                 if craft_sheet:
-                    _update_or_insert_craft_sheet_item(item_id, material, material_id)
+                    _update_or_insert_craft_sheet_item(item_id, material, material_id, craft_sheet.craft_sheet_id, material_type, order_shoe_type_id)
 
                 # Update/Add Purchase Order Items
                 if first_bom_item_id:
@@ -301,7 +302,8 @@ def _update_or_insert_bom_item(item_id, material, material_id, bom_type, order_s
     return bom_item_id  # Return the `bom_item_id`
 
 
-def _update_or_insert_craft_sheet_item(item_id, material, material_id):
+def _update_or_insert_craft_sheet_item(item_id, material, material_id, craft_sheet_id, material_type, order_shoe_type_id):
+    
     """Update or Insert Craft Sheet Item (without updating craft_name)"""
     craft_sheet_item = (
         db.session.query(CraftSheetItem)
@@ -311,24 +313,40 @@ def _update_or_insert_craft_sheet_item(item_id, material, material_id):
 
     if craft_sheet_item:
         # Update existing Craft Sheet item (except craft_name)
+        print("Updating existing CraftSheetItem for item_id:", item_id, "material_id:", material_id)
         craft_sheet_item.material_id = material_id
+        craft_sheet_item.craft_sheet_id = craft_sheet_id
         craft_sheet_item.material_specification = material.get("materialSpecification")
         craft_sheet_item.material_model = material.get("materialModel")
         craft_sheet_item.color = material.get("color")
+        craft_sheet_item.material_type = material_type
+        craft_sheet_item.order_shoe_type_id = order_shoe_type_id
         craft_sheet_item.remark = material.get("comment")
         craft_sheet_item.pairs = material.get("pairs", 0)
-        craft_sheet_item.total_usage = material.get("totalUsage", 0)
+        craft_sheet_item.total_usage = material.get("totalUsage", 0),
+        craft_sheet_item.craft_name = material.get("craftName", None)
+        craft_sheet_item.material_source = "P"
+        craft_sheet_item.after_usage_symbol = 0
+        craft_sheet_item.processing_remark = material.get("processingRemark", None)
     else:
         # Insert new Craft Sheet item
+        print("Creating new CraftSheetItem for item_id:", item_id, "material_id:", material_id)
         new_craft_item = CraftSheetItem(
             material_id=material_id,
+            craft_sheet_id=craft_sheet_id,
             material_specification=material.get("materialSpecification"),
             material_model=material.get("materialModel"),
+            material_type=material_type,
             color=material.get("color"),
             remark=material.get("comment"),
             pairs=material.get("pairs", 0),
             total_usage=material.get("totalUsage", 0),
+            order_shoe_type_id=order_shoe_type_id,
             production_instruction_item_id=item_id,
+            craft_name=material.get("craftName", None),
+            material_source="P",
+            after_usage_symbol=0,
+            processing_remark=material.get("processingRemark", None)
         )
         db.session.add(new_craft_item)
         
