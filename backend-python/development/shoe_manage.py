@@ -21,8 +21,6 @@ def upload_shoe_image():
         return jsonify({"error": "No selected file"}), 500
 
     folder_path = os.path.join(IMAGE_UPLOAD_PATH, "shoe", shoe_rid, shoe_color_name)
-    print("shoe image stored should be in")
-    print(folder_path)
     if os.path.exists(folder_path) == False:
         os.makedirs(folder_path)
     file_path = os.path.join(folder_path, "shoe_image.jpg")
@@ -70,6 +68,9 @@ def add_new_shoe():
         shoe_type = ShoeType(shoe_id=shoe.shoe_id, color_id=shoe_color)
         db.session.add(shoe_type)
         db.session.commit()
+        folder_path = os.path.join(IMAGE_UPLOAD_PATH, "shoe", shoe_rid)
+        if os.path.exists(folder_path) == False:
+            os.makedirs(folder_path)
         return jsonify({"message": "Shoe added successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
