@@ -80,7 +80,7 @@ def get_all_materials():
                 "materialType": material.MaterialType.material_type_name,
                 "unit": material.Material.material_unit,
                 "warehouseName": material.MaterialWarehouse.material_warehouse_name,
-                "addDate": material.Material.material_creation_date.isoformat(),
+                "addDate": material.Material.material_creation_date.isoformat() if material.Material.material_creation_date else "",
                 "factoryInfo": [],  # Initialize as empty list
             }
 
