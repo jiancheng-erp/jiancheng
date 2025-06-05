@@ -136,14 +136,8 @@ def get_shoe_size_columns():
     return result
 
 def _determine_status(storage):
-    for i in range(len(SHOESIZERANGE)):
-        db_name = i + 34
-        estimated_column = f"size_{db_name}_estimated_amount"
-        estimated_amount = getattr(storage, estimated_column)
-        actual_column = f"size_{db_name}_actual_amount"
-        actual_amount = getattr(storage, actual_column)
-        if estimated_amount > actual_amount:
-            return False
+    if storage.semifinished_estimated_amount > storage.semifinished_actual_amount:
+        return False
     return True
 
 
@@ -185,38 +179,42 @@ def inbound_semifinished():
     for item in items:
         storage_id = item["storageId"]
         remark = item["remark"]
+        inbound_quantity = item.get("inboundQuantity", 0)
         amount_list = item["amountList"]
         
         storage = db.session.query(SemifinishedShoeStorage).get(storage_id)
         if not storage:
             return jsonify({"message": "该库存不存在"}), 400
+        
+        storage.semifinished_actual_amount += inbound_quantity
+        storage.semifinished_amount += inbound_quantity
 
-        for i in range(len(amount_list)):
-            db_name = i + 34
-            column_name1 = f"size_{db_name}_actual_amount"
-            actual_amount = getattr(storage, column_name1) + int(amount_list[i])
-            column_name2 = f"size_{db_name}_amount"
-            current_amount = getattr(storage, column_name2) + int(amount_list[i])
-            setattr(storage, column_name1, actual_amount)
-            setattr(storage, column_name2, current_amount)
-            storage.semifinished_actual_amount += int(amount_list[i])
-            storage.semifinished_amount += int(amount_list[i])
+        # for i in range(len(amount_list)):
+        #     db_name = i + 34
+        #     column_name1 = f"size_{db_name}_actual_amount"
+        #     actual_amount = getattr(storage, column_name1) + int(amount_list[i])
+        #     column_name2 = f"size_{db_name}_amount"
+        #     current_amount = getattr(storage, column_name2) + int(amount_list[i])
+        #     setattr(storage, column_name1, actual_amount)
+        #     setattr(storage, column_name2, current_amount)
+        #     storage.semifinished_actual_amount += int(amount_list[i])
+        #     storage.semifinished_amount += int(amount_list[i])
 
-        sub_total_amount = sum([int(x) for x in amount_list])
+        # sub_total_amount = sum([int(x) for x in amount_list])
         
         record_detail = ShoeInboundRecordDetail(
             shoe_inbound_record_id=inbound_record.shoe_inbound_record_id,
-            inbound_amount=sub_total_amount,
+            inbound_amount=inbound_quantity,
             semifinished_shoe_storage_id=storage_id,
             remark=remark,
         )
-        for i in range(len(amount_list)):
-            db_name = i + 34
-            column_name = f"size_{db_name}_amount"
-            setattr(record_detail, column_name, int(amount_list[i]))
+        # for i in range(len(amount_list)):
+        #     db_name = i + 34
+        #     column_name = f"size_{db_name}_amount"
+        #     setattr(record_detail, column_name, int(amount_list[i]))
 
         db.session.add(record_detail)
-        total_amount += sub_total_amount
+        total_amount += inbound_quantity
         if _determine_status(storage):
             storage.semifinished_status = 1
     inbound_record.inbound_amount = total_amount
@@ -318,35 +316,40 @@ def outbound_semifinished():
     total_amount = 0
     for item in items:
         storage_id = item["storageId"]
+        outboundQuantity = item.get("outboundQuantity", 0)
         remark = item.get("remark", None)
         amount_list = item["amountList"]
         storage = db.session.query(SemifinishedShoeStorage).get(storage_id)
         if not storage:
             return jsonify({"message": "failed"}), 400
 
-        for i in range(len(amount_list)):
-            db_name = i + 34
-            column_name = f"size_{db_name}_amount"
-            current_amount = getattr(storage, column_name) - int(amount_list[i])
-            if current_amount < 0:
-                return jsonify({"message": "出库数量大于库存"}), 400
-            setattr(storage, column_name, current_amount)
-            storage.semifinished_amount -= int(amount_list[i])
+        if storage.semifinished_amount < outboundQuantity:
+            return jsonify({"message": "出库数量大于库存"}), 400
+        storage.semifinished_amount -= outboundQuantity
+        # for i in range(len(amount_list)):
+        #     db_name = i + 34
+        #     column_name = f"size_{db_name}_amount"
+        #     current_amount = getattr(storage, column_name) - int(amount_list[i])
+        #     if current_amount < 0:
+        #         return jsonify({"message": "出库数量大于库存"}), 400
+        #     setattr(storage, column_name, current_amount)
+        #     storage.semifinished_amount -= int(amount_list[i])
 
-        sub_total_amount = sum([int(x) for x in amount_list])
+        # sub_total_amount = sum([int(x) for x in amount_list])
+
         record = ShoeOutboundRecordDetail(
             shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
-            outbound_amount=sub_total_amount,
+            outbound_amount=outboundQuantity,
             semifinished_shoe_storage_id=storage_id,
             remark=remark
         )
-        for i in range(len(amount_list)):
-            db_name = i + 34
-            column_name = f"size_{db_name}_amount"
-            setattr(record, column_name, int(amount_list[i]))
+        # for i in range(len(amount_list)):
+        #     db_name = i + 34
+        #     column_name = f"size_{db_name}_amount"
+        #     setattr(record, column_name, int(amount_list[i]))
 
         db.session.add(record)
-        total_amount += sub_total_amount
+        total_amount += outboundQuantity
     outbound_record.outbound_amount = total_amount
     db.session.commit()
     return jsonify({"message": "success"})
@@ -424,6 +427,8 @@ def get_semi_inbound_records():
     inbound_rid = request.args.get("inboundRId")
     start_date = request.args.get("startDate")
     end_date = request.args.get("endDate")
+    order_rid = request.args.get("orderRId")
+    shoe_rid = request.args.get("shoeRId")
     query = (
         db.session.query(
             Order.order_id,
@@ -473,6 +478,10 @@ def get_semi_inbound_records():
         )
     if inbound_rid:
         query = query.filter(ShoeInboundRecord.shoe_inbound_rid.ilike(f"%{inbound_rid}%"))
+    if order_rid:
+        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+    if shoe_rid:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     query = query.order_by(desc(ShoeInboundRecord.inbound_datetime))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
@@ -497,6 +506,7 @@ def get_semi_inbound_records():
             "factoryName": factory_name,
             "detailAmount": inbound_detail.inbound_amount,
             "colorName": color_name,
+            "remark": inbound_detail.remark,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -570,6 +580,9 @@ def get_semi_outbound_records():
     outbound_rid = request.args.get("outboundRId")
     start_date = request.args.get("startDate")
     end_date = request.args.get("endDate")
+    order_rid = request.args.get("orderRId")
+    shoe_rid = request.args.get("shoeRId")
+    picker = request.args.get("picker")
     query = (
         db.session.query(
             Order.order_id,
@@ -610,6 +623,12 @@ def get_semi_outbound_records():
         )
     if outbound_rid:
         query = query.filter(ShoeOutboundRecord.shoe_outbound_rid.ilike(f"%{outbound_rid}%"))
+    if order_rid:
+        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+    if shoe_rid:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if picker:
+        query = query.filter(ShoeOutboundRecord.picker.ilike(f"%{picker}%"))
     query = query.order_by(desc(ShoeOutboundRecord.outbound_datetime))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()

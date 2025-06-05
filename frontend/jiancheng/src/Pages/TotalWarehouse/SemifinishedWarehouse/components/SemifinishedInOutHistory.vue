@@ -52,15 +52,15 @@
         <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
-        <el-table-column label="操作" width="200">
+        <!-- <el-table-column label="操作" width="200">
             <template #default="scope">
                 <el-button type="primary" size="small" @click="viewStock(scope.row)">查看库存</el-button>
-                <!-- <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button> -->
+                <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
             </template>
-        </el-table-column>
+        </el-table-column> -->
     </el-table>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
@@ -134,20 +134,19 @@
                         :label="item.productionLineName" :value="item.productionLineName" />
                 </el-select>
             </el-form-item>
-            <el-form-item label="备注">
+            <!-- <el-form-item label="备注">
                 <el-input v-model="outboundForm.remark" type="textarea" show-word-limit
                     :maxlength="commentLength"></el-input>
-            </el-form-item>
+            </el-form-item> -->
             <el-form-item label="表格">
                 <el-table :data="topTableData" border stripe>
                     <el-table-column prop="orderRId" label="订单号"></el-table-column>
                     <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
-                    <el-table-column prop="customerProductName" label="客人号"></el-table-column>
                     <el-table-column prop="colorName" label="颜色"></el-table-column>
-                    <el-table-column prop="outboundQuantity" label="出库数量"></el-table-column>
-                    <el-table-column label="调整数量">
+                    <el-table-column prop="remainQuantity" label="剩余数量"></el-table-column>
+                    <el-table-column label="出库数量">
                         <template #default="scope">
-                            <el-button type="primary" @click="openQuantityDialog(scope.row)">打开</el-button>
+                            <el-input-number v-model="scope.row.outboundQuantity" :min="0"></el-input-number>
                         </template>
                     </el-table-column>
                     <el-table-column label="备注">
@@ -238,12 +237,13 @@ export default {
     },
     methods: {
         updateSemiShoeTotal() {
-            this.currentQuantityRow.outboundQuantity = this.currentQuantityRow.shoeStockTable.reduce((total, item) => {
+            this.currentQuantityRow.remainQuantity = this.currentQuantityRow.shoeStockTable.reduce((total, item) => {
                 return total + (item.outboundQuantity || 0);
             }, 0);
         },
         buildShoeStockTable(data) {
             for (let item of data) {
+                item.remainQuantity = item.currentAmount
                 item.outboundQuantity = item.currentAmount
                 item["remark"] = null
                 let shoesOutboundTable = []
