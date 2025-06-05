@@ -68,7 +68,7 @@ def insert_series_data(ws, series_data, start_row=4):
             for size in chunk:
                 value = item.get(size, 0)  # Get quantity, default to 0
                 ws[f"{column}{current_row}"] = value
-                row_total += int(value)  # Sum row values
+                row_total += (int(value) if value else 0)
                 column = get_next_column_name(column)
 
             # Insert row total in column K

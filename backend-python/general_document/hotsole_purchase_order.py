@@ -88,10 +88,10 @@ def insert_series_data(ws, series_data, start_row=7):
         sizes = [key for key in item.keys() if key not in ("物品名称", "型号", "类别", "合计", "备注", "工厂型号", "鞋面颜色", "工艺说明", "使用材料")]
         size_chunks = [sizes[x:x+8] for x in range(0, len(sizes), 8)]  # Break sizes into chunks of 8
         if craft_whole_name == "1.":
-            craft_whole_name = craft_whole_name + item.get("使用材料", "") + item.get("工艺说明", "")
+            craft_whole_name = craft_whole_name if craft_whole_name else "" + item.get("使用材料", "") + item.get("工艺说明", "")
             craft_series_number = craft_series_number + 1
         else:
-            craft_whole_name = craft_whole_name + str(craft_series_number) + "." + item.get("使用材料", "") + item.get("工艺说明", "")
+            craft_whole_name = craft_whole_name if craft_whole_name else "" + str(craft_series_number) + "." + item.get("使用材料", "") + item.get("工艺说明", "")
             craft_series_number = craft_series_number + 1
             
 

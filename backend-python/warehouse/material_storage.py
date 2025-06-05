@@ -814,6 +814,7 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
             for i, shoe_size in enumerate(SHOESIZERANGE):
                 if f"amount{i}" not in item:
                     break
+                item[f"amount{i}"] = item[f"amount{i}"] if item[f"amount{i}"] is not None else 0
                 column_name = f"size_{shoe_size}_actual_inbound_amount"
                 current_value = getattr(storage, column_name)
                 new_value = current_value + int(item[f"amount{i}"])

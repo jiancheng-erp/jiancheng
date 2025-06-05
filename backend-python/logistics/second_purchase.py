@@ -553,12 +553,12 @@ def save_purchase():
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
             else:
-                material_quantity = 0
-                approval_quantity = 0
+                material_quantity = Decimal(0)
+                approval_quantity = Decimal(0)
                 for i in range(len(item["sizeInfo"])):
                     name = i + 34
-                    material_quantity += item["sizeInfo"][i]["purchaseAmount"]
-                    approval_quantity += item["sizeInfo"][i]["approvalAmount"]
+                    material_quantity += Decimal(item["sizeInfo"][i]["purchaseAmount"])
+                    approval_quantity += Decimal(item["sizeInfo"][i]["approvalAmount"])
                     setattr(
                         purchase_order_item,
                         f"size_{name}_purchase_amount",

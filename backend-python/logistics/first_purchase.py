@@ -313,7 +313,6 @@ def get_shoe_bom_items():
 
     # Dictionary to combine duplicated items
     combined_items = {}
-
     for entity in entities:
         (
             bom_item,
