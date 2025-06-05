@@ -54,9 +54,9 @@
                     <el-radio :value="1">外包</el-radio>
                 </el-radio-group>
             </el-form-item>
-            <el-form-item prop="remark" label="备注">
+            <!-- <el-form-item prop="remark" label="备注">
                 <el-input v-model="inboundForm.remark" type="textarea" show-word-limit :maxlength="commentLength"></el-input>
-            </el-form-item>
+            </el-form-item> -->
             <el-form-item v-if="inboundForm.operationPurpose == 1" label="外包信息">
                 <el-table :data="inboundForm.outsourceInfo" style="width: 100%" border stripe>
                     <el-table-column width="55">
@@ -83,10 +83,10 @@
                 :label="`订单鞋型 ${group.items[0].orderRId} - ${group.items[0].shoeRId}`" :name="group.orderShoeId">
                 <el-table :data="group.items" style="width: 100%" border stripe>
                     <el-table-column prop="colorName" label="颜色" />
-                    <el-table-column prop="operationQuantity" label="总数量" />
+                    <el-table-column prop="operationQuantity" label="待入库数量" />
                     <el-table-column :label="operationLabels.operationAmount">
                         <template #default="scope">
-                            <el-button type="primary" @click="openQuantityDialog(scope.row)">打开</el-button>
+                            <el-input-number v-model="scope.row.inboundQuantity" :min="0"></el-input-number>
                         </template>
                     </el-table-column>
                     <el-table-column prop="remark" label="备注">
@@ -257,8 +257,9 @@ export default {
                 }
                 newItem.shoesInboundTable.forEach((element, index) => {
                     newItem[`amount${index}`] = element.operationQuantity
-                    newItem.operationQuantity += element.operationQuantity
                 })
+                newItem.operationQuantity = item.estimatedInboundAmount - item.actualInboundAmount
+                newItem.inboundQuantity = newItem.operationQuantity
                 const group = groupedData.find(g => g.orderShoeId === item.orderShoeId);
                 if (group) {
                     group.items.push(newItem);
@@ -299,7 +300,7 @@ export default {
                 for (let item of orderShoeItem.items) {
                     let obj = {
                         "storageId": item.storageId,
-                        "operationQuantity": item.operationQuantity,
+                        "inboundQuantity": item.inboundQuantity,
                         "remark": item.remark,
                     }
                     let amountList = []

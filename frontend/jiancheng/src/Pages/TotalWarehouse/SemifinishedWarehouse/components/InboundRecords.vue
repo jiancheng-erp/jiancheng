@@ -1,42 +1,44 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="6">
+        <el-col>
             <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable>
             </el-date-picker>
-        </el-col>
-        <el-col :span="6" :offset="1">
-            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+            <el-input v-model="orderRIdSearch" placeholder="订单号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+            <el-input v-model="shoeRIdSearch" placeholder="工厂型号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
         </el-col>
-
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <el-table :data="tableData" border>
+            <el-table :data="tableData" border stripe height="500" show-summary :summary-method="getSummaries">
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                <el-table-column prop="colorName" label="颜色"></el-table-column>
+                <el-table-column prop="detailAmount" label="入库数量"></el-table-column>
                 <el-table-column label="入库类型">
                     <template #default="scope">
                         {{ determineInboundName(scope.row.inboundType) }}
                     </template>
                 </el-table-column>
-                <el-table-column label="查看">
-                    <template #default="scope">
-                        <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
-                    </template>
-                </el-table-column>
+                <el-table-column label="备注" prop="remark"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
-                layout="total, sizes, prev, pager, next, jumper" :total="total" />
+                :current-page="currentPage" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
+                :total="total" />
         </el-col>
     </el-row>
 
@@ -68,8 +70,7 @@
                 <tr v-for="(item, index) in recordData.items" :key="index" align="center">
                     <td>{{ index + 1 }}</td>
                     <td>{{ item.colorName }}</td>
-                    <td v-for="(column, index) in filteredShoeSizeColumns"
-                        :key="index">{{ item[column.prop] }}
+                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}
                     </td>
                     <td>{{ calculateInboundTotal() }}</td>
                     <td>{{ item.remark }}</td>
@@ -83,8 +84,9 @@
                     <span style="padding-right:10px;">方式:{{
                         determineInboundName(currentRow.inboundType)
                     }}</span>
-                    <span v-if="inboundType == 1" style="padding-right: 10px;">外包厂家: <span style="text-decoration: underline;">{{
-                        currentRow.factoryName }}</span>
+                    <span v-if="inboundType == 1" style="padding-right: 10px;">外包厂家: <span
+                            style="text-decoration: underline;">{{
+                                currentRow.factoryName }}</span>
                     </span>
                 </div>
             </div>
@@ -133,7 +135,9 @@ export default {
             recordData: {},
             dialogVisible: false,
             dateRange: [null, null],
-            inboundRIdSearch: null
+            inboundRIdSearch: null,
+            orderRIdSearch: null,
+            shoeRIdSearch: null,
         }
     },
     mounted() {
@@ -141,12 +145,29 @@ export default {
     },
     computed: {
         filteredShoeSizeColumns() {
-			return this.recordData.shoeSizeColumns.filter(column =>
-				this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-			);
+            return this.recordData.shoeSizeColumns.filter(column =>
+                this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
+            );
         }
     },
     methods: {
+        getSummaries(param) {
+            const { columns, data } = param;
+            const sums = [];
+            columns.forEach((column, index) => {
+                if (column.property === 'detailAmount') {
+                    const total = data.reduce((sum, row) => {
+                        const value = Number(row.detailAmount);
+                        return sum + (isNaN(value) ? 0 : value);
+                    }, 0);
+                    sums[index] = total;
+                } else {
+                    sums[index] = index === 0 ? '合计' : '';
+                }
+            });
+
+            return sums;
+        },
         calculateInboundTotal() {
             // Calculate the total inbound quantity
             const number = this.recordData.items.reduce((total, item) => {
@@ -176,7 +197,9 @@ export default {
                     pageSize: this.pageSize,
                     startDate: this.dateRange[0],
                     endDate: this.dateRange[1],
-                    "inboundRId": this.inboundRIdSearch
+                    inboundRId: this.inboundRIdSearch,
+                    orderRId: this.orderRIdSearch,
+                    shoeRId: this.shoeRIdSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsemiinboundrecords`, { params })
                 this.tableData = response.data.result
@@ -233,7 +256,8 @@ body {
 @media print {
     #printView {
         display: block;
-        width: 175mm; /* 收据纸的常见宽度 */
+        width: 175mm;
+        /* 收据纸的常见宽度 */
         height: 125mm;
         overflow: hidden;
     }

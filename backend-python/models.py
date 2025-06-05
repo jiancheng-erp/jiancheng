@@ -839,8 +839,6 @@ class ShoeOutboundRecord(db.Model):
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
     picker = db.Column(db.String(15), default=None)
-    semifinished_shoe_storage_id = db.Column(db.BigInteger, index=True)
-    finished_shoe_storage_id = db.Column(db.BigInteger, index=True)
     remark = db.Column(db.String(40), default=None)
 
 
@@ -1074,7 +1072,6 @@ class MaterialWarehouse(db.Model):
 class FinishedShoeStorage(db.Model):
     __tablename__ = "finished_shoe_storage"
     finished_shoe_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    finished_inbound_datetime = db.Column(db.DateTime, nullable=False)
     order_shoe_type_id = db.Column(
         db.BigInteger,
     )
