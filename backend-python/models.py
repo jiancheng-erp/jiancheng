@@ -1213,8 +1213,11 @@ class OutboundRecord(db.Model):
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
     supplier_id = db.Column(db.Integer, nullable=True)
+    warehouse_id = db.Column(db.Integer, nullable=False)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
     total_price = db.Column(db.DECIMAL(12, 3), nullable=True)
+    approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
+    reject_reason = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"

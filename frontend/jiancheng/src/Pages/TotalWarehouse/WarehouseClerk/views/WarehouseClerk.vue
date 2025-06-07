@@ -14,11 +14,11 @@
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
                     <el-menu default-active="1" class="el-menu-vertical-demo">
                         <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>多码采购入库</span>
+                            <span>材料入库</span>
                         </el-menu-item>
-                        <!-- <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>材料待出库</span>
-                        </el-menu-item> -->
+                        <el-menu-item index="2" @click="handleMenuClick(2)">
+                            <span>材料出库</span>
+                        </el-menu-item>
                         <el-menu-item index="9" @click="handleMenuClick(9)">
                             <span>出入库记录</span>
                         </el-menu-item>
@@ -56,6 +56,7 @@ import OutboundView from '../../HeadOfWarehouse/components/OutboundView.vue'
 import InOutboundRecords from '../../HeadOfWarehouse/components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue'
+import OutboundMaterial from '../../HeadOfWarehouse/components/OutboundMaterial.vue'
 
 export default {
     components: {
@@ -65,7 +66,8 @@ export default {
         OutboundView,
         InOutboundRecords,
         PersonalInfo,
-        GeneralOrderSearch
+        GeneralOrderSearch,
+        OutboundMaterial
     },
     data() {
         return {
@@ -90,7 +92,7 @@ export default {
                     this.currentComponent = 'InboundView'
                     break
                 case 2:
-                    this.currentComponent = 'OutboundView'
+                    this.currentComponent = 'OutboundMaterial'
                     break
                 case 5:
                     this.currentComponent = 'InboundOutboundHistory'

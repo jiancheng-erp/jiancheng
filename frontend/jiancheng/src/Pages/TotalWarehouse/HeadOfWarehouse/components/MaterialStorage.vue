@@ -2,15 +2,15 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
             <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <el-button v-if="readonly === false" type="success" @click="confirmOrderShoesToOutbound">
+            <!-- <el-button v-if="readonly === false" type="success" @click="confirmOrderShoesToOutbound">
                 出库
-            </el-button>
+            </el-button> -->
         </el-col>
         <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
             :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions" :warehouse-options="warehouseOptions"
             :searchForm="searchForm" @update-visible="updateDialogVisible" @confirm="handleSearch" />
     </el-row>
-    <el-row :gutter="20">
+    <!-- <el-row :gutter="20">
         <el-col>
             <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
                 <el-form-item v-if="readonly === false" prop="outboundType" label="出库类型">
@@ -39,7 +39,7 @@
             </el-form>
         </el-col>
 
-    </el-row>
+    </el-row> -->
     <div class="transfer-tables">
         <!-- Top Table -->
         <el-table v-if="readonly === false" ref="topTableData" :data="topTableData"
@@ -82,7 +82,7 @@
             </el-button>
         </div>
     </div>
-    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 60vh; width: 100%"
+    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 50vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
         <el-table-column v-if="readonly === false" type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -222,6 +222,10 @@ export default {
             type: Boolean,
             default: true,
         },
+        inputSearchParams: {
+            type: Object,
+            default: {},
+        },
     },
     components: {
         MaterialSearchDialog,
@@ -306,16 +310,22 @@ export default {
             bottomSelected: [],
         }
     },
-    mounted() {
+    async mounted() {
+        console.log("Mounted MaterialStorage")
+        this.searchForm = { ...this.inputSearchParams }
         this.getAllMaterialTypes()
         this.getAllSuppliers()
         this.getMaterialNameOptions()
-        this.getMaterialTableData()
         this.getWarehouseOptions()
         this.getDepartmentOptions()
+        await this.getMaterialTableData()
         this.outboundForm = { ...this.formItemTemplate }
+        console.log("searchForm", this.searchForm)
     },
     methods: {
+        getSelectedData() {
+            return this.topTableData;
+        },
         // Move selected items from bottom to top
         moveUp() {
             this.topTableData = this.topTableData.concat(this.bottomSelected);
@@ -429,7 +439,7 @@ export default {
             this.departmentOptions = response.data
         },
         async getAllMaterialTypes() {
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialtypes`)
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialtypes`)
             this.materialTypeOptions = response.data
         },
         async getAllSuppliers() {
@@ -437,10 +447,11 @@ export default {
             this.materialSupplierOptions = response.data
         },
         async getMaterialTableData() {
+            console.log("getMaterialTableData", this.searchForm)
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
-                "materialType": this.searchForm.materialTypeSearch,
+                "materialTypeId": this.searchForm.materialTypeSearch,
                 "materialName": this.searchForm.materialNameSearch,
                 "materialModel": this.searchForm.materialModelSearch,
                 "materialSpec": this.searchForm.materialSpecificationSearch,

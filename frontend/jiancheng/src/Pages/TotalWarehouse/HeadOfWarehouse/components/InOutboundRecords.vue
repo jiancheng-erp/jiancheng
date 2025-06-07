@@ -4,7 +4,7 @@
             <InboundRecords :materialSupplierOptions="materialSupplierOptions" :warehouseOptions="warehouseOptions"/>
         </el-tab-pane>
         <el-tab-pane label="出库记录">
-            <OutboundRecords />
+            <OutboundRecords :materialSupplierOptions="materialSupplierOptions" :warehouseOptions="warehouseOptions"/>
         </el-tab-pane>
     </el-tabs>
 </template>
