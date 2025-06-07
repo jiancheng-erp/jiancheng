@@ -110,15 +110,18 @@ def format_line_group(line_group_obj):
 
 
 def format_outbound_type(outbound_type):
-    mapping = {0:"自产", 1:"废料",2:"外包", 3:"复合"}
-    if outbound_type in [0,1,2,3,'0','1','2','3']:
+    format_val = int(outbound_type)
+    mapping = {0: "自产", 1: "废料", 2: "外包", 3: "复合", 4: "退回"}
+    if format_val in [0, 1, 2, 3, 4]:
         return mapping[int(outbound_type)]
-
 
 
 def status_converter(current_status_arr, current_status_value_arr):
     status = "未排期"
-    if 17 in current_status_arr and current_status_value_arr[current_status_arr.index(17)] == 1:
+    if (
+        17 in current_status_arr
+        and current_status_value_arr[current_status_arr.index(17)] == 1
+    ):
         status = "已保存排期"
     elif 17 in current_status_arr:
         status = "未排期"
@@ -129,6 +132,7 @@ def status_converter(current_status_arr, current_status_value_arr):
     elif 42 in current_status_arr:
         status = "生产结束"
     return status
+
 
 def outsource_status_converter(status_val):
     if status_val == 0:
@@ -149,6 +153,7 @@ def outsource_status_converter(status_val):
         status = "外包结束"
     return status
 
+
 def outsource_status_strtoint(status_str):
     if status_str == "未提交":
         status = 0
@@ -168,6 +173,7 @@ def outsource_status_strtoint(status_str):
         status = 7
     return status
 
+
 def accounting_audit_status_converter(status_val):
     result = ""
     if status_val == 0:
@@ -176,10 +182,14 @@ def accounting_audit_status_converter(status_val):
         result = "已审核"
     elif status_val == 2:
         result = "已驳回"
-    return result    
+    return result
+
 
 def to_snake(request_attr_name):
-    return ''.join(['_'+c.lower() if c.isupper() else c for c in request_attr_name]).lstrip('_')
+    return "".join(
+        ["_" + c.lower() if c.isupper() else c for c in request_attr_name]
+    ).lstrip("_")
+
 
 def to_camel(db_attr_name):
     split_list = db_attr_name.split("_")
@@ -187,7 +197,11 @@ def to_camel(db_attr_name):
         [split_list[0]] + [db_attr.capitalize() for db_attr in split_list[1:]]
     )
     return result
-def db_obj_to_res(db_entity, db_model,attr_name_offset=0, attr_name_list=[], initial_res=None):
+
+
+def db_obj_to_res(
+    db_entity, db_model, attr_name_offset=0, attr_name_list=[], initial_res=None
+):
     if initial_res:
         res = initial_res
     else:

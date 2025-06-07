@@ -73,7 +73,7 @@
                 <vxe-column field="materialModel" title="材料型号" width="150"></vxe-column>
                 <vxe-column field="materialSpecification" title="材料规格" width="200"></vxe-column>
                 <vxe-column field="materialColor" title="颜色" width="150"></vxe-column>
-                <vxe-column field="actualInboundUnit" title="计量单位" :edit-render="{ autoFocus: true }"
+                <vxe-column field="actualInboundUnit" title="计量单位"
                     width="120"></vxe-column>
                 <vxe-column field="outboundQuantity" title="出库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
@@ -81,13 +81,13 @@
                             @blur="updateTotalPrice(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
+                <vxe-column field="unitPrice" title="单价" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.unitPrice" type="amount" :min="0" :step="0.0001" :digits="4"
                             @blur="updateTotalPrice(row)" :disabled="outboundForm.outboundType != 4"></vxe-number-input>
                     </template>
                 </vxe-column>
-                <vxe-column field="itemTotalPrice" title="采购金额" :edit-render="{ autoFocus: 'input' }" width="120">
+                <vxe-column field="itemTotalPrice" title="金额" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.itemTotalPrice" type="amount" :min="0" :step="0.0001"
                             :digits="4" :disabled="outboundForm.outboundType != 4"></vxe-number-input>
@@ -332,9 +332,11 @@ export default {
                 supplier: null
             },
             showMaterialSelectDialog: false,
+            departmentOptions: [],
         }
     },
     async mounted() {
+        this.getDepartmentOptions()
         this.getMaterialNameOptions()
         this.getWarehouseOptions()
         this.getMaterialTypeOptions();
@@ -377,6 +379,10 @@ export default {
         },
     },
     methods: {
+        async getDepartmentOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
+            this.departmentOptions = response.data
+        },
         convertOutboundType(value) {
             switch (value) {
                 case 0:
@@ -695,6 +701,8 @@ export default {
                 remark: this.outboundForm.remark,
                 items: this.materialTableData,
                 materialTypeId: this.outboundForm.materialTypeId,
+                departmentId: this.outboundForm.departmentId,
+                picker: this.outboundForm.picker,
             }
             try {
                 let response = null

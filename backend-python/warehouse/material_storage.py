@@ -11,6 +11,7 @@ from constants import (
     SHOESIZERANGE,
     MATERIAL_PURCHASE_PAYABLE_ID,
     OUTBOUND_TYPE_MAPPING,
+    ACCOUNTING_AUDIT_ROLE
 )
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, abort, Response
@@ -19,6 +20,7 @@ from sqlalchemy import desc, func, text, literal, cast, JSON, or_
 import json
 from script.refresh_spu_rid import generate_spu_rid
 from logger import logger
+from login.login import current_user_info
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
@@ -721,6 +723,9 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
 
 def _handle_supplier_obj(supplier_name: str):
     # sanitize the supplier name
+    if not supplier_name:
+        error_message = json.dumps({"message": "供应商名称不能为空"})
+        abort(Response(error_message, 400))
     supplier_name = supplier_name.replace(" ", "")
     if supplier_name == "":
         error_message = json.dumps({"message": "供应商名称不能为空"})
@@ -969,17 +974,18 @@ def inbound_material():
 
 
 def _handle_reject_material_outbound(data):
-    outbound_record = _create_outbound_record(data)
+    supplier_name = data.get("supplierName", None)
+    supplier_obj = _handle_supplier_obj(supplier_name)
+    outbound_record = _create_outbound_record(data, 0, supplier_obj.supplier_id)
     items = data.get("items", [])
 
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
 
-def _create_outbound_record(data):
+def _create_outbound_record(data, approval_status, supplier_id=None):
     timestamp = data.get("currentDateTime")
-    supplier_name = data.get("supplierName", None)
-    department = data.get("department", None)
+    department_id = data.get("departmentId", None)
     remark = data.get("remark", None)
     picker = data.get("picker", None)
     warehouse_id = data.get("warehouseId", None)
@@ -990,17 +996,17 @@ def _create_outbound_record(data):
     )
     outbound_rid = "OR" + formatted_timestamp + "T" + str(outbound_type)
 
-    supplier_obj = _handle_supplier_obj(supplier_name)
     # create outbound record
     outbound_record = OutboundRecord(
         outbound_datetime=formatted_timestamp,
-        outbound_type=4,
+        outbound_type=outbound_type,
         outbound_rid=outbound_rid,
-        supplier_id=supplier_obj.supplier_id,
+        supplier_id=supplier_id,
         picker=picker,
         remark=remark,
         warehouse_id=warehouse_id,
-        outbound_department=department,
+        outbound_department=department_id,
+        approval_status=approval_status,
     )
     db.session.add(outbound_record)
     db.session.flush()
@@ -1111,7 +1117,8 @@ def _create_outbound_record_details(items, outbound_record):
 
 def _handle_production_outbound(data):
     items = data.get("items", [])
-    outbound_record = _create_outbound_record(data)
+    supplier_id = None
+    outbound_record = _create_outbound_record(data, 1, supplier_id)
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
@@ -1126,7 +1133,9 @@ def _handle_outsource_outbound(data):
 
 def _handle_composite_outbound(data):
     items = data.get("items", [])
-    outbound_record = _create_outbound_record(data)
+    supplier_name = data.get("supplierName", None)
+    supplier_obj = _handle_supplier_obj(supplier_name)
+    outbound_record = _create_outbound_record(data, 1, supplier_obj.supplier_id)
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
@@ -1656,6 +1665,7 @@ def get_outbound_record_by_id():
 
 @material_storage_bp.route("/warehouse/getmaterialoutboundrecords", methods=["GET"])
 def get_material_outbound_records():
+    character, staff, department = current_user_info()
     start_date_search = request.args.get("startDate")
     end_date_search = request.args.get("endDate")
     page = int(request.args.get("page", 1))
@@ -1704,6 +1714,8 @@ def get_material_outbound_records():
         )
     if status in [0, 1, 2]:
         query = query.filter(OutboundRecord.approval_status == status)
+    if character.character_id == ACCOUNTING_AUDIT_ROLE:
+        query = query.filter(OutboundRecord.outbound_type == 4)
 
     query = query.order_by(desc(OutboundRecord.outbound_datetime))
     count_result = query.distinct().count()
