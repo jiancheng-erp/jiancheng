@@ -36,10 +36,10 @@
                     </template>
                 </el-table-column>
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
-                <el-table-column prop="supplierName" label="供货单位"></el-table-column>
+                <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="warehouseName" label="仓库名称">
                 </el-table-column>
-                <el-table-column prop="timestamp" label="操作时间"></el-table-column>
+                <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="payMethod" label="付款方式"></el-table-column>
                 <el-table-column prop="remark" label="备注"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>

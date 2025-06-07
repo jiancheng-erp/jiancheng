@@ -7,7 +7,7 @@
         </el-select>
         请选择材料类型：
         <el-select v-model="searchForm.materialTypeSearch" value-key="" placeholder="" clearable filterable>
-            <el-option v-for="item in materialTypeOptions" :value="item" />
+            <el-option v-for="item in materialTypeOptions" :value="item.materialTypeId" :label="item.materialTypeName" />
         </el-select>
         请选择材料名称：
         <el-select v-model="searchForm.materialNameSearch" value-key="" placeholder="" clearable filterable>

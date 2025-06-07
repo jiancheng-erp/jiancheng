@@ -1,5 +1,5 @@
 <template>
-    <MaterialStorage :readonly="false"></MaterialStorage>
+    <MaterialStorage></MaterialStorage>
 </template>
 <script>
 import MaterialStorage from './MaterialStorage.vue';
