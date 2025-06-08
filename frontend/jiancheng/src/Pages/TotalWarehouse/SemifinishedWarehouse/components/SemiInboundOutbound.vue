@@ -1,14 +1,15 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <el-input v-model="orderNumberSearch" placeholder="订单号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerNameSearch" placeholder="客户号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
+            <el-input v-model="orderNumberSearch" placeholder="订单号筛选" clearable @change="getTableData()"
+                style="width: 200px; margin-right: 10px;" @clear="getTableData" />
+            <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()"
+                style="width: 200px; margin-right: 10px;" @clear="getTableData" />
+            <el-input v-model="customerNameSearch" placeholder="客户号筛选" clearable @change="getTableData()"
+                style="width: 200px; margin-right: 10px;" @clear="getTableData" />
+            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()"
+                style="width: 200px; margin-right: 10px;" @clear="getTableData" />
+            <span style="color: red">鞋包总欠数: {{ this.totalRemainingAmount }}</span>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -25,7 +26,8 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="500">
+            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="500"
+                :cell-style="getCellStyle">
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
@@ -35,6 +37,7 @@
                 <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
                 <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
                 <el-table-column prop="currentAmount" label="半成品库存"></el-table-column>
+                <el-table-column prop="remainingAmount" label="欠数"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
@@ -42,11 +45,10 @@
         <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
-                :total="totalRows" />
+                :total="totalRows" :page-sizes="pageSizes" />
         </el-col>
     </el-row>
-    <el-dialog :title="operationLabels.dialogTitle" v-model="isMultiInboundDialogVisible" width="70%"
-        destroy-on-close>
+    <el-dialog :title="operationLabels.dialogTitle" v-model="isMultiInboundDialogVisible" width="70%" destroy-on-close>
         <el-form>
             <el-form-item prop="operationPurpose" label="入库类型">
                 <el-radio-group v-model="inboundForm.operationPurpose">
@@ -116,8 +118,8 @@
                     <el-table-column prop="currentQuantity" label="库存"></el-table-column>
                     <el-table-column :label="operationLabels.operationAmount">
                         <template #default="scope">
-                            <el-input-number v-model="scope.row.operationQuantity"
-                                size="small" :min="0" @change="updateSemiShoeTotal"></el-input-number>
+                            <el-input-number v-model="scope.row.operationQuantity" size="small" :min="0"
+                                @change="updateSemiShoeTotal"></el-input-number>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -134,6 +136,7 @@
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus';
 import * as constants from '@/Pages/utils/constants'
+import { PAGESIZE, PAGESIZES } from '../../warehouseUtils';
 export default {
     data() {
         return {
@@ -149,7 +152,8 @@ export default {
             },
             inboundForm: {},
             currentPage: 1,
-            pageSize: 10,
+            pageSize: PAGESIZE,
+            pageSizes: PAGESIZES,
             tableData: [],
             totalRows: 0,
             orderNumberSearch: '',
@@ -194,6 +198,7 @@ export default {
                 "operationAmount": "入库数量",
             },
             commentLength: constants.BOUND_RECORD_COMMENT_LENGTH,
+            totalRemainingAmount: 0,
         }
     },
     computed: {
@@ -209,6 +214,12 @@ export default {
         this.getTableData()
     },
     methods: {
+        getCellStyle({ row, column, rowIndex, columnIndex }) {
+            if (column.property === 'remainingAmount') {
+                return { color: 'red' }
+            }
+            return {}
+        },
         updateSemiShoeTotal() {
             this.currentQuantityRow.shoesInboundTable.forEach((element, index) => {
                 this.currentQuantityRow[`amount${index}`] = element.operationQuantity
@@ -287,6 +298,9 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsemifinishedstorages`, { params })
             this.tableData = response.data.result
             this.totalRows = response.data.total
+
+            const response2 = await axios.get(`${this.$apiBaseUrl}/warehouse/getremainingamountofsemistorage`);
+            this.totalRemainingAmount = response2.data.remainingAmount;
         },
         async submitOperationForm() {
             console.log(this.inboundForm)

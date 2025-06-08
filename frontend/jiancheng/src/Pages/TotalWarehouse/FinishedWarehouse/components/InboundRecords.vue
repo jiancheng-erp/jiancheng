@@ -1,36 +1,37 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="6">
+        <el-col>
             <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable>
             </el-date-picker>
-        </el-col>
-        <el-col :span="6" :offset="1">
-            <el-input v-model="inboundRIdSearch" placeholder="请输入入库单号" @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+            <el-input v-model="orderRIdSearch" placeholder="订单号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+            <el-input v-model="shoeRIdSearch" placeholder="工厂型号搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
         </el-col>
-
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <el-table :data="tableData" border>
+            <el-table :data="tableData" border stripe height="500" show-summary :summary-method="getSummaries">
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
-                <el-table-column label="查看">
-                    <template #default="scope">
-                        <el-button type="primary" @click="handleView(scope.row)">查看</el-button>
-                    </template>
-                </el-table-column>
+                <el-table-column prop="colorName" label="颜色"></el-table-column>
+                <el-table-column prop="detailAmount" label="数量"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
+                :current-page="currentPage" :page-sizes="pageSizes" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="total" />
         </el-col>
     </el-row>
@@ -91,6 +92,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
+import { getSummaries, PAGESIZE, PAGESIZES } from '../../warehouseUtils';
 export default {
     directives: {
         print
@@ -115,14 +117,18 @@ export default {
                 }
             },
             currentPage: 1,
-            pageSize: 10,
+            pageSize: PAGESIZE,
+            pageSizes: PAGESIZES,
             tableData: [],
             total: 0,
             currentRow: {},
             recordData: {},
             dialogVisible: false,
             dateRange: [null, null],
-            inboundRIdSearch: null
+            inboundRIdSearch: null,
+            orderRIdSearch: null,
+            shoeRIdSearch: null,
+            getSummaries: getSummaries,
         }
     },
     mounted() {
@@ -156,7 +162,9 @@ export default {
                     pageSize: this.pageSize,
                     startDate: this.dateRange[0],
                     endDate: this.dateRange[1],
-                    "inboundRId": this.inboundRIdSearch
+                    inboundRId: this.inboundRIdSearch,
+                    orderRId: this.orderRIdSearch,
+                    shoeRId: this.shoeRIdSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecords`, { params })
                 this.tableData = response.data.result

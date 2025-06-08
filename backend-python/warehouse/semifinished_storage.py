@@ -18,9 +18,7 @@ from business.batch_info_type import get_order_batch_type_helper
 semifinished_storage_bp = Blueprint("semifinished_storage_bp", __name__)
 
 
-@semifinished_storage_bp.route(
-    "/warehouse/getsemifinishedstorages", methods=["GET"]
-)
+@semifinished_storage_bp.route("/warehouse/getsemifinishedstorages", methods=["GET"])
 def get_semifinished_storages():
     """
     showAll: 0 means show all orders, 1 means show active orders
@@ -41,7 +39,7 @@ def get_semifinished_storages():
             Shoe,
             SemifinishedShoeStorage,
             Color,
-            BatchInfoType
+            BatchInfoType,
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -54,7 +52,9 @@ def get_semifinished_storages():
         )
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Color, Color.color_id == ShoeType.color_id)
-        .join(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
+        .join(
+            BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id
+        )
         .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
@@ -68,9 +68,7 @@ def get_semifinished_storages():
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
         )
     if show_all == 0:
-        query = query.filter(
-            SemifinishedShoeStorage.semifinished_status == 0
-        )
+        query = query.filter(SemifinishedShoeStorage.semifinished_status == 0)
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -82,6 +80,12 @@ def get_semifinished_storages():
             status_name = "已完成入库"
         else:
             status_name = "已完成出库"
+        remaining_amount = (
+            storage_obj.semifinished_estimated_amount
+            - storage_obj.semifinished_actual_amount
+            if storage_obj.semifinished_actual_amount > 0
+            else 0
+        )
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -93,16 +97,25 @@ def get_semifinished_storages():
             "estimatedInboundAmount": storage_obj.semifinished_estimated_amount,
             "actualInboundAmount": storage_obj.semifinished_actual_amount,
             "currentAmount": storage_obj.semifinished_amount,
-            "statusName": status_name,
+            "remainingAmount": remaining_amount,
+            "storageStatus": status_name,
             "colorName": color.color_name,
-            "shoeSizeColumns": []
+            "shoeSizeColumns": [],
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size_db_name = i + 34
-            obj[f"size{shoe_size_db_name}EstimatedAmount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_estimated_amount")
-            obj[f"size{shoe_size_db_name}ActualAmount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_actual_amount")
-            obj[f"size{shoe_size_db_name}Amount"] = getattr(storage_obj, f"size_{shoe_size_db_name}_amount")
-            obj["shoeSizeColumns"].append(getattr(batch_info, f"size_{shoe_size_db_name}_name"))
+            obj[f"size{shoe_size_db_name}EstimatedAmount"] = getattr(
+                storage_obj, f"size_{shoe_size_db_name}_estimated_amount"
+            )
+            obj[f"size{shoe_size_db_name}ActualAmount"] = getattr(
+                storage_obj, f"size_{shoe_size_db_name}_actual_amount"
+            )
+            obj[f"size{shoe_size_db_name}Amount"] = getattr(
+                storage_obj, f"size_{shoe_size_db_name}_amount"
+            )
+            obj["shoeSizeColumns"].append(
+                getattr(batch_info, f"size_{shoe_size_db_name}_name")
+            )
         result.append(obj)
     return {"result": result, "total": count_result}
 
@@ -135,6 +148,7 @@ def get_shoe_size_columns():
         result.append(obj)
     return result
 
+
 def _determine_status(storage):
     if storage.semifinished_estimated_amount > storage.semifinished_actual_amount:
         return False
@@ -151,9 +165,7 @@ def inbound_semifinished():
     remark = data.get("remark")
     items = data.get("items", [])
     timestamp = format_datetime(datetime.now())
-    formatted_timestamp = (
-        timestamp.replace("-", "").replace(" ", "").replace(":", "")
-    )
+    formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
     rid = "SIR" + formatted_timestamp + "T" + str(operation_purpose)
     inbound_record = ShoeInboundRecord(
         shoe_inbound_rid=rid,
@@ -163,7 +175,7 @@ def inbound_semifinished():
     )
     if operation_purpose == 1 and not outsource_info_id:
         return jsonify({"message": "外包入库需选厂家"}), 400
-        
+
     if operation_purpose == 1:
         outsource_info = db.session.query(OutsourceInfo).get(outsource_info_id)
         if not outsource_info:
@@ -181,11 +193,11 @@ def inbound_semifinished():
         remark = item["remark"]
         inbound_quantity = item.get("inboundQuantity", 0)
         amount_list = item["amountList"]
-        
+
         storage = db.session.query(SemifinishedShoeStorage).get(storage_id)
         if not storage:
             return jsonify({"message": "该库存不存在"}), 400
-        
+
         storage.semifinished_actual_amount += inbound_quantity
         storage.semifinished_amount += inbound_quantity
 
@@ -201,7 +213,7 @@ def inbound_semifinished():
         #     storage.semifinished_amount += int(amount_list[i])
 
         # sub_total_amount = sum([int(x) for x in amount_list])
-        
+
         record_detail = ShoeInboundRecordDetail(
             shoe_inbound_record_id=inbound_record.shoe_inbound_record_id,
             inbound_amount=inbound_quantity,
@@ -218,7 +230,7 @@ def inbound_semifinished():
         if _determine_status(storage):
             storage.semifinished_status = 1
     inbound_record.inbound_amount = total_amount
-        
+
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -291,6 +303,19 @@ def finish_outsource_outbound():
     return jsonify({"message": "success"})
 
 
+def _determine_outbound_status(storage):
+    outbound_amount = (
+        db.session.query(func.sum(ShoeOutboundRecordDetail.outbound_amount))
+        .filter(
+            ShoeOutboundRecordDetail.semifinished_shoe_storage_id == storage.semifinished_shoe_id
+        )
+        .scalar()
+    )
+    if outbound_amount >= storage.semifinished_estimated_amount:
+        return True
+    return False
+
+
 @semifinished_storage_bp.route(
     "/warehouse/outboundsemifinished", methods=["POST", "PATCH"]
 )
@@ -300,9 +325,7 @@ def outbound_semifinished():
     remark = data.get("remark", None)
     items = data.get("items", [])
     timestamp = format_datetime(datetime.now())
-    formatted_timestamp = (
-        timestamp.replace("-", "").replace(" ", "").replace(":", "")
-    )
+    formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
     rid = "SOR" + formatted_timestamp + "T0"
     outbound_record = ShoeOutboundRecord(
         shoe_outbound_rid=rid,
@@ -341,7 +364,7 @@ def outbound_semifinished():
             shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
             outbound_amount=outboundQuantity,
             semifinished_shoe_storage_id=storage_id,
-            remark=remark
+            remark=remark,
         )
         # for i in range(len(amount_list)):
         #     db_name = i + 34
@@ -349,6 +372,9 @@ def outbound_semifinished():
         #     setattr(record, column_name, int(amount_list[i]))
 
         db.session.add(record)
+        db.session.flush()
+        if _determine_outbound_status(storage) is True:
+            storage.semifinished_status = 2
         total_amount += outboundQuantity
     outbound_record.outbound_amount = total_amount
     db.session.commit()
@@ -451,7 +477,8 @@ def get_semi_inbound_records():
         )
         .join(
             ShoeInboundRecordDetail,
-            ShoeInboundRecordDetail.semifinished_shoe_storage_id == SemifinishedShoeStorage.semifinished_shoe_id
+            ShoeInboundRecordDetail.semifinished_shoe_storage_id
+            == SemifinishedShoeStorage.semifinished_shoe_id,
         )
         .join(
             ShoeInboundRecord,
@@ -470,14 +497,18 @@ def get_semi_inbound_records():
 
     if start_date:
         query = query.filter(
-            ShoeInboundRecord.inbound_datetime >= datetime.strptime(start_date, "%Y-%m-%d")
+            ShoeInboundRecord.inbound_datetime
+            >= datetime.strptime(start_date, "%Y-%m-%d")
         )
     if end_date:
         query = query.filter(
-            ShoeInboundRecord.inbound_datetime <= datetime.strptime(end_date, "%Y-%m-%d")
+            ShoeInboundRecord.inbound_datetime
+            <= datetime.strptime(end_date, "%Y-%m-%d")
         )
     if inbound_rid:
-        query = query.filter(ShoeInboundRecord.shoe_inbound_rid.ilike(f"%{inbound_rid}%"))
+        query = query.filter(
+            ShoeInboundRecord.shoe_inbound_rid.ilike(f"%{inbound_rid}%")
+        )
     if order_rid:
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid:
@@ -604,7 +635,8 @@ def get_semi_outbound_records():
         )
         .join(
             ShoeOutboundRecordDetail,
-            ShoeOutboundRecordDetail.semifinished_shoe_storage_id == SemifinishedShoeStorage.semifinished_shoe_id
+            ShoeOutboundRecordDetail.semifinished_shoe_storage_id
+            == SemifinishedShoeStorage.semifinished_shoe_id,
         )
         .join(
             ShoeOutboundRecord,
@@ -615,14 +647,18 @@ def get_semi_outbound_records():
 
     if start_date:
         query = query.filter(
-            ShoeOutboundRecord.outbound_datetime >= datetime.strptime(start_date, "%Y-%m-%d")
+            ShoeOutboundRecord.outbound_datetime
+            >= datetime.strptime(start_date, "%Y-%m-%d")
         )
     if end_date:
         query = query.filter(
-            ShoeOutboundRecord.outbound_datetime <= datetime.strptime(end_date, "%Y-%m-%d")
+            ShoeOutboundRecord.outbound_datetime
+            <= datetime.strptime(end_date, "%Y-%m-%d")
         )
     if outbound_rid:
-        query = query.filter(ShoeOutboundRecord.shoe_outbound_rid.ilike(f"%{outbound_rid}%"))
+        query = query.filter(
+            ShoeOutboundRecord.shoe_outbound_rid.ilike(f"%{outbound_rid}%")
+        )
     if order_rid:
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid:
@@ -708,3 +744,29 @@ def get_semi_outbound_record_by_batch_id():
         )
     result["shoeSizeColumns"] = resulted_filtered_columns
     return result
+
+
+@semifinished_storage_bp.route("/warehouse/gettotalstockofsemistorage", methods=["GET"])
+def get_total_stock_of_semi_storage():
+    """
+    Get the total stock of semifinished storage.
+    """
+    total_stock = db.session.query(
+        func.sum(SemifinishedShoeStorage.semifinished_amount)
+    ).scalar()
+    if total_stock is None:
+        total_stock = 0
+    return jsonify({"totalStock": total_stock})
+
+
+@semifinished_storage_bp.route("/warehouse/getremainingamountofsemistorage", methods=["GET"])
+def get_remaining_amount_of_semi_storage():
+    """
+    Get the remaining amount of semifinished storage.
+    """
+    response = db.session.query(
+        func.sum(SemifinishedShoeStorage.semifinished_estimated_amount - SemifinishedShoeStorage.semifinished_actual_amount)
+    ).filter(
+        SemifinishedShoeStorage.semifinished_actual_amount > 0
+    ).scalar()
+    return jsonify({"remainingAmount": response})

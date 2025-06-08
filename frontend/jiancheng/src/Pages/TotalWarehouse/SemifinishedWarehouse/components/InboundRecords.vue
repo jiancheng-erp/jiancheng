@@ -38,7 +38,7 @@
         <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-size="pageSize" layout="total, sizes, prev, pager, next, jumper"
-                :total="total" />
+                :total="total" :page-sizes="pageSizes" />
         </el-col>
     </el-row>
 
@@ -104,6 +104,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
+import { PAGESIZE, PAGESIZES, getSummaries } from '../../warehouseUtils';
 export default {
     directives: {
         print
@@ -128,7 +129,8 @@ export default {
                 }
             },
             currentPage: 1,
-            pageSize: 10,
+            pageSize: PAGESIZE,
+            pageSizes: PAGESIZES,
             tableData: [],
             total: 0,
             currentRow: {},
@@ -138,6 +140,7 @@ export default {
             inboundRIdSearch: null,
             orderRIdSearch: null,
             shoeRIdSearch: null,
+            getSummaries: getSummaries,
         }
     },
     mounted() {
@@ -151,23 +154,6 @@ export default {
         }
     },
     methods: {
-        getSummaries(param) {
-            const { columns, data } = param;
-            const sums = [];
-            columns.forEach((column, index) => {
-                if (column.property === 'detailAmount') {
-                    const total = data.reduce((sum, row) => {
-                        const value = Number(row.detailAmount);
-                        return sum + (isNaN(value) ? 0 : value);
-                    }, 0);
-                    sums[index] = total;
-                } else {
-                    sums[index] = index === 0 ? '合计' : '';
-                }
-            });
-
-            return sums;
-        },
         calculateInboundTotal() {
             // Calculate the total inbound quantity
             const number = this.recordData.items.reduce((total, item) => {
