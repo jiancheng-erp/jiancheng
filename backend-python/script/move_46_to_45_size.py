@@ -35,7 +35,7 @@ def fix_us_male_size_data(app, db):
 
     with app.app_context():
         # Step 1: PackagingInfo
-        packaging_infos = PackagingInfo.query.filter_by(packaging_info_name="US男").all()
+        packaging_infos = PackagingInfo.query.filter_by(packaging_info_locale="US男").all()
         packaging_ids = []
         for p in packaging_infos:
             if p.size_46_ratio is not None:
