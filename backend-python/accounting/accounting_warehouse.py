@@ -251,6 +251,7 @@ def get_warehouse_inbound_summery():
     material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
     material_color_filter = request.args.get('materialColorFilter', type=str)
     order_rid_filter = request.args.get('orderRidFilter', type=str)
+    order_by_filter = request.args.get('orderByFilter', type=str)
     # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
 
     inbound_records = (db.session.query(InboundRecord.inbound_record_id))
@@ -275,24 +276,24 @@ def get_warehouse_inbound_summery():
     query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
              .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-             .join(Material, MaterialStorage.material_id == Material.material_id)
              .join(SPUMaterial,MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
              .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
                      .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
                     )
-    sized_query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
-             .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
-             .join(SizeMaterialStorage, InboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
-             .join(Material, SizeMaterialStorage.material_id == Material.material_id)
-             .join(SPUMaterial,SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-             .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                     .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
-                    )
+    # sized_query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
+    #          .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
+    #          .join(SizeMaterialStorage, InboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
+    #          .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+    #          .join(SPUMaterial,SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+    #          .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
+    #                  .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
+    #                 )
 
-    query = query.union(sized_query)
+    # query = query.union(sized_query)
     time_period_subquery = query.subquery()
+    print(time_period_subquery.c)
     response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
-                      .join(Material, time_period_subquery.c.spu_material_material_id == Material.material_id)
+                      .join(Material, time_period_subquery.c.material_id == Material.material_id)
                       .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
                       .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
                       .join(Supplier, Material.material_supplier == Supplier.supplier_id)
@@ -304,17 +305,19 @@ def get_warehouse_inbound_summery():
     #                   .join(Supplier, Supplier.supplier_id == Material.material_supplier))
     # print(response_query.all())
     if supplier_name_filter:
+        print("supplier name filter")
+        print("filter is " + str(supplier_name_filter))
         response_query  = response_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
     if material_name_filter:
         response_query = response_query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
     if material_model_filter:
-        response_query = response_query.filter(time_period_subquery.c.spu_material_material_model.ilike(f"%{material_model_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.material_model.ilike(f"%{material_model_filter}%"))
     if material_specification_filter:
-        response_query = response_query.filter(time_period_subquery.c.spu_material_material_specification.ilike(f"%{material_specification_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.material_specification.ilike(f"%{material_specification_filter}%"))
     if material_color_filter:
-        response_query = response_query.filter(time_period_subquery.c.spu_material_color.ilike(f"%{material_color_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.color.ilike(f"%{material_color_filter}%"))
     if order_rid_filter:
-        response_query = response_query.filter(time_period_subquery.c.order_order_rid.ilike(f"%{order_rid_filter}%"))
+        response_query = response_query.filter(time_period_subquery.c.order_rid.ilike(f"%{order_rid_filter}%"))
     total_count = response_query.distinct().count()
     response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_summary = []
@@ -537,6 +540,12 @@ def create_inbound_summary_excel_and_download():
     time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
     generate_accounting_summary_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_summary)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
+
+
+
+
 
 
 @accounting_warehouse_bp.route("/accounting/test", methods=["GET"])
