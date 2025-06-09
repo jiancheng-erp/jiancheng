@@ -57,6 +57,7 @@ def add_transactions():
     return {"msg":"all transactions added"}, 200
 @payable_management_bp.route('/payable_management/get_payable_info', methods=['GET'])
 def get_payable_info():
+    return "OK", 200
     payable_object_accounts = (db.session.query(AccountingPayableAccount, AccountingPayeePayer)
                                .join(AccountingPayeePayer, AccountingPayableAccount.account_owner_id == AccountingPayeePayer.payee_id)
                                .all())
@@ -99,6 +100,7 @@ def get_payable_info():
 
 @payable_management_bp.route('/payable_management/get_payable_info_new', methods=['GET'])
 def get_payable_info_new():
+    return "OK", 200
     payable_object_accounts = (db.session.query(AccountingPayableAccount, AccountingPayeePayer)
                                .join(AccountingPayeePayer, AccountingPayableAccount.account_owner_id == AccountingPayeePayer.payee_id)
                                .all())
