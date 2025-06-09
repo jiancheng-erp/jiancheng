@@ -6,11 +6,11 @@
         <!--引用header-->
         <el-main>
             <div class="userInfo" style="display: flex;justify-content: end;align-items: center;right: 50px;position: relative;">
-                <em style="margin-right: 20px;color: dodgerblue;cursor: pointer;" @click="logout">退出登录</em>
+                <em style="margin-right: 20px;color: dodgerblue;cursor: pointer ;" @click="logout">退出登录</em>
                 <span>{{ userName }}</span>
                 <el-avatar :icon="UserFilled" :size="30" />
             </div>
-            <el-tabs tab-position="left" style="height: 700px" class="demo-tabs" type="border-card">
+            <el-tabs tab-position="left" style="height: 780px" class="demo-tabs" type="border-card">
                 <!-- <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane> -->
                 <!-- <el-tab-pane label="项目录入"><FinancialItemEntry /></el-tab-pane> -->
                 <!-- <el-tab-pane label="历史记录"><FinancialHistoryRecord /></el-tab-pane> -->
