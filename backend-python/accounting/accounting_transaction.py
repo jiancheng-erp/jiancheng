@@ -6,7 +6,8 @@ from app_config import db
 from sqlalchemy import func
 from constants import ACCOUNTING_PAYEE_NOT_FOUND, ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND, ACCOUNTING_PAYEE_EXISTING
 from constants import PAYABLE_EVENT_TO_TEXT, PAYABLE_EVENT_INBOUND,PAYABLE_EVENT_COMPOSITE_INBOUND,PAYABLE_EVENT_MISC_INBOUND,ACCOUNT_TYPE_CASH,ACCOUNT_TYPE_PAYABLE,ACCOUNT_TYPE_RECIEVABLE
- 
+from logger import logger 
+
 # def add_material_paybable(supplier, amount, unit):
 
 #     supplier_name = supplier.name
@@ -67,6 +68,37 @@ def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, 
             for account in tg_accounts_update:
                 tg_account_balance = account.account_balance
                 account.account_balance = tg_account_balance + amount
+        return 0
+    
+def material_outbound_accounting_event(supplier_name, amount, outbound_record_id, unit=1, has_conversion=0, conversion_id=0):
+    payee_entity = db.session.query(AccountingPayeePayer).filter_by(payee_name=supplier_name).first()
+    if not payee_entity:
+        logger.debug("supplier doenst existing in accounting table, check accounting_payee_payer")
+        return ACCOUNTING_PAYEE_NOT_FOUND
+    else:
+        #应付款增加 材料费用
+        new_transaction_entity = AccountingForeignAccountEvent(
+            transaction_type = 1,
+            payable_payee_account_id = None,
+            transaction_amount = -amount, # 负数表示应付减少
+            transaction_amount_unit = unit,
+            transaction_has_conversion = has_conversion,
+            transaction_conversion_id = conversion_id,
+            outbound_record_id = outbound_record_id
+        )
+        payable_account_entity = db.session.query(AccountingPayableAccount).filter_by(account_owner_id = payee_entity.payee_id).first()
+        if not payable_account_entity:
+            logger.debug("entity payable account not found in accounting payable account table")
+            return ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND
+        tg_accounts_update = db.session.query(ThirdGradeAccount).filter_by(account_bound_event = PAYABLE_EVENT_INBOUND).all()
+        new_transaction_entity.payable_payee_account_id = payable_account_entity.account_id
+        db.session.add(new_transaction_entity)
+        current_balance = payable_account_entity.account_payable_balance 
+        payable_account_entity.account_payable_balance = current_balance - amount
+        if tg_accounts_update:
+            for account in tg_accounts_update:
+                tg_account_balance = account.account_balance
+                account.account_balance = tg_account_balance - amount
         return 0
 
 # def add_sales_collectable():

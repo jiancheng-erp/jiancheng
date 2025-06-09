@@ -1536,6 +1536,7 @@ class AccountingForeignAccountEvent(db.Model):
     transaction_has_conversion = db.Column(db.String(1), nullable=False, default=0)
     transaction_conversion_id = db.Column(db.Integer, nullable=True)
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
+    outbound_record_id = db.Column(db.BigInteger, nullable=True)
 
 
 class AccountingCurrencyUnit(db.Model):

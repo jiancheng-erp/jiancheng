@@ -2,7 +2,8 @@
     <el-tabs v-model="activeTab" tab-position="top" style="width: 100%;">
         <el-tab-pane label="原材料" name="原材料">
             <MaterialOutbound :material-supplier-options="materialSupplierOptions"
-                :material-type-options="materialTypeOptions" :materialNameOptions="materialNameOptions">
+                :material-type-options="materialTypeOptions" :materialNameOptions="materialNameOptions"
+                :department-options="departmentOptions">
             </MaterialOutbound>
         </el-tab-pane>
         <!-- <el-tab-pane label="复合材料" name="复合材料">
@@ -33,11 +34,16 @@ export default {
         }
     },
     mounted() {
+        this.getDepartmentOptions();
         this.getMaterialTypeOptions();
         this.getMaterialSupplierOptions();
         this.getMaterialNameOptions();
     },
     methods: {
+        async getDepartmentOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
+            this.departmentOptions = response.data
+        },
         async getMaterialTypeOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialtypes`)
             this.materialTypeOptions = response.data
