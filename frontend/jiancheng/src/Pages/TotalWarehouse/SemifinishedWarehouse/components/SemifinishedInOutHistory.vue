@@ -9,14 +9,17 @@
                 @clear="getTableData" />
             <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
+            <span>半成品仓库存：{{ this.totalStock }}</span>
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-button type="primary" @click="outboundShoes">出库</el-button>
+        <el-col :span="6">
+            <el-button v-if="isOutboundToggle == false" type="primary" @click="toggleOutbound">出库</el-button>
+            <el-button v-if="isOutboundToggle == true" type="success" @click="outboundShoes">确认出库数量</el-button>
+            <el-button v-if="isOutboundToggle == true" @click="toggleOutbound">取消</el-button>
         </el-col>
     </el-row>
-    <div class="transfer-tables">
+    <div v-if="isOutboundToggle" class="transfer-tables">
         <!-- Top Table -->
         <el-table ref="topTableData" :data="topTableData" style="width: 100%; margin-bottom: 20px; height: 20vh"
             @selection-change="handleTopSelectionChange" border stripe>
@@ -43,15 +46,16 @@
             </el-button>
         </div>
     </div>
-    <el-table :data="bottomTableData" border stripe style="width: 100%; margin-bottom: 20px; height: 20vh"
+    <el-table :data="bottomTableData" border stripe style="width: 100%; margin-bottom: 20px; height: 40vh"
         @selection-change="handleBottomSelectionChange">
-        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column v-if="isOutboundToggle" type="selection" width="55"></el-table-column>
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
         <el-table-column prop="customerName" label="客户号"></el-table-column>
         <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
+        <el-table-column prop="storageStatus" label="状态"></el-table-column>
         <!-- <el-table-column label="操作" width="200">
             <template #default="scope">
                 <el-button type="primary" size="small" @click="viewStock(scope.row)">查看库存</el-button>
@@ -62,7 +66,7 @@
     <el-row :gutter="20">
         <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
+                :current-page="currentPage" :page-sizes="[30, 40, 50, 100]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="totalRows" />
         </el-col>
     </el-row>
@@ -195,7 +199,7 @@ export default {
             shoeNumberSearch: '',
             customerNameSearch: '',
             customerProductNameSearch: '',
-            pageSize: 10,
+            pageSize: 30,
             currentPage: 1,
             tableData: [],
             totalRows: 0,
@@ -219,7 +223,9 @@ export default {
             outboundForm: {},
             commentLength: constants.BOUND_RECORD_COMMENT_LENGTH,
             isOutbound: true, // 控制是否显示出库数量列
-            currentQuantityRow: {}
+            currentQuantityRow: {},
+            isOutboundToggle: false, // 控制是否显示出库表格,
+            totalStock: 0, // 半成品仓库存
         }
     },
     computed: {
@@ -236,6 +242,13 @@ export default {
         this.getTableData()
     },
     methods: {
+        toggleOutbound() {
+            this.isOutboundToggle = !this.isOutboundToggle
+            if (this.isOutboundToggle == false) {
+                this.resetVaribles()
+                this.getTableData()
+            }
+        },
         updateSemiShoeTotal() {
             this.currentQuantityRow.remainQuantity = this.currentQuantityRow.shoeStockTable.reduce((total, item) => {
                 return total + (item.outboundQuantity || 0);
@@ -372,6 +385,9 @@ export default {
             this.tableData = response.data.result
             this.totalRows = response.data.total
             this.bottomTableData = this.tableData
+
+            const response2 = await axios.get(`${this.$apiBaseUrl}/warehouse/gettotalstockofsemistorage`)
+            this.totalStock = response2.data.totalStock
         },
         async viewRecords(row) {
             const params = { "storageId": row.storageId }
