@@ -542,6 +542,7 @@ def save_purchase():
             if items[0]["materialCategory"] == 0:
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
+                purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
             else:
                 material_quantity = 0
                 approval_quantity = 0
@@ -552,6 +553,11 @@ def save_purchase():
                     setattr(
                         purchase_order_item,
                         f"size_{name}_purchase_amount",
+                        item["sizeInfo"][i]["purchaseAmount"],
+                    )
+                    setattr(
+                        purchase_order_item,
+                        f"size_{name}_estimated_amount",
                         item["sizeInfo"][i]["purchaseAmount"],
                     )
                 setattr(purchase_order_item, "purchase_amount", material_quantity)
@@ -760,10 +766,16 @@ def edit_purchase_items():
         )
         purchase_order_item, material = entities
         purchase_order_item.purchase_amount = item["purchaseAmount"]
+        purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
         for i in range(len(item["sizeInfo"])):
             setattr(
                 purchase_order_item,
                 f"size_{i}_purchase_amount",
+                item["sizeInfo"][i]["purchaseAmount"],
+            )
+            setattr(
+                purchase_order_item,
+                f"size_{i}_estimated_amount",
                 item["sizeInfo"][i]["purchaseAmount"],
             )
         purchase_order_item.material_specification = item["materialSpecification"]
@@ -1049,65 +1061,6 @@ def submit_purchase_divide_orders():
         # don't create material storage if the quantity is 0
         if material_quantity == 0:
             continue
-        if purchase_divide_order.purchase_divide_order_type == "N":
-            material_storage = MaterialStorage(
-                order_id=order_id,
-                order_shoe_id=order_shoe_id,
-                material_id=material_id,
-                estimated_inbound_amount=material_quantity,
-                actual_inbound_amount=0,
-                department_id=bom_item.department_id,
-                current_amount=0,
-                unit_price=0,
-                material_outsource_status="0",
-                material_model=material_model,
-                material_specification=material_specification,
-                inbound_model=material_model,
-                inbound_specification=material_specification,
-                material_storage_color=color,
-                total_purchase_order_id=total_purchase_order.total_purchase_order_id,
-                craft_name=craft_name,
-                production_instruction_item_id=bom_item.production_instruction_item_id,
-                actual_inbound_material_id=purchase_order_item.inbound_material_id,
-                actual_inbound_unit=purchase_order_item.inbound_unit,
-            )
-            db.session.add(material_storage)
-        elif purchase_divide_order.purchase_divide_order_type == "S":
-            quantity_map = {}
-            for size in SHOESIZERANGE:
-                quantity_map[f"size_{size}_quantity"] = getattr(
-                    purchase_order_item, f"size_{size}_purchase_amount"
-                )
-            if "中底" in material.material_name:
-                material_size_table = order_size_dict["中底"]
-            elif "大底" in material.material_name:
-                material_size_table = order_size_dict["大底"]
-            else:
-                material_size_table = order_size_dict["客人码"]
-            size_material_storage = SizeMaterialStorage(
-                order_id=order_id,
-                order_shoe_id=order_shoe_id,
-                material_id=material_id,
-                total_estimated_inbound_amount=material_quantity,
-                unit_price=0,
-                material_outsource_status="0",
-                department_id=bom_item.department_id,
-                size_material_model=material_model,
-                size_material_specification=material_specification,
-                size_material_color=color,
-                total_purchase_order_id=total_purchase_order.total_purchase_order_id,
-                size_storage_type=batch_info_type_name,
-                craft_name=craft_name,
-                production_instruction_item_id=bom_item.production_instruction_item_id,
-                shoe_size_columns=material_size_table,
-            )
-            for size in SHOESIZERANGE:
-                setattr(
-                    size_material_storage,
-                    f"size_{size}_estimated_inbound_amount",
-                    quantity_map[f"size_{size}_quantity"],
-                )
-            db.session.add(size_material_storage)
     purchase_order_status = "2"
     db.session.query(PurchaseOrder).filter(
         PurchaseOrder.purchase_order_rid == purchase_order_id
@@ -1153,7 +1106,7 @@ def submit_purchase_divide_orders():
         )
         == False
     ):
-        os.mkdir(
+        os.makedirs(
             os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order")
         )
     customer_name = (
