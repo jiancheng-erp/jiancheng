@@ -182,7 +182,6 @@ def get_warehouse_inbound_record():
     material_color_filter = request.args.get('materialColorFilter', type=str)
     order_rid_filter = request.args.get('orderRidFilter', type=str)
     status_filter = [int(status) for status in request.args.getlist('statusFilter[]')]
-    print(status_filter)
     query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial,Order.order_rid)
                 .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
                 .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
@@ -228,7 +227,6 @@ def get_warehouse_inbound_record():
     if order_rid_filter:
         query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
     if status_filter != []:
-        print("status filter isnt empty")
         query = query.filter(InboundRecord.approval_status.in_(status_filter))
     warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
 
