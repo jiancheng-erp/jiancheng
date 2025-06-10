@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 from openpyxl.drawing.image import Image
 from openpyxl.utils import get_column_letter
 import os
-
+from logger import logger
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
     # Copy the template to a new file
@@ -21,9 +21,9 @@ def download_image(image_path, save_path):
     if os.path.exists(image_path):
         # Copy the image to the destination
         shutil.copy(image_path, save_path)
-        print(f"Image copied successfully from {image_path} to {save_path}")
+        logger.debug(f"Image copied successfully from {image_path} to {save_path}")
     else:
-        print(f"Image not found at: {image_path}")
+        logger.debug(f"Image not found at: {image_path}")
 
 # Function to calculate the size of the image to fit within a cell range
 def resize_image_to_fit(ws, image_path, start_cell, end_cell):
@@ -107,7 +107,7 @@ def generate_excel_file(template_path, new_file_path, order_details, series_data
     # Save the modified workbook
     save_workbook(wb, new_file_path)
 
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
 
 # Example usage
 # if __name__ == "__main__":

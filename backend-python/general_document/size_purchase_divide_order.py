@@ -2,7 +2,7 @@ from openpyxl.styles import Border, Side, Alignment, Font
 from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl import load_workbook
 import shutil
-
+from logger import logger
 
 def load_template(template_path, new_file_path):
     shutil.copy(template_path, new_file_path)
@@ -135,7 +135,7 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     add_borders(ws, "A1", f"L{row - 1}")  # 只添加边框到数据部分
 
     wb.save(new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
 
 
 # template_path = "H:\git-projects\jiancheng\\backend-python\general_document\新标准采购订单尺码版.xlsx"

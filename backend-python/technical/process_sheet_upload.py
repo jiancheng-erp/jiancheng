@@ -7,7 +7,7 @@ from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
-
+from logger import logger
 process_sheet_upload_bp = Blueprint("process_sheet_upload", __name__)
 
 
@@ -2477,7 +2477,7 @@ def get_past_craft_sheet_material():
         ).filter(
             CraftSheetItem.craft_sheet_id == craft_sheet_id
         ).all()
-        print(craft_sheet_items)
+        logger.debug(craft_sheet_items)
         result_dict = {}
         for item in craft_sheet_items:
             color_name = item.Color.color_name

@@ -3,7 +3,7 @@ from datetime import datetime
 from app_config import db
 from models import *
 from sqlalchemy import text
-
+from logger import logger
 material_page_bp = Blueprint("material_page_bp", __name__)
 
 
@@ -16,7 +16,7 @@ def get_all_materials():
     material_warehouse = request.args.get("warehousename", None)
     factory_name = request.args.get("factoryname", None)
     material_type = request.args.get("materialtype", None)
-    print(material_name, material_warehouse, factory_name, material_type)
+    logger.debug(material_name, material_warehouse, factory_name, material_type)
 
     # Start building the query with joinedload to reduce query count
     query = (
@@ -223,7 +223,7 @@ def create_material_type():
 def check_material():
     material_name = request.json.get("materialname", None)
     factory_name = request.json.get("factoryname", None)
-    print(material_name, factory_name)
+    logger.debug(material_name, factory_name)
     # Check if the material already exists
     existing_material = (
         db.session.query(Material)
@@ -283,14 +283,14 @@ def get_all_factory_names():
 @material_page_bp.route("/logistics/addmaterial", methods=["POST"])
 def create_material():
     material_list = request.json.get("materials", None)
-    print(material_list)
+    logger.debug(material_list)
     for material in material_list:
         material_category = material.get("materialCategory", None)
         material_name = material.get("materialName", None)
         material_type = material.get("materialType", None)
         unit = material.get("unit", None)
         factory_name = material.get("factoryName", None)
-        print(material_name, material_type, unit, factory_name)
+        logger.debug(material_name, material_type, unit, factory_name)
         material_type_record = (
             db.session.query(MaterialType)
             .filter(MaterialType.material_type_name == material_type)
@@ -343,7 +343,7 @@ def get_all_material_storage():
     factory_name = request.args.get("factoryname", None)
     order_id = request.args.get("orderid", None)
     order_shoe_id = request.args.get("ordershoeid", None)
-    print(
+    logger.debug(
         material_type,
         material_name,
         material_spec,

@@ -14,7 +14,7 @@ from blueprints import register_blueprints
 from models import *
 from event_processor import EventProcessor
 from constants import SHOESIZERANGE
-
+from logger import logger
 
 # --- Flask App Fixture ---
 @pytest.fixture
@@ -154,7 +154,7 @@ def test_audit_material_inbound(client: FlaskClient):
     accounting_payee_payer = (
         db.session.query(AccountingPayeePayer).filter_by(payee_name="嘉泰皮革").first()
     )
-    print(accounting_payee_payer)
+    logger.debug(accounting_payee_payer)
     assert accounting_payee_payer is not None
     new_payable_account_entity = (
         db.session.query(AccountingPayableAccount)

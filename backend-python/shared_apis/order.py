@@ -22,7 +22,7 @@ from general_document.production_order_export import (
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
 from shared_apis import customer
-
+from logger import logger
 order_bp = Blueprint("order_bp", __name__)
 # 订单初始状态
 ORDER_CREATION_STATUS = 6
@@ -170,8 +170,8 @@ def get_dev_orders_for_doc():
 
     result = {"pendingOrders": pending_orders, "inProgressOrders": in_progress_orders}
     t_e = time.time()
-    print("Time Taken is ")
-    print(t_e - t_s)
+    logger.debug("Time Taken is ")
+    logger.debug(t_e - t_s)
     return result
 
 
@@ -181,7 +181,7 @@ def get_dev_orders():
     _, staff, department = current_user_info()
 
     shoe_department = department.department_name
-    print("department" + shoe_department)
+    logger.debug("department" + shoe_department)
     status_val = DEV_ORDER_SHOE_STATUS
     t_s = time.time()
     status_val = request.args.get("ordershoestatus")
@@ -263,15 +263,15 @@ def get_dev_orders():
 
     result = {"pendingOrders": pending_orders, "inProgressOrders": in_progress_orders}
     t_e = time.time()
-    print("Time Taken is ")
-    print(t_e - t_s)
+    logger.debug("Time Taken is ")
+    logger.debug(t_e - t_s)
     return result
 
 
 @order_bp.route("/order/getprodordershoebystatus", methods=["GET"])
 def get_orders_by_status():
     t_s = time.time()
-    print("ORDERSHOESTATUS GET REQUEST WITH STATUS OF")
+    logger.debug("ORDERSHOESTATUS GET REQUEST WITH STATUS OF")
     status_val = request.args.get("ordershoestatus")
     entities = (
         db.session.query(
@@ -312,8 +312,8 @@ def get_orders_by_status():
 
     result = {"pendingOrders": pending_orders, "inProgressOrders": in_progress_orders}
     t_e = time.time()
-    print("Time Taken is ")
-    print(t_e - t_s)
+    logger.debug("Time Taken is ")
+    logger.debug(t_e - t_s)
     return result
 
 
@@ -494,8 +494,8 @@ def get_order_info_business():
         # .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
         # .join(OrderShoeStatusReference, OrderShoeStatus.current_status == OrderShoeStatusReference.status_id)
         # .all())
-        # print(order_shoe_status_entities)
-        # print(order_shoe_id)
+        # logger.debug(order_shoe_status_entities)
+        # logger.debug(order_shoe_id)
 
     order_shoe_id_to_status = {order_shoe_id: "" for order_shoe_id in order_shoe_ids}
     order_shoe_id_to_order_shoe_types = {
@@ -608,9 +608,9 @@ def get_order_info_business():
                 currency_type = order_shoe_type_currency_type
                 # batchInfoEntity = {}
                 # for db_attr in database_attr_list:
-                #     print("getting this db_attr " + db_attr)
+                #     logger.debug("getting this db_attr " + db_attr)
                 #     parsed_key = "".join(db_attr.rsplit(db_attr))
-                #     print(parsed_key)
+                #     logger.debug(parsed_key)
                 #     batchInfoEntity[parsed_key] = getattr(entity.PackagingInfo, db_attr)
                 # response_order_shoe['shoeTypeBatchInfoList'].append(batchInfoEntity)
                 temp_obj = {
@@ -979,7 +979,7 @@ def delete_order():
                 os.rmdir(file_path)
         os.rmdir(order_local_path)
     else:
-        print("path doesnt exist in server")
+        logger.debug("path doesnt exist in server")
     order_shoe_entities = db.session.query(OrderShoe).filter_by(order_id=order_id).all()
     order_shoe_ids = [entity.order_shoe_id for entity in order_shoe_entities]
     order_shoe_type_entities = (
@@ -1682,7 +1682,7 @@ def approve_outbound_by_business():
                 )
                 processor.processEvent(event)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "批准成功"}), 200
@@ -1708,7 +1708,7 @@ def approve_outbound_by_general_manager():
                 )
                 processor.processEvent(event)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "批准成功"}), 200

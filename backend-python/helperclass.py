@@ -1,3 +1,4 @@
+from logger import logger
 class LinkedListNode:
     def __init__(self, val=None):
         self.prev = None
@@ -74,17 +75,17 @@ class Graph:
         cur = self.source
         result = []
         result.append(cur.getVal())
-        print(cur.getVal())
+        logger.debug(cur.getVal())
         while cur.getNext() != []:
             for i in cur.getNext():
-                print(i.getVal())
+                logger.debug(i.getVal())
                 result.append(i.getVal())
                 cur = i
         return str(result)
 
     def printAll(self):
         cur = self.source
-        print(self.BFSR(cur))
+        logger.debug(self.BFSR(cur))
 
     def BFSR(self, cur):
         if cur.getNext() == []:

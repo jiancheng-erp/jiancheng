@@ -9,7 +9,7 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.mysql import insert
-
+from logger import logger
 production_status_nodes_bp = Blueprint("production_status_nodes_bp", __name__)
 
 
@@ -161,7 +161,7 @@ def edit_order_shoe_status():
             .filter_by(order_shoe_id=order_shoe_id)
             .all()
         )
-        print(order_shoe_type_ids)
+        logger.debug(order_shoe_type_ids)
         for id in order_shoe_type_ids:
             for obj in [0, 1]:
                 semi_entity = SemifinishedShoeStorage(
@@ -281,7 +281,7 @@ def edit_order_shoe_status():
             )
             processor.processEvent(event)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.add_all(arr)
     db.session.commit()

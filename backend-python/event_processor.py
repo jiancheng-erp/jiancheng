@@ -243,10 +243,10 @@ class EventProcessor:
     def testPaths(self):
         for i in range(len(ORDERSHOESTATUSNAMELIST)):
             node = self.orderShoeStatusidToNode[i]
-            print("prev has " + str(node.getPrev()))
-            print("cur node is " + str(node))
-            print("next has " + str(node.getNext()))
-            print("================================")
+            logger.debug("prev has " + str(node.getPrev()))
+            logger.debug("cur node is " + str(node))
+            logger.debug("next has " + str(node.getNext()))
+            logger.debug("================================")
 
     def isMerge(self, node_id):
         node_prevs = self.orderShoeStatusidToNode[node_id].getPrev()
@@ -405,13 +405,13 @@ class EventProcessor:
                     )
                 else:
                     result = False
-                    print("OrderShoeStatus with current_status Doesnt exist in DB")
+                    logger.debug("OrderShoeStatus with current_status Doesnt exist in DB")
             else:
                 result = False
-                print("cannot reject order status, use processEvent to set next status")
+                logger.debug("cannot reject order status, use processEvent to set next status")
         else:
             result = False
-            print("bad operation id, should be between 123 and 0")
+            logger.debug("bad operation id, should be between 123 and 0")
         return result
 
     def setOrderShoeRejectStatus(self, event, operation, current_status):
@@ -559,7 +559,7 @@ class EventProcessor:
                     else:
                         result.append(modified_status)
                     # else:
-                    #     print(5)
+                    #     logger.debug(5)
                     #     ### do nothing
                 else:
                     result.append(next_id)
@@ -633,12 +633,12 @@ class EventProcessor:
                 curStat = modifiedStatus
                 nextStatus = self.getNextOrderStatus(curStat)
                 if nextStatus:
-                    print("next status is " + str(nextStatus))
+                    logger.debug("next status is " + str(nextStatus))
                     result = self.dbSetOrderStatus(
                         event, operation, next_status=nextStatus
                     )
                 else:
-                    print("Order Completed, Event not executed")
+                    logger.debug("Order Completed, Event not executed")
                     result = False
             else:
                 ### set status to operation value
@@ -647,7 +647,7 @@ class EventProcessor:
             ### TODO INSERT EVENT INTO DB
             # self.dbInsertEvent(event)
         else:
-            print("Order status doesnt match operation status, Event Invalid")
+            logger.debug("Order status doesnt match operation status, Event Invalid")
             result = False
         return result
 

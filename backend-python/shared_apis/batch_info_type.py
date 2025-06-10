@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from models import *
 from api_utility import to_camel, to_snake
 
-
+from logger import logger
 from app_config import db
 
 #TODO ADD RESTRAINTS
@@ -54,7 +54,7 @@ def add_batch_type_business():
     batch_info_type_name = request.args.get("batchInfoTypeName")
     db_entity = BatchInfoType()
     for attr in API_USED_ATTRS:
-        print(attr, request.json.get(to_camel(attr)))
+        logger.debug(attr, request.json.get(to_camel(attr)))
         setattr(db_entity, attr, request.json.get(to_camel(attr)))
         db_entity.batch_info_type_id = None
         db_entity.batch_info_type_usage = 0
@@ -100,7 +100,7 @@ def add_batch_type_logistics():
     batch_info_type_name = request.args.get("batchInfoTypeName")
     db_entity = BatchInfoType()
     for attr in API_USED_ATTRS:
-        print(attr, request.json.get(to_camel(attr)))
+        logger.debug(attr, request.json.get(to_camel(attr)))
         setattr(db_entity, attr, request.json.get(to_camel(attr)))
         db_entity.batch_info_type_id = None
         db_entity.batch_info_type_usage = 1

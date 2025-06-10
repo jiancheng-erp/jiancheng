@@ -1,8 +1,9 @@
 import pandas as pd
 from collections import defaultdict
+from logger import logger
 def get_order_xls():
     df = pd.read_excel('C:/Users/19825/Desktop/工作簿1.xlsx', header=1)
-    print(df)
+    logger.debug(df)
     return df.to_dict(orient='records')
 xls = get_order_xls()
 def generate_key(item):
@@ -19,7 +20,7 @@ for item in xls:
 
 # Example of accessing data
 for key, items in filtered_data_dict.items():
-    print(f"Key: {key}")
+    logger.debug(f"Key: {key}")
     for item in items:
-        print(f"  Item: {item}")
+        logger.debug(f"  Item: {item}")
 

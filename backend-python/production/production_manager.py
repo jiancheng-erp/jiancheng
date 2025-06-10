@@ -12,7 +12,7 @@ from general_document.batch_info import generate_excel_file
 from business.batch_info_type import get_order_batch_type_helper
 import os
 from login.login import current_user_info
-
+from logger import logger
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
 
@@ -505,7 +505,7 @@ def get_all_order_shoe_info():
         .group_by(Order.order_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_rid)
     )
-    print(query)
+    logger.debug(query)
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
@@ -1200,7 +1200,7 @@ def approve_price_report():
     report.status = PRICE_REPORT_GM_PENDING
     report.rejection_reason = None
     if flag:
-        print(123)
+        logger.debug(123)
         processor: EventProcessor = current_app.config["event_processor"]
         if report.team == "裁断":
             operation_arr = [80, 81]
@@ -1222,7 +1222,7 @@ def approve_price_report():
                 processor.processEvent(event)
                 db.session.add(event)
         except Exception as e:
-            print(e)
+            logger.debug(e)
             return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})
@@ -1266,7 +1266,7 @@ def reject_price_report():
         )
         processor.processRejectEvent(event, current_status)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})

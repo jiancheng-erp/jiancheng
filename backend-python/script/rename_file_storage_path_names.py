@@ -5,9 +5,9 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from file_locations import FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import os
-
+from logger import logger
 def rename_file_storage_path_names(app, db):
-    print("Renaming file storage path names...")
+    logger.debug("Renaming file storage path names...")
     with app.app_context():
         orders = db.session.query(Order).all()
         for order in orders:
@@ -34,7 +34,7 @@ def rename_file_storage_path_names(app, db):
                 if shoe:
                     shoe_id = shoe.shoe_id
                 else:
-                    print(f"Error: shoe with shoe_rid {shoe_rid} not found.")
+                    logger.debug(f"Error: shoe with shoe_rid {shoe_rid} not found.")
                     continue
                 # rename the file storage path name
                 new_shoe_image_url = shoe_type.shoe_image_url.replace(shoe_rid, str(shoe_id))
@@ -72,10 +72,10 @@ def rename_file_storage_path_names(app, db):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            print(f"Error committing changes: {e}")
+            logger.debug(f"Error committing changes: {e}")
         finally:
             db.session.close()
-    print("Renaming file storage path names completed.")
+    logger.debug("Renaming file storage path names completed.")
             
 
             

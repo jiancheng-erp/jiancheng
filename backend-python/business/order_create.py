@@ -17,7 +17,7 @@ from app_config import db
 from flask import current_app
 from event_processor import EventProcessor
 from wechat_api.send_message_api import send_massage_to_users
-
+from logger import logger
 
 order_create_bp = Blueprint("order_create_bp", __name__)
 
@@ -55,7 +55,7 @@ def create_new_order():
 	customer_shoe_names = order_info["customerShoeName"]
 	rid_exist_order = Order.query.filter_by(order_rid = order_rid).first()
 	if rid_exist_order:
-		print("order rid exists, must be unique")
+		logger.debug("order rid exists, must be unique")
 		return jsonify({'message':'订单号或客户订单号已经存在 单号不可重复'}), 400
 
 	new_order = Order(
@@ -181,7 +181,7 @@ def create_new_order():
 				packaging_info_quantity = quantity_per_ratio)
 			batch_info_entity_array.append(new_entity)
 		db.session.add_all(batch_info_entity_array)
-	print("order added to DB")
+	logger.debug("order added to DB")
 	db.session.commit()
 	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
 	os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
@@ -190,7 +190,7 @@ def create_new_order():
 	# except Exception as e:
 	# 	result = jsonify({"message": str(e)}, 500)
 	time_t = time.time()
-	print("time taken is " + str(time_t - time_s))
+	logger.debug("time taken is " + str(time_t - time_s))
 	return result
 
 
@@ -214,16 +214,16 @@ def order_price_update():
 	# .filter(OrderShoeType.order_shoe_type_id == )
 	# sync_order_shoe_status(list(set(unit_price_form.keys()).union(set(currency_type_form.keys()))))
 	time_t = time.time()
-	print("time taken is update price is" + str(time_t - time_s))
+	logger.debug("time taken is update price is" + str(time_t - time_s))
 	return jsonify({'msg':"ok"}), 200
 
 @order_create_bp.route("/ordercreate/proceedevent", methods=["POST"])
 def order_event_proceed():
-	print("PROCEED")
+	logger.debug("PROCEED")
 	order_id = request.json.get('orderId')
 	staff_id = request.json.get('staffId')
 	price_all_filled = True
-	print(order_id, staff_id)
+	logger.debug(order_id, staff_id)
 	order_shoe_type_entities = (db.session.query(Order,OrderShoe,OrderShoeType)
 							 .filter_by(order_id = order_id)
 							 .join(OrderShoe,Order.order_id == OrderShoe.order_id)

@@ -14,6 +14,7 @@ import os
 import zipfile
 from general_document.size_purchase_divide_order import generate_size_excel_file
 from general_document.purchase_divide_order import generate_excel_file
+from logger import logger
 
 assets_purchase_page_bp = Blueprint("assets_purchase_page_bp", __name__)
 
@@ -66,7 +67,7 @@ def get_assets_material_purchase_order():
 )
 def get_assets_new_purchase_order_id():
     department = request.json.get("department")
-    print(department)
+    logger.debug(department)
     current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
     random_string = randomIdGenerater(6)
     new_id = department + current_time_stamp + random_string + "A"
@@ -78,7 +79,7 @@ def get_material_type_and_name():
     material_type = request.args.get("materialtype")
     material_name = request.args.get("materialname")
     supplier_name = request.args.get("suppliername")
-    print(material_type, material_name, supplier_name)
+    logger.debug(material_type, material_name, supplier_name)
     query = (
         db.session.query(Material, MaterialType, MaterialWarehouse, Supplier)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
@@ -143,7 +144,7 @@ def get_all_material_name():
             }
     # Convert the dictionary values into a list
     result = list(unique_materials.values())
-    # Print and return the result
+    # logger.debug and return the result
     return jsonify(result)
 
 
@@ -213,7 +214,7 @@ def new_purchase_order_save():
             db.session.flush()
             purchase_divide_order_id = purchase_divide_order.purchase_divide_order_id
             for item in items:
-                print(item)
+                logger.debug(item)
                 material_name = item["materialName"]
                 material_info = (
                     db.session.query(Material)
@@ -287,7 +288,7 @@ def new_purchase_order_save():
         return jsonify({"status": "success"})
     except SQLAlchemyError as e:
         db.session.rollback()  # Rollback the session to undo changes
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -464,7 +465,7 @@ def get_assets_purchase_order_items():
         "purchaseDivideOrderType": purchase_divide_order_type,
         "data": result,
     }
-    print(result)
+    logger.debug(result)
     return jsonify(fin_result)
 
 
@@ -548,7 +549,7 @@ def get_purchase_divide_orders():
                     obj[getattr(batch_info_type, f"size_{shoe_size}_name")] = getattr(
                         assets_item, f"size_{shoe_size}_purchase_amount"
                     )
-            print(obj)
+            logger.debug(obj)
         grouped_results[divide_order_rid]["assetsItems"].append(obj)
 
     # Convert the grouped results to a list
@@ -560,7 +561,7 @@ def get_purchase_divide_orders():
 @assets_purchase_page_bp.route("/logistics/unsubmitpurchaseordersave", methods=["POST"])
 def unsubmit_purchase_order_save():
     purchase_divide_order_data = request.json.get("data")
-    print(purchase_divide_order_data)
+    logger.debug(purchase_divide_order_data)
     for item in purchase_divide_order_data:
         purchase_divide_order_rid = item["purchaseDivideOrderId"]
         purchase_order_remark = item["remark"]
@@ -653,7 +654,7 @@ def submit_purchase_order():
                 quantity_list[i] = (
                     getattr(assets_item, f"size_{shoe_size}_purchase_amount", 0) or 0
                 )
-            print(quantity_list)
+            logger.debug(quantity_list)
             material_total_quantity = sum(quantity_list)
             size_material_storage = SizeMaterialStorage(
                 material_id=material_id,
@@ -711,7 +712,7 @@ def submit_purchase_order():
         supplier,
     ) in purchase_divide_orders:
         purchase_order_id = purchase_divide_order.purchase_divide_order_rid
-        print(purchase_order_id)
+        logger.debug(purchase_order_id)
         if not os.path.exists(
             os.path.join(FILE_STORAGE_PATH, "单独采购订单", purchase_order_rid)
         ):
@@ -1008,7 +1009,7 @@ def edit_saved_purchase_order_items():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
     finally:
@@ -1057,7 +1058,7 @@ def delete_unsubmit_purchase_order():
         return jsonify({"status": "success"})
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -1086,7 +1087,7 @@ def get_all_material_types():
         return result
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

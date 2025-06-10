@@ -9,7 +9,7 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_
 from sqlalchemy.dialects.mysql import insert
-
+from logger import logger
 production_scheduling_bp = Blueprint("production_scheduling_bp", __name__)
 
 
@@ -276,7 +276,7 @@ def start_production():
             )
             processor.processEvent(event)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"}), 200
@@ -357,7 +357,7 @@ def get_order_production_detail():
 )
 def save_production_amount():
     data = request.get_json()
-    print(data)
+    logger.debug(data)
     for row in data:
         obj = {}
         # set production_amount_id

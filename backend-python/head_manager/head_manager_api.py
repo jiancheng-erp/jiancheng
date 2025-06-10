@@ -9,7 +9,7 @@ from collections import defaultdict
 from wechat_api.send_message_api import send_massage_to_users
 from login.login import current_user_info
 from constants import *
-
+from logger import logger
 
 head_manager_bp = Blueprint("head_manager_bp", __name__)
 
@@ -202,7 +202,7 @@ def get_cost_info():
             "orderTotalProfitPerShoe": round(order_totals["profit"] / order_totals["shoe_amount"], 3) if order_totals["shoe_amount"] else 0,
         })
 
-    print("time taken for get cost info is", time.time() - time_s)
+    logger.debug("time taken for get cost info is", time.time() - time_s)
     return jsonify(cost_info)
 
 
@@ -339,12 +339,12 @@ def get_order_status_info():
                     "orderShoes": order_shoe_list,
                 })
 
-        print("time taken for get order status info is", time.time() - time_s)
+        logger.debug("time taken for get order status info is", time.time() - time_s)
         return jsonify(order_status_info)
 
     else:
         # OrderType != 0 — not implemented in original
-        print("time taken for get order status info is", time.time() - time_s)
+        logger.debug("time taken for get order status info is", time.time() - time_s)
         return jsonify({"msg": "Invalid order type."}), 400
 
 
@@ -453,7 +453,7 @@ def get_order_shoe_timeline():
         event_list = []
         time_t = time.time()
         time_taken = time_t - time_s
-        print("time taken for order shoe time line is " + str(time_taken))
+        logger.debug("time taken for order shoe time line is " + str(time_taken))
         if event:
             for e in event:
                 event_list.append(
@@ -622,7 +622,7 @@ def get_material_price_info():
             )
     time_t = time.time()
     time_taken = time_t - time_s
-    print("time taken for get_material price info is " + str(time_taken))
+    logger.debug("time taken for get_material price info is " + str(time_taken))
     return jsonify(material_price_info)
 
 
@@ -767,7 +767,7 @@ def get_financial_status():
         }
         financial_list.append(order_info)
     time_t = time.time()
-    print("financial status time taken is " + str(time_t - time_s))
+    logger.debug("financial status time taken is " + str(time_t - time_s))
     return jsonify(financial_list)
 
 @head_manager_bp.route("/headmanager/saveProductionOrderPrice", methods=["POST"])
@@ -919,7 +919,7 @@ def approve_price_report_by_head_manager():
                 processor.processEvent(event)
                 db.session.add(event)
         except Exception as e:
-            print(e)
+            logger.debug(e)
             return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "审批成功"}), 200
@@ -961,7 +961,7 @@ def reject_price_report_by_head_manager():
         )
         processor.processRejectEvent(event, current_status)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})

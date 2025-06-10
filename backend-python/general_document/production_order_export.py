@@ -8,7 +8,7 @@ import os
 from collections import defaultdict
 from openpyxl.drawing.image import Image
 from openpyxl.utils import units
-
+from logger import logger
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -316,7 +316,7 @@ def save_workbook(wb, new_file_path):
 
 # Main function to generate the Excel file
 def generate_production_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
@@ -331,10 +331,10 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
         column = get_next_column_name(column)
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
     
 def generate_production_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
@@ -350,4 +350,4 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
 
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")

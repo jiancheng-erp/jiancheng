@@ -1,6 +1,7 @@
 from openpyxl.utils import range_boundaries
 
 from openpyxl import load_workbook
+from logger import logger
 def generate_material_statistics_file(template_path, save_path, order_rid, order_shoe_rid, customer_name, materials_data):
     """
     Generates a 材料统计表 file based on the provided template and materials data.
@@ -40,8 +41,8 @@ def generate_material_statistics_file(template_path, save_path, order_rid, order
         specification = data.get("specification", "")
         approval_amount = data.get("approval_amount", 0)
         purchase_amount = data.get("purchase_amount", 0)
-        print(supplier_name, material_name, model, specification, approval_amount, purchase_amount)
-        print(index)
+        logger.debug(supplier_name, material_name, model, specification, approval_amount, purchase_amount)
+        logger.debug(index)
         
         # Fill the cells
         sheet[f"A{index}"] = supplier_name

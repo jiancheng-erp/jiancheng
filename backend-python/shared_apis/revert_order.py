@@ -19,7 +19,7 @@ from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
 from shared_apis import order
 from wechat_api.send_message_api import send_massage_to_users
-
+from logger import logger
 DEPARTMENT_STATUS_DICT = {
     "3": ["6"],
     "7": ["0"],
@@ -455,7 +455,7 @@ def process_revert_order():
         .filter(Order.order_id == order_id, OrderShoeStatus.revert_info.isnot(None))
         .first()[2]
     )
-    print(order_shoe_status)
+    logger.debug(order_shoe_status)
     revert_info_dict = json.loads(order_shoe_status.revert_info)
     new_middle_process = revert_info_dict["middle_process"]
     source_status = revert_info_dict["source_status"]
