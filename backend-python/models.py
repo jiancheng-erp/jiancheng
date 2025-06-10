@@ -633,6 +633,23 @@ class PurchaseOrderItem(db.Model):
     craft_name = db.Column(db.String(100), nullable=True)
     remark = db.Column(db.String(100), nullable=True)
     related_selected_material_storage = db.Column(db.JSON, nullable=True)
+    estimated_inbound_amount = db.Column(
+        db.DECIMAL(12, 5),
+        default=0,
+    )
+    size_34_estimated_amount = db.Column(db.Integer, default=0)
+    size_35_estimated_amount = db.Column(db.Integer, default=0)
+    size_36_estimated_amount = db.Column(db.Integer, default=0)
+    size_37_estimated_amount = db.Column(db.Integer, default=0)
+    size_38_estimated_amount = db.Column(db.Integer, default=0)
+    size_39_estimated_amount = db.Column(db.Integer, default=0)
+    size_40_estimated_amount = db.Column(db.Integer, default=0)
+    size_41_estimated_amount = db.Column(db.Integer, default=0)
+    size_42_estimated_amount = db.Column(db.Integer, default=0)
+    size_43_estimated_amount = db.Column(db.Integer, default=0)
+    size_44_estimated_amount = db.Column(db.Integer, default=0)
+    size_45_estimated_amount = db.Column(db.Integer, default=0)
+    size_46_estimated_amount = db.Column(db.Integer, default=0)
 
     def __repr__(self):
         return (
