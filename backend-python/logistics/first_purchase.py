@@ -191,7 +191,6 @@ def get_order_shoe_list():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -1235,7 +1234,6 @@ def submit_purchase_divide_orders():
                 size_values = order_size_table.get("楦头", order_size_table["客人码"])
             else:
                 size_values = order_size_table["客人码"]
-            print(size_values)
 
             # 4️⃣ 转换为实际尺码并构造最终的 obj
             obj = {
@@ -1287,7 +1285,6 @@ def submit_purchase_divide_orders():
                 }
 
             size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
-            print(size_purchase_divide_order_dict)
     customer_name = (
         db.session.query(Order, Customer)
         .join(Customer, Order.customer_id == Customer.customer_id)
