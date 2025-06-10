@@ -632,9 +632,9 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
     if material_category == 0:
         storage_query = db.session.query(MaterialStorage).filter(
             MaterialStorage.actual_inbound_material_id == material_id,
-            MaterialStorage.inbound_specification == material_specification,
-            MaterialStorage.inbound_model == material_model,
-            MaterialStorage.material_storage_color == material_color,
+            func.coalesce(MaterialStorage.inbound_model, literal('')) == material_model,
+            func.coalesce(MaterialStorage.inbound_specification, literal('')) == material_specification,
+            func.coalesce(MaterialStorage.material_storage_color, literal('')) == material_color,
             MaterialStorage.actual_inbound_unit == actual_inbound_unit,
         )
         if order_shoe_id:
@@ -649,9 +649,9 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
     elif material_category == 1:
         storage_query = db.session.query(SizeMaterialStorage).filter(
             SizeMaterialStorage.material_id == material_id,
-            SizeMaterialStorage.size_material_specification == material_specification,
-            SizeMaterialStorage.size_material_model == material_model,
-            SizeMaterialStorage.size_material_color == material_color,
+            func.coalesce(SizeMaterialStorage.size_material_model, literal('')) == material_model,
+            func.coalesce(SizeMaterialStorage.size_material_specification, literal('')) == material_specification,
+            func.coalesce(SizeMaterialStorage.size_material_color, literal('')) == material_color,
         )
         if order_shoe_id:
             storage_query = storage_query.filter(
@@ -676,7 +676,6 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
                 inbound_specification=material_specification,
                 material_storage_color=material_color,
                 actual_inbound_unit=unit,
-                spu_material_id=spu_material_id,
                 order_id=order_id,
                 order_shoe_id=order_shoe_id,
             )
@@ -708,12 +707,13 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
                 size_material_model=material_model,
                 size_material_color=material_color,
                 shoe_size_columns=shoe_size_columns,
-                spu_material_id=spu_material_id,
                 order_id=order_id,
                 order_shoe_id=order_shoe_id,
             )
         db.session.add(storage)
         db.session.flush()
+    # 给新创的和已有的storage都加上spu_material_id
+    storage.spu_material_id = spu_material_id
     if material_category == 0:
         storage_id = storage.material_storage_id
     elif material_category == 1:
