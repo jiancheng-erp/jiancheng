@@ -618,7 +618,7 @@ def get_order_info_business():
                     for db_attr in database_attr_list
                 }
                 # casting decimal to int or float accordingly for frontend
-                if entity.OrderShoeBatchInfo.packaging_info_quantity:
+                if entity.OrderShoeBatchInfo.packaging_info_quantity != None:
                     if entity.OrderShoeBatchInfo.packaging_info_quantity == int(entity.OrderShoeBatchInfo.packaging_info_quantity):
                         temp_obj["unitPerRatio"] = int(entity.OrderShoeBatchInfo.packaging_info_quantity)
                     else:
