@@ -244,8 +244,8 @@ class MaterialStorage(db.Model):
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     actual_inbound_unit = db.Column(db.String(5), nullable=True)
     actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
-    inbound_model = db.Column(db.String(50), nullable=True)
-    inbound_specification = db.Column(db.String(100), nullable=True)
+    inbound_model = db.Column(db.String(50), default="", nullable=True)
+    inbound_specification = db.Column(db.String(100), default="", nullable=True)
     spu_material_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
