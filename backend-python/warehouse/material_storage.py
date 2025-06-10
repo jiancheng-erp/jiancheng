@@ -87,49 +87,21 @@ def get_all_material_info():
         filters["shoe_rid"] = request.args.get("shoeRId", "")
     material_filter_map = {
         "material_name": Material.material_name,
-        "material_spec": MaterialStorage.inbound_specification,
-        "material_model": MaterialStorage.inbound_model,
-        "material_color": MaterialStorage.material_storage_color,
+        "material_spec": SPUMaterial.material_specification,
+        "material_model": SPUMaterial.material_model,
+        "material_color": SPUMaterial.color,
         "supplier": Supplier.supplier_name,
         "order_rid": Order.order_rid,
         "shoe_rid": Shoe.shoe_rid,
     }
-    size_material_filter_map = {
-        "material_name": Material.material_name,
-        "material_spec": SizeMaterialStorage.size_material_specification,
-        "material_model": SizeMaterialStorage.size_material_model,
-        "material_color": SizeMaterialStorage.size_material_color,
-        "supplier": Supplier.supplier_name,
-        "order_rid": Order.order_rid,
-        "shoe_rid": Shoe.shoe_rid,
-    }
-    query1 = (
-        db.session.query(
-            Order.order_id,
-            Order.order_rid,
-            OrderShoe.order_shoe_id,
-            Shoe.shoe_rid,
-            MaterialStorage.material_storage_id,
-            MaterialStorage.estimated_inbound_amount,
-            MaterialStorage.actual_inbound_amount,
-            MaterialStorage.current_amount,
-            MaterialStorage.inbound_specification,
-            MaterialStorage.unit_price,
-            MaterialStorage.inbound_model,
-            MaterialStorage.actual_inbound_unit,
-            MaterialStorage.actual_purchase_amount,
-            MaterialStorage.average_price,
-            Material.material_id,
-            Material.material_name,
-            Material.material_unit,
-            MaterialType.material_type_name,
-            Material.material_category,
-            Supplier.supplier_name,
-            MaterialStorage.material_storage_color,
-            cast(literal("[]"), JSON).label("shoe_size_columns"),
+    query1 = (db.session.query(
+        MaterialStorage, SPUMaterial, Material, MaterialType, Supplier, Order, OrderShoe, Shoe
         )
         .join(
-            Material, Material.material_id == MaterialStorage.actual_inbound_material_id
+            SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id
+        )
+        .join(
+            Material, Material.material_id == SPUMaterial.material_id
         )
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
@@ -137,58 +109,14 @@ def get_all_material_info():
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
     )
-    query2 = (
-        db.session.query(
-            Order.order_id,
-            Order.order_rid,
-            OrderShoe.order_shoe_id,
-            Shoe.shoe_rid,
-            SizeMaterialStorage.size_material_storage_id.label("material_storage_id"),
-            SizeMaterialStorage.total_estimated_inbound_amount.label(
-                "estimated_inbound_amount"
-            ),
-            SizeMaterialStorage.total_actual_inbound_amount.label(
-                "actual_inbound_amount"
-            ),
-            SizeMaterialStorage.total_current_amount.label("current_amount"),
-            SizeMaterialStorage.size_material_specification.label(
-                "material_specification"
-            ),
-            SizeMaterialStorage.unit_price,
-            SizeMaterialStorage.size_material_model.label("size_material"),
-            literal("双").label("actual_inbound_unit"),
-            SizeMaterialStorage.total_estimated_inbound_amount.label(
-                "actual_purchase_amount"
-            ),
-            SizeMaterialStorage.average_price,
-            Material.material_id,
-            Material.material_name,
-            Material.material_unit,
-            MaterialType.material_type_name,
-            Material.material_category,
-            Supplier.supplier_name,
-            SizeMaterialStorage.size_material_color,
-            SizeMaterialStorage.shoe_size_columns,
-        )
-        .join(Material, Material.material_id == SizeMaterialStorage.material_id)
-        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
-        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
-        .outerjoin(
-            OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id
-        )
-        .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .outerjoin(Order, OrderShoe.order_id == Order.order_id)
-    )
 
     for key, value in filters.items():
         if value and value != "":
             query1 = query1.filter(material_filter_map[key].ilike(f"%{value}%"))
-            query2 = query2.filter(size_material_filter_map[key].ilike(f"%{value}%"))
 
     warehouse_id = request.args.get("warehouseId")
     if warehouse_id and warehouse_id != "":
         query1 = query1.filter(MaterialType.warehouse_id == warehouse_id)
-        query2 = query2.filter(MaterialType.warehouse_id == warehouse_id)
 
     material_type_id = request.args.get("materialTypeId")
     if material_type_id and material_type_id != "":
@@ -199,65 +127,44 @@ def get_all_material_info():
         query1 = query1.filter(
             MaterialStorage.order_id.is_(None), MaterialStorage.order_shoe_id.is_(None)
         )
-        query2 = query2.filter(
-            SizeMaterialStorage.order_id.is_(None),
-            SizeMaterialStorage.order_shoe_id.is_(None),
-        )
-    union_query = query1.union(query2)
-    count_result = union_query.distinct().count()
-    response = union_query.distinct().limit(number).offset((page - 1) * number).all()
+    count_result = query1.distinct().count()
+    response = query1.distinct().limit(number).offset((page - 1) * number).all()
     result = []
     for row in response:
         (
-            order_id,
-            order_rid,
-            order_shoe_id,
-            shoe_rid,
-            material_storage_id,
-            estimated_inbound_amount,
-            actual_inbound_amount,
-            current_amount,
-            material_specification,
-            unit_price,
-            material_model,
-            actual_inbound_unit,
-            actual_purchase_amount,
-            average_price,
-            material_id,
-            material_name,
-            material_unit,
-            material_type_name,
-            material_category,
-            supplier_name,
-            color,
-            shoe_size_columns,
+            storage,
+            spu_material,
+            material,
+            material_type,
+            supplier,
+            order,
+            order_shoe,
+            shoe
         ) = row
         obj = {
-            "materialId": material_id,
-            "materialType": material_type_name,
-            "materialName": material_name,
-            "materialSpecification": material_specification,
-            "materialUnit": material_unit,
-            "materialCategory": material_category,
-            "estimatedInboundAmount": estimated_inbound_amount,
-            "actualPurchaseAmount": actual_purchase_amount,
-            "actualInboundAmount": actual_inbound_amount,
-            "actualInboundUnit": actual_inbound_unit,
-            "currentAmount": current_amount,
-            "unitPrice": unit_price,
-            "averagePrice": average_price,
+            "materialId": spu_material.material_id,
+            "materialType": material_type.material_type_name,
+            "materialName": material.material_name,
+            "materialModel": spu_material.material_model,
+            "materialSpecification": spu_material.material_specification,
+            "colorName": spu_material.color,
+            "materialCategory": material.material_category,
+            "estimatedInboundAmount": 0,
+            "actualInboundAmount": storage.inbound_amount,
+            "actualInboundUnit": storage.actual_inbound_unit,
+            "currentAmount": storage.current_amount,
+            "unitPrice": storage.unit_price,
+            "averagePrice": storage.average_price,
             "totalPrice": (
-                0 if not unit_price else round(actual_inbound_amount * unit_price, 2)
+                0 if not storage.unit_price else round(storage.inbound_amount * storage.unit_price, 2)
             ),
-            "supplierName": supplier_name,
-            "orderId": order_id,
-            "orderRId": order_rid,
-            "orderShoeId": order_shoe_id,
-            "shoeRId": shoe_rid,
-            "materialStorageId": material_storage_id,
-            "colorName": color,
-            "materialModel": material_model,
-            "shoeSizeColumns": shoe_size_columns,
+            "supplierName": supplier.supplier_name,
+            "orderId": order.order_id if order else None,
+            "orderRId": order.order_rid if order else None,
+            "orderShoeId": order_shoe.order_shoe_id if order_shoe else None,
+            "shoeRId": shoe.shoe_rid if shoe else None,
+            "materialStorageId": storage.material_storage_id,
+            "shoeSizeColumns": storage.shoe_size_columns,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -274,30 +181,28 @@ def get_size_material_storage_by_storage_id():
     if not storage_id:
         _no_storage_id_error()
     storage = (
-        db.session.query(SizeMaterialStorage)
-        .filter(SizeMaterialStorage.size_material_storage_id == storage_id)
+        db.session.query(MaterialStorage)
+        .filter(MaterialStorage.material_storage_id == storage_id)
         .first()
     )
     if not storage:
         return jsonify({"message": "没有找到该材料库存"}), 404
 
     obj = {
-        "materialStorageId": storage.size_material_storage_id,
-        "estimatedInboundAmount": storage.total_estimated_inbound_amount,
-        "actualInboundAmount": storage.total_actual_inbound_amount,
-        "currentAmount": storage.total_current_amount,
+        "materialStorageId": storage.material_storage_id,
+        "estimatedInboundAmount": 0,
+        "actualInboundAmount": storage.inbound_amount,
+        "currentAmount": storage.current_amount,
         "shoeSizeColumns": storage.shoe_size_columns,
     }
     for i, shoe_size in enumerate(SHOESIZERANGE):
-        estimated_inbound_amount = getattr(
-            storage, f"size_{shoe_size}_estimated_inbound_amount"
-        )
-        actual_inbound_amount = getattr(
-            storage, f"size_{shoe_size}_actual_inbound_amount"
+        estimated_inbound_amount = 0
+        inbound_amount = getattr(
+            storage, f"size_{shoe_size}_inbound_amount"
         )
         current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
         obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
-        obj[f"actualInboundAmount{i}"] = actual_inbound_amount
+        obj[f"actualInboundAmount{i}"] = inbound_amount
         obj[f"currentAmount{i}"] = current_amount
     return obj
 
@@ -314,19 +219,20 @@ def get_size_materials():
     }
     material_filter_map = {
         "material_name": Material.material_name,
-        "material_spec": SizeMaterialStorage.size_material_specification,
-        "material_model": SizeMaterialStorage.size_material_model,
-        "material_color": SizeMaterialStorage.size_material_color,
+        "material_spec": SPUMaterial.material_specification,
+        "material_model": SPUMaterial.material_model,
+        "material_color": SPUMaterial.color,
         "supplier": Supplier.supplier_name,
         "order_rid": Order.order_rid,
     }
 
     query = (
-        db.session.query(SizeMaterialStorage, Material, Supplier, Order, Shoe)
-        .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+        db.session.query(MaterialStorage, SPUMaterial, Material, Supplier, Order, Shoe)
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, SPUMaterial.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .join(Order, SizeMaterialStorage.order_id == Order.order_id)
-        .join(OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(Order, MaterialStorage.order_id == Order.order_id)
+        .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .filter(OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER)
@@ -337,42 +243,38 @@ def get_size_materials():
     response = query.all()
     result = []
     for row in response:
-        (storage, material, supplier, order, shoe) = row
+        (storage, spu_material, material, supplier, order, shoe) = row
         obj = {
             "materialStorageId": storage.size_material_storage_id,
             "materialName": material.material_name,
-            "materialModel": storage.size_material_model,
-            "materialSpecification": storage.size_material_specification,
-            "materialColor": storage.size_material_color,
-            "actualInboundUnit": material.material_unit,
+            "materialModel": spu_material.material_model,
+            "materialSpecification": spu_material.material_specification,
+            "materialColor": spu_material.color,
+            "actualInboundUnit": storage.actual_inbound_unit,
             "materialCategory": material.material_category,
             "supplierName": supplier.supplier_name,
             "orderId": order.order_id,
             "orderRId": order.order_rid,
             "shoeRId": shoe.shoe_rid,
-            "estimatedInboundAmount": storage.total_estimated_inbound_amount,
-            "actualInboundAmount": storage.total_actual_inbound_amount,
-            "currentAmount": storage.total_current_amount,
-            "remainingAmount": storage.total_estimated_inbound_amount
-            - storage.total_actual_inbound_amount,
+            "estimatedInboundAmount": 0,
+            "actualInboundAmount": storage.inbound_amount,
+            "currentAmount": storage.current_amount,
             "unitPrice": storage.unit_price,
             "shoeSizeColumns": storage.shoe_size_columns,
             "inboundModel": storage.size_material_model,
             "inboundSpecification": storage.size_material_specification,
         }
         for i, shoe_size in enumerate(SHOESIZERANGE):
-            estimated_inbound_amount = getattr(
-                storage, f"size_{shoe_size}_estimated_inbound_amount"
-            )
-            actual_inbound_amount = getattr(
-                storage, f"size_{shoe_size}_actual_inbound_amount"
+            estimated_inbound_amount = 0
+            inbound_amount = getattr(
+                storage, f"size_{shoe_size}_inbound_amount"
             )
             current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
             obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
-            obj[f"actualInboundAmount{i}"] = actual_inbound_amount
+            obj[f"actualInboundAmount{i}"] = inbound_amount
             obj[f"currentAmount{i}"] = current_amount
             obj[f"remainingAmount{i}"] = (
-                estimated_inbound_amount - actual_inbound_amount
+                estimated_inbound_amount - inbound_amount
             )
         result.append(obj)
     return result
@@ -393,15 +295,18 @@ def get_materials():
     }
     material_filter_map = {
         "material_name": Material.material_name,
-        "material_spec": MaterialStorage.material_specification,
-        "material_model": MaterialStorage.material_model,
-        "material_color": MaterialStorage.material_storage_color,
+        "material_spec": SPUMaterial.material_specification,
+        "material_model": SPUMaterial.material_model,
+        "material_color": SPUMaterial.color,
         "supplier": Supplier.supplier_name,
         "order_rid": Order.order_rid,
     }
     query = (
         db.session.query(
-            MaterialStorage,
+            SPUMaterial.material_model,
+            SPUMaterial.material_specification,
+            SPUMaterial.color,
+            MaterialStorage.actual_inbound_unit,
             Material.material_name,
             Material.material_category,
             Supplier.supplier_name,
@@ -409,8 +314,11 @@ def get_materials():
             Shoe.shoe_rid,
         )
         .join(
+            MaterialStorage, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id
+        )
+        .join(
             Material,
-            MaterialStorage.actual_inbound_material_id == Material.material_id,
+            SPUMaterial.material_id == Material.material_id,
         )
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .join(Order, Order.order_id == MaterialStorage.order_id)
@@ -467,7 +375,7 @@ def get_size_material_info_by_id():
     id = request.args.get("sizeMaterialStorageId", None)
     order_id = request.args.get("orderId", None)
     purchase_divide_order_id = request.args.get("purchaseDivideOrderId", None)
-    storage = SizeMaterialStorage.query.get(id)
+    storage = db.session.query(MaterialStorage).get(id)
     result = []
     shoe_size_names = []
     if purchase_divide_order_id:
@@ -515,7 +423,7 @@ def get_size_material_info_by_id():
                 storage, f"size_{shoe_size_db_name}_estimated_inbound_amount"
             ),
             "actualQuantity": getattr(
-                storage, f"size_{shoe_size_db_name}_actual_inbound_amount"
+                storage, f"size_{shoe_size_db_name}_inbound_amount"
             ),
             "currentQuantity": getattr(
                 storage, f"size_{shoe_size_db_name}_current_amount"
@@ -575,7 +483,7 @@ def _create_spu_record(material_id, model, specification, color):
     return spu_record.spu_material_id
 
 
-def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_type_id):
+def _find_storage_in_db(item: dict, material_type_id, supplier_id):
     """
     处理用户手动输入的材料信息
     """
@@ -598,15 +506,6 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
             material_unit=actual_inbound_unit,
             material_creation_date=date.today(),
         )
-        # 处理材料是否带鞋码
-        origin_material = (
-            db.session.query(Material)
-            .filter(
-                Material.material_name == material_name,
-            )
-            .first()
-        )
-        material.material_category = origin_material.material_category
         db.session.add(material)
         db.session.flush()
     material_id = material.material_id
@@ -627,95 +526,39 @@ def _find_storage_in_db(item: dict, material_type_id, supplier_id, batch_info_ty
         order_shoe_id = order_shoe.order_shoe_id
 
     # 普通材料
-    if material_category == 0:
-        storage_query = db.session.query(MaterialStorage).filter(
-            MaterialStorage.actual_inbound_material_id == material_id,
-            MaterialStorage.inbound_specification == material_specification,
-            MaterialStorage.inbound_model == material_model,
-            MaterialStorage.material_storage_color == material_color,
-            MaterialStorage.actual_inbound_unit == actual_inbound_unit,
+    storage_query = db.session.query(MaterialStorage).filter(
+        MaterialStorage.spu_material_id == spu_material_id,
+        MaterialStorage.actual_inbound_unit == actual_inbound_unit,
+    )
+    if order_shoe_id:
+        storage_query = storage_query.filter(
+            MaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
         )
-        if order_shoe_id:
-            storage_query = storage_query.filter(
-                MaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
-            )
-        else:
-            storage_query = storage_query.filter(
-                MaterialStorage.order_shoe_id.is_(None),
-            )
-    # 尺码材料
-    elif material_category == 1:
-        storage_query = db.session.query(SizeMaterialStorage).filter(
-            SizeMaterialStorage.material_id == material_id,
-            SizeMaterialStorage.size_material_specification == material_specification,
-            SizeMaterialStorage.size_material_model == material_model,
-            SizeMaterialStorage.size_material_color == material_color,
+    else:
+        storage_query = storage_query.filter(
+            MaterialStorage.order_shoe_id.is_(None),
         )
-        if order_shoe_id:
-            storage_query = storage_query.filter(
-                SizeMaterialStorage.order_shoe_id == order_shoe.order_shoe_id,
-            )
-        else:
-            storage_query = storage_query.filter(
-                SizeMaterialStorage.order_shoe_id.is_(None),
-            )
     # 根据材料信息查找对应的材料库存
     # 如果没有找到，则创建新的材料库存
     storage = storage_query.first()
     if not storage:
-        if material_category == 0:
-            unit = item["actualInboundUnit"]
-            storage = MaterialStorage(
-                material_id=material_id,
-                actual_inbound_material_id=material_id,
-                material_specification=material_specification,
-                material_model=material_model,
-                inbound_model=material_model,
-                inbound_specification=material_specification,
-                material_storage_color=material_color,
-                actual_inbound_unit=unit,
-                spu_material_id=spu_material_id,
-                order_id=order_id,
-                order_shoe_id=order_shoe_id,
-            )
-        elif material_category == 1:
-            batch_info_type = (
-                db.session.query(BatchInfoType)
-                .filter(BatchInfoType.batch_info_type_id == batch_info_type_id)
-                .first()
-            )
-            shoe_size_columns: list = item.get("shoeSizeColumns", [])
-            if (
-                not shoe_size_columns
-                and not batch_info_type
-                and material_name == "大底"
-            ):
-                error_message = json.dumps({"message": "尺码材料没有鞋码"})
-                abort(Response(error_message, 400))
-            if shoe_size_columns == [] and batch_info_type:
-                for i in range(len(SHOESIZERANGE)):
-                    db_name = i + 34
-                    size_name = getattr(batch_info_type, f"size_{db_name}_name")
-                    if size_name:
-                        shoe_size_columns.append(size_name)
-                    else:
-                        break
-            storage = SizeMaterialStorage(
-                material_id=material_id,
-                size_material_specification=material_specification,
-                size_material_model=material_model,
-                size_material_color=material_color,
-                shoe_size_columns=shoe_size_columns,
-                spu_material_id=spu_material_id,
-                order_id=order_id,
-                order_shoe_id=order_shoe_id,
-            )
+        storage = MaterialStorage(
+            actual_inbound_unit=actual_inbound_unit,
+            spu_material_id=spu_material_id,
+            order_id=order_id,
+            order_shoe_id=order_shoe_id,
+        )
+        shoe_size_columns: list = item.get("shoeSizeColumns", [])
+        if (
+            not shoe_size_columns
+            and material_name == "大底"
+        ):
+            error_message = json.dumps({"message": "尺码材料没有鞋码"})
+            abort(Response(error_message, 400))
+        storage.shoe_size_columns = shoe_size_columns
         db.session.add(storage)
         db.session.flush()
-    if material_category == 0:
-        storage_id = storage.material_storage_id
-    elif material_category == 1:
-        storage_id = storage.size_material_storage_id
+    storage_id = storage.material_storage_id
     return storage_id, storage
 
 
@@ -775,7 +618,7 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
         material_category = item.get("materialCategory", 0)
         storage_id = item.get("materialStorageId", None)
         storage_id, storage = _find_storage_in_db(
-            item, material_type_id, supplier_id, batch_info_type_id
+            item, material_type_id, supplier_id
         )
 
         # set inbound quantity
@@ -798,34 +641,27 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
         record_detail.item_total_price = item_total_price
 
         # 更新库存数量
-        if material_category == 0:
-            inbound_record.is_sized_material = 0
-            record_detail.material_storage_id = storage_id
-            storage.actual_inbound_amount += inbound_quantity
-            storage.current_amount += inbound_quantity
-        elif material_category == 1:
-            inbound_record.is_sized_material = 1
-            record_detail.size_material_storage_id = storage_id
+        record_detail.material_storage_id = storage_id
+        print(type(storage.inbound_amount))
+        print(type(inbound_quantity))
+        storage.inbound_amount += inbound_quantity
+        storage.current_amount += inbound_quantity
 
-            storage.total_actual_inbound_amount += inbound_quantity
-            storage.total_current_amount += inbound_quantity
+        for i, shoe_size in enumerate(SHOESIZERANGE):
+            if f"amount{i}" not in item:
+                break
+            column_name = f"size_{shoe_size}_inbound_amount"
+            current_value = getattr(storage, column_name)
+            new_value = current_value + int(item[f"amount{i}"])
+            setattr(storage, column_name, new_value)
 
-            for i, shoe_size in enumerate(SHOESIZERANGE):
-                if f"amount{i}" not in item:
-                    break
-                item[f"amount{i}"] = item[f"amount{i}"] if item[f"amount{i}"] is not None else 0
-                column_name = f"size_{shoe_size}_actual_inbound_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value + int(item[f"amount{i}"])
-                setattr(storage, column_name, new_value)
+            column_name = f"size_{shoe_size}_current_amount"
+            current_value = getattr(storage, column_name)
+            new_value = current_value + int(item[f"amount{i}"])
+            setattr(storage, column_name, new_value)
 
-                column_name = f"size_{shoe_size}_current_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value + int(item[f"amount{i}"])
-                setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_inbound_amount"
-                setattr(record_detail, column_name, int(item[f"amount{i}"]))
+            column_name = f"size_{shoe_size}_inbound_amount"
+            setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     inbound_record.total_price = total_price
     return inbound_record.inbound_rid, inbound_record.inbound_datetime
@@ -864,11 +700,7 @@ def _handle_production_remain_inbound(data, next_group_id):
         if not storage_id:
             _no_storage_id_error()
         # 用户选择了材料
-        else:
-            if item["materialCategory"] == 0:
-                storage = MaterialStorage.query.get(storage_id)
-            elif item["materialCategory"] == 1:
-                storage = SizeMaterialStorage.query.get(storage_id)
+        storage = db.session.query(MaterialStorage).get(storage_id)
 
         # set inbound quantity
         inbound_quantity = Decimal(item["inboundQuantity"])
@@ -880,27 +712,20 @@ def _handle_production_remain_inbound(data, next_group_id):
             spu_material_id=storage.spu_material_id,
         )
 
-        if material_category == 0:
-            inbound_record.is_sized_material = 0
-            record_detail.material_storage_id = storage_id
-            storage.current_amount += inbound_quantity
-        elif material_category == 1:
-            inbound_record.is_sized_material = 1
-            record_detail.size_material_storage_id = storage_id
+        inbound_record.is_sized_material = 0
+        record_detail.material_storage_id = storage_id
 
-            storage.total_current_amount += inbound_quantity
+        for i, shoe_size in enumerate(SHOESIZERANGE):
+            if f"amount{i}" not in item:
+                break
 
-            for i, shoe_size in enumerate(SHOESIZERANGE):
-                if f"amount{i}" not in item:
-                    break
+            column_name = f"size_{shoe_size}_current_amount"
+            current_value = getattr(storage, column_name)
+            new_value = current_value + int(item[f"amount{i}"])
+            setattr(storage, column_name, new_value)
 
-                column_name = f"size_{shoe_size}_current_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value + int(item[f"amount{i}"])
-                setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_inbound_amount"
-                setattr(record_detail, column_name, int(item[f"amount{i}"]))
+            column_name = f"size_{shoe_size}_inbound_amount"
+            setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     return inbound_record.inbound_rid
 
@@ -1024,18 +849,11 @@ def _create_outbound_record_details(items, outbound_record):
             abort(Response(error_message, 400))
 
         # 用户选择了材料
-        if item["materialCategory"] == 0:
-            storage = (
-                db.session.query(MaterialStorage)
-                .filter(MaterialStorage.material_storage_id == storage_id)
-                .first()
-            )
-        elif item["materialCategory"] == 1:
-            storage = (
-                db.session.query(SizeMaterialStorage)
-                .filter(SizeMaterialStorage.size_material_storage_id == storage_id)
-                .first()
-            )
+        storage = (
+            db.session.query(MaterialStorage)
+            .filter(MaterialStorage.material_storage_id == storage_id)
+            .first()
+        )
 
         order_rid = item.get("orderRId", None)
         order_id, order_shoe_id = None, None
@@ -1064,47 +882,28 @@ def _create_outbound_record_details(items, outbound_record):
 
         total_price += record_detail.item_total_price
 
-        if material_category == 0:
-            outbound_record.is_sized_material = 0
-            record_detail.material_storage_id = storage_id
+        outbound_record.is_sized_material = 0
+        record_detail.material_storage_id = storage_id
+        storage.current_amount -= outbound_quantity
 
-            if outbound_record.outbound_type == 4:
-                storage.actual_inbound_amount -= outbound_quantity
-            storage.current_amount -= outbound_quantity
+        if storage.current_amount < 0:
+            error_message = json.dumps({"message": "出库数量大于库存数量"})
+            abort(Response(error_message, 400))
 
-            if storage.current_amount < 0:
+        for i, shoe_size in enumerate(SHOESIZERANGE):
+            if f"amount{i}" not in item:
+                break
+
+            column_name = f"size_{shoe_size}_current_amount"
+            current_value = getattr(storage, column_name)
+            new_value = current_value - int(item[f"amount{i}"])
+            if new_value < 0:
                 error_message = json.dumps({"message": "出库数量大于库存数量"})
                 abort(Response(error_message, 400))
-        elif material_category == 1:
-            outbound_record.is_sized_material = 1
-            record_detail.size_material_storage_id = storage_id
-            if outbound_record.outbound_type == 4:
-                storage.actual_inbound_amount -= outbound_quantity
-            storage.total_current_amount -= outbound_quantity
+            setattr(storage, column_name, new_value)
 
-            for i, shoe_size in enumerate(SHOESIZERANGE):
-                if f"amount{i}" not in item:
-                    break
-
-                if outbound_record.outbound_type == 4:
-                    column_name = f"size_{shoe_size}_actual_amount"
-                    current_value = getattr(storage, column_name)
-                    new_value = current_value - int(item[f"amount{i}"])
-                    if new_value < 0:
-                        error_message = json.dumps({"message": "出库数量大于库存数量"})
-                        abort(Response(error_message, 400))
-                    setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_current_amount"
-                current_value = getattr(storage, column_name)
-                new_value = current_value - int(item[f"amount{i}"])
-                if new_value < 0:
-                    error_message = json.dumps({"message": "出库数量大于库存数量"})
-                    abort(Response(error_message, 400))
-                setattr(storage, column_name, new_value)
-
-                column_name = f"size_{shoe_size}_outbound_amount"
-                setattr(record_detail, column_name, int(item[f"amount{i}"]))
+            column_name = f"size_{shoe_size}_outbound_amount"
+            setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     outbound_record.total_price = total_price
 
@@ -1184,10 +983,7 @@ def notify_required_material_arrival():
     query1 = db.session.query(MaterialStorage.material_storage_status).filter(
         MaterialStorage.order_shoe_id == order_shoe_id
     )
-    query2 = db.session.query(SizeMaterialStorage.material_storage_status).filter(
-        SizeMaterialStorage.order_shoe_id == order_shoe_id
-    )
-    response = query1.union(query2).all()
+    response = query1.all()
     notify = True
     for row in response:
         if row.material_storage_status == 0:
@@ -1271,123 +1067,63 @@ def get_inbound_record_by_id():
 
     inbound_record = db.session.query(InboundRecord).get(inbound_record_id)
     is_sized_material = inbound_record.is_sized_material
-    if is_sized_material == 0:
-        inbound_response = (
-            db.session.query(
-                InboundRecordDetail,
-                InboundRecord,
-                MaterialStorage.material_storage_id,
-                MaterialStorage.material_model,
-                MaterialStorage.material_specification,
-                MaterialStorage.inbound_model,
-                MaterialStorage.inbound_specification,
-                MaterialStorage.material_storage_color,
-                MaterialStorage.actual_inbound_unit,
-                cast(literal("[]"), JSON).label("shoe_size_columns"),
-                Material,
-                MaterialType,
-                MaterialWarehouse,
-                Supplier,
-                Order,
-                Shoe,
-            )
-            .join(
-                InboundRecord,
-                InboundRecord.inbound_record_id
-                == InboundRecordDetail.inbound_record_id,
-            )
-            .join(
-                MaterialStorage,
-                InboundRecordDetail.material_storage_id
-                == MaterialStorage.material_storage_id,
-            )
-            .join(
-                Material,
-                Material.material_id == MaterialStorage.actual_inbound_material_id,
-            )
-            .join(
-                MaterialType, Material.material_type_id == MaterialType.material_type_id
-            )
-            .join(
-                MaterialWarehouse,
-                MaterialWarehouse.material_warehouse_id == InboundRecord.warehouse_id,
-            )
-            .outerjoin(Supplier, Supplier.supplier_id == InboundRecord.supplier_id)
-            .outerjoin(
-                Order,
-                Order.order_id == MaterialStorage.order_id,
-            )
-            .outerjoin(
-                OrderShoe,
-                OrderShoe.order_id == Order.order_id,
-            )
-            .outerjoin(
-                Shoe,
-                Shoe.shoe_id == OrderShoe.shoe_id,
-            )
-            .filter(
-                InboundRecord.inbound_record_id == inbound_record_id,
-            )
-            .all()
+    inbound_response = (
+        db.session.query(
+            InboundRecordDetail,
+            InboundRecord,
+            MaterialStorage,
+            SPUMaterial,
+            Material,
+            MaterialType,
+            MaterialWarehouse,
+            Supplier,
+            Order,
+            Shoe,
         )
-    else:
-        inbound_response = (
-            db.session.query(
-                InboundRecordDetail,
-                InboundRecord,
-                SizeMaterialStorage.size_material_storage_id,
-                SizeMaterialStorage.size_material_model,
-                SizeMaterialStorage.size_material_specification,
-                SizeMaterialStorage.size_material_model.label("inbound_model"),
-                SizeMaterialStorage.size_material_specification.label(
-                    "inbound_specification"
-                ),
-                SizeMaterialStorage.size_material_color,
-                Material.material_unit,
-                SizeMaterialStorage.shoe_size_columns,
-                Material,
-                MaterialType,
-                MaterialWarehouse,
-                Supplier,
-                Order,
-                Shoe,
-            )
-            .join(
-                InboundRecord,
-                InboundRecord.inbound_record_id
-                == InboundRecordDetail.inbound_record_id,
-            )
-            .join(
-                SizeMaterialStorage,
-                InboundRecordDetail.size_material_storage_id
-                == SizeMaterialStorage.size_material_storage_id,
-            )
-            .join(Material, Material.material_id == SizeMaterialStorage.material_id)
-            .join(
-                MaterialType, Material.material_type_id == MaterialType.material_type_id
-            )
-            .join(
-                MaterialWarehouse,
-                MaterialWarehouse.material_warehouse_id == InboundRecord.warehouse_id,
-            )
-            .outerjoin(Supplier, Supplier.supplier_id == InboundRecord.supplier_id)
-            .outerjoin(
-                Order,
-                Order.order_id == SizeMaterialStorage.order_id,
-            )
-            .outerjoin(
-                OrderShoe,
-                OrderShoe.order_id == Order.order_id,
-            )
-            .outerjoin(
-                Shoe,
-                Shoe.shoe_id == OrderShoe.shoe_id,
-            )
-            .filter(
-                InboundRecord.inbound_record_id == inbound_record_id,
-            )
-            .all()
+        .join(
+            InboundRecord,
+            InboundRecord.inbound_record_id
+            == InboundRecordDetail.inbound_record_id,
         )
+        .join(
+            MaterialStorage,
+            InboundRecordDetail.material_storage_id
+            == MaterialStorage.material_storage_id,
+        )
+        .join(
+            SPUMaterial,
+            SPUMaterial.spu_material_id == MaterialStorage.spu_material_id,
+        )
+        .join(
+            Material,
+            Material.material_id == SPUMaterial.material_id,
+        )
+        .join(
+            MaterialType, Material.material_type_id == MaterialType.material_type_id
+        )
+        .join(
+            MaterialWarehouse,
+            MaterialWarehouse.material_warehouse_id
+            == InboundRecord.warehouse_id,
+        )
+        .outerjoin(Supplier, Supplier.supplier_id == InboundRecord.supplier_id)
+        .outerjoin(
+            Order,
+            Order.order_id == MaterialStorage.order_id,
+        )
+        .outerjoin(
+            OrderShoe,
+            OrderShoe.order_id == Order.order_id,
+        )
+        .outerjoin(
+            Shoe,
+            Shoe.shoe_id == OrderShoe.shoe_id,
+        )
+        .filter(
+            InboundRecord.inbound_record_id == inbound_record_id,
+        )
+        .all()
+    )
 
     if not inbound_response:
         return jsonify({"message": "record not found"}), 404
@@ -1411,17 +1147,11 @@ def get_inbound_record_by_id():
         (
             record_detail,
             record,
-            material_storage_id,
-            material_model,
-            material_specification,
-            inbound_model,
-            inbound_specification,
-            material_storage_color,
-            material_unit,
-            shoe_size_columns,
+            material_storage,
+            spu_material,
             material,
             material_type,
-            warehouse,
+            material_warehouse,
             supplier,
             order,
             shoe,
@@ -1433,19 +1163,19 @@ def get_inbound_record_by_id():
             "inboundRecordDetailId": record_detail.id,
             "remark": record_detail.remark,
             "materialName": material.material_name,
-            "materialModel": material_model,
-            "materialSpecification": material_specification,
+            "materialModel": spu_material.material_model,
+            "materialSpecification": spu_material.material_specification,
             "materialCategory": material.material_category,
-            "inboundModel": inbound_model,
-            "inboundSpecification": inbound_specification,
-            "materialColor": material_storage_color,
-            "materialUnit": material_unit,
+            "inboundModel": spu_material.material_model,
+            "inboundSpecification": spu_material.material_specification,
+            "materialColor": spu_material.color,
+            "materialUnit": material_storage.actual_inbound_unit,
             "materialTypeId": material.material_type_id,
-            "materialStorageId": material_storage_id,
-            "actualInboundUnit": material_unit,
+            "materialStorageId": material_storage.material_storage_id,
+            "actualInboundUnit": material_storage.actual_inbound_unit,
             "orderRId": order.order_rid if order else None,
             "supplierName": supplier.supplier_name if supplier else None,
-            "shoeSizeColumns": shoe_size_columns,
+            "shoeSizeColumns": material_storage.shoe_size_columns,
             "shoeRId": shoe.shoe_rid if shoe else None,
         }
         for i in range(len(SHOESIZERANGE)):
@@ -1755,21 +1485,12 @@ def get_outbound_record_by_record_id():
     ]
     query1 = (
         db.session.query(
-            OutboundRecordDetail.id,
-            OutboundRecordDetail.outbound_amount,
-            OutboundRecordDetail.unit_price,
-            OutboundRecordDetail.item_total_price,
-            OutboundRecordDetail.remark,
-            MaterialStorage.material_storage_id,
-            MaterialStorage.inbound_model,
-            MaterialStorage.inbound_specification,
-            MaterialStorage.material_storage_color,
-            MaterialStorage.actual_inbound_unit,
-            cast(literal("[]"), JSON).label("shoe_size_columns"),
-            Material.material_name,
+            OutboundRecordDetail,
+            MaterialStorage,
+            SPUMaterial,
+            Material,
             Order,
             Shoe,
-            *columns,
         )
         .join(
             OutboundRecord,
@@ -1782,8 +1503,12 @@ def get_outbound_record_by_record_id():
             == MaterialStorage.material_storage_id,
         )
         .join(
+            SPUMaterial,
+            SPUMaterial.spu_material_id == MaterialStorage.spu_material_id,
+        )
+        .join(
             Material,
-            Material.material_id == MaterialStorage.actual_inbound_material_id,
+            Material.material_id == SPUMaterial.material_id,
         )
         .outerjoin(
             OrderShoe,
@@ -1801,85 +1526,30 @@ def get_outbound_record_by_record_id():
             OutboundRecord.outbound_record_id == outbound_record_id,
         )
     )
-    query2 = (
-        db.session.query(
-            OutboundRecordDetail.id,
-            OutboundRecordDetail.outbound_amount,
-            OutboundRecordDetail.unit_price,
-            OutboundRecordDetail.item_total_price,
-            OutboundRecordDetail.remark,
-            SizeMaterialStorage.size_material_storage_id,
-            SizeMaterialStorage.size_material_model,
-            SizeMaterialStorage.size_material_specification,
-            SizeMaterialStorage.size_material_color,
-            Material.material_unit,
-            SizeMaterialStorage.shoe_size_columns,
-            Material.material_name,
-            Order,
-            Shoe,
-            *columns,
-        )
-        .join(
-            OutboundRecord,
-            OutboundRecord.outbound_record_id
-            == OutboundRecordDetail.outbound_record_id,
-        )
-        .join(
-            SizeMaterialStorage,
-            OutboundRecordDetail.size_material_storage_id
-            == SizeMaterialStorage.size_material_storage_id,
-        )
-        .join(Material, Material.material_id == SizeMaterialStorage.material_id)
-        .outerjoin(
-            OrderShoe,
-            OrderShoe.order_shoe_id == OutboundRecordDetail.order_shoe_id,
-        )
-        .outerjoin(
-            Order,
-            Order.order_id == OrderShoe.order_id,
-        )
-        .outerjoin(
-            Shoe,
-            Shoe.shoe_id == OrderShoe.shoe_id,
-        )
-        .filter(
-            OutboundRecord.outbound_record_id == outbound_record_id,
-        )
-    )
-    union_query = query1.union(query2)
-    response = union_query.all()
+    response = query1.all()
     result = []
     for row in response:
         (
-            record_item_id,
-            record_item_outbound_amount,
-            unit_price,
-            item_total_price,
-            record_item_remark,
-            material_storage_id,
-            material_model,
-            material_specification,
-            material_storage_color,
-            actual_inbound_unit,
-            shoe_size_columns,
-            material_name,
+            record_item,
+            material_storage,
+            spu_material,
+            material,
             order,
-            shoe,
-            *columns,
+            shoe
         ) = row
         obj = {
-            "outboundQuantity": record_item_outbound_amount,
-            "unitPrice": unit_price,
-            "itemTotalPrice": item_total_price,
-            "outboundRecordDetailId": record_item_id,
-            "remark": record_item_remark,
-            "materialName": material_name,
-            "materialModel": material_model,
-            "materialSpecification": material_specification,
-            "colorName": material_storage_color,
-            "materialStorageId": material_storage_id,
-            "actualInboundUnit": actual_inbound_unit,
-            "shoeSizeColumns": shoe_size_columns,
+            "outboundQuantity": record_item.outbound_amount,
+            "unitPrice": record_item.unit_price,
+            "itemTotalPrice": record_item.item_total_price,
+            "outboundRecordDetailId": record_item.outbound_record_detail_id,
+            "remark": record_item.remark,
+            "materialName": material.material_name,
+            "materialModel": spu_material.material_model,
+            "materialSpecification": spu_material.material_specification,
+            "colorName": spu_material.color,
+            "materialStorageId": material_storage.material_storage_id,
+            "actualInboundUnit": material_storage.actual_inbound_unit,
+            "shoeSizeColumns": material_storage.shoe_size_columns,
             "orderRId": order.order_rid if order else None,
             "shoeRId": shoe.shoe_rid if shoe else None,
         }
@@ -2079,13 +1749,7 @@ def finish_inbound_material():
     data = request.get_json()
     unique_order_shoe_ids = set()
     for row in data:
-        storage = None
-        if row["materialCategory"] == 0:
-            storage = MaterialStorage.query.get(row["storageId"])
-        elif row["materialCategory"] == 1:
-            storage = SizeMaterialStorage.query.get(row["storageId"])
-        else:
-            return jsonify({"message": "Invalid material category"}), 400
+        storage = db.session.query(MaterialStorage).get(row["storageId"])
         if not storage:
             return jsonify({"message": "order shoe storage not found"}), 400
         unique_order_shoe_ids.add((row["orderId"], storage.order_shoe_id))
@@ -2139,13 +1803,7 @@ def finish_inbound_material():
 def finish_outbound_material():
     data = request.get_json()
     for row in data:
-        storage = None
-        if row["materialCategory"] == 0:
-            storage = MaterialStorage.query.get(row["storageId"])
-        elif row["materialCategory"] == 1:
-            storage = SizeMaterialStorage.query.get(row["storageId"])
-        else:
-            return jsonify({"message": "Invalid material category"}), 400
+        storage = db.session.query(MaterialStorage).get(row["storageId"])
         if not storage:
             return jsonify({"message": "order shoe storage not found"}), 400
         storage.material_storage_status = 2
@@ -2156,34 +1814,29 @@ def finish_outbound_material():
 def _handle_delete_inbound_record_detail(
     inbound_record_detail, storage_id, is_sized_material
 ):
-    if is_sized_material == 0:
-        storage = MaterialStorage.query.get(storage_id)
-        storage.actual_inbound_amount -= inbound_record_detail.inbound_amount
-        storage.current_amount -= inbound_record_detail.inbound_amount
-    else:
-        storage: SizeMaterialStorage = SizeMaterialStorage.query.get(storage_id)
-        storage.total_actual_inbound_amount -= inbound_record_detail.inbound_amount
-        storage.total_current_amount -= inbound_record_detail.inbound_amount
-        for i in range(len(SHOESIZERANGE)):
-            shoe_size = SHOESIZERANGE[i]
-            column_name = f"size_{shoe_size}_inbound_amount"
-            size_amount = getattr(inbound_record_detail, column_name, 0)
+    storage = db.session.query(MaterialStorage).get(storage_id)
+    storage.inbound_amount -= inbound_record_detail.inbound_amount
+    storage.current_amount -= inbound_record_detail.inbound_amount
+    for i in range(len(SHOESIZERANGE)):
+        shoe_size = SHOESIZERANGE[i]
+        column_name = f"size_{shoe_size}_inbound_amount"
+        size_amount = getattr(inbound_record_detail, column_name, 0)
 
-            db_column_name = f"size_{shoe_size}_current_amount"
-            final_amount = (
-                getattr(storage, db_column_name) - size_amount
-                if getattr(storage, db_column_name) - size_amount >= 0
-                else 0
-            )
-            setattr(storage, db_column_name, final_amount)
+        db_column_name = f"size_{shoe_size}_current_amount"
+        final_amount = (
+            getattr(storage, db_column_name) - size_amount
+            if getattr(storage, db_column_name) - size_amount >= 0
+            else 0
+        )
+        setattr(storage, db_column_name, final_amount)
 
-            db_column_name = f"size_{shoe_size}_actual_inbound_amount"
-            final_amount = (
-                getattr(storage, db_column_name) - size_amount
-                if getattr(storage, db_column_name) - size_amount >= 0
-                else 0
-            )
-            setattr(storage, db_column_name, final_amount)
+        db_column_name = f"size_{shoe_size}_inbound_amount"
+        final_amount = (
+            getattr(storage, db_column_name) - size_amount
+            if getattr(storage, db_column_name) - size_amount >= 0
+            else 0
+        )
+        setattr(storage, db_column_name, final_amount)
     db.session.delete(inbound_record_detail)
 
 
@@ -2238,40 +1891,33 @@ def update_inbound_record():
     )
 
     for detail in details:
-        if detail.material_storage_id:
-            storage = db.session.query(MaterialStorage).get(detail.material_storage_id)
-            storage.actual_inbound_amount -= detail.inbound_amount
-            storage.current_amount -= detail.inbound_amount
-        elif detail.size_material_storage_id:
-            storage = db.session.query(SizeMaterialStorage).get(
-                detail.size_material_storage_id
+        storage = db.session.query(MaterialStorage).get(detail.material_storage_id)
+        storage.inbound_amount -= detail.inbound_amount
+        storage.current_amount -= detail.inbound_amount
+        for i in range(len(SHOESIZERANGE)):
+            shoe_size = SHOESIZERANGE[i]
+            column_name = f"size_{shoe_size}_inbound_amount"
+            size_amount = (
+                getattr(detail, column_name, 0)
+                if getattr(detail, column_name, 0)
+                else 0
             )
-            storage.total_actual_inbound_amount -= detail.inbound_amount
-            storage.total_current_amount -= detail.inbound_amount
-            for i in range(len(SHOESIZERANGE)):
-                shoe_size = SHOESIZERANGE[i]
-                column_name = f"size_{shoe_size}_inbound_amount"
-                size_amount = (
-                    getattr(detail, column_name, 0)
-                    if getattr(detail, column_name, 0)
-                    else 0
-                )
 
-                db_column_name = f"size_{shoe_size}_current_amount"
-                final_amount = (
-                    getattr(storage, db_column_name) - size_amount
-                    if getattr(storage, db_column_name) - size_amount >= 0
-                    else 0
-                )
-                setattr(storage, db_column_name, final_amount)
+            db_column_name = f"size_{shoe_size}_current_amount"
+            final_amount = (
+                getattr(storage, db_column_name) - size_amount
+                if getattr(storage, db_column_name) - size_amount >= 0
+                else 0
+            )
+            setattr(storage, db_column_name, final_amount)
 
-                db_column_name = f"size_{shoe_size}_actual_inbound_amount"
-                final_amount = (
-                    getattr(storage, db_column_name) - size_amount
-                    if getattr(storage, db_column_name) - size_amount >= 0
-                    else 0
-                )
-                setattr(storage, db_column_name, final_amount)
+            db_column_name = f"size_{shoe_size}_inbound_amount"
+            final_amount = (
+                getattr(storage, db_column_name) - size_amount
+                if getattr(storage, db_column_name) - size_amount >= 0
+                else 0
+            )
+            setattr(storage, db_column_name, final_amount)
 
         db.session.delete(detail)
 
@@ -2377,47 +2023,41 @@ def delete_inbound_record():
         return jsonify({"message": "inbound record not found"}), 404
 
     is_sized_material = inbound_record.is_sized_material
-    if is_sized_material == 0:
-        entities = (
-            db.session.query(InboundRecordDetail, MaterialStorage)
-            .join(
-                MaterialStorage,
-                InboundRecordDetail.material_storage_id
-                == MaterialStorage.material_storage_id,
-            )
-            .filter(InboundRecordDetail.inbound_record_id == inbound_record_id)
-            .all()
+    entities = (
+        db.session.query(InboundRecordDetail, MaterialStorage)
+        .join(
+            MaterialStorage,
+            InboundRecordDetail.material_storage_id
+            == MaterialStorage.material_storage_id,
         )
-        for row in entities:
-            inbound_record_detail, storage = row
-            if inbound_record.inbound_type in [0, 2]:
-                storage.actual_inbound_amount -= inbound_record_detail.inbound_amount
-            storage.current_amount -= inbound_record_detail.inbound_amount
-            db.session.delete(inbound_record_detail)
-    else:
-        entities = (
-            db.session.query(InboundRecordDetail, SizeMaterialStorage)
-            .join(
-                SizeMaterialStorage,
-                SizeMaterialStorage.size_material_storage_id
-                == InboundRecordDetail.size_material_storage_id,
+        .filter(InboundRecordDetail.inbound_record_id == inbound_record_id)
+        .all()
+    )
+    for row in entities:
+        inbound_record_detail, storage = row
+        if inbound_record.inbound_type in [0, 2]:
+            storage.inbound_amount -= inbound_record_detail.inbound_amount
+        storage.current_amount -= inbound_record_detail.inbound_amount
+        db.session.delete(inbound_record_detail)
+ 
+        for i in range(len(SHOESIZERANGE)):
+            shoe_size = SHOESIZERANGE[i]
+            column_name = f"size_{shoe_size}_current_amount"
+            current_value = getattr(storage, column_name)
+
+            record_detail_column_name = f"size_{shoe_size}_inbound_amount"
+            inbound_value = getattr(
+                inbound_record_detail, record_detail_column_name
             )
-            .filter(
-                InboundRecordDetail.inbound_record_id == inbound_record_id,
-            )
-            .all()
-        )
-        for row in entities:
-            inbound_record_detail, storage = row
-            storage: SizeMaterialStorage
-            if inbound_record.inbound_type in [0, 2]:
-                storage.total_actual_inbound_amount -= (
-                    inbound_record_detail.inbound_amount
-                )
-            storage.total_current_amount -= inbound_record_detail.inbound_amount
+            if inbound_value is None:
+                continue
+            new_value = current_value - inbound_value
+            setattr(storage, column_name, new_value)
+
+        if inbound_record.inbound_type in [0, 2]:
             for i in range(len(SHOESIZERANGE)):
                 shoe_size = SHOESIZERANGE[i]
-                column_name = f"size_{shoe_size}_current_amount"
+                column_name = f"size_{shoe_size}_inbound_amount"
                 current_value = getattr(storage, column_name)
 
                 record_detail_column_name = f"size_{shoe_size}_inbound_amount"
@@ -2428,22 +2068,7 @@ def delete_inbound_record():
                     continue
                 new_value = current_value - inbound_value
                 setattr(storage, column_name, new_value)
-
-            if inbound_record.inbound_type in [0, 2]:
-                for i in range(len(SHOESIZERANGE)):
-                    shoe_size = SHOESIZERANGE[i]
-                    column_name = f"size_{shoe_size}_actual_inbound_amount"
-                    current_value = getattr(storage, column_name)
-
-                    record_detail_column_name = f"size_{shoe_size}_inbound_amount"
-                    inbound_value = getattr(
-                        inbound_record_detail, record_detail_column_name
-                    )
-                    if inbound_value is None:
-                        continue
-                    new_value = current_value - inbound_value
-                    setattr(storage, column_name, new_value)
-            db.session.delete(inbound_record_detail)
+        db.session.delete(inbound_record_detail)
     db.session.delete(inbound_record)
     db.session.commit()
     return jsonify({"message": "success"})
@@ -2457,9 +2082,9 @@ def get_all_material_models():
     # get all material models from material storage
     material_models = (
         db.session.query(
-            MaterialStorage.material_model,
+            SPUMaterial.material_model,
         )
-        .filter(MaterialStorage.material_model.ilike(f"%{material_model}%"))
+        .filter(SPUMaterial.material_model.ilike(f"%{material_model}%"))
         .distinct()
     )
     result = []
