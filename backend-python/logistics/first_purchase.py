@@ -1002,7 +1002,7 @@ def submit_purchase_divide_orders():
         material_quantity = purchase_order_item.purchase_amount
         material_specification = purchase_order_item.material_specification if purchase_order_item.material_specification else ''
         material_model = purchase_order_item.material_model if purchase_order_item.material_model else ''
-        color = purchase_order_item.color if purchase_order_item.color else bom_item.bom_item_color
+        color = purchase_order_item.color if purchase_order_item.color else ''
         remark = purchase_order_item.remark
         size_type = purchase_order_item.size_type
         if is_craft_existed:
