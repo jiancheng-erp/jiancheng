@@ -9,7 +9,7 @@ from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
 import json
 from constants import DEFAULT_SUPPLIER
-
+from logger import logger
 dev_revert_api = Blueprint("dev_revert_api", __name__)
 
 
@@ -105,7 +105,7 @@ def edit_revert_production_instruction():
         }.items():
             for material in material_data:
                 item_id = material.get("productionInstructionItemId")
-                print(f"Processing item_id: {item_id} for material_type: {material_type}")
+                logger.debug(f"Processing item_id: {item_id} for material_type: {material_type}")
                 uploaded_item_ids.add(item_id)
 
                 # Ensure material & supplier exist
@@ -313,7 +313,7 @@ def _update_or_insert_craft_sheet_item(item_id, material, material_id, craft_she
 
     if craft_sheet_item:
         # Update existing Craft Sheet item (except craft_name)
-        print("Updating existing CraftSheetItem for item_id:", item_id, "material_id:", material_id)
+        logger.debug("Updating existing CraftSheetItem for item_id:", item_id, "material_id:", material_id)
         craft_sheet_item.material_id = material_id
         craft_sheet_item.craft_sheet_id = craft_sheet_id
         craft_sheet_item.material_specification = material.get("materialSpecification")
@@ -330,7 +330,7 @@ def _update_or_insert_craft_sheet_item(item_id, material, material_id, craft_she
         craft_sheet_item.processing_remark = material.get("processingRemark", None)
     else:
         # Insert new Craft Sheet item
-        print("Creating new CraftSheetItem for item_id:", item_id, "material_id:", material_id)
+        logger.debug("Creating new CraftSheetItem for item_id:", item_id, "material_id:", material_id)
         new_craft_item = CraftSheetItem(
             material_id=material_id,
             craft_sheet_id=craft_sheet_id,

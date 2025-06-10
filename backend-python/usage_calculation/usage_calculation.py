@@ -16,7 +16,7 @@ from collections import defaultdict
 from business.batch_info_type import get_order_batch_type_helper
 from sqlalchemy.sql.expression import case
 from wechat_api.send_message_api import send_massage_to_users
-
+from logger import logger
 usage_calculation_bp = Blueprint("usage_calculation_bp", __name__)
 
 
@@ -51,7 +51,7 @@ def get_order_first_bom():
         .all()
     )
 
-    print(entities)
+    logger.debug(entities)
 
     # Initialize the result list
     result_dict = {}
@@ -156,7 +156,7 @@ def get_order_first_bom():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
+            logger.debug(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -465,7 +465,7 @@ def issue_bom_usage():
         image_save_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "firstbom", "shoe_image.jpg"
         )
-        print(image_save_path)
+        logger.debug(image_save_path)
         order_shoe_id = (
             db.session.query(OrderShoe, Shoe)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)

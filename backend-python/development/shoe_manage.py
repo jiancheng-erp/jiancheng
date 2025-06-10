@@ -3,7 +3,7 @@ import os
 from app_config import db
 from models import *
 from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
-
+from logger import logger
 shoe_manage_bp = Blueprint("shoe_manage_bp", __name__)
 
 
@@ -25,7 +25,7 @@ def upload_shoe_image():
         os.makedirs(folder_path)
     file_path = os.path.join(folder_path, "shoe_image.jpg")
     file.save(file_path)
-    print("shoe_rid is " + str(shoe_rid))
+    logger.debug("shoe_rid is " + str(shoe_rid))
     shoe_type = (
         db.session.query(Shoe, ShoeType, Color)
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
@@ -138,7 +138,7 @@ def delete_shoe_type():
             if os.path.exists(folder_path):
                 os.rmdir(folder_path)
             if os.path.exists(img_path) or os.path.exists(folder_path):
-                print("delete dir failed")
+                logger.debug("delete dir failed")
                 return jsonify({"error": "removing path failed"}), 400
         db.session.delete(existing_shoe_type)
         db.session.commit()
@@ -156,7 +156,7 @@ def add_shoe():
     shoe_desinger = request.json.get("shoeDesigner")
     shoe_department_id = request.json.get("shoeDepartmentId")
     colors = request.json.get("colorId")
-    print(colors)
+    logger.debug(colors)
     existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == shoe_rid).first()
     if existing_shoe:
         return jsonify({"error": "shoe_rid already exists"}), 200

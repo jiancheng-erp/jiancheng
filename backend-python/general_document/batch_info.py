@@ -1,7 +1,7 @@
 import shutil
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
-
+from logger import logger
 COLUMNS = 0
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -85,7 +85,7 @@ def save_workbook(wb, new_file_path):
 # Main function to generate the Excel file
 def generate_excel_file(template_path, new_file_path, data: dict):
     global COLUMNS
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
 
@@ -144,4 +144,4 @@ def generate_excel_file(template_path, new_file_path, data: dict):
 
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")

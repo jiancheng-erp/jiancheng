@@ -2,7 +2,7 @@ import shutil
 from openpyxl import load_workbook
 import os
 from openpyxl.styles import Border, Side, Alignment
-
+from logger import logger
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
     # Copy the template to a new file
@@ -35,8 +35,8 @@ def insert_series_data(ws, series_data, start_row=4):
 
     for i, item in enumerate(series_data):
         row = start_row + i
-        print(f"Inserting series data into row {row}")
-        print(item)
+        logger.debug(f"Inserting series data into row {row}")
+        logger.debug(item)
 
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = item.get("物品名称", "")
@@ -52,7 +52,7 @@ def insert_series_data(ws, series_data, start_row=4):
 
     for i in range(len(series_data), required_rows):
         row = start_row + i
-        print(f"Adding empty row at {row}")
+        logger.debug(f"Adding empty row at {row}")
         ws[f"B{row}"] = i + 1  # Continue numbering for empty rows
 
         # Ensure alignment for each empty row
@@ -67,7 +67,7 @@ def save_workbook(wb, new_file_path):
 
 # Main function to generate the Excel file
 def generate_excel_file(template_path, new_file_path, order_data):
-    print(f"Generating Excel file for order {order_data.get('订单信息', '')}")
+    logger.debug(f"Generating Excel file for order {order_data.get('订单信息', '')}")
     wb, ws = load_template(template_path, new_file_path)
 
     # Insert order details
@@ -106,7 +106,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
     # Save the workbook
     save_workbook(wb, new_file_path)
 
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
 
 
 # def test_case_1():
@@ -127,5 +127,5 @@ def generate_excel_file(template_path, new_file_path, order_data):
 #         "交货期限": "2024-12-01",
 #     }
 #     generate_excel_file(template_path, new_file_path, order_data)
-#     print("Test Case 1: Basic functionality passed.")
+#     logger.debug("Test Case 1: Basic functionality passed.")
 

@@ -7,7 +7,7 @@ from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
-
+from logger import logger
 process_sheet_review = Blueprint("process_sheet_review", __name__)
 
 @process_sheet_review.route("/craftsheetreview/getcraftsheetinfo", methods=["GET"])
@@ -32,7 +32,7 @@ def getCraftSheetInfo():
         .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
         .first()
     )
-    print(craft_sheet)
+    logger.debug(craft_sheet)
 
     craft_sheet_id = craft_sheet.craft_sheet_id
     craft_sheet_rid = craft_sheet.craft_sheet_rid
@@ -50,7 +50,7 @@ def getCraftSheetInfo():
         .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
         .all()
     )
-    print(craft_sheet_items)
+    logger.debug(craft_sheet_items)
     
     result_dict = {}
     for row in craft_sheet_items:
@@ -158,7 +158,7 @@ def issue_craft_sheet():
         )
         order_id = order_shoe.Order.order_id
         order_shoe_id = order_shoe.OrderShoe.order_shoe_id
-        print(order_shoe.OrderShoe.process_sheet_upload_status)
+        logger.debug(order_shoe.OrderShoe.process_sheet_upload_status)
         if order_shoe.OrderShoe.process_sheet_upload_status != "3":
             return jsonify({"error": "Unit usage not uploaded yet"}), 500
         order_shoe.OrderShoe.process_sheet_upload_status = "4"

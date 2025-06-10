@@ -3,9 +3,9 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
-
+from logger import logger
 def refresh_default_craft_sheet(app, db):
-    print("Refreshing default craft sheet...")
+    logger.debug("Refreshing default craft sheet...")
     with app.app_context():
         connection = db.engine.connect()
         inspector = inspect(db.engine)

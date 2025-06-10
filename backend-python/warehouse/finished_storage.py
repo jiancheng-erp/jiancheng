@@ -18,7 +18,7 @@ from api_utility import format_datetime
 from login.login import current_user_info
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
-
+from logger import logger
 
 @finished_storage_bp.route(
     "/warehouse/warehousemanager/getfinishedinoutoverview", methods=["GET"]
@@ -330,7 +330,7 @@ def inbound_finished():
                     )
                     processor.processEvent(event)
             except Exception as e:
-                print(e)
+                logger.debug(e)
                 return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})
@@ -402,7 +402,7 @@ def outbound_finished():
                 )
                 processor.processEvent(event)
         except Exception as e:
-            print(e)
+            logger.debug(e)
             return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})

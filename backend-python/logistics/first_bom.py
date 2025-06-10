@@ -7,6 +7,7 @@ from api_utility import randomIdGenerater
 from event_processor import EventProcessor
 from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import os
+from logger import logger
 
 first_bom_bp = Blueprint("first_bom_bp", __name__)
 
@@ -47,7 +48,7 @@ def get_order_first_bom():
         .all()
     )
 
-    print(entities)
+    logger.debug(entities)
 
     # Initialize the result list
     result_dict = {}
@@ -199,7 +200,7 @@ def save_bom():
     order_shoe_rid = request.json.get("orderShoeId")
     bom_data = request.json.get("bomData")
     color = request.json.get("color")
-    print(order_id, order_shoe_rid, bom_data, color)
+    logger.debug(order_id, order_shoe_rid, bom_data, color)
     order_shoe_type_id = (
         db.session.query(Order, OrderShoe, Shoe, ShoeType, OrderShoeType, Color)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -215,7 +216,7 @@ def save_bom():
         .first()
         .OrderShoeType.order_shoe_type_id
     )
-    print(order_shoe_type_id)
+    logger.debug(order_shoe_type_id)
 
     bom = Bom(
         bom_rid=bom_rid, order_shoe_type_id=order_shoe_type_id, bom_status=1, bom_type=0
@@ -260,7 +261,7 @@ def get_bom_details():
     order_id = request.args.get("orderid")
     order_shoe_id = request.args.get("ordershoeid")
     color = request.args.get("color")
-    print(order_id, order_shoe_id, color)
+    logger.debug(order_id, order_shoe_id, color)
     order_shoe_type_id = (
         db.session.query(Order, OrderShoe, Shoe, ShoeType, OrderShoeType, Color)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -276,14 +277,14 @@ def get_bom_details():
         .first()
         .OrderShoeType.order_shoe_type_id
     )
-    print(order_shoe_type_id)
+    logger.debug(order_shoe_type_id)
     bom_id = (
         db.session.query(Bom)
         .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 0)
         .first()
         .bom_id
     )
-    print(bom_id)
+    logger.debug(bom_id)
     bom_rid = db.session.query(Bom).filter(Bom.bom_id == bom_id).first().bom_rid
     bom_items = (
         db.session.query(BomItem, Bom, Material, MaterialType, Department, Supplier)
@@ -322,7 +323,7 @@ def edit_bom():
     order_shoe_rid = request.json.get("orderShoeId")
     color = request.json.get("color")
     bom_data = request.json.get("bomData")
-    print(order_id, order_shoe_rid, bom_data)
+    logger.debug(order_id, order_shoe_rid, bom_data)
     order_shoe_type_id = (
         db.session.query(Order, OrderShoe, Shoe, ShoeType, OrderShoeType, Color)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -410,7 +411,7 @@ def issue_boms():
     order_rid = request.json.get("orderId")
     order_shoe_rids = request.json.get("orderShoeIds")
     colors = request.json.get("colors")
-    print(order_rid, order_shoe_rids, colors)
+    logger.debug(order_rid, order_shoe_rids, colors)
     order_id = (
         db.session.query(Order).filter(Order.order_rid == order_rid).first().order_id
     )

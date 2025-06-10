@@ -76,10 +76,10 @@ class MockDataGenerator:
     def initializeEntityDataPath(self, path_to_data="/mock_data/"):
         self.path_to_data = os.getcwd() + path_to_data
         layer_num = 0
-        print("initializing DB")
+        logger.debug("initializing DB")
         for layer in self.layers:
-            print("Current Layer = " + str(layer_num))
-            print("Entities are " + str(layer))
+            logger.debug("Current Layer = " + str(layer_num))
+            logger.debug("Entities are " + str(layer))
             for entity_class in layer:
                 typeName = getTypename(entity_class)
                 entity_path = self.path_to_data + toDBname(typeName) + ".csv"
@@ -87,15 +87,15 @@ class MockDataGenerator:
             layer_num += 1
 
     def setupDBLocalData(self, terminating_layer=None):
-        print("Inserting into DB")
+        logger.debug("Inserting into DB")
         if terminating_layer:
-            print("Terminating at layer number " + str(terminating_layer))
+            logger.debug("Terminating at layer number " + str(terminating_layer))
         else:
-            print("No Terminating Layer is set")
+            logger.debug("No Terminating Layer is set")
         layer_num = 0
         for layer in self.layers:
-            print("Current layer is " + str(layer_num))
-            print("should terminate at " + str(terminating_layer))
+            logger.debug("Current layer is " + str(layer_num))
+            logger.debug("should terminate at " + str(terminating_layer))
             if layer_num == terminating_layer:
                 break
             else:
@@ -116,11 +116,11 @@ class MockDataGenerator:
     ### create entity list for all the layers
     ### and insert into db
     def cleanAndSetup(self):
-        print("layers before reversing")
-        # print(self.layers)
+        logger.debug("layers before reversing")
+        # logger.debug(self.layers)
         self.layers.reverse()
-        # print("layers after reversing")
-        # print(self.layers)
+        # logger.debug("layers after reversing")
+        # logger.debug(self.layers)
         for layer in self.layers:
             for entity_class in layer:
                 table_name = toDBname(getTypename(entity_class))
@@ -128,13 +128,13 @@ class MockDataGenerator:
                 db.session.commit()
                 # sql = text('ALTER TABLE `{}` auto_increment=1'.format(entity_class.__tablename__))
                 # db.session.execute(sql)
-        # print("reversing layers back")
+        # logger.debug("reversing layers back")
         self.layers.reverse()
-        # print(self.layers)
+        # logger.debug(self.layers)
 
     def pushEntityObjectsDB(self, list_to_push):
-        print("this is the list to push")
-        print(list_to_push)
+        logger.debug("this is the list to push")
+        logger.debug(list_to_push)
         self.db.session.add_all(list_to_push)
         self.db.session.commit()
 
@@ -197,7 +197,7 @@ def TestPopulateEndEntityDB(shoes_rid_for_Shoes, customer_name_for_Customers):
     for i in customer_name_for_Customers:
         if not check_customerName_exists(i):
             dbcreateCustomer(i)
-            print("customer with name %s added", i)
+            logger.debug("customer with name %s added", i)
     return True
 
 
@@ -212,12 +212,12 @@ def TestPopulateOrdersDB(firstTime=False, reset=False):
         for i in range(42):
             dbcreateOrder("K99-" + str(i), "2024-01-01", test_customer_id)
             dbcreateOrder("K89-" + str(i), "2024-01-01", test_customer_id)
-        print("mock orders inserted")
+        logger.debug("mock orders inserted")
     elif reset == True:
         test_customer_id = get_customerId(test_customer)
         db.session.execute(db.delete(Order).filter_by(order_customer=test_customer_id))
         db.session.commit()
-        print("mock orders deleted")
+        logger.debug("mock orders deleted")
     return True
 
 

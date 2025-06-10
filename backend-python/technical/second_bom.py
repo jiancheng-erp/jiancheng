@@ -12,7 +12,7 @@ from collections import defaultdict
 from business.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
 from sqlalchemy.sql.expression import case
-
+from logger import logger
 second_bom_bp = Blueprint("second_bom_bp", __name__)
 
 
@@ -55,7 +55,7 @@ def get_order_second_bom():
         .all()
     )
 
-    print(entities)
+    logger.debug(entities)
 
     # Initialize the result list
     result_dict = {}
@@ -160,7 +160,7 @@ def get_order_second_bom():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
+            logger.debug(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -429,7 +429,7 @@ def edit_bom():
     bom_rid = request.json.get("bomId")
     bom_data = request.json.get("bomData")
     bom_id = Bom.query.filter(Bom.bom_rid == bom_rid, Bom.bom_type == 1).first().bom_id
-    print(bom_data)
+    logger.debug(bom_data)
     for item in bom_data:
         material_id = (
             db.session.query(Material, Supplier)
@@ -562,7 +562,7 @@ def issue_boms():
                 .all()
             )
             for bom_item in bom_items:
-                print(
+                logger.debug(
                     bom_item.Material.material_name,
                     bom_item.BomItem.material_model,
                     bom_item.BomItem.material_specification,
@@ -675,7 +675,7 @@ def issue_boms():
         image_save_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "secondbom", "shoe_image.jpg"
         )
-        print(image_save_path)
+        logger.debug(image_save_path)
         order_shoe_id = (
             db.session.query(OrderShoe, Shoe)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)

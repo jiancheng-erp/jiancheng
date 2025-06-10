@@ -6,6 +6,7 @@ import _thread
 import time
 import os
 import sys
+from logger import logger
 sys.path.append("./weworkapi_python/callback")  # （知乎：小辣椒高效Office）正确的模块导入路径
 from WXBizMsgCrypt3 import WXBizMsgCrypt   # https://github.com/sbzhu/weworkapi_python 项目地址
 app = Flask(__name__)
@@ -30,10 +31,10 @@ def signature(request, i):
     timestamp = request.args.get('timestamp', '')
     nonce = request.args.get('nonce', '')
     echo_str = request.args.get('echostr', '')
-    print(msg_signature, timestamp, nonce, echo_str)
+    logger.debug(msg_signature, timestamp, nonce, echo_str)
     ret,sEchoStr=qy_api[i].VerifyURL(msg_signature, timestamp,nonce,echo_str)
     if (ret != 0):
-        print("ERR: VerifyURL ret: " + str(ret))
+        logger.debug("ERR: VerifyURL ret: " + str(ret))
         return("failed")
     else:
         return(sEchoStr)
@@ -46,7 +47,7 @@ def signature2(request, i):
     data = request.data.decode('utf-8')
     ret,sMsg=qy_api[i].DecryptMsg(data,msg_signature, timestamp,nonce)
     if (ret != 0):
-        print("ERR: DecryptMsg ret: " + str(ret))
+        logger.debug("ERR: DecryptMsg ret: " + str(ret))
         return("failed")
     else:
         with open ("/var/log/qywx.log", 'a+') as f: # 消息接收日志

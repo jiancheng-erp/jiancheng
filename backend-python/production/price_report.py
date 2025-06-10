@@ -13,7 +13,7 @@ from general_document.procedure_form import generate_excel_file
 import os
 from file_locations import FILE_STORAGE_PATH
 from login.login import current_user_info
-
+from logger import logger
 price_report_bp = Blueprint("price_report_bp", __name__)
 
 
@@ -160,7 +160,7 @@ def submit_price_report():
             processor.processEvent(event)
             db.session.add(event)
     except Exception as e:
-        print(e)
+        logger.debug(e)
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})

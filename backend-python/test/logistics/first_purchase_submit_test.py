@@ -4,7 +4,7 @@ from datetime import datetime
 from unittest.mock import patch
 import pytest
 from flask.testing import FlaskClient
-
+from logger import logger
 
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -169,7 +169,7 @@ def test_submit_purchase_divide_orders(client: FlaskClient):
             "/firstpurchase/submitpurchasedivideorders",
             json={"purchaseOrderId": purchase_order_id},
         )
-         print(response.json)
+         logger.debug(response.json)
 
          assert response.status_code == 200
          assert response.json["status"] == "success"

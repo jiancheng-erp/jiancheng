@@ -4,7 +4,7 @@ from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl import load_workbook
 import shutil
 import math
-
+from logger import logger
 def set_wrapped_cell(ws, cell_address, text, center=True, column_width_chars=40, line_height=15, min_height=30):
     """
     设置自动换行、估算行高的单元格。
@@ -143,7 +143,7 @@ def get_next_column_name(current_column_name):
 
 
 def generate_hotsole_excel_file(template_path, new_file_path, order_data):
-    print("start generate_last_excel_file")
+    logger.debug("start generate_last_excel_file")
     wb, ws = load_template(template_path, new_file_path)
 
     # Insert order details
@@ -182,7 +182,7 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     add_borders(ws, "A6", f"L{row - 1}")  # 只添加边框到数据部分
 
     wb.save(new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
 
 
 # template_path = "D:\catSupermarket\jiancheng\\backend-python\general_document\烫底标准采购订单.xlsx"

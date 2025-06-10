@@ -6,7 +6,7 @@ from constants import END_OF_PRODUCTION_NUMBER
 from flask import Blueprint, jsonify, request
 from models import *
 from sqlalchemy import func, literal
-
+from logger import logger
 quantity_report_bp = Blueprint("quantity_report_bp", __name__)
 
 
@@ -347,5 +347,5 @@ def get_quantity_report_detail():
                 )
     for _, value in meta_data_mapping.items():
         result.append(value)
-    # print(result)
+    # logger.debug(result)
     return result

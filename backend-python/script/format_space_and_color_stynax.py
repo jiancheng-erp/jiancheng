@@ -5,6 +5,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
+from logger import logger
 #delete the space at the begining/end of the string columns and delete '色' at the end of the color columns
 def format_space_and_color_stynax(app, db):
     with app.app_context():
@@ -108,7 +109,7 @@ def format_space_and_color_stynax(app, db):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            print(f"Error committing changes: {e}")
+            logger.debug(f"Error committing changes: {e}")
         finally:
             db.session.close()
         

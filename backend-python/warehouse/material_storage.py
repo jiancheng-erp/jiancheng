@@ -642,8 +642,8 @@ def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
 
         # 更新库存数量
         record_detail.material_storage_id = storage_id
-        print(type(storage.inbound_amount))
-        print(type(inbound_quantity))
+        logger.debug(type(storage.inbound_amount))
+        logger.debug(type(inbound_quantity))
         storage.inbound_amount += inbound_quantity
         storage.current_amount += inbound_quantity
 

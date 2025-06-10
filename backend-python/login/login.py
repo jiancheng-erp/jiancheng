@@ -8,14 +8,14 @@ import hashlib
 from models import *
 from flask import Blueprint, jsonify, request, current_app
 from app_config import db
-
+from logger import logger
 login_bp = Blueprint("login_bp", __name__)
 
 def decrypt_password(encrypted_password, iv, secret_key):
     # Decode Base64 encoded password and IV
     encrypted_password_bytes = base64.b64decode(encrypted_password) 
     iv_bytes = base64.b64decode(iv)
-    print(iv_bytes)
+    logger.debug(iv_bytes)
 
     # Create AES cipher in CBC mode with the provided IV
     cipher = AES.new(secret_key.encode('utf-8'), AES.MODE_CBC, iv=iv_bytes)
@@ -35,11 +35,11 @@ def login():
     username = data.get("username")
     encrypted_password = data.get("password")
     iv = data.get("iv")  # Get the IV from the request
-    print(encrypted_password)
+    logger.debug(encrypted_password)
     secret_key = "6f8e6f9178b12c08dce94bcf57b8df22"  # Same key used in the frontend
     decrypt_password_result = decrypt_password(encrypted_password, iv, secret_key)
     second_encrypted_password = hashlib.md5(decrypt_password_result.encode()).hexdigest()
-    print(decrypt_password_result)
+    logger.debug(decrypt_password_result)
     user = db.session.query(User, Staff, Character).join(
         Staff, User.staff_id == Staff.staff_id).join(
         Character, Staff.character_id == Character.character_id
