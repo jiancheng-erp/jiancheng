@@ -40,7 +40,14 @@
                 <el-input v-model="materialColorFilter" placeholder="材料颜色搜索" clearable
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
                 <el-input v-model="orderRidFilter" placeholder="订单号搜索" clearable
-                @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
+                    @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
+                <el-select v-model="statusFilter" multiple style="width:200px；"
+                    @change="updateInboundDisplayRecord">
+                    <el-option v-for="statusOption in statusFilterOptions"
+                    :key="statusOption.key"
+                    :label="statusOption.label"
+                    :value="statusOption.key"></el-option>
+                </el-select>
                 <el-button type="primary" @click="createAndDownloadInboundExcel">生成并下载excel</el-button>
             </div>
 
@@ -66,7 +73,7 @@
 
     <el-row :gutter="20">
         <el-col>
-            <el-table :data="displayRecords" border stripe height="500" style="width: 100%">
+            <el-table :data="displayRecords" border stripe height="tabledisplayHeight" style="width: 100%">
                 <el-table-column v-for="col in selectedColumns" :prop="col.attrName" :key="col.id"
                     :label="col.labelName">
                 </el-table-column>
@@ -110,8 +117,26 @@ const materialModelFilter = ref('')
 const materialSpecificationFilter = ref('')
 const materialColorFilter = ref('')
 const orderRidFilter = ref('')
+const statusFilter = ref([])
+const statusFilterOptions = ref([
+    {
+        key:0,
+        value:'0',
+        label:'待审核'
+    },{
+        key:1,
+        value:'1',
+        label:'已审核'
+    },{
+        key:2,
+        value:'2',
+        label:'以驳回'
+    },
+])
 const detailOrSummary = ref(true)
 const currentApi = ref('')
+const tabledisplayHeight = ref(1300 )
+
 // const shortcuts: [
 //                 {
 //                     text: '过去一周',
@@ -195,7 +220,8 @@ function getCurrentPageInfo() {
         'materialModelFilter': materialModelFilter.value,
         'materialSpecificationFilter': materialSpecificationFilter.value,
         'materialColorFilter': materialColorFilter.value,
-        'orderRidFilter': orderRidFilter.value
+        'orderRidFilter': orderRidFilter.value,
+        'statusFilter':statusFilter.value
         // 'approvalStatusFilter':[0,1,2]
     }
 }
