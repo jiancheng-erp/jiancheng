@@ -323,6 +323,9 @@ def get_materials():
             MaterialStorage,
         )
         .join(
+            MaterialStorage, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id
+        )
+        .join(
             Material,
             PurchaseOrderItem.inbound_material_id == Material.material_id,
         )
@@ -1373,7 +1376,7 @@ def get_outbound_record_by_id():
             shoe_size_columns,
             material,
             material_type,
-            warehouse,
+            material_warehouse,
             supplier,
             order,
             shoe,
@@ -1393,11 +1396,11 @@ def get_outbound_record_by_id():
             "materialColor": spu_material.color,
             "materialUnit": material_unit,
             "materialTypeId": material.material_type_id,
-            "materialStorageId": material_storage_id,
-            "actualInboundUnit": material_unit,
+            "materialStorageId": material_storage.material_storage_id,
+            "actualInboundUnit": material_storage.actual_inbound_unit,
             "orderRId": order.order_rid if order else None,
             "supplierName": supplier.supplier_name if supplier else None,
-            "shoeSizeColumns": shoe_size_columns,
+            "shoeSizeColumns": material_storage.shoe_size_columns,
             "shoeRId": shoe.shoe_rid if shoe else None,
         }
         for i in range(len(SHOESIZERANGE)):

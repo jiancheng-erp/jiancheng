@@ -213,7 +213,6 @@ class MaterialStorage(db.Model):
     batch_info_type_id = db.Column(INTEGER, nullable=True)
     material_storage_status = db.Column(CHAR(1), nullable=True)
     shoe_size_columns = db.Column(JSON, nullable=True)
-    craft_name = db.Column(CHAR(200), nullable=True)
     # Current amounts per size
     size_34_current_amount = db.Column(INTEGER, nullable=True)
     size_35_current_amount = db.Column(INTEGER, nullable=True)
