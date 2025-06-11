@@ -262,15 +262,7 @@ class OldMaterialStorage(db.Model):
     __tablename__ = "old_material_storage"
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "actual_inbound_material_id",
-            "inbound_model",
-            "inbound_specification",
-            "actual_inbound_unit",
-            "material_storage_color",
-            "order_shoe_id",
-            name="unq_material_storage",
-        ),
+        db.UniqueConstraint('spu_material_id', 'order_shoe_id', 'actual_inbound_unit', name='unq_material_storage_0'),
     )
 
     material_storage_id = db.Column(
@@ -781,7 +773,6 @@ class PurchaseOrderItem(db.Model):
     remark = db.Column(VARCHAR(100), nullable=True)
 
     related_selected_material_storage = db.Column(JSON, nullable=True)
-    estimated_inbound_amount = db.Column(DECIMAL(12, 5), nullable=True)
 
     __table_args__ = (
         db.Index('fk_purchase_order_items_bom_item_0', 'bom_item_id'),
