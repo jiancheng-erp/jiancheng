@@ -136,29 +136,24 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         material_warehouse_id=1, material_warehouse_name="里料仓"
     )
 
-    # insert dependency data into the temporary database
-    material_storage = MaterialStorage(
-        material_storage_id=1,
-        order_id=1,
-        order_shoe_id=1,
+    purchaese_order_item = PurchaseOrderItem(
+        purchase_order_item_id=1,
+        bom_item_id=1,
+        purchase_divide_order_id=1,
         material_id=1,
-        actual_inbound_material_id=1,
         material_model="测试型号",
         material_specification="测试规格",
-        material_storage_color="黑",
-        inbound_model="测试型号",
-        inbound_specification="测试规格",
-        actual_inbound_unit="米",
-        estimated_inbound_amount=20,
-        spu_material_id=1,
+        color="黑",
+        inbound_unit="米",
     )
+
     db.session.add(supplier)
     db.session.add(material)
-    db.session.add(material_storage)
     db.session.add(material_type)
     db.session.add(warehouse)
     db.session.add(order)
     db.session.add(order_shoe)
+    db.session.add(purchaese_order_item)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -181,7 +176,6 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
                 "materialModel": "测试型号",
                 "materialName": "PU里",
                 "materialSpecification": "测试规格",
-                "materialStorageId": 1,
                 "orderId": 1,
                 "orderRId": "K25-001",
                 "shoeRId": "0E19533",
@@ -189,6 +183,7 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
                 "disableEdit": True,
                 "unitPrice": 12.5,
                 "itemTotalPrice": "250.000",
+                "purchaseOrderItemId": 1,
             },
         ],
         "batchInfoTypeId": None,
@@ -200,8 +195,10 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
-    assert storage.actual_inbound_amount == 20.0
+    assert storage.purchase_order_item_id == 1
+    assert storage.inbound_amount == 20.0
     assert storage.current_amount == 20.0
+    assert storage.spu_material_id == 1
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -212,6 +209,8 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     )
 
     assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].spu_material_id == 1
+    assert record_detail[0].material_storage_id == 1
     assert record_detail[0].unit_price == 12.5
     assert record_detail[0].inbound_amount == 20.0
     assert record_detail[0].item_total_price == 250.0
@@ -225,7 +224,6 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     assert spu_material.color == "黑"
 
 
-# 用户选择订单材料
 def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     """
     测试用户选择订单底材材料
@@ -271,26 +269,26 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     )
 
     # insert dependency data into the temporary database
-    size_material_storage = SizeMaterialStorage(
-        size_material_storage_id=1,
-        order_id=1,
-        order_shoe_id=1,
+    purchase_order_item = PurchaseOrderItem(
+        purchase_order_item_id=1,
+        bom_item_id=1,
+        purchase_divide_order_id=1,
         material_id=1,
-        size_material_model="9166",
-        size_material_specification="棕/后跟喷棕",
-        size_material_color="",
-        total_estimated_inbound_amount=600,
+        material_model="9166",
+        material_specification="棕/后跟喷棕",
+        color="",
+        purchase_amount=600,
     )
-    setattr(size_material_storage, f"size_35_estimated_inbound_amount", 50)
-    setattr(size_material_storage, f"size_36_estimated_inbound_amount", 100)
-    setattr(size_material_storage, f"size_37_estimated_inbound_amount", 150)
-    setattr(size_material_storage, f"size_38_estimated_inbound_amount", 150)
-    setattr(size_material_storage, f"size_39_estimated_inbound_amount", 100)
-    setattr(size_material_storage, f"size_40_estimated_inbound_amount", 50)
+    setattr(purchase_order_item, f"size_35_purchase_amount", 50)
+    setattr(purchase_order_item, f"size_36_purchase_amount", 100)
+    setattr(purchase_order_item, f"size_37_purchase_amount", 150)
+    setattr(purchase_order_item, f"size_38_purchase_amount", 150)
+    setattr(purchase_order_item, f"size_39_purchase_amount", 100)
+    setattr(purchase_order_item, f"size_40_purchase_amount", 50)
 
     db.session.add(supplier)
     db.session.add(material)
-    db.session.add(size_material_storage)
+    db.session.add(purchase_order_item)
     db.session.add(material_type)
     db.session.add(warehouse)
     db.session.add(order)
@@ -329,6 +327,8 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
                 "amount7": 0,
                 "inboundQuantity": 600,
                 "itemTotalPrice": "7500",
+                "purchaseOrderItemId": 1,
+                "shoeSizeColumns": ["35", "36", "37", "38", "39", "40", "41", "42"],
             }
         ],
         "batchInfoTypeId": None,
@@ -338,21 +338,19 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
 
-    storage = (
-        db.session.query(SizeMaterialStorage)
-        .filter_by(size_material_storage_id=1)
-        .first()
-    )
+    storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
-    assert storage.total_actual_inbound_amount == 600
-    assert storage.total_current_amount == 600
+    assert storage.purchase_order_item_id == 1
+    assert storage.spu_material_id == 1
+    assert storage.inbound_amount == 600
+    assert storage.current_amount == 600
 
-    assert storage.size_35_actual_inbound_amount == 50.0
-    assert storage.size_36_actual_inbound_amount == 100.0
-    assert storage.size_37_actual_inbound_amount == 150.0
-    assert storage.size_38_actual_inbound_amount == 150.0
-    assert storage.size_39_actual_inbound_amount == 100.0
-    assert storage.size_40_actual_inbound_amount == 50.0
+    assert storage.size_35_inbound_amount == 50.0
+    assert storage.size_36_inbound_amount == 100.0
+    assert storage.size_37_inbound_amount == 150.0
+    assert storage.size_38_inbound_amount == 150.0
+    assert storage.size_39_inbound_amount == 100.0
+    assert storage.size_40_inbound_amount == 50.0
 
     assert storage.size_35_current_amount == 50.0
     assert storage.size_36_current_amount == 100.0
@@ -370,6 +368,8 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     )
 
     assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].spu_material_id == 1
+    assert record_detail[0].material_storage_id == 1
     assert record_detail[0].unit_price == 12.5
     assert record_detail[0].inbound_amount == 600
     assert record_detail[0].item_total_price == 7500.0
@@ -389,78 +389,56 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     assert spu_material.color == ""
 
 
-# 用户手输订单材料
-def test_inbound_material_user_enter_order_material(client: FlaskClient):
+def test_inbound_material_user_enter_material(client: FlaskClient):
     """
-    测试用户手输订单非底材材料
+    测试用户手输非底材材料
     """
 
     # insert supplier
     supplier = Supplier(
         supplier_id=1,
-        supplier_name="深源皮革",
+        supplier_name="一嘉胶水",
     )
 
     material = Material(
         material_id=1,
-        material_name="布里",
+        material_name="胶水",
         material_type_id=2,
         material_supplier=1,
     )
 
     material_type = MaterialType(
         material_type_id=2,
-        material_type_name="面料",
+        material_type_name="化工",
         warehouse_id=1,
     )
 
     warehouse = MaterialWarehouse(
-        material_warehouse_id=1, material_warehouse_name="面料仓"
-    )
-
-    order = Order(
-        order_id=1,
-        order_rid="W25-006",
-        start_date="2023-10-01",
-        end_date="2023-10-31",
-        salesman_id=1,
-        batch_info_type_id=1,
-    )
-
-    order_shoe = OrderShoe(
-        order_shoe_id=1,
-        shoe_id=1,
-        customer_product_name="Product A",
-        order_id=1,
+        material_warehouse_id=1, material_warehouse_name="化工仓"
     )
 
     db.session.add(supplier)
     db.session.add(material)
     db.session.add(material_type)
     db.session.add(warehouse)
-    db.session.add(order)
-    db.session.add(order_shoe)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
     query_string = {
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
-        "supplierName": "深源皮革",
+        "supplierName": "一嘉胶水",
         "warehouseId": 1,
         "remark": "123",
         "items": [
             {
                 "materialCategory": 0,
                 "materialColor": "",
-                "materialName": "布里",
-                "orderId": 1,
-                "orderRId": "W25-006",
-                "shoeRId": "3E29515",
-                "supplierName": "日禾底材",
+                "materialName": "胶水",
+                "supplierName": "一嘉胶水",
                 "unitPrice": 12.500,
-                "inboundModel": "3701",
-                "inboundSpecification": "测试123",
+                "inboundModel": "测试1",
+                "inboundSpecification": "测试2",
                 "inboundQuantity": 600,
                 "itemTotalPrice": 7500,
             }
@@ -475,12 +453,10 @@ def test_inbound_material_user_enter_order_material(client: FlaskClient):
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
-    assert storage.material_model == "3701"
-    assert storage.material_specification == "测试123"
-    assert storage.inbound_model == "3701"
-    assert storage.inbound_specification == "测试123"
-    assert storage.material_storage_color == ""
-    assert storage.actual_inbound_amount == 600
+    assert storage.spu_material_id == 1
+    assert storage.order_id == None
+    assert storage.purchase_order_item_id == None
+    assert storage.inbound_amount == 600
     assert storage.current_amount == 600
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
@@ -492,15 +468,17 @@ def test_inbound_material_user_enter_order_material(client: FlaskClient):
     )
 
     assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].spu_material_id == 1
+    assert record_detail[0].material_storage_id == 1
     assert record_detail[0].unit_price == 12.5
     assert record_detail[0].inbound_amount == 600
     assert record_detail[0].item_total_price == 7500.0
 
     # created spu record
     spu_material = db.session.query(SPUMaterial).filter_by(spu_material_id=1).first()
-    assert spu_material.spu_material_id == 1
-    assert spu_material.material_model == "3701"
-    assert spu_material.material_specification == "测试123"
+    assert spu_material.material_id == 1
+    assert spu_material.material_model == "测试1"
+    assert spu_material.material_specification == "测试2"
     assert spu_material.color == ""
 
 
@@ -613,23 +591,16 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 200
 
-    storage = (
-        db.session.query(SizeMaterialStorage)
-        .filter_by(size_material_storage_id=1)
-        .first()
-    )
+    storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
-    assert storage.size_material_model == "9166"
-    assert storage.size_material_specification == "棕/后跟喷棕"
-    assert storage.total_actual_inbound_amount == 600
-    assert storage.total_current_amount == 600
+    assert storage.spu_material_id == 1
 
-    assert storage.size_35_actual_inbound_amount == 50.0
-    assert storage.size_36_actual_inbound_amount == 100.0
-    assert storage.size_37_actual_inbound_amount == 150.0
-    assert storage.size_38_actual_inbound_amount == 150.0
-    assert storage.size_39_actual_inbound_amount == 100.0
-    assert storage.size_40_actual_inbound_amount == 50.0
+    assert storage.size_35_inbound_amount == 50.0
+    assert storage.size_36_inbound_amount == 100.0
+    assert storage.size_37_inbound_amount == 150.0
+    assert storage.size_38_inbound_amount == 150.0
+    assert storage.size_39_inbound_amount == 100.0
+    assert storage.size_40_inbound_amount == 50.0
 
     assert storage.size_35_current_amount == 50.0
     assert storage.size_36_current_amount == 100.0
@@ -649,6 +620,8 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
     )
 
     assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].spu_material_id == 1
+    assert record_detail[0].material_storage_id == 1
     assert record_detail[0].unit_price == 12.5
     assert record_detail[0].inbound_amount == 600
     assert record_detail[0].item_total_price == 7500.0
@@ -662,7 +635,7 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
 
     # created spu record
     spu_material = db.session.query(SPUMaterial).filter_by(spu_material_id=1).first()
-    assert spu_material.spu_material_id == 1
+    assert spu_material.material_id == 1
     assert spu_material.material_model == "9166"
     assert spu_material.material_specification == "棕/后跟喷棕"
     assert spu_material.color == ""
@@ -670,7 +643,7 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
 
 def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
     """
-    测试用户手输订单底材材料
+    测试用户手输订单底材材料时没选码段
     """
 
     # insert supplier
@@ -776,7 +749,7 @@ def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
 
     response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
     assert response.status_code == 400
-    assert json.loads(response.data)["message"] == "尺码材料没有鞋码"
+    assert json.loads(response.data)["message"] == "无效尺码ID"
 
 def test_inbound_material_user_enter_order_material_to_existed_storage(
     client: FlaskClient,
@@ -824,20 +797,21 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         order_id=1,
     )
 
+    spu_material = SPUMaterial(
+        spu_material_id=1,
+        material_id=1,
+        material_model="ModelA",
+        material_specification="SpecA",
+        color="ColorA",
+    )
+
     storage = MaterialStorage(
         material_storage_id=1,
         order_id=1,
         order_shoe_id=1,
-        material_id=1,
-        actual_inbound_material_id=1,
-        material_model="ModelA",
-        material_specification="SpecA",
-        material_storage_color="ColorA",
-        inbound_model="ModelA",
-        inbound_specification="SpecA",
+        spu_material_id=1,
         actual_inbound_unit="米",
-        estimated_inbound_amount=100,
-        actual_inbound_amount=40,
+        inbound_amount=40,
         current_amount=40,
     )
 
@@ -847,6 +821,7 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
     db.session.add(warehouse)
     db.session.add(order)
     db.session.add(order_shoe)
+    db.session.add(spu_material)
     db.session.add(storage)
     db.session.commit()
 
@@ -881,13 +856,8 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
-
-    assert storage.material_model == "ModelA"
-    assert storage.material_specification == "SpecA"
-    assert storage.inbound_model == "ModelA"
-    assert storage.inbound_specification == "SpecA"
-    assert storage.material_storage_color == "ColorA"
-    assert storage.actual_inbound_amount == 90
+    assert storage.spu_material_id == 1
+    assert storage.inbound_amount == 90
     assert storage.current_amount == 90
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
@@ -899,16 +869,11 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
     )
 
     assert record_detail[0].inbound_record_id == 1
+    assert record_detail[0].spu_material_id == 1
+    assert record_detail[0].material_storage_id == 1
     assert record_detail[0].unit_price == 2
     assert record_detail[0].inbound_amount == 50
     assert record_detail[0].item_total_price == 100
-
-    # created spu record
-    spu_material = db.session.query(SPUMaterial).filter_by(spu_material_id=1).first()
-    assert spu_material.spu_material_id == 1
-    assert spu_material.material_model == "ModelA"
-    assert spu_material.material_specification == "SpecA"
-    assert spu_material.color == "ColorA"
 
 
 def test_inbound_material_manually_multiple_times(client: FlaskClient):
@@ -1008,23 +973,15 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
-    assert storage.material_model == "ModelA"
-    assert storage.material_specification == "SpecA"
-    assert storage.inbound_model == "ModelA"
-    assert storage.inbound_specification == "SpecA"
-    assert storage.material_storage_color == "ColorA"
-    assert storage.actual_inbound_amount == 50
+    assert storage.spu_material_id == 1
+    assert storage.inbound_amount == 50
     assert storage.current_amount == 50
 
     storage2 = (
         db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
     )
-    assert storage2.material_model == "ModelB"
-    assert storage2.material_specification == "SpecB"
-    assert storage2.inbound_model == "ModelB"
-    assert storage2.inbound_specification == "SpecB"
-    assert storage2.material_storage_color == "ColorB"
-    assert storage2.actual_inbound_amount == 20
+    assert storage2.spu_material_id == 2
+    assert storage2.inbound_amount == 20
     assert storage2.current_amount == 20
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
