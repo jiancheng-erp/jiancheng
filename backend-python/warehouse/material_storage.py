@@ -398,7 +398,7 @@ def get_materials():
     if show_unfinished_orders == "true":
         query = query.filter(
             PurchaseOrderItem.purchase_amount
-            - func.coalesce(MaterialStorage.inbound_amount)
+            - func.coalesce(MaterialStorage.inbound_amount, 0)
             > 0
         )
     count_result = query.distinct().count()
