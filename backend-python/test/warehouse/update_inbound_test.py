@@ -307,6 +307,7 @@ def test_update_inbound_record_material_type(client: FlaskClient):
         spu_material_id=1,
         inbound_amount=10,
         current_amount=10,
+        actual_inbound_unit="米",
     )
     db.session.add(inbound_record)
     db.session.add(inbound_record_detail)

@@ -714,6 +714,7 @@ def _find_storage_in_db(
             actual_inbound_unit=actual_inbound_unit,
             order_id=order_id,
             order_shoe_id=order_shoe_id,
+            spu_material_id=spu_material_id
         )
         # 余量不需要采购单子项id
         if order_id:
