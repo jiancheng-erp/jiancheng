@@ -43,61 +43,59 @@ def refresh_spu_rid(app, db):
         # ), then insert the spu_material_id to material_storage and size_material_storage
         material_storages = db.session.query(MaterialStorage).all()
         for material_storage in material_storages:
-            if material_storage.actual_inbound_amount != 0:
             # get the spu_material_id from the database
-                spu_material = db.session.query(SPUMaterial).filter(
-                    SPUMaterial.material_id == material_storage.actual_inbound_material_id,
-                    SPUMaterial.material_model == material_storage.inbound_model,
-                    SPUMaterial.material_specification == material_storage.inbound_specification,
-                    SPUMaterial.color == material_storage.material_storage_color,
-                ).first()
-                if not spu_material:
-                    # create a new spu_material
-                    # use algorithm to generate a new spu_material_rid
-                    spu_material_rid = generate_spu_rid(material_storage.actual_inbound_material_id)
-                    
-                    
-                    spu_material = SPUMaterial(
-                        material_id=material_storage.actual_inbound_material_id,
-                        material_model=material_storage.inbound_model,
-                        material_specification=material_storage.inbound_specification,
-                        color=material_storage.material_storage_color,
-                        spu_rid=spu_material_rid,
-                    )
-                    db.session.add(spu_material)
-                    db.session.flush()
-                # update the spu_rid to material_storage and size_material_storage
-                material_storage.spu_material_id = spu_material.spu_material_id
+            spu_material = db.session.query(SPUMaterial).filter(
+                SPUMaterial.material_id == material_storage.actual_inbound_material_id,
+                SPUMaterial.material_model == material_storage.inbound_model,
+                SPUMaterial.material_specification == material_storage.inbound_specification,
+                SPUMaterial.color == material_storage.material_storage_color,
+            ).first()
+            if not spu_material:
+                # create a new spu_material
+                # use algorithm to generate a new spu_material_rid
+                spu_material_rid = generate_spu_rid(material_storage.actual_inbound_material_id)
+                
+                
+                spu_material = SPUMaterial(
+                    material_id=material_storage.actual_inbound_material_id,
+                    material_model=material_storage.inbound_model,
+                    material_specification=material_storage.inbound_specification,
+                    color=material_storage.material_storage_color,
+                    spu_rid=spu_material_rid,
+                )
+                db.session.add(spu_material)
                 db.session.flush()
-            # update the spu_rid to size_material_storage
+            # update the spu_rid to material_storage and size_material_storage
+            material_storage.spu_material_id = spu_material.spu_material_id
+            db.session.flush()
+        # update the spu_rid to size_material_storage
         size_material_storages = db.session.query(SizeMaterialStorage).all()
         for size_material_storage in size_material_storages:
-            if size_material_storage.total_actual_inbound_amount != 0:
             # get the spu_material_id from the database
-                spu_material = db.session.query(SPUMaterial).filter(
-                    SPUMaterial.material_id == size_material_storage.material_id,
-                    SPUMaterial.material_model == size_material_storage.size_material_model,
-                    SPUMaterial.material_specification == size_material_storage.size_material_specification,
-                    SPUMaterial.color == size_material_storage.size_material_color,
-                ).first()
-                if not spu_material:
-                    # create a new spu_material
-                    # use algorithm to generate a new spu_material_rid
-                    spu_material_rid = generate_spu_rid(size_material_storage.material_id)
-                    
-                    
-                    spu_material = SPUMaterial(
-                        material_id=size_material_storage.material_id,
-                        material_model=size_material_storage.size_material_model,
-                        material_specification=size_material_storage.size_material_specification,
-                        color=size_material_storage.size_material_color,
-                        spu_rid=spu_material_rid,
-                    )
-                    db.session.add(spu_material)
-                    db.session.flush()
-                # update the spu_rid to size_material_storage
-                size_material_storage.spu_material_id = spu_material.spu_material_id
+            spu_material = db.session.query(SPUMaterial).filter(
+                SPUMaterial.material_id == size_material_storage.material_id,
+                SPUMaterial.material_model == size_material_storage.size_material_model,
+                SPUMaterial.material_specification == size_material_storage.size_material_specification,
+                SPUMaterial.color == size_material_storage.size_material_color,
+            ).first()
+            if not spu_material:
+                # create a new spu_material
+                # use algorithm to generate a new spu_material_rid
+                spu_material_rid = generate_spu_rid(size_material_storage.material_id)
+                
+                
+                spu_material = SPUMaterial(
+                    material_id=size_material_storage.material_id,
+                    material_model=size_material_storage.size_material_model,
+                    material_specification=size_material_storage.size_material_specification,
+                    color=size_material_storage.size_material_color,
+                    spu_rid=spu_material_rid,
+                )
+                db.session.add(spu_material)
                 db.session.flush()
+            # update the spu_rid to size_material_storage
+            size_material_storage.spu_material_id = spu_material.spu_material_id
+            db.session.flush()
         # commit the changes to the database
         try:
             db.session.commit()
