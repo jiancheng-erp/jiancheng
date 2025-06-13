@@ -43,12 +43,15 @@ def refresh_spu_rid(app, db):
         # ), then insert the spu_material_id to material_storage and size_material_storage
         material_storages = db.session.query(MaterialStorage).all()
         for material_storage in material_storages:
-            # get the spu_material_id from the database
+            model = material_storage.inbound_model or None
+            spec = material_storage.inbound_specification or None
+            color = material_storage.material_storage_color or None
+
             spu_material = db.session.query(SPUMaterial).filter(
                 SPUMaterial.material_id == material_storage.actual_inbound_material_id,
-                SPUMaterial.material_model == material_storage.inbound_model,
-                SPUMaterial.material_specification == material_storage.inbound_specification,
-                SPUMaterial.color == material_storage.material_storage_color,
+                SPUMaterial.material_model.is_(model),
+                SPUMaterial.material_specification.is_(spec),
+                SPUMaterial.color.is_(color),
             ).first()
             if not spu_material:
                 # create a new spu_material
@@ -72,11 +75,15 @@ def refresh_spu_rid(app, db):
         size_material_storages = db.session.query(SizeMaterialStorage).all()
         for size_material_storage in size_material_storages:
             # get the spu_material_id from the database
+            model = size_material_storage.size_material_model or None
+            spec = size_material_storage.size_material_specification or None
+            color = size_material_storage.size_material_color or None
+
             spu_material = db.session.query(SPUMaterial).filter(
                 SPUMaterial.material_id == size_material_storage.material_id,
-                SPUMaterial.material_model == size_material_storage.size_material_model,
-                SPUMaterial.material_specification == size_material_storage.size_material_specification,
-                SPUMaterial.color == size_material_storage.size_material_color,
+                SPUMaterial.material_model.is_(model),
+                SPUMaterial.material_specification.is_(spec),
+                SPUMaterial.color.is_(color),
             ).first()
             if not spu_material:
                 # create a new spu_material
