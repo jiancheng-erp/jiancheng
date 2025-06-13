@@ -353,7 +353,7 @@ def get_all_material_storage():
         order_shoe_id,
     )
 
-    query1 = (
+    query = (
         db.session.query(
             MaterialType.material_type_name,
             Material.material_name,
@@ -378,38 +378,6 @@ def get_all_material_storage():
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
     )
-
-    query2 = (
-        db.session.query(
-            MaterialType.material_type_name,
-            Material.material_name,
-            SizeMaterialStorage.material_id.label("material_id"),
-            SizeMaterialStorage.size_material_specification.label("specification"),
-            MaterialWarehouse.material_warehouse_name,
-            Material.material_unit,
-            SizeMaterialStorage.total_current_amount.label("material_storage_amount"),
-            SizeMaterialStorage.unit_price,
-            Supplier.supplier_name,
-            Shoe.shoe_rid,
-            Order.order_rid,
-        )
-        .join(Material, MaterialType.material_type_id == Material.material_type_id)
-        .join(
-            SizeMaterialStorage, Material.material_id == SizeMaterialStorage.material_id
-        )
-        .join(
-            MaterialWarehouse,
-            MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
-        )
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .outerjoin(
-            OrderShoe, SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id
-        )
-        .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .outerjoin(Order, OrderShoe.order_id == Order.order_id)
-    )
-
-    query = query1.union(query2)
 
     # Applying the filters
     if material_type:

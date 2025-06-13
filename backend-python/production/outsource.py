@@ -425,36 +425,7 @@ def get_outsource_material_shipping():
             OutsourceInfo.outsource_info_id == outsource_info_id,
         )
     )
-    query2 = (
-        db.session.query(
-            OutsourceInfo,
-            SizeMaterialStorage.material_outsource_status,
-            SizeMaterialStorage.total_current_amount.label("current_amount"),
-            SizeMaterialStorage.size_material_color,
-            Material,
-            MaterialType,
-            OutboundRecord,
-        )
-        .join(OrderShoe, OutsourceInfo.order_shoe_id == OrderShoe.order_shoe_id)
-        .join(
-            SizeMaterialStorage,
-            SizeMaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
-        )
-        .join(
-            Material,
-            Material.material_id == SizeMaterialStorage.material_id,
-        )
-        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
-        .join(
-            OutboundRecord,
-            OutboundRecord.size_material_storage_id
-            == SizeMaterialStorage.size_material_storage_id,
-        )
-        .filter(
-            OutsourceInfo.outsource_info_id == outsource_info_id,
-        )
-    )
-    response = query1.union(query2).all()
+    response = query1.all()
     result = []
     for row in response:
         (

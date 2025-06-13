@@ -127,15 +127,6 @@ def wrapper_helper():
 #              .join(Supplier, Material.material_supplier == Supplier.supplier_id)
 #              .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
 #              .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
-    
-#     sized_query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, SizeMaterialStorage.average_price)
-#              .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
-#              .join(SizeMaterialStorage, OutboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
-#              .join(SPUMaterial, SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-#              .join(Material, SizeMaterialStorage.material_id == Material.material_id)
-#              .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-#              .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-#              .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
 #     query = query.union(sized_query)
 #     if outbound_type_filter:
 #         query = query.filter(OutboundRecord.outbound_type == outbound_type_filter)
@@ -279,16 +270,6 @@ def get_warehouse_inbound_summery():
              .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
                      .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
                     )
-    # sized_query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
-    #          .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
-    #          .join(SizeMaterialStorage, InboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
-    #          .join(Material, SizeMaterialStorage.material_id == Material.material_id)
-    #          .join(SPUMaterial,SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-    #          .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-    #                  .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
-    #                 )
-
-    # query = query.union(sized_query)
     time_period_subquery = query.subquery()
     logger.debug(time_period_subquery.c)
     response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
@@ -389,17 +370,6 @@ def create_excel_and_download():
                 .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
                 .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
                 )
-    
-    sized_material_query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial, Order.order_rid)
-                .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
-                .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
-                .join(SizeMaterialStorage, InboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
-                .join(Material, SizeMaterialStorage.material_id == Material.material_id)
-                .join(SPUMaterial, SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-                .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                )
-
-    query = query.union(sized_material_query)
 
     if warehouse_filter:
         query = query.filter(InboundRecord.warehouse_id == warehouse_filter)
@@ -487,16 +457,6 @@ def create_inbound_summary_excel_and_download():
              .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
                      .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
                     )
-    sized_query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
-             .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
-             .join(SizeMaterialStorage, InboundRecordDetail.size_material_storage_id == SizeMaterialStorage.size_material_storage_id)
-             .join(Material, SizeMaterialStorage.material_id == Material.material_id)
-             .join(SPUMaterial,SizeMaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-             .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                     .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
-                    )
-
-    query = query.union(sized_query)
     time_period_subquery = query.subquery()
     response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
                       .join(Material, time_period_subquery.c.spu_material_material_id == Material.material_id)
@@ -539,115 +499,3 @@ def create_inbound_summary_excel_and_download():
     time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
     generate_accounting_summary_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_summary)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
-
-
-@accounting_warehouse_bp.route("/accounting/test", methods=["GET"])
-def test():
-    old_material_storage_count = len(db.session.query(OldMaterialStorage).all())
-    old_size_material_storage_count = len(db.session.query(OldSizeMaterialStorage).all())
-    new_material_storage_count = len(db.session.query(MaterialStorage).all())
-    print("old material storage has number of " + str(old_material_storage_count) + " of records")
-    print("old size material storage has number of " + str(old_size_material_storage_count) + " of records")
-    print("new material storage has number of " + str(new_material_storage_count) + " of records")
-    inbound_record_detail_count = len(db.session.query(InboundRecordDetail).all())
-    inbound_record_detail_actual = len(db.session.query(InboundRecordDetail, InboundRecord).join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id).all())
-    print("inbound_record_detail has " + str(inbound_record_detail_count))
-    print("actual inbound record detail has " + str(inbound_record_detail_actual))
-    return "OK", 200
-@accounting_warehouse_bp.route("/accounting/syncmaterialstorage", methods=["GET"])
-def sync_material_storage():
-    def display_sync_info():
-        old_material_storage_count = len(db.session.query(OldMaterialStorage).all())
-        old_size_material_storage_count = len(db.session.query(OldSizeMaterialStorage).all())
-        new_material_storage_count = len(db.session.query(MaterialStorage).all())
-        print("old material storage has number of " + str(old_material_storage_count) + " of records")
-        print("old size material storage has number of " + str(old_size_material_storage_count) + " of records")
-        print("new material storage has number of " + str(new_material_storage_count) + " of records")
-    display_sync_info()
-    attr_names = ["order_id", "order_shoe_id", "spu_material_id","current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
-                  "material_estimated_arrival_date", "spu_material_id", "actual_inbound_unit","craft_name", "average_price", "material_storage_status"]
-    count = 0
-    total = str(len(db.session.query(OldMaterialStorage).all()))
-    for entity in db.session.query(OldMaterialStorage).all():
-        if count % 100 == 0:
-            print(str(count) + " / " + total)
-        new_entity = MaterialStorage()
-        for attr in attr_names:
-            setattr(new_entity, attr, getattr(entity, attr) if getattr(entity, attr) else None)
-        new_entity.inbound_amount = entity.actual_inbound_amount if entity.actual_inbound_amount else None
-        db.session.add(new_entity)
-        db.session.flush()
-        old_ms_new_ms_mapping[entity.material_storage_id] = new_entity.material_storage_id
-        count += 1
-    db.session.commit()
-    display_sync_info()
-    print("unsized mapping has " + str(len(old_ms_new_ms_mapping.keys())))
-    return "request OK", 200
-
-@accounting_warehouse_bp.route("/accounting/syncsizematerialstorage", methods=["GET"])
-def sync_size_material_storage():
-    def display_sync_info():
-        old_size_material_storage_count = len(db.session.query(OldSizeMaterialStorage).all())
-        new_material_storage_count = len(db.session.query(MaterialStorage).all())
-        print("old size material storage has number of " + str(old_size_material_storage_count) + " of records")
-        print("new material storage has number of " + str(new_material_storage_count) + " of records")
-    display_sync_info()
-    attr_names = ["order_id", "order_shoe_id", "spu_material_id","size_34_current_amount","size_35_current_amount"
-                  ,"size_36_current_amount"
-                  ,"size_37_current_amount"
-                  ,"size_38_current_amount"
-                  ,"size_39_current_amount"
-                  ,"size_40_current_amount"
-                  ,"size_41_current_amount"
-                  ,"size_42_current_amount"
-                  ,"size_43_current_amount"
-                  ,"size_44_current_amount"
-                  ,"size_45_current_amount"
-                  ,"size_46_current_amount"
-                  , "unit_price", "material_outsource_status", "material_outsource_date",
-                  "material_estimated_arrival_date", "spu_material_id","craft_name", "average_price", "material_storage_status","actual_inbound_unit",
-                  "shoe_size_columns"]
-    count = 0
-    total = str(len(db.session.query(OldSizeMaterialStorage).all()))
-    for entity in db.session.query(OldSizeMaterialStorage).all():
-        if count % 100 == 0:
-            print(str(count) + " / " + total)
-        new_entity = MaterialStorage()
-        for attr in attr_names:
-            setattr(new_entity, attr, getattr(entity, attr) if getattr(entity, attr) else None)
-            for i in range(34, 47, 1):
-                setattr(new_entity, "size_"+str(i)+"_inbound_amount", getattr(entity, "size_" + str(i) + "_actual_inbound_amount"))
-        db.session.add(new_entity)
-        db.session.flush()
-        size_ms_mapping[entity.size_material_storage_id] = new_entity.material_storage_id
-        count += 1
-    db.session.commit()
-    display_sync_info()
-    print("size mapping has " + str(len(size_ms_mapping.keys())))
-    return "request OK", 200
-
-
-# @accounting_warehouse_bp.route("accounting/syncsizematerialstorageid", methods=["GET"])
-# def sync_size_material_storage_id():
-#     return 
-@accounting_warehouse_bp.route("/accounting/syncmateiralstorageid", methods=["GET"])
-def sync_material_storage_id():
-    print("unsized mapping has " + str(len(old_ms_new_ms_mapping.keys())) + " number of keys")
-    print("sized mapping has " + str(len(size_ms_mapping.keys())))
-    total = str(len(db.session.query(InboundRecordDetail).all()))
-    print(max(old_ms_new_ms_mapping.keys()))
-    print(max(size_ms_mapping.keys()))
-    print("inbound_record_detail has " + str(len(db.session.query(InboundRecordDetail).all())) + " number of records")
-    count = 0
-    for entity, _ in db.session.query(InboundRecordDetail, InboundRecord).join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id).all():
-        if count % 100 == 0:
-            print(str(count) + " / " + total)
-        if entity.material_storage_id == None:
-            entity.material_storage_id = size_ms_mapping[entity.size_material_storage_id]
-        else:
-            entity.material_storage_id = old_ms_new_ms_mapping[entity.material_storage_id]
-        db.session.flush()
-        count += 1
-    db.session.commit()
-    return "request OK", 200
-
