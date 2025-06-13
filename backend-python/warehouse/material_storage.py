@@ -16,7 +16,7 @@ from constants import (
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, abort, Response
 from models import *
-from sqlalchemy import desc, func, text, literal, cast, JSON, or_
+from sqlalchemy import desc, func, text, literal, cast, JSON, or_, and_
 import json
 from script.refresh_spu_rid import generate_spu_rid
 from logger import logger
@@ -230,7 +230,7 @@ def get_size_materials():
         "material_spec": request.args.get("materialSpec", ""),
         "material_model": request.args.get("materialModel", ""),
         "material_color": request.args.get("materialColor", ""),
-        "supplier": request.args.get("supplier", ""),
+        "supplierName": request.args.get("supplierName", ""),
         "order_rid": request.args.get("orderRId", ""),
     }
     material_filter_map = {
@@ -238,7 +238,7 @@ def get_size_materials():
         "material_spec": PurchaseOrderItem.material_specification,
         "material_model": PurchaseOrderItem.material_model,
         "material_color": PurchaseOrderItem.color,
-        "supplier": Supplier.supplier_name,
+        "supplierName": Supplier.supplier_name,
         "order_rid": Order.order_rid,
     }
 
@@ -270,8 +270,9 @@ def get_size_materials():
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(
             MaterialStorage,
-            MaterialStorage.purchase_order_item_id
+            and_(MaterialStorage.purchase_order_item_id
             == PurchaseOrderItem.purchase_order_item_id,
+            MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         )
     )
     for key, value in filters.items():
@@ -386,19 +387,20 @@ def get_materials():
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(
             MaterialStorage,
-            MaterialStorage.purchase_order_item_id
+            and_(MaterialStorage.purchase_order_item_id
             == PurchaseOrderItem.purchase_order_item_id,
+            MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         )
     )
     for key, value in filters.items():
         if value and value != "":
             query = query.filter(material_filter_map[key].ilike(f"%{value}%"))
-    # if show_unfinished_orders == "true":
-    #     query = query.filter(
-    #         MaterialStorage.estimated_inbound_amount
-    #         - MaterialStorage.actual_inbound_amount
-    #         > 0
-    #     )
+    if show_unfinished_orders == "true":
+        query = query.filter(
+            PurchaseOrderItem.purchase_amount
+            - func.coalesce(MaterialStorage.inbound_amount)
+            > 0
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
@@ -712,8 +714,10 @@ def _find_storage_in_db(
             actual_inbound_unit=actual_inbound_unit,
             order_id=order_id,
             order_shoe_id=order_shoe_id,
-            purchase_order_item_id=item.get("purchaseOrderItemId", None),
         )
+        # 余量不需要采购单子项id
+        if order_id:
+            storage.purchase_order_item_id = item.get("purchaseOrderItemId", None)
         shoe_size_columns: list = item.get("shoeSizeColumns", [])
         if not shoe_size_columns:
             shoe_size_columns = []

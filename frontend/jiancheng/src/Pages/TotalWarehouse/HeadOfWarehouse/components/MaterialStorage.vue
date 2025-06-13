@@ -143,7 +143,7 @@
                 {{ currentRow.supplierName }}
             </el-descriptions-item>
             <el-descriptions-item label="材料单位">
-                {{ currentRow.materialUnit }}
+                {{ currentRow.actualInboundUnit }}
             </el-descriptions-item>
             <el-descriptions-item label="材料库存">
                 {{ currentRow.currentAmount }}
