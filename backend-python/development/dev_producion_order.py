@@ -10,7 +10,7 @@ from general_document.prodution_instruction import generate_instruction_excel_fi
 import json
 from constants import DEFAULT_SUPPLIER
 from wechat_api.send_message_api import send_massage_to_users
-
+from logger import logger
 dev_producion_order_bp = Blueprint("dev_producion_order_bp", __name__)
 
 
@@ -142,7 +142,7 @@ def get_order_shoe_list():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
+            logger.debug(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -328,7 +328,7 @@ def get_order_shoe_list_for_doc():
 
         # If the color entry already exists, update it with BOM details
         if existing_entry:
-            print(existing_entry)
+            logger.debug(existing_entry)
             # Update only if fields are not already filled to prevent overwriting
             if first_bom_id and existing_entry.get("firstBomId") == "未填写":
                 existing_entry["firstBomId"] = first_bom_id
@@ -389,7 +389,7 @@ def save_document_pass_status():
     order_id = request.json.get("orderId")
     is_production_instruction_passed = request.json.get("isProductionInstructionPassed")
     is_color_card_passed = request.json.get("isColorCardPassed")
-    print(is_production_instruction_passed, is_color_card_passed)
+    logger.debug(is_production_instruction_passed, is_color_card_passed)
     order = db.session.query(Order).filter(Order.order_id == order_id).first()
     if order:
         order.order_paper_production_instruction_status = '1' if is_production_instruction_passed else '0'
@@ -947,7 +947,7 @@ def edit_production_instruction():
 def upload_production_order():
     order_shoe_rid = request.form.get("orderShoeRId")
     order_id = request.form.get("orderId")
-    print(order_shoe_rid, order_id)
+    logger.debug(order_shoe_rid, order_id)
     if "file" not in request.files:
         return jsonify({"error": "No file part"}), 500
     file = request.files["file"]
@@ -975,8 +975,8 @@ def upload_production_order():
 def download_production_order():
     order_shoe_rid = request.args.get("ordershoerid")
     order_id = request.args.get("orderid")
-    print(order_shoe_rid)
-    print(order_id)
+    logger.debug(order_shoe_rid)
+    logger.debug(order_id)
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -1006,7 +1006,7 @@ def issue_production_order():
         )
         order_id = order_shoe.Order.order_id
         order_shoe_id = order_shoe.OrderShoe.order_shoe_id
-        print(order_shoe.OrderShoe.production_order_upload_status)
+        logger.debug(order_shoe.OrderShoe.production_order_upload_status)
         if order_shoe.OrderShoe.production_order_upload_status != "1":
             return jsonify({"error": "Production order not uploaded yet"}), 500
         order_shoe.OrderShoe.production_order_upload_status = "2"
@@ -1393,7 +1393,7 @@ def get_past_shoe_info():
     for shoe in similar_shoes:
         if shoe.Shoe.shoe_rid not in shoe_list:
             shoe_list.append(shoe.Shoe.shoe_rid)
-            print(shoe_list)
+            logger.debug(shoe_list)
             result_list.append(
                 {
                     "inheritId": shoe.Shoe.shoe_rid,
@@ -1679,7 +1679,7 @@ def get_size_table():
 def download_production_instruction():
     order_shoe_rid = request.args.get("ordershoerid")
     order_id = request.args.get("orderid")
-    print(order_shoe_rid, order_id)
+    logger.debug(order_shoe_rid, order_id)
     order_shoe = (
         db.session.query(Order, OrderShoe, Shoe)
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)

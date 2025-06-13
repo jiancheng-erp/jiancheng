@@ -18,7 +18,7 @@ from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_P
 from business.batch_info_type import get_order_batch_type_helper
 from general_document.package_purchase_divide_order import generate_package_excel_file
 import zipfile
-
+from logger import logger
 package_api_bp = Blueprint("package_api", __name__)
 
 
@@ -167,7 +167,7 @@ def new_package_purchase_order_save():
             order.packaging_status = '1'
             db.session.flush()
             for item in items:
-                print(item)
+                logger.debug(item)
                 material_name = item["materialName"]
                 material_info = (
                     db.session.query(Material)
@@ -241,7 +241,7 @@ def new_package_purchase_order_save():
         return jsonify({"status": "success"})
     except SQLAlchemyError as e:
         db.session.rollback()  # Rollback the session to undo changes
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
 @package_api_bp.route("/logistics/editsavedpackagepurchaseorderitems", methods=["POST"])
@@ -264,7 +264,7 @@ def edit_saved_package_purchase_order_items():
             material_list_sorted, key=itemgetter("supplierName")
         ):
             grouped_materials[supplier_name] = list(items)
-        print(purchase_order_rid)
+        logger.debug(purchase_order_rid)
         purchase_order = (
             db.session.query(PurchaseOrder)
             .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
@@ -403,7 +403,7 @@ def edit_saved_package_purchase_order_items():
         return jsonify({"status": "success"})
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error: {e}")
+        logger.debug(f"Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     
 @package_api_bp.route("/logistics/getindividualpurchaseorders", methods=["GET"])
@@ -441,7 +441,7 @@ def get_individual_purchase_orders():
         .filter(PurchaseOrder.purchase_order_id == purchase_order_id)
         .all()
     )
-    print(query)
+    logger.debug(query)
 
     # Group the results by purchase_divide_order_rid
     grouped_results = {}
@@ -764,7 +764,7 @@ def submit_purchase_divide_orders():
                 size_values = order_size_table.get("包材", order_size_table["客人码"])
             else:
                 size_values = order_size_table["客人码"]
-            print(size_values)
+            logger.debug(size_values)
 
             # 4️⃣ 转换为实际尺码并构造最终的 obj
             obj = {
@@ -806,7 +806,7 @@ def submit_purchase_divide_orders():
                 }
 
             size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
-            print(size_purchase_divide_order_dict)
+            logger.debug(size_purchase_divide_order_dict)
     customer_name = (
         db.session.query(Order, Customer)
         .join(Customer, Order.customer_id == Customer.customer_id)

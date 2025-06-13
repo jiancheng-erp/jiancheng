@@ -15,7 +15,7 @@ from constants import SHOESIZERANGE
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from sqlalchemy.orm import aliased
-
+from logger import logger
 
 multiissue_purchase_order_bp = Blueprint("multiissue_purchase_order", __name__)
 
@@ -128,7 +128,7 @@ def get_all_purchase_divide_order():
         .filter(PurchaseDivideOrder.total_purchase_order_id == None)
         .all()
     )
-    print(purchase_divide_orders)
+    logger.debug(purchase_divide_orders)
     result = []
     for pdo, po, order, customer, os, shoe in purchase_divide_orders:
         supplier_id = int(pdo.purchase_divide_order_rid[-4:])
@@ -321,7 +321,7 @@ def get_single_purchase_divide_order():
 def create_total_purchase_order():
     """Create a total purchase order."""
     data = request.json
-    print(data)
+    logger.debug(data)
     supplier_id = data["purchaseDivideOrders"][0]["supplierId"]
     purchase_divide_orders = data["purchaseDivideOrders"]
     current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
@@ -406,7 +406,7 @@ def get_single_total_purchase_order():
     }
     material_map = {}
 
-    print(query)
+    logger.debug(query)
 
     for (
         total_purchase_order,
@@ -464,7 +464,7 @@ def get_single_total_purchase_order():
             material_specification,
             color,
         )
-        print(material_key)
+        logger.debug(material_key)
 
         # Initialize material entry if not exists
         if material_key not in material_map:

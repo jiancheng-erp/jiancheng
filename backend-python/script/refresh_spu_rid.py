@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from file_locations import FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import os
-
+from logger import logger
 from warehouse import material_storage
 
 NAME_TO_FIRST_ALPHABET = {
@@ -34,7 +34,7 @@ NAME_TO_FIRST_ALPHABET = {
 
 
 def refresh_spu_rid(app, db):
-    print("Refreshing spu rid...")
+    logger.debug("Refreshing spu rid...")
     with app.app_context():
         # loop all material_storage and size_material_storage, and update the spu_table.
         # if not have a spu row, create it;if have, use the spu_material_id(use inbound_material_id,
@@ -103,7 +103,7 @@ def refresh_spu_rid(app, db):
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
-            print(f"Error committing changes: {e}")
+            logger.debug(f"Error committing changes: {e}")
             raise e
 
 def generate_spu_rid(material_id):

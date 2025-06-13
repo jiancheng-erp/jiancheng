@@ -3,10 +3,10 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
-
+from logger import logger
 
 def refresh_default_bom(app, db):
-    print("Refreshing default BOM...")
+    logger.debug("Refreshing default BOM...")
     with app.app_context():
         connection = db.engine.connect()
         inspector = inspect(db.engine)

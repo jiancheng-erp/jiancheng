@@ -6,7 +6,7 @@ from constants import DEFAULT_PAYABLE_TRANSACTION_ACCOUNT_GRADE, DEFAULT_TRANSAC
 import time
 from app_config import db
 from sqlalchemy import func
-
+from logger import logger
 payable_management_bp = Blueprint("payable_management", __name__)
 ACCOUNT_ATTR_LIST = AccountingPayableAccount.__table__.columns.keys()
 PAYEE_ATTR_LIST = AccountingPayeePayer.__table__.columns.keys()
@@ -57,6 +57,7 @@ def add_transactions():
     return {"msg":"all transactions added"}, 200
 @payable_management_bp.route('/payable_management/get_payable_info', methods=['GET'])
 def get_payable_info():
+    return "OK", 200
     payable_object_accounts = (db.session.query(AccountingPayableAccount, AccountingPayeePayer)
                                .join(AccountingPayeePayer, AccountingPayableAccount.account_owner_id == AccountingPayeePayer.payee_id)
                                .all())
@@ -90,8 +91,8 @@ def get_payable_info():
         cur_transaction_res["materialUnit"] = material_storage.actual_inbound_unit
         cur_transaction_res["materialAmount"] = float(inbound_record_detail.inbound_amount)
         cur_transaction_res["materialUnitPrice"] = float(inbound_record_detail.unit_price)
-        # print(inbound_record_detail.inbound_amount, inbound_record_detail.unit_price)
-        # print(material_storage.material_specification, material.material_name, material_type.material_type_name)
+        # logger.debug(inbound_record_detail.inbound_amount, inbound_record_detail.unit_price)
+        # logger.debug(material_storage.material_specification, material.material_name, material_type.material_type_name)
         account_owner_id = transaction.payable_payee_account_id
         account_owner_id_to_account_res[account_owner_id]['transactionDetails'].append(cur_transaction_res)
     res_data = list(account_owner_id_to_account_res.values())
@@ -99,6 +100,7 @@ def get_payable_info():
 
 @payable_management_bp.route('/payable_management/get_payable_info_new', methods=['GET'])
 def get_payable_info_new():
+    return "OK", 200
     payable_object_accounts = (db.session.query(AccountingPayableAccount, AccountingPayeePayer)
                                .join(AccountingPayeePayer, AccountingPayableAccount.account_owner_id == AccountingPayeePayer.payee_id)
                                .all())

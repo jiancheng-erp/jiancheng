@@ -776,17 +776,20 @@ export default {
                 "materialSpec": this.currentKeyDownRow.inboundSpecification,
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
-                "supplier": this.inboundForm.supplierName,
+                "supplierName": this.inboundForm.supplierName,
+                "materialTypeId": this.inboundForm.materialTypeId,
             }
             this.searchParams = params; // Update search parameters
         },
         async fetchSizeMaterialData() {
             const params = {
+                "orderRId": this.currentKeyDownRow.orderRId,
                 "materialName": this.currentKeyDownRow.materialName,
                 "materialSpec": this.currentKeyDownRow.inboundSpecification,
                 "materialModel": this.currentKeyDownRow.inboundModel,
                 "materialColor": this.currentKeyDownRow.materialColor,
-                "supplier": this.inboundForm.supplierName,
+                "supplierName": this.inboundForm.supplierName,
+                "materialTypeId": this.inboundForm.materialTypeId,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
             this.searchedSizeMaterials = response.data

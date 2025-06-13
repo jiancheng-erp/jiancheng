@@ -4,7 +4,7 @@ from app_config import db
 from models import *
 from login.login import decrypt_password
 import hashlib
-
+from logger import logger
 user_bp = Blueprint("user_bp", __name__)
 
 @user_bp.route("/general/getallcharacters", methods=["GET"])
@@ -62,7 +62,7 @@ def change_password():
     new_password = data.get("newPassword")
     staff_id = data.get("staffId")
     iv = data.get("iv")  # Get the IV from the request
-    print(data)
+    logger.debug(data)
     secret_key = "6f8e6f9178b12c08dce94bcf57b8df22"  # Same key used in the frontend
     decrypt_old_password_result = decrypt_password(old_password, iv, secret_key)
     second_encrypted_password = hashlib.md5(decrypt_old_password_result.encode()).hexdigest()
@@ -73,7 +73,7 @@ def change_password():
         Staff, User.staff_id == Staff.staff_id).join(
         Character, Staff.character_id == Character.character_id
     ).filter(Staff.staff_id == staff_id).first()
-    print(user)
+    logger.debug(user)
 
     if user and user.User.user_passwd == second_encrypted_password:
         user.User.user_passwd = second_encrypted_new_password
@@ -90,7 +90,7 @@ def create_user():
     user_password = data.get("userPassword")
     staff_id = data.get("staffId")
     iv = data.get("iv")
-    print(data)
+    logger.debug(data)
     secret_key = "6f8e6f9178b12c08dce94bcf57b8df22"
     new_pw = decrypt_password(user_password, iv, secret_key)
     db_pw = hashlib.md5(new_pw.encode()).hexdigest()

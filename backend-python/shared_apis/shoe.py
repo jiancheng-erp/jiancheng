@@ -8,7 +8,7 @@ from api_utility import to_camel, to_snake
 from login.login import current_user, current_user_info
 import json
 import time
-
+from logger import logger
 shoe_bp = Blueprint("shoe_bp", __name__)
 
 SHOE_TABLE_ATTRNAMES = Shoe.__table__.columns.keys()
@@ -50,7 +50,7 @@ def get_all_shoes():
                 ),
             }
         )
-    print(result)
+    logger.debug(result)
     return jsonify(result)
 
 
@@ -111,7 +111,7 @@ def get_all_shoes_new():
         res_data[shoe_type.shoe_id]["shoeTypeData"].append(shoe_type_res)
     result_data = list(res_data.values())
     time_t2 = time.time()
-    print("get all shoes new time taken is " + " " + str(time_t2 - time_s))
+    logger.debug("get all shoes new time taken is " + " " + str(time_t2 - time_s))
     return {"shoeTable": result_data, "total": total_count}, 200
 
 
@@ -185,7 +185,7 @@ def get_last_shoe_batch_by_size_table():
     )
     # transform order_size_table json to dict
     order_size_table = json.loads(order_size_table)
-    print(order_size_table)
+    logger.debug(order_size_table)
     last_order_list = order_size_table["楦头"]
     # trans the list to result like "size34Slot": last_order_list['楦头'][0], max to size47slot, if last_order_list is not enough, fill with None
     # use index to get the value
@@ -195,7 +195,7 @@ def get_last_shoe_batch_by_size_table():
             result[f"size{i}Slot"] = last_order_list[i - 34]
         else:
             result[f"size{i}Slot"] = None
-    print(result)
+    logger.debug(result)
     return jsonify(result)
 
 

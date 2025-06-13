@@ -1,6 +1,6 @@
 import shutil
 from openpyxl import load_workbook
-
+from logger import logger
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -27,7 +27,7 @@ def save_workbook(wb, new_file_path):
 
 # Main function to generate the Excel file
 def generate_excel_file(template_path, new_file_path, data: dict):
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb, ws = load_template(template_path, new_file_path)
 
@@ -50,4 +50,4 @@ def generate_excel_file(template_path, new_file_path, data: dict):
 
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")

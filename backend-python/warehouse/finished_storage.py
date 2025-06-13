@@ -19,7 +19,7 @@ from login.login import current_user_info
 from logger import logger
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
-
+from logger import logger
 
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
 def get_finished_in_out_overview():

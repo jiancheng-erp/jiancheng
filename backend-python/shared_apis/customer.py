@@ -5,7 +5,7 @@ from models import *
 from api_utility import to_camel, to_snake
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
-
+from logger import logger
 
 customer_bp = Blueprint("customer_bp", __name__)
 IS_ACTIVE = '1'
@@ -65,7 +65,7 @@ def add_customer():
     customer_name = request.json.get("customerName")
     customer_brand = request.json.get("customerBrand")
     existing = (db.session.query(Customer).filter(and_(Customer.customer_name == customer_name ,Customer.customer_brand == customer_brand)).first())
-    print(existing)
+    logger.debug(existing)
     if existing:
         return jsonify({"message":"客户及商标信息已存在"}), 400
     try:
@@ -83,7 +83,7 @@ def add_customer():
 def add_customer_batch_info():
     
     customer_id = request.json.get("customerId")
-    print(request.json)
+    logger.debug(request.json)
     packaging_info_name = request.json.get("packagingInfoName")
     packaging_info_locale = request.json.get("packagingInfoLocale")
     batch_info_type_id = request.json.get("batchInfoTypeId")
@@ -130,7 +130,7 @@ def add_customer_batch_info():
         db.session.commit()
         return jsonify({"message": "Customer BatchInfo added successfully"})
     except Exception as e:
-        print(str(e))
+        logger.debug(str(e))
         return jsonify({"error": str(e)}), 500
 
 @customer_bp.route("/customer/editbatchinfo", methods=["POST"])
@@ -176,7 +176,7 @@ def edit_packaging_info():
         db.session.commit()
         return jsonify({"message": "Customer BatchInfo Updated Successfully"})
     except Exception as e:
-        print(str(e))
+        logger.debug(str(e))
         return jsonify({"error": str(e)}), 500
 
 @customer_bp.route("/customer/editcustomer", methods=["POST"])
@@ -199,7 +199,7 @@ def delete_customer_all_batch(customer_id):
         db.session.commit()
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error:{e}")
+        logger.debug(f"Error:{e}")
         raise SystemError("Delete Failed")
     finally:
         db.session.close()
@@ -208,7 +208,7 @@ def delete_customer_all_batch(customer_id):
 @customer_bp.route("/customer/deletecustomer", methods=["DELETE"])
 def delete_customer():
     try:
-        print(request)
+        logger.debug(request)
         customer_id = request.args.get("customerId")
         customer_entity = (db.session.query(Customer).filter(
             Customer.customer_id == customer_id
@@ -222,14 +222,14 @@ def delete_customer():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error:{e}")
+        logger.debug(f"Error:{e}")
         return jsonify({"status":"error", "message" :str(e)}), 500
     finally:
         db.session.close()
 @customer_bp.route("/customer/deletebatchinfo", methods = ["DELETE"])
 def delete_customer_batch():
     try:
-        print(request)
+        logger.debug(request)
         customer_id = request.args.get("customerId")
         packaging_info_id = request.args.get("packagingInfoId")
         batch_info_entity = db.session.query(PackagingInfo).filter(
@@ -243,7 +243,7 @@ def delete_customer_batch():
 
     except SQLAlchemyError as e:
         db.session.rollback()
-        print(f"Error:{e}")
+        logger.debug(f"Error:{e}")
         return jsonify({"status":"error", "message" :str(e)}), 500
     finally:
         db.session.close()

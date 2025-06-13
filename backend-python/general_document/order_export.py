@@ -7,7 +7,7 @@ from file_locations import IMAGE_UPLOAD_PATH
 import os
 from collections import defaultdict
 from openpyxl.utils import units
-
+from logger import logger
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -275,7 +275,7 @@ def save_workbook(wb, new_file_path):
 
 # Main function to generate the Excel file
 def generate_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
@@ -291,10 +291,10 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
 
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
     
 def generate_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
-    print(f"Generating Excel file")
+    logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
@@ -310,4 +310,4 @@ def generate_amount_excel_file(template_path, new_file_path, order_data: dict, m
 
     # Save the workbook
     save_workbook(wb, new_file_path)
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")

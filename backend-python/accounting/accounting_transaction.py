@@ -6,8 +6,7 @@ from app_config import db
 from sqlalchemy import func
 from constants import ACCOUNTING_PAYEE_NOT_FOUND, ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND, ACCOUNTING_PAYEE_EXISTING
 from constants import PAYABLE_EVENT_TO_TEXT, PAYABLE_EVENT_INBOUND,PAYABLE_EVENT_COMPOSITE_INBOUND,PAYABLE_EVENT_MISC_INBOUND,ACCOUNT_TYPE_CASH,ACCOUNT_TYPE_PAYABLE,ACCOUNT_TYPE_RECIEVABLE
-from logger import logger 
-
+from logger import logger
 # def add_material_paybable(supplier, amount, unit):
 
 #     supplier_name = supplier.name
@@ -16,7 +15,7 @@ def add_payable_entity(name, address='', bank_info='', contact_info=''):
     # 添加应收账户收款人以及账号 初始账号数字为0
     existing_entity = db.session.query(AccountingPayeePayer).filter_by(payee_name = name).first()
     if existing_entity:
-        print("entity already exist")
+        logger.debug("entity already exist")
         return ACCOUNTING_PAYEE_EXISTING
     entity_type = 0
     payable_entity_name = name
@@ -34,7 +33,7 @@ def add_payable_entity(name, address='', bank_info='', contact_info=''):
     new_payable_account_entity.account_unit_id = 1
     new_payable_account_entity.account_owner_id = new_payable_entity.payee_id
     db.session.add(new_payable_account_entity)
-    print("new accounting entity and its account added successfully")
+    logger.debug("new accounting entity and its account added successfully")
     return 0
 
 def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, unit=1,has_conversion=0,conversion_id=0):
@@ -42,7 +41,7 @@ def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, 
     # supplier name 对应 accountingpayeepayer 表 payee name
     payee_entity = db.session.query(AccountingPayeePayer).filter_by(payee_name=supplier_name).first()
     if not payee_entity:
-        print("supplier doenst existing in accounting table, check accounting_payee_payer")
+        logger.debug("supplier doenst existing in accounting table, check accounting_payee_payer")
         return ACCOUNTING_PAYEE_NOT_FOUND
     else:
         #应付款增加 材料费用
@@ -51,7 +50,7 @@ def material_inbound_accounting_event(supplier_name, amount, inbound_record_id, 
         new_transaction_entity.transaction_type = transaction_type
         payable_account_entity = db.session.query(AccountingPayableAccount).filter_by(account_owner_id = payee_entity.payee_id).first()
         if not payable_account_entity:
-            print("entity payable account not found in accounting payable account table")
+            logger.debug("entity payable account not found in accounting payable account table")
             return ACCOUNTING_PAYABLE_ACCOUNT_NOT_FOUND
         # TODO type check 
         tg_accounts_update = db.session.query(ThirdGradeAccount).filter_by(account_bound_event = PAYABLE_EVENT_INBOUND).all()
@@ -119,7 +118,7 @@ def set_up_customer_accounts():
     #                                        ).join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
     #                                               ).join(OrderShoeBatchInfo,OrderShoeType.order_shoe_type_id == OrderShoeBatchInfo.order_shoe_type_id
     #                                                      ).group_by(Customer.customer_id).all()
-    # print(balances)
+    # logger.debug(balances)
     customers = db.session.query(Customer).all()
     for customer in customers:
         new_recievable_entity = AccountingPayeePayer()
@@ -143,11 +142,11 @@ def compute_balance():
                                                                     ).join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id
                                                                     ).group_by(OrderShoeType.order_shoe_type_id, Customer.customer_id).all()
     for i in order_count:
-        print(i)
+        logger.debug(i)
     #客户 鞋款 以及各鞋款单价 和单位
     order_price = db.session.query(Customer,OrderShoeType.unit_price, OrderShoeType.currency_type,OrderShoeType.order_shoe_type_id).join(Order,Order.customer_id == Customer.customer_id
                                                                 ).join(OrderShoe, Order.order_id == OrderShoe.order_id
                                                                     ).join(OrderShoeType,OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
                                                                            ).group_by(OrderShoeType.order_shoe_type_id, Customer.customer_id).all()
     for j in order_price:
-        print(j)
+        logger.debug(j)

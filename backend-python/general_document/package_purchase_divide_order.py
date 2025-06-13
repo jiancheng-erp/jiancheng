@@ -3,7 +3,7 @@ from openpyxl import load_workbook
 import os
 from openpyxl.styles import Border, Side, Alignment
 from openpyxl.drawing.image import Image
-
+from logger import logger
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
     # Copy the template to a new file
@@ -33,18 +33,18 @@ def copy_text_to_new_sheet(source_file, dest_wb, sheet_name="Package Info"):
                 cell = source_ws.cell(row=row, column=col)
                 dest_ws.cell(row=row, column=col, value=cell.value)
 
-        print(f"Successfully copied text to new sheet: {sheet_name}")
+        logger.debug(f"Successfully copied text to new sheet: {sheet_name}")
         return source_ws, dest_ws  # Return both worksheets
 
     except Exception as e:
-        print(f"⚠️ Error copying text to new sheet: {e}")
+        logger.debug(f"⚠️ Error copying text to new sheet: {e}")
         return None, None  # Return None to indicate failure but continue execution
 
 def copy_images_with_absolute_positioning(source_ws, dest_ws):
     """Copy images from source worksheet to destination worksheet while keeping absolute positions, with error handling."""
     try:
         if source_ws is None or dest_ws is None:
-            print("⚠️ Skipping image copying due to missing source/destination worksheet.")
+            logger.debug("⚠️ Skipping image copying due to missing source/destination worksheet.")
             return
 
         for img in source_ws._images:
@@ -55,10 +55,10 @@ def copy_images_with_absolute_positioning(source_ws, dest_ws):
                 new_img.anchor = img.anchor  # Copy exact position anchor
                 dest_ws.add_image(new_img)  # Place image at the same position
 
-        print("✅ Successfully copied images with absolute positioning.")
+        logger.debug("✅ Successfully copied images with absolute positioning.")
 
     except Exception as e:
-        print(f"⚠️ Error copying images: {e}")
+        logger.debug(f"⚠️ Error copying images: {e}")
 def add_borders(ws, start_cell, end_cell):
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -83,8 +83,8 @@ def insert_series_data(ws, series_data, start_row=4):
 
     for i, item in enumerate(series_data):
         row = start_row + i
-        print(f"Inserting series data into row {row}")
-        print(item)
+        logger.debug(f"Inserting series data into row {row}")
+        logger.debug(item)
 
         ws[f"B{row}"] = i + 1
         ws[f"C{row}"] = item.get("物品名称", "")
@@ -100,7 +100,7 @@ def insert_series_data(ws, series_data, start_row=4):
 
     for i in range(len(series_data), required_rows):
         row = start_row + i
-        print(f"Adding empty row at {row}")
+        logger.debug(f"Adding empty row at {row}")
         ws[f"B{row}"] = i + 1  # Continue numbering for empty rows
 
         # Ensure alignment for each empty row
@@ -115,7 +115,7 @@ def save_workbook(wb, new_file_path):
 
 # Main function to generate the Excel file
 def generate_package_excel_file(template_path, new_file_path, package_info_file, order_data):
-    print(f"Generating Excel file for order {order_data.get('订单信息', '')}")
+    logger.debug(f"Generating Excel file for order {order_data.get('订单信息', '')}")
     wb, ws = load_template(template_path, new_file_path)
 
     # Insert order details
@@ -158,7 +158,7 @@ def generate_package_excel_file(template_path, new_file_path, package_info_file,
     # Save the workbook
     save_workbook(wb, new_file_path)
 
-    print(f"Workbook saved as {new_file_path}")
+    logger.debug(f"Workbook saved as {new_file_path}")
 
 
 # template_path = "H:/git-projects/jiancheng/backend-python/general_document/标准采购订单.xlsx"
@@ -179,5 +179,5 @@ def generate_package_excel_file(template_path, new_file_path, package_info_file,
 #     "交货期限": "2024-12-01",
 # }
 # generate_package_excel_file(template_path, new_file_path, package_file, order_data)
-# print("Test Case 1: Basic functionality passed.")
+# logger.debug("Test Case 1: Basic functionality passed.")
 

@@ -9,7 +9,7 @@ import json
 import shutil
 from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
-
+from logger import logger
 from app_config import db
 
 order_import_bp = Blueprint("order_import_bp", __name__)
@@ -90,7 +90,7 @@ def upload_order():
                 os.remove(file_path)
             return jsonify({"error": str(e)}), 500
     time_t = time.time()
-    print("time taken for /getuploadorder is " + str(time_t - time_s))
+    logger.debug("time taken for /getuploadorder is " + str(time_t - time_s))
     return jsonify({"error": "Invalid file type"}), 400
 
 
@@ -309,7 +309,7 @@ def confirm_import_order():
         result = jsonify({"error": str(e)}), 500
 
     time_t = time.time()
-    print("time taken for /confirmimportorder is " + str(time_t - time_s))
+    logger.debug("time taken for /confirmimportorder is " + str(time_t - time_s))
     return result
 
 
@@ -325,11 +325,11 @@ def submit_doc():
 
     file_type = request.form.get("fileType")
     order_rid = request.form.get("orderRid")
-    print(file_type, order_rid)
+    logger.debug(file_type, order_rid)
 
     if file_type == "0":
         file_path = os.path.join(FILE_STORAGE_PATH, order_rid, "生产订单.xlsx")
-        print(file_path)
+        logger.debug(file_path)
         file.save(file_path)
         order = db.session.query(Order).filter_by(order_rid=order_rid).first()
         # order.production_list_upload_status = "0"
