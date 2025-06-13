@@ -2227,51 +2227,6 @@ def issue_production_order():
                     first_bom_item.material_specification = item.material_specification
                     first_bom_item.craft_name = item.craft_name
                     db.session.flush()
-                material_storage = (
-                    db.session.query(MaterialStorage).filter(
-                        MaterialStorage.production_instruction_item_id == item.production_instruction_item_id
-                    ).first()
-                )
-                if material_storage:
-                    if material_type == "I":
-                        # Find all similar hotsole entries
-                        similiar_hotsoles = (
-                            db.session.query(ProductionInstructionItem)
-                            .filter(
-                                ProductionInstructionItem.material_id == item.material_id,
-                                ProductionInstructionItem.material_model == item.material_model,
-                                ProductionInstructionItem.material_specification == item.material_specification,
-                                ProductionInstructionItem.color == item.color,
-                                ProductionInstructionItem.order_shoe_type_id == item.order_shoe_type_id,
-                                ProductionInstructionItem.material_type == "H",
-                            )
-                            .all()
-                        )
-
-                        # Extract hotsole craft names
-                        hotsole_craft_names = set()
-                        for hotsole in similiar_hotsoles:
-                            if hotsole.pre_craft_name:
-                                hotsole_craft_names.update(hotsole.pre_craft_name.split("@"))
-
-                        # Extract original craft names from item
-                        original_crafts = set(filter(None, (item.craft_name or "").split("@")))
-
-                        # Combine and assign
-                        combined_crafts = original_crafts.union(hotsole_craft_names)
-                        material_storage.craft_name = "@".join(sorted(combined_crafts)) if combined_crafts else None
-                    else:
-                        material_storage.craft_name = item.craft_name
-
-                    db.session.flush()
-                size_material_storage =(
-                    db.session.query(SizeMaterialStorage).filter(
-                        SizeMaterialStorage.production_instruction_item_id == item.production_instruction_item_id
-                    ).first()
-                )
-                if size_material_storage:
-                    size_material_storage.craft_name = item.craft_name
-                    db.session.flush()
                 if item.order_shoe_type_id == order_shoe_type.order_shoe_type_id:
                     craft_list = item.craft_name.split("@")
                     for craft in craft_list:
