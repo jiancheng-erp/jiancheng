@@ -88,4 +88,10 @@ async function logout() {
 .demo-tabs > .el-tabs__item{
   margin-right: 50px;
 }
+::v-deep .el-header {
+    height:5vh;
+}
+::v-deep .el-main {
+  height: 85vh;
+}
 </style>
