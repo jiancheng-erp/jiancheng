@@ -14,7 +14,7 @@
                 <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
                 <el-tab-pane label="入库待审核"><InOutboundRecords /></el-tab-pane>
                 <el-tab-pane label="入库明细"><InboundDetails /></el-tab-pane>
-                <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane>
+                <!-- <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane> -->
 
             </el-tabs>
         </el-main>

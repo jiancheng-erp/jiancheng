@@ -189,7 +189,7 @@
                     }
                 ]"
             >
-                <el-input v-model="newOrderForm.orderRId"></el-input>
+                <el-input @change="checkOrderRidExists" v-model="newOrderForm.orderRId"></el-input>
             </el-form-item>
             <el-form-item label="客户订单号">
                 <el-input v-model="newOrderForm.orderCid"></el-input>
@@ -1957,6 +1957,28 @@ export default {
                     this.currentPage = 1
                 }
             }
+        },
+        async checkOrderRidExists(){
+            const queryRid = this.newOrderForm.orderRId
+            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`,
+            {
+                params:
+                {
+                    pendingRid: queryRid
+                }
+            }
+            )
+            const message = response.data.result
+            const exists = response.data.exists
+            if (exists == true)
+            {
+                this.$message.warning(message)
+            }
+            else
+            {
+                this.$message.success(message)
+            }
+
         },
         async handleOrderStatusChange(value) {
             let response

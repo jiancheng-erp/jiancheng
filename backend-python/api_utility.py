@@ -3,7 +3,7 @@
 # from event_processor import *
 import random
 import string
-
+from decimal import Decimal
 
 # ### check if a shoe exists in DB
 # def check_shoe_exists(shoe_rid):
@@ -220,3 +220,8 @@ def db_obj_to_res(
             res[to_camel(attr[attr_name_offset:])] = getattr(db_entity, attr)
 
     return res
+
+def normalize_decimal(value):
+    d = Decimal(value).normalize()
+    # Convert to string without scientific notation
+    return format(d, 'f').rstrip('0').rstrip('.') if '.' in format(d, 'f') else format(d, 'f')

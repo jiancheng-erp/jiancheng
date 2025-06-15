@@ -54,14 +54,14 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span=22>
+        <el-col :span=20>
             <el-checkbox-group v-model="checkedColumnValues" @change="updateCheckBox">
                 <el-checkbox-button v-for="col in allColumns" :key="col.id" :value="col.id">
                     {{ col.labelName }}
                 </el-checkbox-button>
             </el-checkbox-group>
         </el-col>
-        <el-col :span="2">
+        <el-col :span="4">
             <el-button type="primary" @click="deselectAllColumns">
                 清空选择
             </el-button>
@@ -73,9 +73,9 @@
 
     <el-row :gutter="20">
         <el-col>
-            <el-table :data="displayRecords" border stripe height="tabledisplayHeight" style="width: 100%">
+            <el-table :data="displayRecords" border stripe height="tabledisplayHeight" style="width: 90vw">
                 <el-table-column v-for="col in selectedColumns" :prop="col.attrName" :key="col.id"
-                    :label="col.labelName">
+                    :label="col.labelName" :min-width="col.width">
                 </el-table-column>
             </el-table>
         </el-col>
