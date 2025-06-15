@@ -881,7 +881,14 @@ def get_display_orders_manager():
             }
         )
     return jsonify(result)
-
+@order_bp.route("/order/checkorderridexists", methods=["GET"])
+def check_order_rid_exists():
+    order_rid = request.args.get("pendingRid")
+    pending_exists = db.session.query(Order).filter(Order.order_rid == order_rid).first()
+    if pending_exists:
+        return jsonify({"result":"订单号已存在", "exists":True}), 200
+    else:
+        return jsonify({"result":"订单号未占用", "exists":False}), 200
 
 # TODO delete
 @order_bp.route("/order/getallorders", methods=["GET"])

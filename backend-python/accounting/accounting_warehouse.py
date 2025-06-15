@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, send_file
 from accounting import accounting
 from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res,format_date, format_datetime,format_outbound_type, accounting_audit_status_converter
+from api_utility import normalize_decimal
 from sqlalchemy import func, and_
 from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
 from general_document.accounting_summary_excel import generate_accounting_summary_excel
@@ -49,8 +50,28 @@ name_en_cn_mapping_inbound = {
     "item_total_price":"总价",
     "approval_status":"审批状态",
     "spu_rid":"SPU",
-    "remark":"入库备注",
+    "remark":"备注",
     }
+col_width_mapping = {
+    "inbound_rid":"150px",
+    "inbound_datetime":"150px",
+    "material_warehouse":"95px",
+    "supplier_name":"115px",
+    "material_name":"140px",
+    "material_model":"165px",
+    "color":"85px",
+    "material_specification":"170px",
+    "order_rid":"95px",
+    "unit_price":"85px",
+    "actual_inbound_unit":"60px",
+    "inbound_amount":"90px",
+    "item_total_price":"80px",
+    "approval_status":"85px",
+    "spu_rid":"180px",
+    "remark":"85px"
+
+
+}
 name_mapping_inbound_summary = {
     "material_warehouse":"仓库",
     "supplier_name":"供应商",
@@ -109,53 +130,52 @@ def wrapper_helper():
     # material.material_name, material_unit
     #  
     return
-# @accounting_warehouse_bp.route("/accounting/get_warehouse_outbound_record", methods=["GET"])
-# def get_warehouse_outbound_record():
-#     page_num = request.args.get('pageNumber',type=int)
-#     page_size = request.args.get('pageSize', type=int)
-#     warehouse_filter = request.args.get('selectedWarehouse')
-#     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-#     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
-#     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-#     material_model_filter = request.args.get('materialModelFilter', type=str)
-#     outbound_type_filter = request.args.get('outboudnTypeFilter', type=str)
-#     query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage.average_price)
-#              .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
-#              .join(MaterialStorage, OutboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-#              .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-#              .join(Material, MaterialStorage.material_id == Material.material_id)
-#              .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-#              .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-#              .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
-#     query = query.union(sized_query)
-#     if outbound_type_filter:
-#         query = query.filter(OutboundRecord.outbound_type == outbound_type_filter)
-#     if warehouse_filter:
-#         query = query.filter(MaterialWarehouse.warehouse_id == warehouse_filter)
-#     if supplier_name_filter:
-#         query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-#     if date_range_filter_start:
-#         query = query.filter(OutboundRecord.outbound_datetime >= date_range_filter_start)
-#     if date_range_filter_end:
-#         query = query.filter(OutboundRecord.outbound_datetime <= date_range_filter_end)
-#     if material_model_filter:
-#         query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-#     total_count = query.distinct().count()
-#     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
-#     outbound_records = []
-#     department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
-#     for outbound_record, outbound_record_detail, material, supplier, material_type, material_warehouse, spu, avg_price in response_entities:
-#         res = db_obj_to_res(outbound_record, OutboundRecord, attr_name_list=OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES)
-#         res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-#         res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
-#         res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-#         res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-#         res[to_camel('unit_price')] = avg_price
-#         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
-#         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
-#         res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department]
-#         outbound_records.append(res)
-#     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
+@accounting_warehouse_bp.route("/accounting/get_warehouse_outbound_record", methods=["GET"])
+def get_warehouse_outbound_record():
+    page_num = request.args.get('pageNumber',type=int)
+    page_size = request.args.get('pageSize', type=int)
+    warehouse_filter = request.args.get('selectedWarehouse')
+    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
+    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    material_model_filter = request.args.get('materialModelFilter', type=str)
+    outbound_type_filter = request.args.get('outboudnTypeFilter', type=str)
+    query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage.average_price)
+             .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
+             .join(MaterialStorage, OutboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
+             .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+             .join(Material, SPUMaterial.material_id == Material.material_id)
+             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+             .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+             .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
+    if outbound_type_filter:
+        query = query.filter(OutboundRecord.outbound_type == outbound_type_filter)
+    if warehouse_filter:
+        query = query.filter(MaterialWarehouse.warehouse_id == warehouse_filter)
+    if supplier_name_filter:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
+    if date_range_filter_start:
+        query = query.filter(OutboundRecord.outbound_datetime >= date_range_filter_start)
+    if date_range_filter_end:
+        query = query.filter(OutboundRecord.outbound_datetime <= date_range_filter_end)
+    if material_model_filter:
+        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
+    total_count = query.distinct().count()
+    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    outbound_records = []
+    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
+    for outbound_record, outbound_record_detail, material, supplier, material_type, material_warehouse, spu, avg_price in response_entities:
+        res = db_obj_to_res(outbound_record, OutboundRecord, attr_name_list=OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES)
+        res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
+        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res[to_camel('unit_price')] = avg_price
+        res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
+        res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
+        res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department]
+        outbound_records.append(res)
+    return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
     
 @accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_record", methods=["GET"])
 def get_warehouse_inbound_record():
@@ -225,6 +245,9 @@ def get_warehouse_inbound_record():
         res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
         res[to_camel('order_rid')] = order_rid
         res[to_camel('actual_inbound_unit')] = material_storage.actual_inbound_unit
+        res[to_camel('unit_price')] = normalize_decimal(res[to_camel('unit_price')])
+        res[to_camel('inbound_amount')] = normalize_decimal(res[to_camel('inbound_amount')])
+        res[to_camel('item_total_price')] = normalize_decimal(res[to_camel('item_total_price')])
         inbound_records.append(res)
     return jsonify({"inboundRecords":inbound_records, "total":total_count}), 200
 
@@ -304,9 +327,9 @@ def get_warehouse_inbound_summery():
     for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, material, warehouse_name, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
-        res['unitPrice'] = unit_price
-        res['totalAmount'] = round(inbound_amount_sum, 3)
-        res['totalPrice'] = round(unit_price * inbound_amount_sum, 4)
+        res['unitPrice'] = normalize_decimal(unit_price)
+        res['totalAmount'] = normalize_decimal(inbound_amount_sum)
+        res['totalPrice'] = normalize_decimal(unit_price * inbound_amount_sum)
         res['materialModel'] = m_model
         res['materialSpecification'] = m_specification
         res['materialColor'] = color
@@ -326,7 +349,9 @@ def get_inbound_display_columns():
     for attr_name in name_en_cn_mapping_inbound.keys():
         res_data.append({"attrName":to_camel(attr_name),
                          "labelName":name_en_cn_mapping_inbound[attr_name],
-                         "id":res_id})
+                         "id":res_id,
+                         "width":col_width_mapping[attr_name]
+                         })
         res_id += 1
     return jsonify({"selectableColumns":res_data}), 200
 @accounting_warehouse_bp.route("/accounting/get_inbound_summary_display_columns", methods=["GET"])
@@ -336,7 +361,8 @@ def get_inbound_summary_columns():
     for attr_name in name_mapping_inbound_summary.keys():
         res_data.append({"attrName":to_camel(attr_name),
                          "labelName":name_mapping_inbound_summary[attr_name],
-                         "id":res_id})
+                         "id":res_id,
+                         "width":"170px" if attr_name == "spu_Rid" else "120px"})
         res_id += 1
     return jsonify({"selectableColumns":res_data}), 200
 @accounting_warehouse_bp.route("/accounting/get_outbound_display_columns", methods=["GET"])

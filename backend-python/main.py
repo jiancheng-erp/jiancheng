@@ -6,11 +6,11 @@ from mock_data_gen import *
 from models import *
 from event_processor import EventProcessor
 from update_db import sync_schema
-from script.refresh_craft_name import refresh_storage_craft_match_craft_sheet
-from script.refresh_default_craft_sheet import refresh_default_craft_sheet
-from script.refresh_default_bom import refresh_default_bom
-from script.format_space_and_color_stynax import format_space_and_color_stynax
-from script.refresh_correct_size_material_amount_in_bom import refresh_correct_size_material_amount_in_bom
+# from script.refresh_craft_name import refresh_storage_craft_match_craft_sheet
+# from script.refresh_default_craft_sheet import refresh_default_craft_sheet
+# from script.refresh_default_bom import refresh_default_bom
+# from script.format_space_and_color_stynax import format_space_and_color_stynax
+# from script.refresh_correct_size_material_amount_in_bom import refresh_correct_size_material_amount_in_bom
 
 
 def get_app():

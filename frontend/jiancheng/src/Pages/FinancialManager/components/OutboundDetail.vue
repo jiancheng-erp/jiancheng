@@ -40,7 +40,14 @@
             
 
         </el-col>
-        
+           <el-col :span="4" :offset="2">
+            <el-button type="primary" @click="deselectAllColumns">
+                清空选择
+            </el-button>
+            <el-button @click="selectAllColumns">
+                全选
+            </el-button>
+        </el-col>
         
     </el-row>
 
@@ -52,7 +59,7 @@
         <el-col :span="12" :offset="0"></el-col>
     </el-row>
      -->
-    
+ 
     
     <el-row :gutter="20">
         < <el-checkbox-group v-model="checkedColumnValues"  @change="updateCheckBox">
@@ -142,9 +149,10 @@ let warehouseOptions = ref([])
 
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
-onMounted(() => {
+onMounted(async () => {
     getWarehouseInfo()
-    getSelectableColumns()
+    await getSelectableColumns()
+    selectAllColumns()
     updateInboundDisplayRecord()
     console.log(warehouseOptions.value)
 })
@@ -209,7 +217,14 @@ async function updateInboundDisplayRecord()
     totalNum.value = res.data.total
     displayRecords.value = res.data.outboundRecords
 }
-
+function deselectAllColumns() {
+    checkedColumnValues.value = []
+    updateCheckBox()
+}
+function selectAllColumns() {
+    checkedColumnValues.value = allColumns.value.map((col) => col.id)
+    updateCheckBox()
+}
 async function getWarehouseInfo()
 {
     const res = await axios.get($api_baseUrl + `/accounting/get_warehouse_info`)
