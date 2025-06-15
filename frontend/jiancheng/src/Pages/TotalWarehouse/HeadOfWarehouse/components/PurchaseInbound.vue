@@ -28,7 +28,7 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item prop="materialTypeId" label="材料类型">
-                    <el-select v-model="inboundForm.materialTypeId" filterable clearable @change="getWarehouseName">
+                    <el-select v-model="inboundForm.materialTypeId" filterable clearable @change="handleMaterialType">
                         <el-option v-for="item in materialTypeOptions" :key="item.materialTypeId"
                             :value="item.materialTypeId" :label="item.materialTypeName"></el-option>
                     </el-select>
@@ -321,8 +321,6 @@ export default {
                 remark: '',
                 shoeSizes: null,
                 payMethod: '应付账款',
-                warehouseName: null,
-                warehouseId: null,
             },
             rowTemplate: {
                 materialName: '',
@@ -643,14 +641,7 @@ export default {
             let response = await axios.get(`${this.$apiBaseUrl}/logistics/getallmaterialname`)
             this.materialNameOptions = response.data
         },
-        async getWarehouseName() {
-            let params = {
-                materialTypeId: this.inboundForm.materialTypeId,
-            }
-            let response = await axios.get(`${this.$apiBaseUrl}/logistics/getwarehousebymaterialtypeid`, { params })
-            this.inboundForm.warehouseName = response.data.warehouseName
-            this.inboundForm.warehouseId = response.data.warehouseId
-
+        async handleMaterialType() {
             if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
                 this.inboundForm.shoeSizes = null
                 this.shoeSizeColumns = []
@@ -816,7 +807,6 @@ export default {
                 inboundRecordId: this.inboundForm.inboundRecordId,
                 inboundType: this.inboundForm.inboundType,
                 supplierName: this.inboundForm.supplierName,
-                warehouseId: this.inboundForm.warehouseId,
                 remark: this.inboundForm.remark,
                 items: this.materialTableData,
                 batchInfoTypeId: this.inboundForm.shoeSizes,
@@ -833,6 +823,7 @@ export default {
                 }
                 this.previewInboundForm.timestamp = response.data.inboundTime
                 this.previewInboundForm.inboundRId = response.data.inboundRId
+                this.previewInboundForm.warehouseName = response.data.warehouseName
                 this.isInbounded = 1
                 ElMessage.success('入库成功')
             } catch (error) {

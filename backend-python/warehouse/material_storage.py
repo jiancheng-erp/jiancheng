@@ -766,7 +766,7 @@ def _handle_supplier_obj(supplier_name: str):
     return supplier_obj
 
 
-def _handle_purchase_inbound(data, next_group_id, is_warehouse_changed=False):
+def _handle_purchase_inbound(data, next_group_id):
     timestamp = data["currentDateTime"]
     formatted_timestamp = (
         timestamp.replace("-", "").replace(" ", "").replace("T", "").replace(":", "")
@@ -919,7 +919,22 @@ def _handle_production_remain_inbound(data, next_group_id):
     return inbound_record.inbound_rid
 
 
-def create_inbound_record(data, is_warehouse_changed=False):
+def create_inbound_record(data):
+
+    # 1) check if material_type_id is provided
+    material_type_id = data.get("materialTypeId", None)
+    if not material_type_id:
+        _empty_material_type()
+
+    # get warehouse_id
+    warehouse_id = db.session.query(MaterialType).filter(
+        MaterialType.material_type_id == material_type_id
+    ).first().warehouse_id
+
+    data["warehouseId"] = warehouse_id
+    warehouse_name = db.session.query(MaterialWarehouse).filter(
+        MaterialWarehouse.material_warehouse_id == warehouse_id
+    ).first().material_warehouse_name
 
     # 2) you’ll need supplier_id in data for purchase flow
     if data.get("inboundType", 0) == 0:
@@ -963,13 +978,13 @@ def create_inbound_record(data, is_warehouse_changed=False):
     # 5) dispatch
     itype = data.get("inboundType", 0)
     if itype == 0:
-        rid, ts = _handle_purchase_inbound(data, 0, is_warehouse_changed)
+        rid, ts = _handle_purchase_inbound(data, 0)
     elif itype == 1:
-        rid, ts = _handle_production_remain_inbound(data, 0, is_warehouse_changed)
+        rid, ts = _handle_production_remain_inbound(data, 0)
     else:
         abort(Response(json.dumps({"message": "invalid inbound type"}), 400))
 
-    return rid, ts, 0
+    return rid, ts, warehouse_name
 
 
 @material_storage_bp.route("/warehouse/inboundmaterial", methods=["POST"])
@@ -977,9 +992,9 @@ def inbound_material():
     data = request.get_json()
     data["currentDateTime"] = format_datetime(datetime.now())
     logger.debug(f"inbound data: {data}")
-    rid, ts, _ = create_inbound_record(data)
+    rid, ts, warehouse_name = create_inbound_record(data)
     db.session.commit()
-    return jsonify({"message": "success", "inboundRId": rid, "inboundTime": ts})
+    return jsonify({"message": "success", "inboundRId": rid, "inboundTime": ts, "warehouseName": warehouse_name}), 200
 
 
 def _handle_reject_material_outbound(data):
@@ -1854,7 +1869,6 @@ def update_inbound_record():
     logger.debug(f"update data: {data}")
     inbound_record_id = data.get("inboundRecordId")
     is_sized_material = data.get("isSizedMaterial", 0)
-    warehouse_id = data.get("warehouseId")
 
     inbound_record = (
         db.session.query(InboundRecord)
@@ -1864,16 +1878,7 @@ def update_inbound_record():
     if not inbound_record:
         return jsonify({"message": "inbound record not found"}), 404
 
-    old_warehouse_id = inbound_record.warehouse_id
-
-    is_warehouse_changed = False
-    # 换仓库，对新的入库材料要创建新的库存
-    if old_warehouse_id != warehouse_id:
-        is_warehouse_changed = True
-
     inbound_timestamp: datetime = inbound_record.inbound_datetime
-    inbound_rid = inbound_record.inbound_rid
-    inbound_batch_id = inbound_record.inbound_batch_id
 
     details = (
         db.session.query(InboundRecordDetail)
@@ -1920,10 +1925,10 @@ def update_inbound_record():
     data["currentDateTime"] = format_datetime(inbound_timestamp)
     data["inboundRecordId"] = inbound_record_id
 
-    new_rid, new_ts, _ = create_inbound_record(data, is_warehouse_changed)
+    new_rid, new_ts, warehouse_name = create_inbound_record(data)
     db.session.commit()
 
-    return jsonify({"message": "updated", "inboundRId": new_rid, "inboundTime": new_ts})
+    return jsonify({"message": "updated", "inboundRId": new_rid, "inboundTime": new_ts, "warehouseName": warehouse_name}), 200
 
 
 @material_storage_bp.route("/warehouse/updateoutboundrecord", methods=["PUT"])

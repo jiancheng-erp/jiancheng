@@ -161,7 +161,6 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": "嘉泰皮革",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -203,6 +202,10 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 250.0
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
@@ -300,7 +303,6 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": "日禾底材",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -362,6 +364,10 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 7500
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
@@ -428,7 +434,6 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": "一嘉胶水",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -462,6 +467,10 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 7500
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
@@ -555,7 +564,6 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": "日禾底材",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -614,6 +622,10 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 7500
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
@@ -830,7 +842,6 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": "深源皮革",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -863,6 +874,10 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 100
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
@@ -933,7 +948,6 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
         "inboundType": 0,
         "currentDateTime": "2025-04-06 16:59:45",
         "supplierName": " 深 源 皮 革 ",
-        "warehouseId": 1,
         "remark": "123",
         "items": [
             {
@@ -987,6 +1001,10 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
     assert record.total_price == 165.0
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "应付账款"
 
     record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
