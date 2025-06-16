@@ -34,6 +34,9 @@
                         <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>供应商管理</span>
                         </el-menu-item>
+                        <el-menu-item index="7" @click="handleMenuClick(7)">
+                            <span>绩效查询</span>
+                        </el-menu-item>
                         <el-menu-item index="8" @click="handleMenuClick(8)">
                             <span>个人信息</span>
                         </el-menu-item>
@@ -61,6 +64,7 @@ import MaterialManagement from '../components/MaterialManagementView.vue'
 import SupplierManagement from '../components/SupplierManagementView.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import RevertDashboard from '@/components/RevertDashboard.vue'
+import DevelopmentPerformanceManagement from '../components/DevelopmentPerformanceManagement.vue'
 import axios from 'axios'
 
 
@@ -74,7 +78,9 @@ export default {
         MaterialManagement,
         SupplierManagement,
         PersonalInfo,
-        RevertDashboard
+        RevertDashboard,
+        DevelopmentPerformanceManagement
+
     },
     data() {
         return {
@@ -112,6 +118,9 @@ export default {
                     break
                 case 6:
                     this.currentComponent = 'SupplierManagement'
+                    break
+                case 7:
+                    this.currentComponent = 'DevelopmentPerformanceManagement'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'
