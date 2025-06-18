@@ -75,7 +75,7 @@ import ApprovalPage from '../components/ApprovalPage.vue'
 import ProductionManagement from '../components/ProductionManagement.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
-import ProductionScheduling from '../components/ProductionScheduling.vue'
+import NewProductionScheduling from '../components/NewProductionScheduling.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import axios from 'axios'
@@ -97,7 +97,7 @@ export default {
     OutsourceFactoryInfo,
     ProductionReport,
     PersonalInfo,
-    ProductionScheduling
+    NewProductionScheduling,
   },
   data() {
     return {
@@ -122,7 +122,7 @@ export default {
           this.currentComponent = 'OrderProgress'
           break
         case 11:
-          this.currentComponent = 'ProductionScheduling'
+          this.currentComponent = 'NewProductionScheduling'
           break
         case 3:
           this.currentComponent = 'LogisticInfo'

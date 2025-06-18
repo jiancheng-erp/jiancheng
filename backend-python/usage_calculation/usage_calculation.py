@@ -13,7 +13,7 @@ from general_document.bom import generate_excel_file
 from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from api_utility import randomIdGenerater
 from collections import defaultdict
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 from sqlalchemy.sql.expression import case
 from wechat_api.send_message_api import send_massage_to_users
 from logger import logger

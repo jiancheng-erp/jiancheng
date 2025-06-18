@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from api_utility import format_date
 from app_config import db
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import (
     END_OF_PRODUCTION_NUMBER,
     IN_PRODUCTION_ORDER_NUMBER,
