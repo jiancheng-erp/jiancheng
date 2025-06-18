@@ -11,6 +11,7 @@ from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from api_utility import format_date
 from decimal import Decimal
+from sqlalchemy import func
 
 from app_config import db
 
@@ -18,7 +19,7 @@ from flask import current_app
 from event_processor import EventProcessor
 from wechat_api.send_message_api import send_massage_to_users
 from logger import logger
-
+from api_utility import to_camel, to_snake
 order_create_bp = Blueprint("order_create_bp", __name__)
 
 NEW_ORDER_STATUS = 6
@@ -365,3 +366,36 @@ def order_shoe_type_customer_color_update():
 			return jsonify({"error":"order_shoe_type_id not found"}), 404
 	db.session.commit()
 	return jsonify({"msg":"customer color updated"}), 200
+
+@order_create_bp.route("/ordercreate/template", methods=['GET'])
+def order_create_template():
+	salesman_id = request.args.get("staffId", type=str)
+	print(salesman_id)
+	orders = (db.session.query(Order.customer_id, Order.batch_info_type_id,  func.count(Order.order_id))
+		   .filter(Order.salesman_id == salesman_id)
+		   .join(BatchInfoType, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+		   .join(Customer,Order.customer_id == Customer.customer_id)
+		   .group_by(Order.customer_id, Order.batch_info_type_id)
+		   .order_by(func.count(Order.order_id).desc())).all()
+	customer_entities = db.session.query(Customer).all()
+	batch_info_entities = db.session.query(BatchInfoType).all()
+	customer_mapping = {}
+	batch_info_mapping = {}
+	customer_attr_names = ['customer_name', 'customer_brand', 'customer_id']
+	batch_info_attr_names = ['batch_info_type_name', 'batch_info_type_id']
+	for entity in customer_entities:
+		customer_mapping[entity.customer_id] = entity
+	for entity in batch_info_entities:
+		batch_info_mapping[entity.batch_info_type_id] = entity 
+	response = []
+	for cid, bid, count in orders:
+		response_entity = {}
+		for attr in customer_attr_names:
+			response_entity[to_camel(attr)] = getattr(customer_mapping[cid], attr)
+		for attr in batch_info_attr_names:
+			response_entity[to_camel(attr)] = getattr(batch_info_mapping[bid], attr)
+		response_entity["count"] = count
+		response.append(response_entity)
+	print(response)
+	return jsonify(response), 200
+

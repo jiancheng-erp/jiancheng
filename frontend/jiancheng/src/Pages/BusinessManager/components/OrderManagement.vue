@@ -9,6 +9,9 @@
             <el-button size="default" type="primary" @click="openCreateOrderDialog"
                 >创建订单</el-button
             >
+            <el-button size="default" type="primary" @click="showTemplate">
+                模板
+            </el-button>
             <el-select
             v-model="selectedOrderStatus"
             placeholder="请选择订单类型"
@@ -700,7 +703,26 @@
             <el-button type="primary" @click="addShoeTypeBatchInfo()"> 保存配码</el-button>
         </template>
     </el-dialog>
+    <el-dialog title="选择模板" v-model="newOrderTemplateVis" width="50%">
+       <el-table
+       :data = this.templateData
+       >
+        <el-table-column
+        prop="customerName" label="客户名称"></el-table-column>
+        <el-table-column
+        prop="customerBrand" label="客户商标"></el-table-column>
+        <el-table-column
+        prop="batchInfoTypeName" label="配码名称"></el-table-column>
+        
+        <el-table-column>
+            <template #default="scope">
+                        <el-button type="primary" @click="openCreateOrderDialogFromTemplate(scope.row)">模板创建订单</el-button>
+            </template>
+            
+        </el-table-column>
+       </el-table>
 
+    </el-dialog>
     <el-dialog title="添加配码" v-model="addCustomerBatchDialogVisible" width="30%">
         <el-form :model="batchForm" label-width="120px" :inline="false" size="default">
             <el-form-item label="配码名称">
@@ -834,6 +856,7 @@ export default {
             addBatchInfoDialogVis: false,
             addShoeDialogVis: false,
             addShoeTypeDialogVis: false,
+            newOrderTemplateVis:false,
             Upload,
             batchNameFilter: '',
             orderRidFilter: '',
@@ -861,6 +884,7 @@ export default {
             curBatchType: {},
             userRole: '',
             userName: '',
+            templateData:[],
             shoeForm: {
                 shoeId: '',
                 shoeRid: '',
@@ -1007,6 +1031,7 @@ export default {
         this.getAllColors()
         this.getAllBatchTypes()
         this.initialStatusFilter()
+        // this.getTemplate()
     },
     methods: {
         async getAllColors() {
@@ -1084,12 +1109,36 @@ export default {
         openImportDialog() {
             this.isImportVis = true
         },
+        openCreateOrderDialogFromTemplate(row){
+            console.log(row)
+            this.newOrderForm.batchInfoTypeId = row.batchInfoTypeId
+            this.newOrderForm.batchInfoTypeName = row.batchInfoTypeName
+            this.newOrderForm.customerId = row.customerId
+            this.newOrderForm.customerBrand = row.customerBrand
+            this.newOrderForm.customerName = row.customerName
+            this.openCreateOrderDialog()
+            this.newOrderTemplateVis = false
+        },
         openCreateOrderDialog() {
             this.newOrderForm.orderStartDate = this.formatDateToYYYYMMDD(new Date())
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
             this.orderCreationInfoVis = true
         },
+        async showTemplate(){
+            const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {params: {
+                    staffId:this.staffId
+                }})
+            this.newOrderTemplateVis = true
+            this.templateData = response.data
+            console.log(response.data)
+        },
+        // getTemplate(){
+        //     const response = axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {params: {
+        //             staffId:this.staffId
+        //         }})
+        //     console.log(response.data)
+        // },
         async openPreviewDialog(row) {
             this.orderData = row
             await this.getOrderOrderShoe(row.orderRid)

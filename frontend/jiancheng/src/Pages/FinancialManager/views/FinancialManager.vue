@@ -89,9 +89,9 @@ async function logout() {
   margin-right: 50px;
 }
 ::v-deep .el-header {
-    height:5vh;
+    height:3vh;
 }
 ::v-deep .el-main {
-  height: 85vh;
+  height: 90vh;
 }
 </style>

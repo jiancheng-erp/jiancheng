@@ -53,9 +53,9 @@ name_en_cn_mapping_inbound = {
     "remark":"备注",
     }
 col_width_mapping = {
-    "inbound_rid":"150px",
-    "inbound_datetime":"150px",
-    "material_warehouse":"95px",
+    "inbound_rid":"160px",
+    "inbound_datetime":"155px",
+    "material_warehouse":"100px",
     "supplier_name":"115px",
     "material_name":"140px",
     "material_model":"165px",
@@ -69,7 +69,6 @@ col_width_mapping = {
     "approval_status":"85px",
     "spu_rid":"180px",
     "remark":"85px"
-
 
 }
 name_mapping_inbound_summary = {
