@@ -21,11 +21,15 @@
         <el-form-item label="状态点">
             <el-select v-model="localSearchForm.statusNodeSearch" placeholder="例：生产中" @change="handleConfirm" clearable style="width: 150px;">
                 <el-option v-for="item in [
-                    '未排期',
-                    '已保存排期',
-                    '生产前确认',
-                    '生产中',
-                    '生产结束',
+                    '裁断未开始',
+                    '裁断进行中',
+                    '预备未开始',
+                    '预备进行中',
+                    '针车未开始',
+                    '针车进行中',
+                    '成型未开始',
+                    '成型进行中',
+                    '生产已结束',
                 ]" :key="item" :label="item" :value="item">
                 </el-option>
             </el-select>

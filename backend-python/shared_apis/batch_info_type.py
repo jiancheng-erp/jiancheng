@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models import *
 from api_utility import to_camel, to_snake
+from constants import SHOESIZERANGE
 
 from logger import logger
 from app_config import db
@@ -122,10 +123,44 @@ def delete_batch_type_logistics():
         return jsonify({"error":"batch_type_doesnt exists"}), 400
 
 
-
 @batch_type_bp.route("/batchtype/getorderbatchtype", methods=["GET"])
 def get_order_batch_type():
     order_id = request.args.get("orderId")
     result = get_order_batch_type_helper(order_id)
     return result
 
+
+@batch_type_bp.route("/batchtype/getbatchtypefororders", methods=["GET"])
+def get_batch_type_for_orders():
+    order_ids = request.args.get("orderIds")
+    if not order_ids:
+        return jsonify({"error": "No order IDs provided"}), 400
+    order_ids = order_ids.split(",")
+    shoe_size_locales = (
+        db.session.query(BatchInfoType, Order)
+        .join(Order, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
+        .filter(Order.order_id.in_(order_ids))
+        .all()
+    )
+    result = {}
+    for row in shoe_size_locales:
+        shoe_size_locale, order = row
+        if order.order_id not in result:
+            result[order.order_id] = []
+        for i in range(len(SHOESIZERANGE)):
+            db_index = i + 34
+            locale = getattr(shoe_size_locale, f"size_{db_index}_name")
+            type_name = getattr(shoe_size_locale, f"batch_info_type_name")
+            id = getattr(shoe_size_locale, f"batch_info_type_id")
+            if not locale:
+                break
+            obj = {
+                "orderId": order.order_id,
+                "id": id,
+                "prop": f"size{db_index}Amount",
+                "label": locale,
+                "type": type_name,
+                "usage": getattr(shoe_size_locale, "batch_info_type_usage"),
+            }
+            result[order.order_id].append(obj)
+    return result

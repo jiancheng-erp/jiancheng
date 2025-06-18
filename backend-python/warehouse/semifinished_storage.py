@@ -13,7 +13,7 @@ from flask import Blueprint, current_app, jsonify, request
 from models import *
 from sqlalchemy import func, or_, and_, desc
 from api_utility import format_datetime
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 
 semifinished_storage_bp = Blueprint("semifinished_storage_bp", __name__)
 

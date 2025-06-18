@@ -9,7 +9,7 @@ from event_processor import EventProcessor
 from file_locations import IMAGE_STORAGE_PATH, FILE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from general_document.bom import generate_excel_file
 from collections import defaultdict
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
 from sqlalchemy.sql.expression import case
 from logger import logger

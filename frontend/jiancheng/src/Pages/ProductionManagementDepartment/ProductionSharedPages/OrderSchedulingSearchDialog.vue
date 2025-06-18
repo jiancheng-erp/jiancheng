@@ -18,7 +18,7 @@
                 </el-option>
             </el-select>
         </el-form-item>
-        <el-form-item label="订单日期">
+        <!-- <el-form-item label="订单日期">
             <el-date-picker v-model="localSearchForm.orderDateRangeSearch" type="daterange" range-separator="至"
                 start-placeholder="订单开始日期" end-placeholder="订单结束日期" value-format="YYYY-MM-DD" @change="handleConfirm" clearable>
             </el-date-picker>
@@ -33,7 +33,7 @@
                 ]" :key="item" :label="item" :value="item">
                 </el-option>
             </el-select>
-        </el-form-item>
+        </el-form-item> -->
     </el-form>
 </template>
 <script>

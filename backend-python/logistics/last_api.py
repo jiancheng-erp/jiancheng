@@ -15,7 +15,7 @@ from general_document.size_purchase_divide_order import generate_size_excel_file
 from constants import SHOESIZERANGE
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 from general_document.last_purchase_divide_order import generate_last_excel_file
 import zipfile
 from logger import logger
