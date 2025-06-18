@@ -25,7 +25,10 @@
             class="el-menu-vertical-demo"
           >
             <el-menu-item index="2" @click="handleMenuClick(2)">
-              <span>订单生产明细</span>
+              <span>生产进度</span>
+            </el-menu-item>
+            <el-menu-item index="11" @click="handleMenuClick(11)">
+              <span>订单排期</span>
             </el-menu-item>
             <el-menu-item index="9" @click="handleMenuClick(9)">
               <span>生产报表</span>
@@ -68,11 +71,11 @@ import todotaskDashboard from '../components/TodoTasksView.vue'
 import LogisticInfo from '../components/LogisticInfo.vue'
 import ProductionInfo from '../components/ProductionInfo.vue'
 import OutSourceInfo from '../components/OutSourceInfo.vue'
-import ProductionSchedulingDialogue from '../components/ProductionSchedulingDialogue.vue'
 import ApprovalPage from '../components/ApprovalPage.vue'
 import ProductionManagement from '../components/ProductionManagement.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import NewProductionScheduling from '../components/NewProductionScheduling.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import axios from 'axios'
@@ -87,14 +90,14 @@ export default {
     ProductionInfo,
     SideMenu,
     LogisticInfo,
-    ProductionSchedulingDialogue,
     OutSourceInfo,
     ApprovalPage,
     ProductionManagement,
     OrderProgress,
     OutsourceFactoryInfo,
     ProductionReport,
-    PersonalInfo
+    PersonalInfo,
+    NewProductionScheduling,
   },
   data() {
     return {
@@ -117,6 +120,9 @@ export default {
       switch (index) {
         case 2:
           this.currentComponent = 'OrderProgress'
+          break
+        case 11:
+          this.currentComponent = 'NewProductionScheduling'
           break
         case 3:
           this.currentComponent = 'LogisticInfo'

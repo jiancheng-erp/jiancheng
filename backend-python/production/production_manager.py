@@ -1,6 +1,12 @@
 import traceback
 from datetime import datetime, timedelta, date
-from api_utility import format_date, format_line_group, status_converter, to_camel
+from api_utility import (
+    format_date,
+    format_line_group,
+    estimate_status_converter,
+    scheduling_status_converter,
+    to_camel,
+)
 from app_config import db
 from constants import *
 from event_processor import EventProcessor
@@ -9,10 +15,11 @@ from models import *
 from sqlalchemy import func, or_, cast, Integer, and_, select, asc, desc, case
 from sqlalchemy.dialects.mysql import insert
 from general_document.batch_info import generate_excel_file
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 import os
 from login.login import current_user_info
 from logger import logger
+
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
 
@@ -232,17 +239,8 @@ def get_in_progress_orders():
     return {"result": result, "total": count_result}
 
 
-PROGRESS_STATUS_MAPPING = {
-    "未排期": [17],
-    "已保存排期": [17],
-    "生产前确认": [18],
-    "生产中": [23],
-    "生产结束": [42],
-}
-
-
 @production_manager_bp.route(
-    "/production/productionmanager/getallorderproductionprogress", methods=["GET"]
+    "/production/getallorderproductionprogress", methods=["GET"]
 )
 def get_all_order_production_progress():
     page = request.args.get("page", type=int)
@@ -256,8 +254,16 @@ def get_all_order_production_progress():
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
     sort_condition = request.args.get("sortCondition")
+    mode = request.args.get("mode", "false")
     # check order status >= 生产流程
-    stmt = select(OrderStatus.order_id).where(OrderStatus.order_current_status >= 9)
+    if mode == "true":
+        stmt = select(OrderStatus.order_id).where(
+            OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER
+        )
+    else:
+        stmt = select(OrderStatus.order_id).where(
+            OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER
+        )
     order_ids = db.session.execute(stmt).scalars().all()
 
     # order shoe status
@@ -275,15 +281,6 @@ def get_all_order_production_progress():
         .filter(OrderShoeStatus.current_status >= 17)
         .group_by(OrderShoe.order_shoe_id)
     )
-    if status_node and status_node != "":
-        status_ids = PROGRESS_STATUS_MAPPING[status_node]
-        status_table = status_table.filter(
-            OrderShoeStatus.current_status.in_(status_ids)
-        )
-        if status_node == "已保存排期":
-            status_table = status_table.filter(
-                OrderShoeStatus.current_status_value == 1
-            )
     status_table = status_table.subquery()
 
     # order shoe amount
@@ -343,6 +340,12 @@ def get_all_order_production_progress():
         .join(
             order_shoe_info, order_shoe_info.c.order_shoe_id == OrderShoe.order_shoe_id
         )
+        .filter(
+            and_(
+                OrderShoeProductionInfo.cutting_start_date.isnot(None),
+                OrderShoeProductionInfo.cutting_end_date.isnot(None),
+            )
+        )  # 不显示没排期的订单
         .filter(Order.order_id.in_(order_ids))
     )
     if order_rid and order_rid != "":
@@ -394,6 +397,110 @@ def get_all_order_production_progress():
         query = query.order_by(desc(order_shoe_info.c.order_shoe_amount))
     else:
         query = query.order_by(asc(Order.order_rid))
+
+    safe_max_datetime = datetime(2099, 12, 31).date()
+    today = datetime.now().date()
+    if status_node == "裁断未开始":
+        query = query.filter(
+            func.coalesce(OrderShoeProductionInfo.cutting_start_date, safe_max_datetime)
+            > today
+        )
+    elif status_node == "裁断进行中":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.cutting_start_date, safe_max_datetime
+                )
+                <= today,
+                func.coalesce(
+                    OrderShoeProductionInfo.cutting_end_date, safe_max_datetime
+                )
+                >= today,
+            )
+        )
+    elif status_node == "预备未开始":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.cutting_end_date, safe_max_datetime
+                )
+                < today,
+                func.coalesce(
+                    OrderShoeProductionInfo.pre_sewing_start_date, safe_max_datetime
+                )
+                > today,
+            )
+        )
+    elif status_node == "预备进行中":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.pre_sewing_start_date, safe_max_datetime
+                )
+                <= today,
+                func.coalesce(
+                    OrderShoeProductionInfo.pre_sewing_end_date, safe_max_datetime
+                )
+                >= today,
+            )
+        )
+    elif status_node == "针车未开始":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.pre_sewing_end_date, safe_max_datetime
+                )
+                < today,
+                func.coalesce(
+                    OrderShoeProductionInfo.sewing_start_date, safe_max_datetime
+                )
+                > today,
+            )
+        )
+    elif status_node == "针车进行中":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.sewing_start_date, safe_max_datetime
+                )
+                <= today,
+                func.coalesce(
+                    OrderShoeProductionInfo.sewing_end_date, safe_max_datetime
+                )
+                >= today,
+            )
+        )
+    elif status_node == "成型未开始":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.sewing_end_date, safe_max_datetime
+                )
+                < today,
+                func.coalesce(
+                    OrderShoeProductionInfo.molding_start_date, safe_max_datetime
+                )
+                > today,
+            )
+        )
+    elif status_node == "成型进行中":
+        query = query.filter(
+            and_(
+                func.coalesce(
+                    OrderShoeProductionInfo.molding_start_date, safe_max_datetime
+                )
+                <= today,
+                func.coalesce(
+                    OrderShoeProductionInfo.molding_end_date, safe_max_datetime
+                )
+                >= today,
+            )
+        )
+    elif status_node == "生产已结束":
+        query = query.filter(
+            func.coalesce(OrderShoeProductionInfo.molding_end_date, safe_max_datetime)
+            < today
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     res = []
@@ -412,9 +519,7 @@ def get_all_order_production_progress():
             total_molding_amount,
             order_shoe_amount,
         ) = row
-        status_arr = [int(item) for item in current_status_str.split(",")]
-        status_value_arr = [int(item) for item in current_status_value_str.split(",")]
-        status = status_converter(status_arr, status_value_arr)
+        estimated_status = estimate_status_converter(production_info)
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -426,7 +531,7 @@ def get_all_order_production_progress():
             "orderStartDate": format_date(order.start_date),
             "orderEndDate": format_date(order.end_date),
             "processSheetUploadStatus": order_shoe.process_sheet_upload_status,
-            "status": status,
+            "status": estimated_status,
             "technicalRemark": order_shoe.business_technical_remark,
             "materialRemark": order_shoe.business_material_remark,
             "cuttingStartDate": format_date(production_info.cutting_start_date),
@@ -491,15 +596,16 @@ def get_all_order_shoe_info():
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     query = (
-        db.session.query(Order, OrderShoe, Shoe, func.sum(OrderShoeBatchInfo.total_amount))
+        db.session.query(
+            Order, OrderShoe, Shoe, func.sum(OrderShoeBatchInfo.total_amount)
+        )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(
             OrderShoeBatchInfo,
-            OrderShoeBatchInfo.order_shoe_type_id
-            == OrderShoeType.order_shoe_type_id,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
         .group_by(Order.order_id, OrderShoe.order_shoe_id)
@@ -755,10 +861,145 @@ def get_order_shoe_production_amount():
     return jsonify(result)
 
 
+@production_manager_bp.route(
+    "/production/getordershoesproductionamount", methods=["GET"]
+)
+def get_order_shoes_production_amount():
+    order_shoe_ids = request.args.get("orderShoeIds")
+    id_list = order_shoe_ids.split(",") if order_shoe_ids else []
+    if not id_list:
+        return jsonify({"message": "No order shoe IDs provided"}), 400
+    entities = (
+        db.session.query(
+            OrderShoeType.order_shoe_type_id,
+            OrderShoeProductionAmount,
+            OrderShoe,
+            Color,
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeProductionAmount.order_shoe_type_id
+            == OrderShoeType.order_shoe_type_id,
+        )
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(OrderShoe.order_shoe_id.in_(id_list))
+        .all()
+    )
+    # Dictionary to accumulate total amounts by color
+    order_shoe_totals = {}
+    color_totals = {}
+
+    # First loop to accumulate total amounts for each color
+    for entity in entities:
+        _, order_shoe_production_amount, order_shoe, color = entity
+        order_shoe_id = order_shoe.order_shoe_id
+        if order_shoe.order_shoe_id not in order_shoe_totals:
+            order_shoe_totals[order_shoe_id] = {}
+        team = order_shoe_production_amount.production_team
+        if team not in order_shoe_totals[order_shoe_id]:
+            order_shoe_totals[order_shoe_id][team] = {}
+        if color.color_name not in order_shoe_totals[order_shoe_id][team]:
+            order_shoe_totals[order_shoe_id][team][color.color_name] = 0
+        if order_shoe_production_amount.total_production_amount:
+            order_shoe_totals[order_shoe_id][team][
+                color.color_name
+            ] += order_shoe_production_amount.total_production_amount
+    print(order_shoe_totals)
+    # Second loop to build the result list and include the color totals
+    result = {}
+    for entity in entities:
+        order_shoe_type_id, order_shoe_production_amount, order_shoe, color = entity
+        team = order_shoe_production_amount.production_team
+        actual_total_amount = order_shoe_production_amount.total_production_amount
+        order_shoe_id = order_shoe.order_shoe_id
+        if order_shoe_id not in result:
+            result[order_shoe_id] = {}
+        if team not in result[order_shoe_id]:
+            result[order_shoe_id][team] = []
+        if not actual_total_amount:
+            actual_total_amount = 0
+        obj = {
+            "productionAmountId": order_shoe_production_amount.order_shoe_production_amount_id,
+            "orderShoeId": order_shoe.order_shoe_id,
+            "orderShoeTypeId": order_shoe_type_id,
+            "colorName": color.color_name,
+            "pairAmount": actual_total_amount,
+            "totalAmount": order_shoe_totals[order_shoe.order_shoe_id][team][
+                color.color_name
+            ],
+            "productionTeam": team,
+        }
+        for i in range(len(SHOESIZERANGE)):
+            db_size = SHOESIZERANGE[i]
+            amount_column_name = f"size_{db_size}_production_amount"
+            amount = getattr(order_shoe_production_amount, amount_column_name)
+            obj[f"size{db_size}Amount"] = amount
+        result[order_shoe_id][team].append(obj)
+    return jsonify(result)
+
+
 @production_manager_bp.route("/production/getordershoebatchinfo", methods=["GET"])
 def get_order_shoe_batch_info():
     order_shoe_id = request.args.get("orderShoeId")
     result = get_order_shoe_batch_info_helper(order_shoe_id)
+    return jsonify(result)
+
+
+@production_manager_bp.route("/production/getamountfororders", methods=["GET"])
+def get_amount_for_orders():
+    order_shoe_ids = request.args.get("orderShoeIds")
+    if not order_shoe_ids:
+        return jsonify({"message": "No order shoe IDs provided"}), 400
+    id_list = order_shoe_ids.split(",")
+    query = (
+        db.session.query(
+            OrderShoe,
+            OrderShoeType,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_amount"),
+            Color,
+        )
+        .join(
+            OrderShoeType,
+            OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id,
+        )
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(OrderShoeType.order_shoe_id.in_(id_list))
+        .group_by(OrderShoeType.order_shoe_type_id)
+    )
+    for i in range(len(SHOESIZERANGE)):
+        db_name = i + 34
+        column_name = f"size_{db_name}_amount"
+        query = query.add_column(
+            cast(func.sum(getattr(OrderShoeBatchInfo, column_name)), Integer).label(
+                column_name
+            )
+        )
+    entities = query.all()
+    # Second loop to build the result list and include the color totals
+    result = {}
+    for entity in entities:
+        order_shoe, order_shoe_type, total_amount, color, *rest = entity
+        if order_shoe.order_shoe_id not in result:
+            result[order_shoe.order_shoe_id] = []
+        obj = {
+            "orderShoeId": order_shoe.order_shoe_id,
+            "orderShoeTypeId": order_shoe_type.order_shoe_type_id,
+            "colorName": color.color_name,
+            "totalAmount": total_amount,
+        }
+        for i in range(34, 47):
+            amount_column_name = f"size_{i}_amount"
+            amount = getattr(entity, amount_column_name)
+            obj[f"size{i}Amount"] = amount
+        result[order_shoe.order_shoe_id].append(obj)
+
     return jsonify(result)
 
 
@@ -1244,7 +1485,7 @@ def reject_price_report():
         report.status = PRICE_REPORT_PM_REJECTED
         report.rejection_reason = data["rejectionReason"]
         team = report.team
-    
+
     if team == "裁断":
         operation = 78
         current_status = 21

@@ -10,7 +10,7 @@ import json
 
 from api_utility import randomIdGenerater
 from app_config import db
-from business.batch_info_type import get_order_batch_type_helper
+from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
 from event_processor import EventProcessor
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
