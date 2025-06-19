@@ -38,18 +38,22 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="多选鞋型排期" v-model="isOrdersSchedulingDialogVis" fullscreen>
+    <el-dialog title="多选鞋型排期" v-model="isOrdersSchedulingDialogVis" fullscreen destroy-on-close @close="closeDialog">
         <el-row>
             <el-col>
                 <el-date-picker v-model="uniformCuttingDateValue" type="daterange" size="default" range-separator="至"
-                    value-format="YYYY-MM-DD" start-placeholder="裁断开始" end-placeholder="裁断结束" />
+                    value-format="YYYY-MM-DD" start-placeholder="裁断开始" end-placeholder="裁断结束" @change="test"/>
                 <el-date-picker v-model="uniformPreSewingDateValue" type="daterange" size="default" range-separator="至"
                     value-format="YYYY-MM-DD" start-placeholder="预备开始" end-placeholder="预备结束" />
                 <el-date-picker v-model="uniformSewingDateValue" type="daterange" size="default" range-separator="至"
                     value-format="YYYY-MM-DD" start-placeholder="针车开始" end-placeholder="针车结束" />
                 <el-date-picker v-model="uniformMoldingDateValue" type="daterange" size="default" range-separator="至"
                     value-format="YYYY-MM-DD" start-placeholder="成型开始" end-placeholder="成型结束" />
-                <el-button type="primary" @click="uniformDateValue">统一排期</el-button>
+                <el-button-group>
+                    <el-button type="primary" @click="setDateValue">设置生产日期</el-button>
+                    <el-button type="warning" @click="overwriteDateValue">覆盖生产日期</el-button>
+                    <el-button type="danger" @click="clearDateValue">清空生产日期</el-button>
+                </el-button-group>
             </el-col>
         </el-row>
         <el-row>
@@ -100,8 +104,8 @@
                             </el-table>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="orderRid" label="订单号"></el-table-column>
-                    <el-table-column prop="shoeRid" label="工厂型号"></el-table-column>
+                    <el-table-column prop="orderRid" label="订单号" width="120px"></el-table-column>
+                    <el-table-column prop="shoeRid" label="工厂型号" width="120px"></el-table-column>
                     <el-table-column label="裁断排期">
                         <template #default="scope">
                             <el-date-picker v-model="scope.row.cuttingDateValue" type="daterange" size="default"
@@ -131,7 +135,7 @@
         </el-row>
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="isOrdersSchedulingDialogVis = false">取消</el-button>
+                <el-button @click="closeDialog">取消</el-button>
                 <el-button type="primary" @click="startProduction">下发排期</el-button>
             </span>
         </template>
@@ -164,10 +168,10 @@ export default {
                 customerBrandSearch: null,
                 sortCondition: null
             },
-            uniformCuttingDateValue: [null, null],
-            uniformPreSewingDateValue: [null, null],
-            uniformSewingDateValue: [null, null],
-            uniformMoldingDateValue: [null, null],
+            uniformCuttingDateValue: null,
+            uniformPreSewingDateValue: null,
+            uniformSewingDateValue: null,
+            uniformMoldingDateValue: null,
             orderTableData: [],
             orderTotalRows: 0,
             currentPage: 1,
@@ -176,7 +180,7 @@ export default {
             isMultiOrders: false,
             isOrdersSchedulingDialogVis: false,
             schedulingStatusObj: {
-                dateValue: [null, null],
+                dateValue: null,
                 dateStatusTable: [],
                 isDateStatusTableVis: false,
                 isLoading: false,
@@ -187,16 +191,19 @@ export default {
         this.getOrderDataTable()
     },
     methods: {
+        test() {
+            console.log(this.uniformCuttingDateValue, this.uniformPreSewingDateValue, this.uniformSewingDateValue, this.uniformMoldingDateValue)
+        },
         async saveProductionSchedule() {
             try {
                 let data = []
                 for (let row of this.selectedRows) {
                     let obj = {
                         "orderShoeId": row.orderShoeId,
-                        "cuttingDateValue": row.cuttingDateValue,
-                        "preSewingDateValue": row.preSewingDateValue,
-                        "sewingDateValue": row.sewingDateValue,
-                        "moldingDateValue": row.moldingDateValue
+                        "cuttingDateValue": row.cuttingDateValue ? row.cuttingDateValue : [null, null],
+                        "preSewingDateValue": row.preSewingDateValue ? row.preSewingDateValue : [null, null],
+                        "sewingDateValue": row.sewingDateValue ? row.sewingDateValue : [null, null],
+                        "moldingDateValue": row.moldingDateValue ? row.moldingDateValue : [null, null],
                     }
                     data.push(obj)
                 }
@@ -234,14 +241,34 @@ export default {
                 this.isOrdersSchedulingDialogVis = false
             })
         },
-        uniformDateValue() {
+        setDateValue() {
             this.selectedRows.forEach(row => {
-                row.cuttingDateValue = this.uniformCuttingDateValue
-                row.preSewingDateValue = this.uniformPreSewingDateValue
-                row.sewingDateValue = this.uniformSewingDateValue
-                row.moldingDateValue = this.uniformMoldingDateValue
+                if (row.cuttingDateValue == null) row.cuttingDateValue = this.uniformCuttingDateValue
+                if (row.preSewingDateValue == null) {
+                    row.preSewingDateValue = this.uniformPreSewingDateValue
+                }
+                if (!row.sewingDateValue) row.sewingDateValue = this.uniformSewingDateValue
+                if (!row.moldingDateValue) row.moldingDateValue = this.uniformMoldingDateValue
             })
-            ElMessage.success('已统一排期')
+            ElMessage.success('已设置排期')
+        },
+        overwriteDateValue() {
+            this.selectedRows.forEach(row => {
+                row.cuttingDateValue = this.uniformCuttingDateValue ? this.uniformCuttingDateValue : row.cuttingDateValue
+                row.preSewingDateValue = this.uniformPreSewingDateValue ? this.uniformPreSewingDateValue : row.preSewingDateValue
+                row.sewingDateValue = this.uniformSewingDateValue ? this.uniformSewingDateValue : row.sewingDateValue
+                row.moldingDateValue = this.uniformMoldingDateValue ? this.uniformMoldingDateValue : row.moldingDateValue
+            })
+            ElMessage.success('已覆盖排期')
+        },
+        clearDateValue() {
+            this.selectedRows.forEach(row => {
+                row.cuttingDateValue = null
+                row.preSewingDateValue = null
+                row.sewingDateValue = null
+                row.moldingDateValue = null
+            })
+            ElMessage.success('已清空所有日期')
         },
         filteredColumns(table) {
             return table.shoeSizeColumns.filter(column =>
@@ -265,10 +292,10 @@ export default {
             let orderShoeSizesMap = response.data
             // set date range values for selected rows
             for (let row of this.selectedRows) {
-                row.cuttingDateValue = row.cuttingStartDate ? [row.cuttingStartDate, row.cuttingEndDate] : [null, null]
-                row.preSewingDateValue = row.preSewingStartDate ? [row.preSewingStartDate, row.preSewingEndDate] : [null, null]
-                row.sewingDateValue = row.sewingStartDate ? [row.sewingStartDate, row.sewingEndDate] : [null, null]
-                row.moldingDateValue = row.moldingStartDate ? [row.moldingStartDate, row.moldingEndDate] : [null, null]
+                row.cuttingDateValue = row.cuttingStartDate ? [row.cuttingStartDate, row.cuttingEndDate] : null
+                row.preSewingDateValue = row.preSewingStartDate ? [row.preSewingStartDate, row.preSewingEndDate] :null
+                row.sewingDateValue = row.sewingStartDate ? [row.sewingStartDate, row.sewingEndDate] : null
+                row.moldingDateValue = row.moldingStartDate ? [row.moldingStartDate, row.moldingEndDate] : null
                 row.shoeBatchInfo = orderShoeAmountMap[row.orderShoeId] || []
                 row.shoeSizeColumns = orderShoeSizesMap[row.orderId] || []
                 row.spanMethod = shoeBatchInfoTableSpanMethod(row.shoeBatchInfo)
@@ -412,6 +439,14 @@ export default {
             this.pageSize = val
             this.getOrderDataTable()
         },
+        closeDialog() {
+            this.isOrdersSchedulingDialogVis = false
+            this.selectedRows = []
+            this.uniformCuttingDateValue = null
+            this.uniformPreSewingDateValue = null
+            this.uniformSewingDateValue = null
+            this.uniformMoldingDateValue = null
+        }
     },
 }
 </script>
