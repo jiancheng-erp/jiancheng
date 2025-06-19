@@ -1424,6 +1424,29 @@ def get_technical_confirm_status():
 def export_order():
     output_type = request.args.get("outputType", type=int)
     order_ids = request.args.get("orderIds").split(",")
+
+    # 获取订单与 batch_info_type 映射
+    order_batch_type_map = dict(
+        db.session.query(Order.order_id, Order.batch_info_type_id)
+        .filter(Order.order_id.in_(order_ids))
+        .all()
+    )
+
+    # 获取所有唯一的 batch_info_type_id
+    batch_info_type_ids = list(set(filter(None, order_batch_type_map.values())))
+    batch_info_types = (
+        db.session.query(BatchInfoType)
+        .filter(BatchInfoType.batch_info_type_id.in_(batch_info_type_ids))
+        .all()
+    )
+
+    # 构建 batch_info_type_id => 尺码名列表映射
+    batch_size_names_map = {}
+    for bit in batch_info_types:
+        batch_size_names_map[bit.batch_info_type_id] = [
+            getattr(bit, f"size_{i+34}_name") for i in range(len(SHOESIZERANGE))
+        ]
+
     response = (
         db.session.query(
             Order,
@@ -1433,7 +1456,7 @@ def export_order():
             ShoeType,
             OrderShoeBatchInfo,
             PackagingInfo,
-            Color
+            Color,
         )
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
@@ -1447,14 +1470,13 @@ def export_order():
             PackagingInfo,
             PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
         )
-        .join(
-            Color, Color.color_id == ShoeType.color_id
-        )
+        .join(Color, Color.color_id == ShoeType.color_id)
         .filter(Order.order_id.in_(order_ids))
         .all()
     )
+
     order_shoe_mapping = {}
-    
+
     for row in response:
         (
             order,
@@ -1464,81 +1486,63 @@ def export_order():
             shoe_type,
             order_shoe_batch_info,
             packaging_info,
-            color
+            color,
         ) = row
+
+        current_batch_type_id = order_batch_type_map.get(order.order_id)
+        size_names = batch_size_names_map.get(current_batch_type_id, [])
+
+        obj = {
+            "packagingInfoName": packaging_info.packaging_info_name,
+            "packagingInfoLocale": packaging_info.packaging_info_locale,
+            "totalQuantityRatio": packaging_info.total_quantity_ratio,
+            "count": order_shoe_batch_info.packaging_info_quantity,
+            "sizeNames": size_names,
+        }
+
+        for i in range(len(SHOESIZERANGE)):
+            obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
+                packaging_info, f"size_{i+34}_ratio"
+            )
+
+        shoe_meta_data = {
+            "color": color.color_name,
+            "colorName": order_shoe_type.customer_color_name,
+            "imgUrl": shoe_type.shoe_image_url,
+            "unitPrice": order_shoe_type.unit_price,
+            "packagingInfo": [obj],
+        }
+
         if order_shoe.order_shoe_id not in order_shoe_mapping:
             order_shoe_mapping[order_shoe.order_shoe_id] = {
                 "orderRId": order.order_rid,
                 "customerProductName": order_shoe.customer_product_name,
                 "shoeRId": shoe.shoe_rid,
-                "shoes": [],
-                "remark": order_shoe.business_technical_remark + order_shoe.business_material_remark,
+                "shoes": [shoe_meta_data],
+                "remark": (order_shoe.business_technical_remark or "") + (order_shoe.business_material_remark or ""),
             }
-            shoe_meta_data = {
-                "color": color.color_name,
-                "colorName": order_shoe_type.customer_color_name,
-                "imgUrl": shoe_type.shoe_image_url,
-                "unitPrice": order_shoe_type.unit_price,
-                "packagingInfo": [],
-            }
-            obj = {
-                "packagingInfoName": packaging_info.packaging_info_name,
-                "packagingInfoLocale": packaging_info.packaging_info_locale,
-                "totalQuantityRatio": packaging_info.total_quantity_ratio,
-                "count": order_shoe_batch_info.packaging_info_quantity,
-            }
-            for i in range(len(SHOESIZERANGE)):
-                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
-                    packaging_info, f"size_{i+34}_ratio"
-                )
-            shoe_meta_data["packagingInfo"].append(obj)
-            order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
         else:
-            shoe_meta_data = {
-                "color": color.color_name,
-                "colorName": order_shoe_type.customer_color_name,
-                "imgUrl": shoe_type.shoe_image_url,
-                "unitPrice": order_shoe_type.unit_price,
-                "packagingInfo": [],
-            }
-            obj = {
-                "packagingInfoName": packaging_info.packaging_info_name,
-                "packagingInfoLocale": packaging_info.packaging_info_locale,
-                "totalQuantityRatio": packaging_info.total_quantity_ratio,
-                "count": order_shoe_batch_info.packaging_info_quantity,
-            }
-            for i in range(len(SHOESIZERANGE)):
-                obj[f"size{SHOESIZERANGE[i]}Ratio"] = getattr(
-                    packaging_info, f"size_{i+34}_ratio"
-                )
-            shoe_meta_data["packagingInfo"].append(obj)
             order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
 
-    # find shoe size name
-    shoe_size_names = (
-        db.session.query(BatchInfoType)
-        .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
-        .filter(Order.order_id == order_ids[0])
-        .first()
-    )
-    meta_data = {"sizeNames": []}
-    # add size_name of batch info type
-    for i in range(len(SHOESIZERANGE)):
-        meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))
+    # 构建 meta_data（备用用作整体字段）
+    meta_data = {
+        "batchSizeNames": batch_size_names_map  # 如果你后续也需要在模板中用
+    }
+
     template_path = os.path.join(FILE_STORAGE_PATH, "订单模板.xlsx")
+    timestamp = str(time.time())
+
     if output_type == 0:
-        timestamp = str(time.time())
         new_file_name = f"导出配码订单_{timestamp}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码订单", new_file_name)
         generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
     else:
-        timestamp = str(time.time())
         new_file_name = f"导出数量订单_{timestamp}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量订单", new_file_name)
-        generate_amount_excel_file(
-            template_path, new_file_path, order_shoe_mapping, meta_data
-        )
+        generate_amount_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+
     return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
+
 
 @order_bp.route("/order/exportproductionorder", methods=["GET"])
 def export_production_order():
