@@ -8,6 +8,7 @@ import os
 from collections import defaultdict
 from openpyxl.utils import units
 from logger import logger
+from openpyxl.styles import Font
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -63,10 +64,50 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                 "remark": metadata.get("remark")
             })
 
+    first_customer_shoe_written = False  # 标记是否写过第一个鞋型
+
     for shoe_rid, cust_group in grouped_data.items():
         shoe_start = row
         for cust_name, color_group in cust_group.items():
             cust_start = row
+
+            # 🟩 获取当前鞋型的尺码名（从任意颜色-包装里取即可）
+            size_names = []
+            found = False
+            for color_entries in color_group.values():
+                for entry in color_entries:
+                    for packaging in entry["packaging_info"]:
+                        size_names = packaging.get("sizeNames", [])
+                        found = True
+                        break
+                    if found:
+                        break
+                if found:
+                    break
+
+            # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
+            if not first_customer_shoe_written:
+                temp_column = column_index_from_string("F")
+                for name in size_names:
+                    cell = ws[f"{get_column_letter(temp_column)}8"]
+                    cell.value = name
+                    cell.font = Font(bold=True)  # 🟩 加粗
+                    temp_column += 1
+                merge_start_row = cust_start
+                first_customer_shoe_written = True
+            else:
+                insert_row_with_format(ws, row, row + 1)
+                ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
+                ws[f"E{row}"] = "尺码"
+                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("F")
+                for name in size_names:
+                    cell = ws[f"{get_column_letter(temp_column)}{row}"]
+                    cell.value = name
+                    cell.font = Font(bold=True)  # 🟩 加粗
+                    temp_column += 1
+                merge_start_row = row + 1  # 记录尺码行位置
+                row += 1  # advance to next row
             for color, color_entries in color_group.items():
                 color_start = row
                 color_name = color_entries[0].get("color_name")
@@ -151,8 +192,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         ws.add_image(img)
 
             # Merge column C (customer_product_name)
-            if row - cust_start > 1:
-                ws.merge_cells(f"B{cust_start}:B{row - 1}")
+            if row - merge_start_row > 1:
+                ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
     ws = wb.active
@@ -175,10 +216,50 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                 "remark": metadata.get("remark")
             })
 
+    first_customer_shoe_written = False  # 标记是否写过第一个鞋型
+
     for shoe_rid, cust_group in grouped_data.items():
         shoe_start = row
         for cust_name, color_group in cust_group.items():
             cust_start = row
+
+            # 🟩 获取当前鞋型的尺码名（从任意颜色-包装里取即可）
+            size_names = []
+            found = False
+            for color_entries in color_group.values():
+                for entry in color_entries:
+                    for packaging in entry["packaging_info"]:
+                        size_names = packaging.get("sizeNames", [])
+                        found = True
+                        break
+                    if found:
+                        break
+                if found:
+                    break
+
+            # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
+            if not first_customer_shoe_written:
+                temp_column = column_index_from_string("F")
+                for name in size_names:
+                    cell = ws[f"{get_column_letter(temp_column)}8"]
+                    cell.value = name
+                    cell.font = Font(bold=True)  # 🟩 加粗
+                    temp_column += 1
+                merge_start_row = cust_start
+                first_customer_shoe_written = True
+            else:
+                insert_row_with_format(ws, row, row + 1)
+                ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
+                ws[f"E{row}"] = "尺码"
+                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("F")
+                for name in size_names:
+                    cell = ws[f"{get_column_letter(temp_column)}{row}"]
+                    cell.value = name
+                    cell.font = Font(bold=True)  # 🟩 加粗
+                    temp_column += 1
+                merge_start_row = row + 1  # 记录尺码行位置
+                row += 1  # advance to next row
             for color, color_entries in color_group.items():
                 color_start = row
                 color_name = color_entries[0].get("color_name")
@@ -264,8 +345,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         ws.add_image(img)
 
             # Merge column C (customer_product_name)
-            if row - cust_start > 1:
-                ws.merge_cells(f"B{cust_start}:B{row - 1}")
+            if row - merge_start_row > 1:
+                ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
 
 
 # Function to save the workbook after modification
@@ -283,11 +364,11 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     insert_series_data(wb, order_data, "A", 9)
 
     # insert shoe size name
-    column = "F"
-    row = 8
-    for i in range(len(SHOESIZERANGE)):
-        ws[f"{column}{row}"] = metadata["sizeNames"][i]
-        column = get_next_column_name(column)
+    # column = "F"
+    # row = 8
+    # for i in range(len(SHOESIZERANGE)):
+    #     ws[f"{column}{row}"] = metadata["sizeNames"][i]
+    #     column = get_next_column_name(column)
 
     # Save the workbook
     save_workbook(wb, new_file_path)
@@ -302,11 +383,11 @@ def generate_amount_excel_file(template_path, new_file_path, order_data: dict, m
     insert_series_data_amount(wb, order_data, "A", 9)
 
     # insert shoe size name
-    column = "F"
-    row = 8
-    for i in range(len(SHOESIZERANGE)):
-        ws[f"{column}{row}"] = metadata["sizeNames"][i]
-        column = get_next_column_name(column)
+    # column = "F"
+    # row = 8
+    # for i in range(len(SHOESIZERANGE)):
+    #     ws[f"{column}{row}"] = metadata["sizeNames"][i]
+    #     column = get_next_column_name(column)
 
     # Save the workbook
     save_workbook(wb, new_file_path)
