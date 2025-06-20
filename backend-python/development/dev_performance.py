@@ -212,8 +212,8 @@ def get_all_shoes_with_designer():
         if order_pair_key not in counted_pairs:
             counted_pairs.add(order_pair_key)
             shoe_map[shoe_key]["totalOrderCount"] += 1
-            shoe_map[shoe_key]["totalShoeCountBussiness"] += row.business_amount
-            shoe_map[shoe_key]["totalShoeCountProduct"] += row.product_amount
+        shoe_map[shoe_key]["totalShoeCountBussiness"] += row.business_amount
+        shoe_map[shoe_key]["totalShoeCountProduct"] += row.product_amount
 
     final_data = []
     for shoe in shoe_map.values():
