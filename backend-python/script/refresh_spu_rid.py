@@ -35,75 +35,42 @@ NAME_TO_FIRST_ALPHABET = {
 
 def refresh_spu_rid(app, db):
     logger.debug("Refreshing spu rid...")
+
+    def normalize_empty(value):
+        return value if value not in ("", None) else None
+
+    def safe_equal(column, value):
+        return column.is_(None) if value is None else column == value
+
     with app.app_context():
-        # loop all material_storage and size_material_storage, and update the spu_table.
-        # if not have a spu row, create it;if have, use the spu_material_id(use inbound_material_id,
-        # inbound_material_model,inbound_material_specification,color for material_storage;
-        # material_id,material_model,material_specification,color for size_material_storage
-        # ), then insert the spu_material_id to material_storage and size_material_storage
         material_storages = db.session.query(MaterialStorage).all()
         for material_storage in material_storages:
-            model = material_storage.inbound_model or None
-            spec = material_storage.inbound_specification or None
-            color = material_storage.material_storage_color or None
+            model = normalize_empty(material_storage.inbound_model)
+            spec = normalize_empty(material_storage.inbound_specification)
+            color = normalize_empty(material_storage.material_storage_color)
 
             spu_material = db.session.query(SPUMaterial).filter(
                 SPUMaterial.material_id == material_storage.actual_inbound_material_id,
-                SPUMaterial.material_model.is_(model),
-                SPUMaterial.material_specification.is_(spec),
-                SPUMaterial.color.is_(color),
+                safe_equal(SPUMaterial.material_model, model),
+                safe_equal(SPUMaterial.material_specification, spec),
+                safe_equal(SPUMaterial.color, color),
             ).first()
+
             if not spu_material:
-                # create a new spu_material
-                # use algorithm to generate a new spu_material_rid
                 spu_material_rid = generate_spu_rid(material_storage.actual_inbound_material_id)
-                
-                
                 spu_material = SPUMaterial(
                     material_id=material_storage.actual_inbound_material_id,
-                    material_model=material_storage.inbound_model,
-                    material_specification=material_storage.inbound_specification,
-                    color=material_storage.material_storage_color,
+                    material_model=model if model else '',
+                    material_specification=spec if spec else '',
+                    color=color if color else '',
                     spu_rid=spu_material_rid,
                 )
                 db.session.add(spu_material)
                 db.session.flush()
-            # update the spu_rid to material_storage and size_material_storage
+
             material_storage.spu_material_id = spu_material.spu_material_id
             db.session.flush()
-        # update the spu_rid to size_material_storage
-        size_material_storages = db.session.query(SizeMaterialStorage).all()
-        for size_material_storage in size_material_storages:
-            # get the spu_material_id from the database
-            model = size_material_storage.size_material_model or None
-            spec = size_material_storage.size_material_specification or None
-            color = size_material_storage.size_material_color or None
 
-            spu_material = db.session.query(SPUMaterial).filter(
-                SPUMaterial.material_id == size_material_storage.material_id,
-                SPUMaterial.material_model.is_(model),
-                SPUMaterial.material_specification.is_(spec),
-                SPUMaterial.color.is_(color),
-            ).first()
-            if not spu_material:
-                # create a new spu_material
-                # use algorithm to generate a new spu_material_rid
-                spu_material_rid = generate_spu_rid(size_material_storage.material_id)
-                
-                
-                spu_material = SPUMaterial(
-                    material_id=size_material_storage.material_id,
-                    material_model=size_material_storage.size_material_model,
-                    material_specification=size_material_storage.size_material_specification,
-                    color=size_material_storage.size_material_color,
-                    spu_rid=spu_material_rid,
-                )
-                db.session.add(spu_material)
-                db.session.flush()
-            # update the spu_rid to size_material_storage
-            size_material_storage.spu_material_id = spu_material.spu_material_id
-            db.session.flush()
-        # commit the changes to the database
         try:
             db.session.commit()
         except SQLAlchemyError as e:
@@ -128,3 +95,38 @@ def generate_spu_rid(material_id):
         return spu_rid
     else:
         raise ValueError("Material type name not found in the database.")
+    
+    
+    
+def batch_update_spu_material_id(app, db, batch_size=1000):
+    logger.info("Starting batch update for spu_material_id from material_storage...")
+
+    with app.app_context():
+        # 加载整个映射表到内存（dict 结构），只做一次
+        logger.info("Loading spu_material_id_mapping into memory...")
+        mapping_rows = db.session.execute(text("SELECT old_spu_material_id, new_spu_material_id FROM spu_material_id_mapping")).fetchall()
+        mapping_dict = {row.old_spu_material_id: row.new_spu_material_id for row in mapping_rows}
+        logger.info(f"Loaded {len(mapping_dict)} mapping records.")
+
+        offset = 0
+        total_updated = 0
+
+        while True:
+            # 分批获取 material_storage 记录
+            storages = db.session.query(MaterialStorage).order_by(MaterialStorage.material_storage_id).offset(offset).limit(batch_size).all()
+            if not storages:
+                break
+
+            for storage in storages:
+                old_id = storage.spu_material_id
+                new_id = mapping_dict.get(old_id)
+                if new_id and new_id != old_id:
+                    storage.spu_material_id = new_id
+
+            db.session.commit()
+            updated_count = len(storages)
+            total_updated += updated_count
+            offset += batch_size
+            logger.info(f"Updated batch of {updated_count}, total updated: {total_updated}")
+
+        logger.info(f"Finished updating spu_material_id in material_storage. Total: {total_updated}")
