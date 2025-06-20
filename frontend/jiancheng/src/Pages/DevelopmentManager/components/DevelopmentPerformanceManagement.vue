@@ -15,48 +15,17 @@
                 value-format="YYYY-MM-DD"
                 style="width: 100%"
                 clearable
-                @change="onFilterChange"
-                @clear="onFilterChange"
+                @change="handleDateChange('start')"
             />
         </el-col>
         <el-col :span="4">
-            <el-date-picker
-                v-model="endDateFilter"
-                type="date"
-                placeholder="结束日期"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-                clearable
-                @change="onFilterChange"
-                @clear="onFilterChange"
-            />
+            <el-date-picker v-model="endDateFilter" type="date" placeholder="结束日期" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" clearable @change="handleDateChange('end')" />
         </el-col>
         <el-col :span="4">
-            <el-date-picker
-                v-model="yearFilter"
-                type="year"
-                placeholder="按年份统计"
-                format="YYYY"
-                value-format="YYYY"
-                style="width: 100%"
-                clearable
-                @change="onFilterChange"
-                @clear="onFilterChange"
-            />
+            <el-date-picker v-model="yearFilter" type="year" placeholder="按年份统计" format="YYYY" value-format="YYYY" style="width: 100%" clearable @change="handleDateChange('year')" />
         </el-col>
         <el-col :span="4">
-            <el-date-picker
-                v-model="monthFilter"
-                type="month"
-                placeholder="按月份统计"
-                format="YYYY-MM"
-                value-format="YYYY-MM"
-                style="width: 100%"
-                clearable
-                @change="onFilterChange"
-                @clear="onFilterChange"
-            />
+            <el-date-picker v-model="monthFilter" type="month" placeholder="按月份统计" format="YYYY-MM" value-format="YYYY-MM" style="width: 100%" clearable @change="handleDateChange('month')" />
         </el-col>
     </el-row>
 
@@ -91,7 +60,7 @@
                     value-format="YYYY-MM-DD"
                     style="width: 100%"
                     clearable
-                    @change="handleDialogFilterChange"
+                    @change="handleDateChange('start')"
                 />
             </el-col>
             <el-col :span="4">
@@ -103,14 +72,14 @@
                     value-format="YYYY-MM-DD"
                     style="width: 100%"
                     clearable
-                    @change="handleDialogFilterChange"
+                    @change="handleDateChange('end')"
                 />
             </el-col>
             <el-col :span="4">
-                <el-date-picker v-model="yearFilter" type="year" placeholder="按年份统计" format="YYYY" value-format="YYYY" clearable style="width: 100%" @change="handleDialogFilterChange" />
+                <el-date-picker v-model="yearFilter" type="year" placeholder="按年份统计" format="YYYY" value-format="YYYY" clearable style="width: 100%" @change="handleDateChange('year')" />
             </el-col>
             <el-col :span="4">
-                <el-date-picker v-model="monthFilter" type="month" placeholder="按月份统计" format="YYYY-MM" value-format="YYYY-MM" clearable style="width: 100%" @change="handleDialogFilterChange" />
+                <el-date-picker v-model="monthFilter" type="month" placeholder="按月份统计" format="YYYY-MM" value-format="YYYY-MM" clearable style="width: 100%" @change="handleDateChange('month')" />
             </el-col>
             <el-col :span="24" style="text-align: right; font-weight: bold; line-height: 32px">
                 使用订单数：{{ filteredOrderCount.byShoe }}（按鞋型） / {{ filteredOrderCount.byColor }}（按颜色） ，总业务量：{{ filteredOrderSummary.totalBusiness }}，总生产量：{{
@@ -166,7 +135,6 @@ export default {
         return {
             designerSearchText: '',
             designerList: [],
-            allPerformanceDataMap: {},
             performanceData: [],
             selectedDesigner: '',
             dialogVisible: false,
@@ -175,24 +143,18 @@ export default {
             startDateFilter: '',
             endDateFilter: '',
             yearFilter: '',
-            monthFilter: '',
-            dateRangeFilter: []
+            monthFilter: ''
         }
     },
     computed: {
         totalSummary() {
             let totalBusiness = 0
             let totalProduct = 0
-
             for (const designer of this.designerList) {
                 totalBusiness += Number(designer.totalShoeCountBussiness || 0)
                 totalProduct += Number(designer.totalShoeCountProduct || 0)
             }
-
-            return {
-                totalBusiness,
-                totalProduct
-            }
+            return { totalBusiness, totalProduct }
         },
         paginatedData() {
             const start = (this.currentPage - 1) * 10
@@ -202,7 +164,6 @@ export default {
         filteredOrderCount() {
             let totalByColor = 0
             let totalByShoe = new Set()
-
             for (const item of this.performanceData) {
                 for (const color of item.colors) {
                     for (const order of color.orders) {
@@ -211,11 +172,7 @@ export default {
                     }
                 }
             }
-
-            return {
-                byColor: totalByColor,
-                byShoe: totalByShoe.size
-            }
+            return { byColor: totalByColor, byShoe: totalByShoe.size }
         },
         filteredOrderSummary() {
             let totalBusiness = 0
@@ -228,42 +185,23 @@ export default {
                     }
                 }
             }
-            return {
-                totalBusiness,
-                totalProduct
-            }
+            return { totalBusiness, totalProduct }
         }
     },
     mounted() {
         this.fetchDesignerList()
     },
     methods: {
-        handleDialogFilterChange() {
-            // 清除互斥项
-            if (this.startDateFilter || this.endDateFilter) {
+        handleDateChange(type) {
+            if (type === 'start' || type === 'end') {
                 this.yearFilter = ''
                 this.monthFilter = ''
-            } else if (this.yearFilter || this.monthFilter) {
+            } else if (type === 'year' || type === 'month') {
                 this.startDateFilter = ''
                 this.endDateFilter = ''
             }
-
-            // 更新对话框数据
-            this.fetchPerformanceData()
-
-            // 更新主页面数据
             this.fetchDesignerList()
-        },
-        onFilterChange() {
-            if (this.startDateFilter || this.endDateFilter) {
-                this.yearFilter = ''
-                this.monthFilter = ''
-            } else if (this.yearFilter || this.monthFilter) {
-                this.startDateFilter = ''
-                this.endDateFilter = ''
-            }
-
-            this.fetchDesignerList()
+            if (this.dialogVisible) this.fetchPerformanceData()
         },
         async fetchDesignerList() {
             const params = {
@@ -273,7 +211,6 @@ export default {
                 year: this.yearFilter ?? '',
                 month: this.monthFilter ?? ''
             }
-
             const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getalldesigners`, { params })
             this.designerList = res.data.data
         },
@@ -293,7 +230,6 @@ export default {
                 month: this.monthFilter || '',
                 shoeRid: this.searchText || ''
             }
-
             const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getallshoeswithadesigner`, { params })
             this.performanceData = res.data.data || []
         },
