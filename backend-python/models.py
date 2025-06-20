@@ -257,64 +257,6 @@ class MaterialStorage(db.Model):
         """Convert SQLAlchemy object to dictionary."""
         return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
-class OldMaterialStorage(db.Model):
-    __tablename__ = "old_material_storage"
-
-    __table_args__ = (
-        db.UniqueConstraint('spu_material_id', 'order_shoe_id', 'actual_inbound_unit', name='unq_material_storage_0'),
-    )
-
-    material_storage_id = db.Column(
-        db.BigInteger, primary_key=True, autoincrement=True, nullable=False
-    )
-    material_model = db.Column(db.String(50), default="", nullable=True)
-    order_id = db.Column(db.BigInteger)
-    order_shoe_id = db.Column(db.BigInteger)
-    material_id = db.Column(db.BigInteger, nullable=False)
-    estimated_inbound_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    actual_purchase_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    actual_inbound_amount = db.Column(
-        db.DECIMAL(12, 5),
-        default=0,
-    )
-    current_amount = db.Column(db.DECIMAL(12, 5), default=0, nullable=False)
-    unit_price = db.Column(db.DECIMAL(13, 4), nullable=True, default=0.00)
-    average_price = db.Column(db.DECIMAL(13, 4), nullable=True, default=0.00)
-    material_specification = db.Column(db.String(100), default="", nullable=True)
-    material_outsource_status = db.Column(db.SmallInteger, default=0, nullable=False)
-    material_outsource_date = db.Column(db.Date)
-    material_storage_color = db.Column(db.String(40), default="", nullable=True)
-    total_purchase_order_id = db.Column(db.BigInteger, nullable=True)
-    material_estimated_arrival_date = db.Column(db.Date)
-    material_storage_status = db.Column(db.SmallInteger, default=0)
-    department_id = db.Column(db.Integer)
-
-    craft_name = db.Column(db.String(200), nullable=True)
-    composite_unit_cost = db.Column(db.DECIMAL(12, 3), default=0.00)
-    production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
-    purchase_order_item_id = db.Column(db.BigInteger, nullable=True)
-    actual_inbound_unit = db.Column(db.String(5), nullable=True)
-    actual_inbound_material_id = db.Column(db.BigInteger, nullable=True)
-    inbound_model = db.Column(db.String(50), nullable=True)
-    inbound_specification = db.Column(db.String(100), nullable=True)
-    spu_material_id = db.Column(db.Integer, nullable=True)
-
-    def __repr__(self):
-        return f"<MaterialStorage(material_storage_id={self.material_storage_id})>"
-
-    def __name__(self):
-        return "MaterialStorage"
-
-    def to_dict(obj):
-        """Convert SQLAlchemy object to dictionary."""
-        return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
-
     
 
 class Operation(db.Model):
@@ -1197,9 +1139,8 @@ class OutboundRecord(db.Model):
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
     supplier_id = db.Column(db.Integer, nullable=True)
-    warehouse_id = db.Column(db.Integer, nullable=False)
     is_sized_material = db.Column(db.SmallInteger, nullable=False, default=0)
-    total_price = db.Column(db.DECIMAL(12, 3), nullable=True)
+    total_price = db.Column(db.DECIMAL(13, 4), nullable=True)
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
 
