@@ -1123,6 +1123,7 @@ export default {
             this.newOrderForm.customerId = row.customerId
             this.newOrderForm.customerBrand = row.customerBrand
             this.newOrderForm.customerName = row.customerName
+            this.updateBatchType()
             this.openCreateOrderDialog()
             this.templateFilter = ''
             this.newOrderTemplateVis = false
