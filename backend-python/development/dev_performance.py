@@ -22,14 +22,18 @@ def get_all_designers():
     _, _, department = current_user_info()
     user_department = department.department_name
 
-    # 空值转换为“设计师信息空缺”
+    designer_keyword = request.args.get("designer", "").strip()
+    start_date = request.args.get("startDate", "").strip()
+    end_date = request.args.get("endDate", "").strip()
+    year = request.args.get("year", "").strip()
+    month = request.args.get("month", "").strip()
+
     designer_group = case(
         (func.ifnull(Shoe.shoe_designer, "") == "", "设计师信息空缺"),
         else_=Shoe.shoe_designer,
     )
 
-    # 联表统计
-    results = (
+    query = (
         db.session.query(
             designer_group.label("designer"),
             Shoe.shoe_department_id.label("department"),
@@ -44,34 +48,53 @@ def get_all_designers():
         .outerjoin(OrderShoeBatchInfo, OrderShoeType.order_shoe_type_id == OrderShoeBatchInfo.order_shoe_type_id)
         .outerjoin(FinishedShoeStorage, OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id)
         .filter(Shoe.shoe_department_id == user_department)
-        .group_by(designer_group, Shoe.shoe_department_id)
-        .all()
     )
 
-    # 构造返回结构
-    designer_list = []
-    for row in results:
-        designer_list.append({
-            "designer": row.designer,
-            "department": row.department,
-            "totalOrderCount": row.totalOrderCount,
-            "totalShoeCountBussiness": row.totalShoeCountBussiness,
-            "totalShoeCountProduct": row.totalShoeCountProduct
-        })
+    # 🧠 精准处理筛选条件
+    if designer_keyword:
+        query = query.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
 
-    return jsonify({"status": "success", "data": designer_list}), 200
+    if start_date:
+        query = query.filter(Order.start_date >= start_date)
+    if end_date:
+        query = query.filter(Order.start_date <= end_date)
+    if year:
+        query = query.filter(func.year(Order.start_date) == int(year))
+    if month:
+        query = query.filter(func.date_format(Order.start_date, "%Y-%m") == month)
+
+    results = query.group_by(designer_group, Shoe.shoe_department_id).all()
+
+    return jsonify({
+        "status": "success",
+        "data": [
+            {
+                "designer": row.designer,
+                "department": row.department,
+                "totalOrderCount": row.totalOrderCount,
+                "totalShoeCountBussiness": row.totalShoeCountBussiness,
+                "totalShoeCountProduct": row.totalShoeCountProduct
+            } for row in results
+        ]
+    }), 200
+
+
 
 
 
 @dev_performance_bp.route("/devproductionorder/getallshoeswithadesigner", methods=["GET"])
 def get_all_shoes_with_designer():
-    from sqlalchemy import func, or_
-
     designer = request.args.get("designer")
+    start_date = request.args.get("startDate", "").strip()
+    end_date = request.args.get("endDate", "").strip()
+    year = request.args.get("year", "").strip()
+    month = request.args.get("month", "").strip()
+    shoe_rid = request.args.get("shoeRid")
+
     _, _, department = current_user_info()
     user_department = department.department_name
 
-    if designer is None:
+    if not designer:
         return jsonify({"status": "error", "message": "Designer is required"}), 400
 
     if designer == "设计师信息空缺":
@@ -79,7 +102,14 @@ def get_all_shoes_with_designer():
     else:
         designer_filter = Shoe.shoe_designer == designer
 
-    results = (
+    # 日期筛选优先级：年 > 月 > 指定时间段
+    if year:
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+    elif month:
+        start_date, end_date = get_month_date_range(month)
+
+    query = (
         db.session.query(
             Shoe.shoe_id,
             Shoe.shoe_rid,
@@ -107,27 +137,35 @@ def get_all_shoes_with_designer():
         .outerjoin(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .outerjoin(FinishedShoeStorage, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .filter(designer_filter, Shoe.shoe_department_id == user_department)
-        .group_by(
-            Shoe.shoe_id,
-            Shoe.shoe_rid,
-            Shoe.shoe_designer,
-            Shoe.shoe_department_id,
-            ShoeType.shoe_type_id,
-            ShoeType.color_id,
-            Color.color_name,
-            Order.order_id,
-            Order.order_rid,
-            Order.order_cid,
-            Order.start_date,
-            Order.end_date,
-            Order.customer_id,
-            Order.salesman_id,
-            Order.supervisor_id
-        )
-        .all()
     )
 
-    # 构建结构
+    if start_date:
+        query = query.filter(Order.start_date >= start_date)
+    if end_date:
+        query = query.filter(Order.start_date <= end_date)
+    if shoe_rid:
+        query = query.filter(Shoe.shoe_rid.like(f"%{shoe_rid}%"))
+
+    query = query.group_by(
+        Shoe.shoe_id,
+        Shoe.shoe_rid,
+        Shoe.shoe_designer,
+        Shoe.shoe_department_id,
+        ShoeType.shoe_type_id,
+        ShoeType.color_id,
+        Color.color_name,
+        Order.order_id,
+        Order.order_rid,
+        Order.order_cid,
+        Order.start_date,
+        Order.end_date,
+        Order.customer_id,
+        Order.salesman_id,
+        Order.supervisor_id
+    )
+
+    results = query.all()
+
     shoe_map = {}
     counted_pairs = set()
 
@@ -156,8 +194,8 @@ def get_all_shoes_with_designer():
                 "colorName": row.color_name,
                 "orders": []
             }
+        shoe_map[shoe_key]["totalOrderCountColor"] += 1
 
-        # 附加订单信息
         shoe_map[shoe_key]["colors"][color_key]["orders"].append({
             "orderId": row.order_id,
             "orderRid": row.order_rid,
@@ -171,21 +209,28 @@ def get_all_shoes_with_designer():
             "productAmount": row.product_amount
         })
 
-        shoe_map[shoe_key]["totalOrderCountColor"] += 1
-
         if order_pair_key not in counted_pairs:
             counted_pairs.add(order_pair_key)
             shoe_map[shoe_key]["totalOrderCount"] += 1
             shoe_map[shoe_key]["totalShoeCountBussiness"] += row.business_amount
             shoe_map[shoe_key]["totalShoeCountProduct"] += row.product_amount
 
-    # 整理为最终列表结构
     final_data = []
     for shoe in shoe_map.values():
         shoe["colors"] = list(shoe["colors"].values())
         final_data.append(shoe)
 
     return jsonify({"status": "success", "data": final_data}), 200
+
+
+import calendar
+
+def get_month_date_range(month_str):  # month_str 形如 "2025-04"
+    year, month = map(int, month_str.split("-"))
+    last_day = calendar.monthrange(year, month)[1]
+    start_date = f"{month_str}-01"
+    end_date = f"{month_str}-{last_day:02d}"
+    return start_date, end_date
 
 
 

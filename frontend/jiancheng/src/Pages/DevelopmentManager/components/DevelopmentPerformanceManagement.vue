@@ -2,6 +2,63 @@
     <el-row :gutter="20">
         <el-col :span="24" style="font-size: xx-large; text-align: center">绩效管理</el-col>
     </el-row>
+    <el-row :gutter="20" style="margin-bottom: 10px">
+        <el-col :span="6">
+            <el-input v-model="designerSearchText" placeholder="搜索设计师" clearable @input="fetchDesignerList" />
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="startDateFilter"
+                type="date"
+                placeholder="开始日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                clearable
+                @change="onFilterChange"
+                @clear="onFilterChange"
+            />
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="endDateFilter"
+                type="date"
+                placeholder="结束日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                clearable
+                @change="onFilterChange"
+                @clear="onFilterChange"
+            />
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="yearFilter"
+                type="year"
+                placeholder="按年份统计"
+                format="YYYY"
+                value-format="YYYY"
+                style="width: 100%"
+                clearable
+                @change="onFilterChange"
+                @clear="onFilterChange"
+            />
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker
+                v-model="monthFilter"
+                type="month"
+                placeholder="按月份统计"
+                format="YYYY-MM"
+                value-format="YYYY-MM"
+                style="width: 100%"
+                clearable
+                @change="onFilterChange"
+                @clear="onFilterChange"
+            />
+        </el-col>
+    </el-row>
 
     <el-table :data="designerList" border stripe style="width: 100%">
         <el-table-column prop="designer" label="设计师" />
@@ -15,28 +72,50 @@
             </template>
         </el-table-column>
     </el-table>
+    <el-row style="margin-top: 10px; font-weight: bold; font-size: 16px; text-align: right">
+        <el-col :span="24"> 当前筛选共计业务量：{{ totalSummary.totalBusiness }}， 生产量：{{ totalSummary.totalProduct }} </el-col>
+    </el-row>
 
     <!-- 对话框：鞋型绩效详情 -->
     <el-dialog v-model="dialogVisible" :title="`设计师：${selectedDesigner} 的鞋型使用情况`" width="60%">
         <el-row :gutter="20" style="margin-bottom: 10px">
             <el-col :span="6">
-                <el-input v-model="searchText" placeholder="搜索鞋型编号" clearable />
+                <el-input v-model="searchText" placeholder="搜索鞋型编号" clearable @input="fetchPerformanceData" />
             </el-col>
             <el-col :span="4">
-                <el-date-picker v-model="startDateFilter" type="date" placeholder="开始日期" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" clearable />
+                <el-date-picker
+                    v-model="startDateFilter"
+                    type="date"
+                    placeholder="开始日期"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                    clearable
+                    @change="handleDialogFilterChange"
+                />
             </el-col>
             <el-col :span="4">
-                <el-date-picker v-model="endDateFilter" type="date" placeholder="结束日期" format="YYYY-MM-DD" value-format="YYYY-MM-DD" style="width: 100%" clearable />
+                <el-date-picker
+                    v-model="endDateFilter"
+                    type="date"
+                    placeholder="结束日期"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                    clearable
+                    @change="handleDialogFilterChange"
+                />
             </el-col>
             <el-col :span="4">
-                <el-date-picker v-model="yearFilter" type="year" placeholder="按年份统计" format="YYYY" value-format="YYYY" clearable style="width: 100%" />
+                <el-date-picker v-model="yearFilter" type="year" placeholder="按年份统计" format="YYYY" value-format="YYYY" clearable style="width: 100%" @change="handleDialogFilterChange" />
             </el-col>
-
             <el-col :span="4">
-                <el-date-picker v-model="monthFilter" type="month" placeholder="按月份统计" format="YYYY-MM" value-format="YYYY-MM" clearable style="width: 100%" />
+                <el-date-picker v-model="monthFilter" type="month" placeholder="按月份统计" format="YYYY-MM" value-format="YYYY-MM" clearable style="width: 100%" @change="handleDialogFilterChange" />
             </el-col>
-            <el-col :span="8" style="text-align: right; font-weight: bold; line-height: 32px">
-                使用订单数：{{ filteredOrderCount.byShoe }}（按鞋型） / {{ filteredOrderCount.byColor }}（按颜色）
+            <el-col :span="24" style="text-align: right; font-weight: bold; line-height: 32px">
+                使用订单数：{{ filteredOrderCount.byShoe }}（按鞋型） / {{ filteredOrderCount.byColor }}（按颜色） ，总业务量：{{ filteredOrderSummary.totalBusiness }}，总生产量：{{
+                    filteredOrderSummary.totalProduct
+                }}
             </el-col>
         </el-row>
 
@@ -57,7 +136,7 @@
                 </template>
             </el-table-column>
             <el-table-column prop="shoeRid" label="鞋型编号" />
-            <el-table-column prop="totalOrderCount" label="使用次数（订单数）(按鞋型)"> </el-table-column>
+            <el-table-column prop="totalOrderCount" label="使用次数（订单数）(按鞋型)" />
             <el-table-column prop="totalOrderCountColor" label="使用次数（按颜色）" />
             <el-table-column prop="totalShoeCountBussiness" label="总业务量" />
             <el-table-column prop="totalShoeCountProduct" label="总生产量" />
@@ -65,7 +144,7 @@
 
         <el-pagination
             layout="prev, pager, next"
-            :total="filteredPerformanceData.length"
+            :total="performanceData.length"
             :page-size="10"
             :current-page="currentPage"
             @current-change="handlePageChange"
@@ -78,15 +157,17 @@
         </template>
     </el-dialog>
 </template>
+
 <script>
 import axios from 'axios'
 
 export default {
     data() {
         return {
+            designerSearchText: '',
             designerList: [],
-            allPerformanceDataMap: {}, // 缓存每位设计师数据
-            performanceData: [], // 当前选中设计师数据
+            allPerformanceDataMap: {},
+            performanceData: [],
             selectedDesigner: '',
             dialogVisible: false,
             searchText: '',
@@ -99,38 +180,30 @@ export default {
         }
     },
     computed: {
-        filteredPerformanceData() {
-            return this.performanceData
-                .map((item) => {
-                    const filteredColors = item.colors
-                        .map((color) => ({
-                            ...color,
-                            orders: this.filteredOrders(color.orders)
-                        }))
-                        .filter((color) => color.orders.length > 0)
+        totalSummary() {
+            let totalBusiness = 0
+            let totalProduct = 0
 
-                    if ((!this.searchText || item.shoeRid.includes(this.searchText)) && filteredColors.length > 0) {
-                        return {
-                            ...item,
-                            colors: filteredColors
-                        }
-                    }
-                    return null
-                })
-                .filter(Boolean)
+            for (const designer of this.designerList) {
+                totalBusiness += Number(designer.totalShoeCountBussiness || 0)
+                totalProduct += Number(designer.totalShoeCountProduct || 0)
+            }
+
+            return {
+                totalBusiness,
+                totalProduct
+            }
         },
-
         paginatedData() {
             const start = (this.currentPage - 1) * 10
             const end = start + 10
-            return this.filteredPerformanceData.slice(start, end)
+            return this.performanceData.slice(start, end)
         },
-
         filteredOrderCount() {
             let totalByColor = 0
             let totalByShoe = new Set()
 
-            for (const item of this.filteredPerformanceData) {
+            for (const item of this.performanceData) {
                 for (const color of item.colors) {
                     for (const order of color.orders) {
                         totalByColor += 1
@@ -143,42 +216,65 @@ export default {
                 byColor: totalByColor,
                 byShoe: totalByShoe.size
             }
-        }
-    },
-    watch: {
-        startDateFilter(val) {
-            if (val) {
-                this.yearFilter = ''
-                this.monthFilter = ''
-            }
         },
-        endDateFilter(val) {
-            if (val) {
-                this.yearFilter = ''
-                this.monthFilter = ''
+        filteredOrderSummary() {
+            let totalBusiness = 0
+            let totalProduct = 0
+            for (const item of this.performanceData) {
+                for (const color of item.colors) {
+                    for (const order of color.orders) {
+                        totalBusiness += Number(order.businessAmount || 0)
+                        totalProduct += Number(order.productAmount || 0)
+                    }
+                }
             }
-        },
-        yearFilter(val) {
-            if (val) {
-                this.startDateFilter = ''
-                this.endDateFilter = ''
-                this.monthFilter = ''
-            }
-        },
-        monthFilter(val) {
-            if (val) {
-                this.startDateFilter = ''
-                this.endDateFilter = ''
-                this.yearFilter = ''
+            return {
+                totalBusiness,
+                totalProduct
             }
         }
     },
     mounted() {
-        this.loadDesignerList()
+        this.fetchDesignerList()
     },
     methods: {
-        async loadDesignerList() {
-            const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getalldesigners`)
+        handleDialogFilterChange() {
+            // 清除互斥项
+            if (this.startDateFilter || this.endDateFilter) {
+                this.yearFilter = ''
+                this.monthFilter = ''
+            } else if (this.yearFilter || this.monthFilter) {
+                this.startDateFilter = ''
+                this.endDateFilter = ''
+            }
+
+            // 更新对话框数据
+            this.fetchPerformanceData()
+
+            // 更新主页面数据
+            this.fetchDesignerList()
+        },
+        onFilterChange() {
+            if (this.startDateFilter || this.endDateFilter) {
+                this.yearFilter = ''
+                this.monthFilter = ''
+            } else if (this.yearFilter || this.monthFilter) {
+                this.startDateFilter = ''
+                this.endDateFilter = ''
+            }
+
+            this.fetchDesignerList()
+        },
+        async fetchDesignerList() {
+            const params = {
+                designer: this.designerSearchText ?? '',
+                startDate: this.startDateFilter ?? '',
+                endDate: this.endDateFilter ?? '',
+                year: this.yearFilter ?? '',
+                month: this.monthFilter ?? ''
+            }
+
+            const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getalldesigners`, { params })
             this.designerList = res.data.data
         },
         async openPerformanceDialog(row) {
@@ -186,33 +282,23 @@ export default {
             this.dialogVisible = true
             this.searchText = ''
             this.currentPage = 1
-
-            // 缓存查询结果，避免重复请求
-            if (!this.allPerformanceDataMap[row.designer]) {
-                const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getallshoeswithadesigner`, {
-                    params: { designer: row.designer }
-                })
-                this.allPerformanceDataMap[row.designer] = res.data.data
+            await this.fetchPerformanceData()
+        },
+        async fetchPerformanceData() {
+            const params = {
+                designer: this.selectedDesigner,
+                startDate: this.startDateFilter || '',
+                endDate: this.endDateFilter || '',
+                year: this.yearFilter || '',
+                month: this.monthFilter || '',
+                shoeRid: this.searchText || ''
             }
 
-            this.performanceData = this.allPerformanceDataMap[row.designer]
+            const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getallshoeswithadesigner`, { params })
+            this.performanceData = res.data.data || []
         },
         handlePageChange(page) {
             this.currentPage = page
-        },
-        filteredOrders(orders) {
-            const year = this.yearFilter
-            const month = this.monthFilter
-            const start = this.startDateFilter
-            const end = this.endDateFilter || new Date().toISOString().slice(0, 10)
-
-            return orders.filter((o) => {
-                if (year && (!o.startDate || !o.startDate.startsWith(year))) return false
-                if (month && (!o.startDate || !o.startDate.startsWith(month))) return false
-                if (start && o.startDate < start) return false
-                if (end && o.startDate > end) return false
-                return true
-            })
         }
     }
 }
