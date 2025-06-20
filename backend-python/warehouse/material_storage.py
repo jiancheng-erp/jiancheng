@@ -184,6 +184,27 @@ def get_all_material_info():
             "materialStorageId": storage.material_storage_id,
             "shoeSizeColumns": storage.shoe_size_columns,
         }
+        for i in range(len(SHOESIZERANGE)):
+            shoe_size = SHOESIZERANGE[i]
+            estimated_amount = (
+                getattr(purchase_order_item, f"size_{shoe_size}_purchase_amount", None)
+                or 0
+                if purchase_order_item
+                else 0
+            )
+            inbound_amount = (
+                getattr(storage, f"size_{shoe_size}_inbound_amount", None) or 0
+                if storage is not None
+                else 0
+            )
+            current_amount = (
+                getattr(storage, f"size_{shoe_size}_current_amount", None) or 0
+                if storage is not None
+                else 0
+            )
+            obj[f"estimatedInboundAmount{i}"] = estimated_amount
+            obj[f"actualInboundAmount{i}"] = inbound_amount
+            obj[f"currentAmount{i}"] = current_amount
         result.append(obj)
     return {"result": result, "total": count_result}
 
@@ -1000,20 +1021,24 @@ def inbound_material():
 def _handle_reject_material_outbound(data):
     supplier_name = data.get("supplierName", None)
     supplier_obj = _handle_supplier_obj(supplier_name)
-    outbound_record = _create_outbound_record(data, 0, supplier_obj.supplier_id)
+    data["supplierId"] = supplier_obj.supplier_id
+    data["departmentId"] = None
+    data["outsourceInfoId"] = None
+    outbound_record = _create_outbound_record(data, 0)
     items = data.get("items", [])
 
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
 
-def _create_outbound_record(data, approval_status, supplier_id=None):
+def _create_outbound_record(data, approval_status):
     timestamp = data.get("currentDateTime")
     department_id = data.get("departmentId", None)
     remark = data.get("remark", None)
     picker = data.get("picker", None)
-    warehouse_id = data.get("warehouseId", None)
     outbound_type = data.get("outboundType", 0)
+    outsource_info_id = data.get("outsourceInfoId", None)
+    supplier_id = data.get("supplierId", None)
 
     formatted_timestamp = (
         timestamp.replace("-", "").replace(" ", "").replace("T", "").replace(":", "")
@@ -1028,9 +1053,9 @@ def _create_outbound_record(data, approval_status, supplier_id=None):
         supplier_id=supplier_id,
         picker=picker,
         remark=remark,
-        warehouse_id=warehouse_id,
         outbound_department=department_id,
         approval_status=approval_status,
+        outsource_info_id=outsource_info_id,
     )
     db.session.add(outbound_record)
     db.session.flush()
@@ -1049,9 +1074,6 @@ def _create_outbound_record_details(items, outbound_record):
 
         # set outbound quantity
         outbound_quantity = Decimal(item["outboundQuantity"])
-        if outbound_quantity == 0:
-            error_message = json.dumps({"message": "出库数量不能为0"})
-            abort(Response(error_message, 400))
 
         # 用户选择了材料
         storage = (
@@ -1115,25 +1137,39 @@ def _create_outbound_record_details(items, outbound_record):
 
 def _handle_production_outbound(data):
     items = data.get("items", [])
-    supplier_id = None
-    outbound_record = _create_outbound_record(data, 1, supplier_id)
+    data["supplierId"] = None
+    outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
 
 def _handle_waste_outbound(data):
-    pass
+    items = data.get("items", [])
+    data["supplierId"] = None
+    data["departmentId"] = None
+    data["outsourceInfoId"] = None
+    outbound_record = _create_outbound_record(data, 1)
+    _create_outbound_record_details(items, outbound_record)
+    return outbound_record.outbound_rid
 
 
 def _handle_outsource_outbound(data):
-    pass
+    items = data.get("items", [])
+    data["supplierId"] = None
+    data["departmentId"] = None
+    outbound_record = _create_outbound_record(data, 1)
+    _create_outbound_record_details(items, outbound_record)
+    return outbound_record.outbound_rid
 
 
 def _handle_composite_outbound(data):
     items = data.get("items", [])
     supplier_name = data.get("supplierName", None)
     supplier_obj = _handle_supplier_obj(supplier_name)
-    outbound_record = _create_outbound_record(data, 1, supplier_obj.supplier_id)
+    data["supplierId"] = supplier_obj.supplier_id
+    data["departmentId"] = None
+    data["outsourceInfoId"] = None
+    outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
     return outbound_record.outbound_rid
 
@@ -1406,12 +1442,9 @@ def get_outbound_record_by_id():
             OutboundRecordDetail,
             OutboundRecord,
             SPUMaterial,
-            MaterialStorage.material_storage_id,
-            MaterialStorage.actual_inbound_unit,
-            cast(literal("[]"), JSON).label("shoe_size_columns"),
+            MaterialStorage,
             Material,
             MaterialType,
-            MaterialWarehouse,
             Supplier,
             Order,
             Shoe,
@@ -1435,10 +1468,6 @@ def get_outbound_record_by_id():
             Material.material_id == SPUMaterial.material_id,
         )
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(
-            MaterialWarehouse,
-            MaterialWarehouse.material_warehouse_id == OutboundRecord.warehouse_id,
-        )
         .outerjoin(Supplier, Supplier.supplier_id == OutboundRecord.supplier_id)
         .outerjoin(
             Order,
@@ -1465,12 +1494,10 @@ def get_outbound_record_by_id():
         "metadata": {
             "outboundRecordId": first_row.OutboundRecord.outbound_record_id,
             "outboundRId": first_row.OutboundRecord.outbound_rid,
-            "warehouseId": first_row.OutboundRecord.warehouse_id,
             "remark": first_row.OutboundRecord.remark,
             "supplierName": first_row.Supplier.supplier_name,
             "materialTypeId": first_row.MaterialType.material_type_id,
             "outboundType": first_row.OutboundRecord.outbound_type,
-            "warehouseName": first_row.MaterialWarehouse.material_warehouse_name,
             "timestamp": format_datetime(first_row.OutboundRecord.outbound_datetime),
         },
         "items": [],
@@ -1480,12 +1507,9 @@ def get_outbound_record_by_id():
             record_detail,
             record,
             spu_material,
-            material_storage_id,
-            material_unit,
-            shoe_size_columns,
+            material_storage,
             material,
             material_type,
-            material_warehouse,
             supplier,
             order,
             shoe,
@@ -1503,21 +1527,27 @@ def get_outbound_record_by_id():
             "inboundModel": spu_material.material_model,
             "inboundSpecification": spu_material.material_specification,
             "materialColor": spu_material.color,
-            "materialUnit": material_unit,
+            "materialUnit": material_storage.actual_inbound_unit,
             "materialTypeId": material.material_type_id,
-            "materialStorageId": material_storage_id,
-            "actualInboundUnit": material_unit,
+            "materialStorageId": material_storage.material_storage_id,
+            "actualInboundUnit": material_storage.actual_inbound_unit,
             "orderRId": order.order_rid if order else None,
             "supplierName": supplier.supplier_name if supplier else None,
-            "shoeSizeColumns": shoe_size_columns,
+            "shoeSizeColumns": material_storage.shoe_size_columns,
             "shoeRId": shoe.shoe_rid if shoe else None,
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
             column_name = f"size_{shoe_size}_outbound_amount"
             obj[f"amount{i}"] = (
-                round(getattr(record_detail, column_name, None))
+                getattr(record_detail, column_name, None)
                 if getattr(record_detail, column_name, None)
+                else 0
+            )
+            column_name = f"size_{shoe_size}_current_amount"
+            obj[f"currentAmount{i}"] = (
+                getattr(material_storage, column_name, None)
+                if getattr(material_storage, column_name, None)
                 else 0
             )
         result["items"].append(obj)
@@ -1532,16 +1562,13 @@ def get_material_outbound_records():
     page = int(request.args.get("page", 1))
     number = int(request.args.get("pageSize", 10))
     outbound_rid = request.args.get("outboundRId")
-    warehouse_id = request.args.get("warehouseId")
     status = request.args.get("status", type=int, default=0)
+    destination = request.args.get("destination")
+    outbound_type = request.args.get("outboundType", type=int, default=0)
 
     query = (
         db.session.query(
-            OutboundRecord, MaterialWarehouse, OutsourceFactory, Department, Supplier
-        )
-        .join(
-            MaterialWarehouse,
-            MaterialWarehouse.material_warehouse_id == OutboundRecord.warehouse_id,
+            OutboundRecord, OutsourceFactory, Department, Supplier
         )
         .outerjoin(
             OutsourceInfo,
@@ -1571,12 +1598,20 @@ def get_material_outbound_records():
         query = query.filter(OutboundRecord.outbound_datetime <= end_date_search)
     if outbound_rid:
         query = query.filter(OutboundRecord.outbound_rid.ilike(f"%{outbound_rid}%"))
-    if warehouse_id:
-        query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_id)
     if status in [0, 1, 2]:
         query = query.filter(OutboundRecord.approval_status == status)
     if character.character_id == ACCOUNTING_AUDIT_ROLE:
         query = query.filter(OutboundRecord.outbound_type == 4)
+    if destination:
+        query = query.filter(
+            or_(
+                Department.department_name.ilike(f"%{destination}%"),
+                OutsourceFactory.factory_name.ilike(f"%{destination}%"),
+                Supplier.supplier_name.ilike(f"%{destination}%"),
+            )
+        )
+    if outbound_type and outbound_type in OUTBOUND_TYPE_MAPPING:
+        query = query.filter(OutboundRecord.outbound_type == outbound_type)
 
     query = query.order_by(desc(OutboundRecord.outbound_datetime))
     count_result = query.distinct().count()
@@ -1585,7 +1620,6 @@ def get_material_outbound_records():
     for row in response:
         (
             outbound_record,
-            material_warehouse,
             outsource_factory,
             department,
             supplier,
@@ -1605,7 +1639,6 @@ def get_material_outbound_records():
             "outboundRecordId": outbound_record.outbound_record_id,
             "outboundBatchId": outbound_record.outbound_batch_id,
             "outboundRId": outbound_record.outbound_rid,
-            "warehouseName": material_warehouse.material_warehouse_name,
             "timestamp": format_datetime(outbound_record.outbound_datetime),
             "outboundType": outbound_type,
             "destination": destination,

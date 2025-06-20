@@ -8,14 +8,22 @@
             <el-input v-model="outboundRIdSearch" placeholder="请输入出库单号" @change="getOutboundRecordsTable"
                 @clear="getOutboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
-            <el-select v-model="warehouseNameSearch" @change="getOutboundRecordsTable" placeholder="仓库名称搜索"
+            <!-- <el-select v-model="warehouseNameSearch" @change="getOutboundRecordsTable" placeholder="仓库名称搜索"
                 @clear="getOutboundRecordsTable" filterable clearable style="width: 200px; margin-left: 20px;">
                 <el-option v-for="(item, index) in warehouseOptions" :key="index" :label="item.label"
                     :value="item.value"></el-option>
-            </el-select>
-            <el-input v-model="supplierNameSearch" placeholder="出库目的地搜索" @change="getOutboundRecordsTable"
+            </el-select> -->
+            <el-input v-model="destinationSearch" placeholder="出库目的地搜索" @change="getOutboundRecordsTable"
                 @clear="getOutboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
             </el-input>
+            <el-select v-model="outboundTypeSearch" placeholder="出库类型搜索" @change="getOutboundRecordsTable"
+                @clear="getOutboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
+                <el-option label="生产出库" :value="0"></el-option>
+                <el-option label="废料处理" :value="1"></el-option>
+                <el-option label="外包出库" :value="2"></el-option>
+                <el-option label="复合出库" :value="3"></el-option>
+                <el-option label="材料退回" :value="4"></el-option>
+            </el-select>
             <el-select v-if="loadReject == false" v-model="statusSearch" @change="getOutboundRecordsTable"
                 @clear="getOutboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
                 <el-option label="全部" :value="-1"></el-option>
@@ -37,12 +45,11 @@
                 </el-table-column>
                 <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
-                <el-table-column prop="warehouseName" label="仓库名称">
-                </el-table-column>
                 <el-table-column prop="destination" label="出库至">
                 </el-table-column>
                 <el-table-column prop="outboundType" label="出库类型">
                 </el-table-column>
+                <el-table-column prop="picker" label="领料人"></el-table-column>
                 <el-table-column prop="remark" label="备注"></el-table-column>
                 <el-table-column prop="rejectReason" label="驳回原因"></el-table-column>
                 <el-table-column label="查看">
@@ -60,7 +67,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="14">
+        <el-col>
             <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
                 :current-page="currentPage" :page-sizes="[10, 20, 30, 40]" :page-size="pageSize"
                 layout="total, sizes, prev, pager, next, jumper" :total="total" />
@@ -68,39 +75,6 @@
     </el-row>
 
     <el-dialog title="出库单详情" v-model="dialogVisible" width="80%">
-        <!-- <el-descriptions border>
-            <template #extra>
-                <span style="font-weight: bolder;font-size: 16px;">
-                    单据编号：{{ currentRow.outboundRId }}
-                </span>
-            </template>
-            <el-descriptions-item label="出库类型">{{ currentRow.outboundType
-            }}</el-descriptions-item>
-            <el-descriptions-item label="出库至">{{
-                }}</el-descriptions-item>
-            <el-descriptions-item label="出库时间">{{ currentRow.timestamp }}</el-descriptions-item>
-        </el-descriptions>
-        <el-table :data="recordData" border stripe>
-            <el-table-column type="expand">
-                <template #default="props">
-                    <el-table :data="props.row['displayShoeSizes']" border stripe style="width: 100%">
-                        <el-table-column label="鞋码" prop="shoeSizeColumns"></el-table-column>
-                        <el-table-column label="数量" prop="outboundAmount"></el-table-column>
-                    </el-table>
-                </template>
-
-            </el-table-column>
-            <el-table-column prop="orderRId" label="订单号"></el-table-column>
-            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-            <el-table-column prop="materialName" label="名称"></el-table-column>
-            <el-table-column prop="materialModel" label="型号"></el-table-column>
-            <el-table-column prop="materialSpecification" label="规格"></el-table-column>
-            <el-table-column prop="colorName" label="颜色"></el-table-column>
-            <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-            <el-table-column prop="unitPrice" label="平均价"></el-table-column>
-            <el-table-column prop="outboundQuantity" label="数量"></el-table-column>
-            <el-table-column prop="itemTotalPrice" label="金额"></el-table-column>
-        </el-table> -->
         <div id="printView" v-show="true">
             <table style="width:100%; border-collapse: collapse;">
                 <!-- Header repeated on each page -->
@@ -119,8 +93,6 @@
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">出库至: {{
                                         currentRow.destination }}</td>
-                                    <td style="padding:5px; width: 150px;" align="left">仓库名称: {{
-                                        currentRow.warehouseName }}</td>
                                     <td style="padding:5px; width: 300px;" align="left">出库时间: {{
                                         currentRow.timestamp }}
                                     </td>
@@ -177,13 +149,13 @@
                 <tfoot>
                     <tr>
                         <td>
-                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold; display: flex;">
+                            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;display: flex;">
+                                <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
+                                    calculateOutboundTotal() }}</span></span>
                                 <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
-                                    currentRow.totalPrice
-                                        }}</span></span>
-                                <span style="padding-right: 10px;">领料人: <span style="text-decoration: underline;">{{
-                                    currentRow.picker
-                                        }}</span></span>
+                                    currentRow.totalPrice }}</span></span>
+                                <span style="padding-right: 10px; width: 150px;">领料人: <span style="text-decoration: underline;">{{
+                                    currentRow.picker }}</span></span>
                                 <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
                                     currentRow.remark }}</span></span>
                             </div>
@@ -241,8 +213,8 @@ export default {
             dialogVisible: false,
             dateRange: [null, null],
             outboundRIdSearch: null,
-            warehouseNameSearch: null,
-            supplierNameSearch: null,
+            destinationSearch: null,
+            outboundTypeSearch: null,
             statusSearch: this.loadReject ? 2 : 0,
             rejectDialogVisible: false,
             rejectText: '',
@@ -254,6 +226,14 @@ export default {
         this.getOutboundRecordsTable()
     },
     methods: {
+        calculateOutboundTotal() {
+            // Calculate the total inbound quantity
+            console.log(this.recordData)
+            const number = this.recordData.reduce((total, item) => {
+                return total + (Number(item.outboundQuantity) || 0);
+            }, 0);
+            return Number(number).toFixed(2);
+        },
         handleRowClick(row) {
             this.selectedRow = row
             this.$emit('update-selected-row', row)
@@ -269,8 +249,8 @@ export default {
                     startDate: this.dateRange[0],
                     endDate: this.dateRange[1],
                     outboundRId: this.outboundRIdSearch,
-                    warehouseName: this.warehouseNameSearch,
-                    supplierName: this.supplierNameSearch,
+                    destination: this.destinationSearch,
+                    outboundType: this.outboundTypeSearch,
                     status: this.statusSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialoutboundrecords`, { params })
