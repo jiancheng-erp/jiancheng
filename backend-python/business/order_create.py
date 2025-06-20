@@ -370,7 +370,6 @@ def order_shoe_type_customer_color_update():
 @order_create_bp.route("/ordercreate/template", methods=['GET'])
 def order_create_template():
 	salesman_id = request.args.get("staffId", type=str)
-	print(salesman_id)
 	orders = (db.session.query(Order.customer_id, Order.batch_info_type_id,  func.count(Order.order_id))
 		   .filter(Order.salesman_id == salesman_id)
 		   .join(BatchInfoType, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
@@ -396,6 +395,5 @@ def order_create_template():
 			response_entity[to_camel(attr)] = getattr(batch_info_mapping[bid], attr)
 		response_entity["count"] = count
 		response.append(response_entity)
-	print(response)
 	return jsonify(response), 200
 

@@ -704,8 +704,11 @@
         </template>
     </el-dialog>
     <el-dialog title="选择模板" v-model="newOrderTemplateVis" width="50%">
+        <el-input v-model="templateFilter" @input="filterTemplateOptions()" >
+            search
+        </el-input>
        <el-table
-       :data = this.templateData
+       :data = this.templateDisplayData
        >
         <el-table-column
         prop="customerName" label="客户名称"></el-table-column>
@@ -866,6 +869,7 @@ export default {
             orderCustomerNameFilter: '',
             orderCustomerBrandFilter: '',
             customerProductNameFilter: '',
+            templateFilter:'',
             shoeRIdSearch: '',
             displayData: [],
             prevDisplayData: [],
@@ -885,6 +889,9 @@ export default {
             userRole: '',
             userName: '',
             templateData:[],
+            templateDisplayData:[],
+            templateCustomerBrandMatch:[],
+            templateCustomerNameMatch:[],
             shoeForm: {
                 shoeId: '',
                 shoeRid: '',
@@ -1117,6 +1124,7 @@ export default {
             this.newOrderForm.customerBrand = row.customerBrand
             this.newOrderForm.customerName = row.customerName
             this.openCreateOrderDialog()
+            this.templateFilter = ''
             this.newOrderTemplateVis = false
         },
         openCreateOrderDialog() {
@@ -1131,7 +1139,7 @@ export default {
                 }})
             this.newOrderTemplateVis = true
             this.templateData = response.data
-            console.log(response.data)
+            this.templateDisplayData = this.templateData
         },
         // getTemplate(){
         //     const response = axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {params: {
@@ -1274,7 +1282,7 @@ export default {
                     }
                 })
                 .then(async () => {
-                    this.getAllOrders()
+                    this.initialStatusFilter()
                 })
         },
         backPreviousStep() {
@@ -1465,18 +1473,21 @@ export default {
         async getAllOrders() {
             // const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
 
-            if (role == 21) {
-            response = await axios.get(`${apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+            if (this.role == 21) {
+                const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                 currentStaffId: staffId
-            })
+            }     
+            )
+                this.unfilteredData = response.data
             }
-            if (role == 4) {
-                response = await axios.get(`${apiBaseUrl}/order/getallorders`)
+            else if (this.role == 4) {
+                const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
+                this.unfilteredData = response.data
             }
-            this.unfilteredData = response.data
             this.displayData = this.unfilteredData
             this.totalItems = this.unfilteredData.length
             this.currentPage = 1
+           
         },
         // async getAllOrderStatus() {
         //     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorderstatus`)
@@ -1669,6 +1680,27 @@ export default {
                 return filterMatch
             })
             this.displayData = this.filterData
+        },
+        filterTemplateOptions(){
+        if (this.templateFilter != '')
+        {
+                this.templateCustomerBrandMatch = this.templateData.filter((task)=>
+            {
+                const templateCustomerBrandMatch = task.customerBrand.toLowerCase().includes(this.templateFilter.toLowerCase())
+                return templateCustomerBrandMatch
+            })
+                this.templateCustomerNameMatch = this.templateData.filter((task)=>
+            {
+                const templateCustomerNameMatch = task.customerName.toLowerCase().includes(this.templateFilter.toLowerCase())
+                return templateCustomerNameMatch
+            })
+                this.templateDisplayData = this.templateCustomerBrandMatch.concat(this.templateCustomerNameMatch)
+        }
+        else
+        {
+            this.templateDisplayData = this.templateData
+        }
+            
         },
         handleUploadSuccess(response, file) {
             // Handle the successful response
