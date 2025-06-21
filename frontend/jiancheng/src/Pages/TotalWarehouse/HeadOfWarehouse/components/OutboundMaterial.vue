@@ -96,7 +96,8 @@
                 </vxe-column>
                 <vxe-column title="调整鞋码数量" fixed="right" width="120">
                     <template #default="scope">
-                        <vxe-button status="primary" @click="openShoeSizesDialog(scope)">打开</vxe-button>
+                        <vxe-button status="primary" @click="openShoeSizesDialog(scope)" :disabled="scope.row.materialType
+                            !== '底材' && scope.row.materialType !== '烫底'">打开</vxe-button>
                     </template>
                 </vxe-column>
             </vxe-table>
@@ -187,8 +188,9 @@
                                     calculateOutboundTotal }}</span></span>
                                 <span style="padding-right: 10px;">合计金额: <span style="text-decoration: underline;">{{
                                     calculateTotalPriceSum }}</span></span>
-                                <span style="padding-right: 10px; width: 150px;">领料人: <span style="text-decoration: underline;">{{
-                                    previewOutboundForm.picker }}</span></span>
+                                <span style="padding-right: 10px; width: 150px;">领料人: <span
+                                        style="text-decoration: underline;">{{
+                                            previewOutboundForm.picker }}</span></span>
                                 <span style="padding-right: 10px;">备注: <span style="text-decoration: underline;">{{
                                     previewOutboundForm.remark }}</span></span>
                             </div>
@@ -222,7 +224,8 @@
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
             <el-table-column label="出库数量">
                 <template #default="{ row }">
-                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)" :min="0"></el-input-number>
+                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)"
+                        :min="0"></el-input-number>
                 </template>
             </el-table-column>
         </el-table>
@@ -521,7 +524,7 @@ export default {
                     if (type == 1) {
                         outboundQuantity = row[`amount${j}`] || 0
                     }
-                    let obj = {"shoeSizeName": shoeSizeName, "currentAmount": row[`currentAmount${j}`], "outboundQuantity": outboundQuantity}
+                    let obj = { "shoeSizeName": shoeSizeName, "currentAmount": row[`currentAmount${j}`], "outboundQuantity": outboundQuantity }
                     shoeSizeTableData.push(obj)
                 }
                 row.shoeSizeTableData = shoeSizeTableData

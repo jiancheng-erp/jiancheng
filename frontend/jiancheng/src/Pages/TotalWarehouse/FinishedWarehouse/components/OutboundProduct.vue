@@ -1,25 +1,23 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col :span="16" :offset="0">
             <el-input v-model="orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" />
-        </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+                @clear="getTableData" class="search-input"/>
             <el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" />
-        </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+                @clear="getTableData" class="search-input"/>
             <el-input v-model="orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" />
-        </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+                @clear="getTableData" class="search-input"/>
             <el-input v-model="customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" />
+                @clear="getTableData" class="search-input"/>
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            <el-select v-model="selectedStatus" placeholder="请选择审核状态" clearable @change="getTableData">
-                <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-            </el-select>
+        <el-col :span="8" :offset="0">
+            <span>表格数据筛选：</span>
+            <el-radio-group v-model="selectedStatus" @change="getTableData">
+                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value"
+                    v-model="selectedStatus">
+                    {{ option.label }}
+                </el-radio-button>
+            </el-radio-group>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -65,11 +63,12 @@
                 <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
                 <el-table-column prop="currentStock" label="成品库存"></el-table-column>
                 <el-table-column prop="outboundedAmount" label="已出库数量"></el-table-column>
-                <el-table-column label="允许出库">
+                <el-table-column label="成品仓状态">
                     <template #default="{ row }">
-                        <el-tag v-if="row.isOutboundAllowed == 0" type="warning">业务部审核</el-tag>
-                        <el-tag v-else-if="row.isOutboundAllowed == 1" type="warning">总经理审核</el-tag>
-                        <el-tag v-else-if="row.isOutboundAllowed == 2" type="success">已批准</el-tag>
+                        <el-tag v-if="row.isOutboundAllowed == 0" type="warning" disable-transitions>业务部审核</el-tag>
+                        <el-tag v-else-if="row.isOutboundAllowed == 1" type="warning" disable-transitions>总经理审核</el-tag>
+                        <el-tag v-else-if="row.isOutboundAllowed == 2" type="success" disable-transitions>已批准</el-tag>
+                        <el-tag v-else-if="row.isOutboundAllowed == 3" type="success" disable-transitions>已完成出库</el-tag>
                     </template>
                 </el-table-column>
             </el-table>
@@ -195,11 +194,13 @@ export default {
             clientTab: null,
             role: localStorage.getItem('role'),
             statusOptions: [
-                { value: 0, label: "业务部审核" },
-                { value: 1, label: "总经理审核" },
+                { value: null, label: "全部" },
+                { value: 0, label: "发货审核未下发" },
+                { value: 1, label: "总经理审核中" },
                 { value: 2, label: "已批准" },
+                { value: 3, label: "已完成出库" },
             ],
-            selectedStatus: null,
+            selectedStatus: -1,
             isOpenShoeSizeDialogVisible: false,
             activeStockTab: null,
         }
@@ -214,12 +215,45 @@ export default {
         },
     },
     mounted() {
+        this.displayOrdersbyRole()
         this.getTableData()
     },
     methods: {
-        async approveOutbound() {
+        displayOrdersbyRole() {
+            if (this.role == 4 || this.role == 21) {
+                this.selectedStatus = 0
+            }
+            else if (this.role == 2) {
+                this.selectedStatus = 1
+            }
+            else if (this.role == 20) {
+                this.selectedStatus = 2
+            }
+        },
+        async checkOutboundPrequisite() {
             if (this.selectedRows.length == 0) {
                 ElMessage.error("未选择订单")
+                return false
+            }
+            let unfinishedOrders = this.selectedRows.filter(row => row.currentStock + row.outboundedAmount < row.orderAmount).map(row => row.orderRId)
+            if (unfinishedOrders.length > 0) {
+                try {
+                    await ElMessageBox.alert(`以下订单未完成入库:${unfinishedOrders.toString()}, 是否继续`, '警告', {
+                        confirmButtonText: '确认',
+                        showCancelButton: true,
+                        cancelButtonText: '取消'
+                    });
+                    return true
+                }
+                catch (error) {
+                    ElMessage.info("操作已取消")
+                    return false
+                }
+            }
+            return true
+        },
+        async approveOutbound() {
+            if (!await this.checkOutboundPrequisite()) {
                 return
             }
             try {
@@ -365,3 +399,9 @@ export default {
     }
 }
 </script>
+<style scoped>
+.search-input {
+    width: 200px;
+    margin-right: 10px;
+}
+</style>

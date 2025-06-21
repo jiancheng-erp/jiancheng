@@ -1678,13 +1678,11 @@ def approve_outbound_by_business():
     db.session.query(Order).filter(
         Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
     ).update({Order.is_outbound_allowed: 1}, synchronize_session=False)
-    db.session.query(Order).filter(
-        Order.order_id.in_(order_ids), Order.is_outbound_allowed != 2
-    ).update({Order.is_outbound_allowed: 1}, synchronize_session=False)
     try:
         processor: EventProcessor = current_app.config["event_processor"]
+        events = []
         for order_id in order_ids:
-            for operation in [22, 23, 24, 25, 26, 27]:
+            for operation in [18, 19, 20, 21, 22, 23, 24, 25, 26, 27]:
                 event = Event(
                     staff_id=staff_id,
                     handle_time=datetime.now(),
@@ -1692,6 +1690,8 @@ def approve_outbound_by_business():
                     event_order_id=order_id,
                 )
                 processor.processEvent(event)
+                events.append(event)
+        db.session.add_all(events)
     except Exception as e:
         logger.debug(e)
         return jsonify({"message": "failed"}), 400
@@ -1709,6 +1709,7 @@ def approve_outbound_by_general_manager():
     ).update({Order.is_outbound_allowed: 2}, synchronize_session=False)
     try:
         processor: EventProcessor = current_app.config["event_processor"]
+        events = []
         for order_id in order_ids:
             for operation in [28, 29]:
                 event = Event(
@@ -1718,6 +1719,8 @@ def approve_outbound_by_general_manager():
                     event_order_id=order_id,
                 )
                 processor.processEvent(event)
+                events.append(event)
+        db.session.add_all(events)
     except Exception as e:
         logger.debug(e)
         return jsonify({"message": "failed"}), 400
