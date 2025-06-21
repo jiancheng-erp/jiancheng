@@ -21,6 +21,7 @@ from logger import logger
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 from logger import logger
 
+
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
 def get_finished_in_out_overview():
     """
@@ -78,8 +79,7 @@ def get_finished_in_out_overview():
         else:
             status_name = "已完成出库"
         remaining_amount = (
-            storage_obj.finished_estimated_amount
-            - storage_obj.finished_actual_amount
+            storage_obj.finished_estimated_amount - storage_obj.finished_actual_amount
             if storage_obj.finished_actual_amount > 0
             else 0
         )
@@ -152,6 +152,7 @@ def get_product_overview():
             == FinishedShoeStorage.finished_shoe_id,
         )
         .group_by(Order.order_id)
+        .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
@@ -392,26 +393,6 @@ def _determine_outbound_status(storage):
     return False
 
 
-def check_finished_storage_status_for_order(order_id):
-    """
-    Check if all finished storage for the given order_id are completed.
-    """
-    finished_storages = (
-        db.session.query(FinishedShoeStorage)
-        .join(
-            OrderShoeType,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
-        )
-        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
-        .filter(OrderShoe.order_id == order_id)
-        .all()
-    )
-    for storage in finished_storages:
-        if storage.finished_status != 2:  # Not completed
-            return False
-    return True
-
-
 @finished_storage_bp.route(
     "/warehouse/warehousemanager/outboundfinished", methods=["POST", "PATCH"]
 )
@@ -434,16 +415,25 @@ def outbound_finished():
 
     total_amount = 0
     unique_order_id = set()
+
+    # get all the shoe storage ids from the items
+    storage_ids = [item["storageId"] for item in items]
+    storages = (
+        db.session.query(FinishedShoeStorage)
+        .filter(FinishedShoeStorage.finished_shoe_id.in_(storage_ids))
+        .all()
+    )
+    if not storages:
+        return jsonify({"message": "无成品记录"}), 400
+    storage_dict = {storage.finished_shoe_id: storage for storage in storages}
     for item in items:
         storage_id = item["storageId"]
         remark = item["remark"]
         outbound_quantity = item.get("outboundQuantity", 0)
         unique_order_id.add(item["orderId"])
-        storage = db.session.query(FinishedShoeStorage).get(storage_id)
+        storage = storage_dict.get(storage_id)
         if not storage:
-            return jsonify({"message": "无成品记录"}), 400
-        if storage.finished_amount == 0:
-            return jsonify({"message": "没有库存"}), 400
+            continue  # Skip if storage not found
 
         storage.finished_amount -= outbound_quantity
         record_detail = ShoeOutboundRecordDetail(
@@ -462,8 +452,37 @@ def outbound_finished():
 
     processor: EventProcessor = current_app.config["event_processor"]
     staff_id = current_user_info()[1].staff_id
-    for order_id in unique_order_id:
-        if check_finished_storage_status_for_order(order_id):
+
+    # get all the orders
+    orders = (
+        db.session.query(Order, FinishedShoeStorage)
+        .join(
+            OrderShoe,
+            OrderShoe.order_id == Order.order_id,
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .filter(Order.order_id.in_(unique_order_id))
+        .all()
+    )
+    storage_map = {}
+    order_map = {}
+    for order, storage in orders:
+        if order.order_id not in storage_map:
+            storage_map[order.order_id] = []
+        storage_map[order.order_id].append(storage)
+        order_map[order.order_id] = order
+    for order_id, storages in storage_map.items():
+        if all(storage.finished_status == 2 for storage in storages):
+            order = order_map[order_id]
+            order.is_outbound_allowed = 3  # Mark order as completed
+            # All storages for this order are finished
             try:
                 for operation in [30, 31]:
                     event = Event(
@@ -920,4 +939,5 @@ def get_remaining_amount_of_finished_storage():
         .filter(FinishedShoeStorage.finished_actual_amount > 0)
         .scalar()
     )
-    return jsonify({"remainingAmount": response})
+    result = response if response is not None else 0
+    return jsonify({"remainingAmount": result})
