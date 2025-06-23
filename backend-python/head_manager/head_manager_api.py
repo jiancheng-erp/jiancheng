@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, session
+from matplotlib.pylab import logistic
 from models import *
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timedelta
 from event_processor import EventProcessor
 import time
 from decimal import Decimal
@@ -33,7 +34,9 @@ def get_cost_info():
     # Customers
     customers = {
         c.customer_id: c.customer_name
-        for c in db.session.query(Customer).filter(Customer.customer_id.in_(customer_ids))
+        for c in db.session.query(Customer).filter(
+            Customer.customer_id.in_(customer_ids)
+        )
     }
 
     # OrderShoe and Shoe
@@ -51,17 +54,17 @@ def get_cost_info():
 
     # MaterialStorage and SizeMaterialStorage
     material_storages = defaultdict(list)
-    for ms in db.session.query(MaterialStorage).filter(MaterialStorage.order_shoe_id.in_(order_shoe_ids)):
+    for ms in db.session.query(MaterialStorage).filter(
+        MaterialStorage.order_shoe_id.in_(order_shoe_ids)
+    ):
         material_storages[ms.order_shoe_id].append(ms)
 
-    size_storages = defaultdict(list)
-    for ss in db.session.query(SizeMaterialStorage).filter(SizeMaterialStorage.order_shoe_id.in_(order_shoe_ids)):
-        size_storages[ss.order_shoe_id].append(ss)
-
     # UnitPriceReports
-    cutting_prices = defaultdict(float)
-    sewing_prices = defaultdict(float)
-    for upr in db.session.query(UnitPriceReport).filter(UnitPriceReport.order_shoe_id.in_(order_shoe_ids)):
+    cutting_prices = defaultdict(Decimal)
+    sewing_prices = defaultdict(Decimal)
+    for upr in db.session.query(UnitPriceReport).filter(
+        UnitPriceReport.order_shoe_id.in_(order_shoe_ids)
+    ):
         if upr.team == "裁断":
             cutting_prices[upr.order_shoe_id] += upr.price_sum
         elif upr.team == "针车":
@@ -71,7 +74,11 @@ def get_cost_info():
     prod_amounts = defaultdict(lambda: {"cutting": 0, "sewing": 0})
     for ipa, ost, os in (
         db.session.query(OrderShoeProductionAmount, OrderShoeType, OrderShoe)
-        .join(OrderShoeType, OrderShoeProductionAmount.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(
+            OrderShoeType,
+            OrderShoeProductionAmount.order_shoe_type_id
+            == OrderShoeType.order_shoe_type_id,
+        )
         .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
     ):
@@ -83,7 +90,9 @@ def get_cost_info():
     # OutsourceInfo
     outsources = {
         o.order_shoe_id: o.total_cost
-        for o in db.session.query(OutsourceInfo).filter(OutsourceInfo.order_shoe_id.in_(order_shoe_ids))
+        for o in db.session.query(OutsourceInfo).filter(
+            OutsourceInfo.order_shoe_id.in_(order_shoe_ids)
+        )
     }
 
     # BatchInfo (for amount and price)
@@ -91,7 +100,10 @@ def get_cost_info():
     for os, ost, osbi in (
         db.session.query(OrderShoe, OrderShoeType, OrderShoeBatchInfo)
         .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
-        .join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
         .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
     ):
         batch_infos[os.order_shoe_id].append((ost.unit_price, osbi.total_amount))
@@ -103,10 +115,18 @@ def get_cost_info():
         order_shoe_list = []
 
         order_totals = {
-            "material_cost": 0, "admin_exp": 0, "logistics": 0,
-            "outsource": 0, "price": 0, "shoe_amount": 0,
-            "labor": 0, "cutting": 0, "sewing": 0, "molding": 0,
-            "cost": 0, "profit": 0
+            "material_cost": 0,
+            "admin_exp": 0,
+            "logistics": 0,
+            "outsource": 0,
+            "price": 0,
+            "shoe_amount": 0,
+            "labor": 0,
+            "cutting": 0,
+            "sewing": 0,
+            "molding": 0,
+            "cost": 0,
+            "profit": 0,
         }
 
         for os, shoe in order_shoes_by_order[o.order_id]:
@@ -114,14 +134,10 @@ def get_cost_info():
 
             # Calculate material costs
             material_cost = sum(
-                (max(ms.actual_inbound_amount, ms.estimated_inbound_amount or 0) or 0) * (ms.unit_price or 0)
+                (ms.inbound_amount or 0) * (ms.unit_price or 0)
                 for ms in material_storages[sid]
             )
-            size_cost = sum(
-                (max(ss.total_actual_inbound_amount, ss.total_estimated_inbound_amount or 0) or 0) * (ss.unit_price or 0)
-                for ss in size_storages[sid]
-            )
-            total_material_cost = material_cost + size_cost
+            total_material_cost = material_cost
 
             # Cutting and sewing
             cutting_unit_cost = cutting_prices[sid]
@@ -139,32 +155,43 @@ def get_cost_info():
             outsource_cost = outsources.get(sid, 0)
 
             # Sale price and amount
-            price_of_shoes = sum((unit_price or 0) * (amount or 0) for unit_price, amount in batch_infos[sid])
+            price_of_shoes = sum(
+                (unit_price or 0) * (amount or 0)
+                for unit_price, amount in batch_infos[sid]
+            )
             shoe_total_amount = sum(amount or 0 for _, amount in batch_infos[sid])
 
-            total_cost = Decimal(total_material_cost) + Decimal(admin_exp) + Decimal(logistics_cost) + Decimal(outsource_cost) + Decimal(inside_labor_cost)
+            total_cost = (
+                Decimal(total_material_cost)
+                + Decimal(admin_exp)
+                + Decimal(logistics_cost)
+                + Decimal(outsource_cost)
+                + Decimal(inside_labor_cost)
+            )
             cost_per_shoe = total_cost / shoe_total_amount if shoe_total_amount else 0
             profit = Decimal(price_of_shoes) - Decimal(total_cost)
             profit_per_shoe = profit / shoe_total_amount if shoe_total_amount else 0
 
             # Append to order shoe list
-            order_shoe_list.append({
-                "shoeRId": shoe.shoe_rid,
-                "shoeName": os.customer_product_name,
-                "totalMaterialCost": round(total_material_cost, 3),
-                "administrativeExpenses": round(admin_exp, 3),
-                "logisticsCost": round(logistics_cost, 3),
-                "outsouceCost": round(outsource_cost, 3),
-                "priceOfShoes": round(price_of_shoes, 3),
-                "labourCost": round(inside_labor_cost, 3),
-                "cuttingCost": round(cutting_cost, 3),
-                "sewingCost": round(sewing_cost, 3),
-                "moldingCost": round(molding_cost, 3),
-                "shoeTotalAmount": shoe_total_amount,
-                "profit": round(profit, 3),
-                "profitPerShoe": round(profit_per_shoe, 3),
-                "costPerShoe": round(cost_per_shoe, 3),
-            })
+            order_shoe_list.append(
+                {
+                    "shoeRId": shoe.shoe_rid,
+                    "shoeName": os.customer_product_name,
+                    "totalMaterialCost": round(total_material_cost, 3),
+                    "administrativeExpenses": round(admin_exp, 3),
+                    "logisticsCost": round(logistics_cost, 3),
+                    "outsouceCost": round(outsource_cost, 3),
+                    "priceOfShoes": round(price_of_shoes, 3),
+                    "labourCost": round(inside_labor_cost, 3),
+                    "cuttingCost": round(cutting_cost, 3),
+                    "sewingCost": round(sewing_cost, 3),
+                    "moldingCost": round(molding_cost, 3),
+                    "shoeTotalAmount": shoe_total_amount,
+                    "profit": round(profit, 3),
+                    "profitPerShoe": round(profit_per_shoe, 3),
+                    "costPerShoe": round(cost_per_shoe, 3),
+                }
+            )
 
             # Update totals
             order_totals["material_cost"] += total_material_cost
@@ -180,29 +207,38 @@ def get_cost_info():
             order_totals["cost"] += total_cost
             order_totals["profit"] += profit
 
-        cost_info.append({
-            "orderId": o.order_id,
-            "orderRid": o.order_rid,
-            "customerName": customer_name,
-            "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
-            "orderShoes": order_shoe_list,
-            "orderTotalMaterialCost": round(order_totals["material_cost"], 3),
-            "orderTotalAdministrativeExpenses": round(order_totals["admin_exp"], 3),
-            "orderTotalLogisticsCost": round(order_totals["logistics"], 3),
-            "orderTotalOutsouceCost": round(order_totals["outsource"], 3),
-            "orderTotalPriceOfShoes": round(order_totals["price"], 3),
-            "orderTotalShoeAmount": order_totals["shoe_amount"],
-            "orderTotalLabourCost": round(order_totals["labor"], 3),
-            "orderTotalCuttingCost": round(order_totals["cutting"], 3),
-            "orderTotalSewingCost": round(order_totals["sewing"], 3),
-            "orderTotalMoldingCost": round(order_totals["molding"], 3),
-            "orderTotalProfit": round(order_totals["profit"], 3),
-            "orderTotalCost": round(order_totals["cost"], 3),
-            "orderTotalCostPerShoe": round(order_totals["cost"] / order_totals["shoe_amount"], 3) if order_totals["shoe_amount"] else 0,
-            "orderTotalProfitPerShoe": round(order_totals["profit"] / order_totals["shoe_amount"], 3) if order_totals["shoe_amount"] else 0,
-        })
+        cost_info.append(
+            {
+                "orderId": o.order_id,
+                "orderRid": o.order_rid,
+                "customerName": customer_name,
+                "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
+                "orderShoes": order_shoe_list,
+                "orderTotalMaterialCost": round(order_totals["material_cost"], 3),
+                "orderTotalAdministrativeExpenses": round(order_totals["admin_exp"], 3),
+                "orderTotalLogisticsCost": round(order_totals["logistics"], 3),
+                "orderTotalOutsouceCost": round(order_totals["outsource"], 3),
+                "orderTotalPriceOfShoes": round(order_totals["price"], 3),
+                "orderTotalShoeAmount": order_totals["shoe_amount"],
+                "orderTotalLabourCost": round(order_totals["labor"], 3),
+                "orderTotalCuttingCost": round(order_totals["cutting"], 3),
+                "orderTotalSewingCost": round(order_totals["sewing"], 3),
+                "orderTotalMoldingCost": round(order_totals["molding"], 3),
+                "orderTotalProfit": round(order_totals["profit"], 3),
+                "orderTotalCost": round(order_totals["cost"], 3),
+                "orderTotalCostPerShoe": (
+                    round(order_totals["cost"] / order_totals["shoe_amount"], 3)
+                    if order_totals["shoe_amount"]
+                    else 0
+                ),
+                "orderTotalProfitPerShoe": (
+                    round(order_totals["profit"] / order_totals["shoe_amount"], 3)
+                    if order_totals["shoe_amount"]
+                    else 0
+                ),
+            }
+        )
 
-    logger.debug("time taken for get cost info is", time.time() - time_s)
     return jsonify(cost_info)
 
 
@@ -215,8 +251,20 @@ def get_order_status_info():
 
     # Get orders
     # orders = Order.query.all() if not order_rid else Order.query.filter_by(order_rid=order_rid).all()
-    orders = db.session.query(Order).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(OrderStatus.order_current_status >= 9).all()\
-        if not order_rid else db.session.query(Order, OrderStatus).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(Order.order_rid.like(f"%{order_rid}%"), OrderStatus.order_current_status >= 9).all()
+    orders = (
+        db.session.query(Order)
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .filter(OrderStatus.order_current_status >= 9)
+        .all()
+        if not order_rid
+        else db.session.query(Order, OrderStatus)
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .filter(
+            Order.order_rid.like(f"%{order_rid}%"),
+            OrderStatus.order_current_status >= 9,
+        )
+        .all()
+    )
     if not orders:
         return jsonify({"msg": "No order found."}), 404
 
@@ -226,11 +274,18 @@ def get_order_status_info():
     # Get customer names
     customers = {
         c.customer_id: c.customer_name
-        for c in db.session.query(Customer).filter(Customer.customer_id.in_(customer_ids))
+        for c in db.session.query(Customer).filter(
+            Customer.customer_id.in_(customer_ids)
+        )
     }
 
     # Get order shoes
-    order_shoes = db.session.query(OrderShoe, Shoe).join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id).filter(OrderShoe.order_id.in_(order_ids)).all()
+    order_shoes = (
+        db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(OrderShoe.order_id.in_(order_ids))
+        .all()
+    )
     shoes_by_order = defaultdict(list)
     order_shoe_ids = []
     for os, shoe in order_shoes:
@@ -240,7 +295,9 @@ def get_order_status_info():
     # Get production info
     production_infos = {
         pi.order_shoe_id: pi.is_material_arrived
-        for pi in db.session.query(OrderShoeProductionInfo).filter(OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids))
+        for pi in db.session.query(OrderShoeProductionInfo).filter(
+            OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids)
+        )
     }
 
     # Get current statuses
@@ -249,7 +306,11 @@ def get_order_status_info():
         for ref in db.session.query(OrderShoeStatusReference).all()
     }
     status_by_shoe = defaultdict(list)
-    for status in db.session.query(OrderShoeStatus).filter(OrderShoeStatus.order_shoe_id.in_(order_shoe_ids)).all():
+    for status in (
+        db.session.query(OrderShoeStatus)
+        .filter(OrderShoeStatus.order_shoe_id.in_(order_shoe_ids))
+        .all()
+    ):
         status_name = status_refs.get(status.current_status, "")
         status_by_shoe[status.order_shoe_id].append(status_name)
 
@@ -257,7 +318,10 @@ def get_order_status_info():
     finished_statuses = defaultdict(list)
     fss_query = (
         db.session.query(FinishedShoeStorage, OrderShoeType)
-        .join(OrderShoeType, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(
+            OrderShoeType,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
         .filter(OrderShoeType.order_shoe_id.in_(order_shoe_ids))
         .all()
     )
@@ -287,28 +351,34 @@ def get_order_status_info():
                     outbound_status = "未完全出库"
                 else:
                     outbound_status = "已出库"
-                order_shoe_list.append({
+                order_shoe_list.append(
+                    {
                         "orderShoeId": sid,
                         "shoeRId": shoe.shoe_rid,
                         "shoeName": os.customer_product_name,
                         "isMaterialArrived": is_arrived_string,
                         "orderShoeStatus": order_shoe_status_string,
                         "outboundStatus": outbound_status,
-                    })
-                order_status_info.append({
-                    "orderId": o.order_id,
-                    "customerName": customer_name,
-                    "shoeRId": shoe.shoe_rid,
-                    "shoeName": os.customer_product_name,
-                    "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
-                    "orderRid": o.order_rid,
-                    "orderShoes": order_shoe_list,
-                })
+                    }
+                )
+                order_status_info.append(
+                    {
+                        "orderId": o.order_id,
+                        "customerName": customer_name,
+                        "shoeRId": shoe.shoe_rid,
+                        "shoeName": os.customer_product_name,
+                        "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
+                        "orderRid": o.order_rid,
+                        "orderShoes": order_shoe_list,
+                    }
+                )
 
             else:
                 for os, shoe in shoes_by_order[o.order_id]:
                     sid = os.order_shoe_id
-                    is_arrived_string = "已到料" if production_infos.get(sid) else "未到料"
+                    is_arrived_string = (
+                        "已到料" if production_infos.get(sid) else "未到料"
+                    )
 
                     # Status string
                     order_shoe_status_string = " ".join(status_by_shoe.get(sid, []))
@@ -322,40 +392,38 @@ def get_order_status_info():
                     else:
                         outbound_status = "已出库"
 
-                    order_shoe_list.append({
-                        "orderShoeId": sid,
-                        "shoeRId": shoe.shoe_rid,
-                        "shoeName": os.customer_product_name,
-                        "isMaterialArrived": is_arrived_string,
-                        "orderShoeStatus": order_shoe_status_string,
-                        "outboundStatus": outbound_status,
-                    })
+                    order_shoe_list.append(
+                        {
+                            "orderShoeId": sid,
+                            "shoeRId": shoe.shoe_rid,
+                            "shoeName": os.customer_product_name,
+                            "isMaterialArrived": is_arrived_string,
+                            "orderShoeStatus": order_shoe_status_string,
+                            "outboundStatus": outbound_status,
+                        }
+                    )
 
-                order_status_info.append({
-                    "orderId": o.order_id,
-                    "customerName": customer_name,
-                    "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
-                    "orderRid": o.order_rid,
-                    "orderShoes": order_shoe_list,
-                })
+                order_status_info.append(
+                    {
+                        "orderId": o.order_id,
+                        "customerName": customer_name,
+                        "orderStartDate": o.start_date.strftime("%Y-%m-%d"),
+                        "orderRid": o.order_rid,
+                        "orderShoes": order_shoe_list,
+                    }
+                )
 
-        logger.debug("time taken for get order status info is", time.time() - time_s)
         return jsonify(order_status_info)
 
     else:
         # OrderType != 0 — not implemented in original
-        logger.debug("time taken for get order status info is", time.time() - time_s)
         return jsonify({"msg": "Invalid order type."}), 400
-
-
-
-
 
 
 @head_manager_bp.route("/headmanager/getordershoetimeline", methods=["GET"])
 def get_order_shoe_timeline():
     time_s = time.time()
-    
+
     order_id = request.args.get("orderId", None)
     order_shoe_id = request.args.get("orderShoeId", None)
     if not order_id and not order_shoe_id:
@@ -368,7 +436,7 @@ def get_order_shoe_timeline():
                 Event.operation_id,
                 Event.event_order_id,
                 Event.event_type,
-                func.max(Event.handle_time).label("latest_handle_time")
+                func.max(Event.handle_time).label("latest_handle_time"),
             )
             .filter(Event.event_order_id == order_id, Event.event_type == 0)
             .group_by(Event.operation_id, Event.event_order_id, Event.event_type)
@@ -377,24 +445,33 @@ def get_order_shoe_timeline():
 
         # Main query to fetch the latest records
         event = (
-            db.session.query(Event, Operation, Order, OrderStatus, OrderStatusReference, OrderShoeStatusReference)
+            db.session.query(
+                Event,
+                Operation,
+                Order,
+                OrderStatus,
+                OrderStatusReference,
+                OrderShoeStatusReference,
+            )
             .join(Operation, Event.operation_id == Operation.operation_id)
             .join(Order, Event.event_order_id == Order.order_id)
             .join(
                 OrderStatusReference,
-                Operation.operation_modified_status == OrderStatusReference.order_status_id,
+                Operation.operation_modified_status
+                == OrderStatusReference.order_status_id,
             )
             .join(OrderStatus, OrderStatus.order_id == Order.order_id)
             .join(
                 OrderShoeStatusReference,
-                Operation.operation_modified_status == OrderShoeStatusReference.status_id,
+                Operation.operation_modified_status
+                == OrderShoeStatusReference.status_id,
             )
             .join(
                 latest_event_subquery,
-                (Event.operation_id == latest_event_subquery.c.operation_id) &
-                (Event.event_order_id == latest_event_subquery.c.event_order_id) &
-                (Event.event_type == latest_event_subquery.c.event_type) &
-                (Event.handle_time == latest_event_subquery.c.latest_handle_time)
+                (Event.operation_id == latest_event_subquery.c.operation_id)
+                & (Event.event_order_id == latest_event_subquery.c.event_order_id)
+                & (Event.event_type == latest_event_subquery.c.event_type)
+                & (Event.handle_time == latest_event_subquery.c.latest_handle_time),
             )
             .filter(Operation.operation_modified_value == 2)
             .all()
@@ -407,9 +484,11 @@ def get_order_shoe_timeline():
                     {
                         "operationId": e.Operation.operation_id,
                         "operationName": e.Operation.operation_name,
-                        "operationModifiedStatus": (e.OrderStatusReference.order_status_name
-                                                    if e.Operation.operation_type == 1
-                                                    else e.OrderShoeStatusReference.status_name),
+                        "operationModifiedStatus": (
+                            e.OrderStatusReference.order_status_name
+                            if e.Operation.operation_type == 1
+                            else e.OrderShoeStatusReference.status_name
+                        ),
                         "handleTime": e.Event.handle_time.strftime("%Y-%m-%d %H:%M:%S"),
                     }
                 )
@@ -424,7 +503,7 @@ def get_order_shoe_timeline():
                 Event.operation_id,
                 Event.event_order_shoe_id,
                 Event.event_type,
-                func.max(Event.handle_time).label("latest_handle_time")
+                func.max(Event.handle_time).label("latest_handle_time"),
             )
             .filter(Event.event_order_shoe_id == order_shoe_id, Event.event_type == 1)
             .group_by(Event.operation_id, Event.event_order_shoe_id, Event.event_type)
@@ -437,23 +516,25 @@ def get_order_shoe_timeline():
             .join(Operation, Event.operation_id == Operation.operation_id)
             .join(OrderShoe, Event.event_order_shoe_id == OrderShoe.order_shoe_id)
             .join(
-                OrderShoeStatusReference, Operation.operation_modified_status == OrderShoeStatusReference.status_id
+                OrderShoeStatusReference,
+                Operation.operation_modified_status
+                == OrderShoeStatusReference.status_id,
             )
             .join(
                 latest_event_subquery,
-                (Event.operation_id == latest_event_subquery.c.operation_id) &
-                (Event.event_order_shoe_id == latest_event_subquery.c.event_order_shoe_id) &
-                (Event.event_type == latest_event_subquery.c.event_type) &
-                (Event.handle_time == latest_event_subquery.c.latest_handle_time)
+                (Event.operation_id == latest_event_subquery.c.operation_id)
+                & (
+                    Event.event_order_shoe_id
+                    == latest_event_subquery.c.event_order_shoe_id
+                )
+                & (Event.event_type == latest_event_subquery.c.event_type)
+                & (Event.handle_time == latest_event_subquery.c.latest_handle_time),
             )
             .filter(Operation.operation_modified_value == 2)
             .all()
         )
 
         event_list = []
-        time_t = time.time()
-        time_taken = time_t - time_s
-        logger.debug("time taken for order shoe time line is " + str(time_taken))
         if event:
             for e in event:
                 event_list.append(
@@ -469,210 +550,159 @@ def get_order_shoe_timeline():
             return jsonify({"msg": "No event found."}), 404
 
 
-
 @head_manager_bp.route("/headmanager/getmaterialpriceinfo", methods=["GET"])
 def get_material_price_info():
-    """Get the price information of the materials."""
     time_s = time.time()
-    # Get query parameters
-    material_name = request.args.get("materialName", None)
-    material_model = request.args.get("materialModel", None)
-    material_specification = request.args.get("materialSpecification", None)
-    supplier_name = request.args.get("supplierName", None)
 
-    # Subquery to get the latest inbound record for each material storage
-    latest_material_inbound_subquery = (
+    material_name = request.args.get("materialName")
+    material_model = request.args.get("materialModel")
+    material_specification = request.args.get("materialSpecification")
+    supplier_name = request.args.get("supplierName")
+
+    # 子查询：每个 spu_material_id 分区，按入库时间降序，编号 row_number
+    ranked_detail_subquery = (
         db.session.query(
-            InboundRecord.material_storage_id.label("material_storage_id"),
-            func.max(InboundRecord.inbound_datetime).label("latest_inbound_date"),
+            InboundRecordDetail.id.label("detail_id"),
+            SPUMaterial.spu_material_id.label("spu_material_id"),
+            func.row_number()
+            .over(
+                partition_by=SPUMaterial.spu_material_id,
+                order_by=InboundRecord.inbound_datetime.desc(),
+            )
+            .label("rnk"),
         )
-        .group_by(InboundRecord.material_storage_id)
-        .subquery()
-    )
-
-    # Subquery to get the latest inbound record for each size material storage
-    latest_size_inbound_subquery = (
-        db.session.query(
-            InboundRecord.size_material_storage_id.label("size_material_storage_id"),
-            func.max(InboundRecord.inbound_datetime).label("latest_inbound_date"),
-        )
-        .group_by(InboundRecord.size_material_storage_id)
-        .subquery()
-    )
-
-    # Main query to get material price info with the newest inbound record
-    material_storage = (
-        db.session.query(MaterialStorage, Material, MaterialType, Supplier, InboundRecord)
-        .join(Material, MaterialStorage.material_id == Material.material_id)
-        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .outerjoin(
-            latest_material_inbound_subquery,
+        .join(
+            MaterialStorage,
             MaterialStorage.material_storage_id
-            == latest_material_inbound_subquery.c.material_storage_id,
+            == InboundRecordDetail.material_storage_id,
         )
-        .outerjoin(
+        .join(
+            SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id
+        )
+        .join(
             InboundRecord,
-            (
-                InboundRecord.material_storage_id
-                == latest_material_inbound_subquery.c.material_storage_id
-            )
-            & (
-                InboundRecord.inbound_datetime
-                == latest_material_inbound_subquery.c.latest_inbound_date
-            ),
+            InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id,
         )
-        .all()
+        .subquery()
     )
 
-    # Main query to get size material price info with the newest inbound record
-    size_material_storage = (
-        db.session.query(SizeMaterialStorage, Material, MaterialType, Supplier, InboundRecord)
-        .join(Material, SizeMaterialStorage.material_id == Material.material_id)
+    # 主查询：只保留每个 SPU 的最新入库记录
+    results = (
+        db.session.query(
+            InboundRecordDetail,
+            MaterialStorage,
+            SPUMaterial,
+            Material,
+            MaterialType,
+            Supplier,
+            InboundRecord,
+        )
+        .join(
+            ranked_detail_subquery,
+            InboundRecordDetail.id == ranked_detail_subquery.c.detail_id,
+        )
+        .filter(ranked_detail_subquery.c.rnk == 1)
+        .join(
+            MaterialStorage,
+            MaterialStorage.material_storage_id
+            == InboundRecordDetail.material_storage_id,
+        )
+        .join(
+            SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id
+        )
+        .join(Material, SPUMaterial.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .outerjoin(
-            latest_size_inbound_subquery,
-            SizeMaterialStorage.size_material_storage_id
-            == latest_size_inbound_subquery.c.size_material_storage_id,
-        )
-        .outerjoin(
+        .join(
             InboundRecord,
-            (
-                InboundRecord.size_material_storage_id
-                == latest_size_inbound_subquery.c.size_material_storage_id
-            )
-            & (
-                InboundRecord.inbound_datetime
-                == latest_size_inbound_subquery.c.latest_inbound_date
-            ),
+            InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id,
         )
         .all()
     )
 
-    # Process results for material storage
+    # 输出 JSON
     material_price_info = []
-    for ms in material_storage:
+    for detail, ms, spu_mat, mat, mat_type, supplier, record in results:
         if (
-            (not material_name or ms.Material.material_name == material_name)
-            and (not material_model or ms.MaterialStorage.material_model == material_model)
+            (not material_name or mat.material_name == material_name)
+            and (not material_model or spu_mat.material_model == material_model)
             and (
                 not material_specification
-                or ms.MaterialStorage.material_specification == material_specification
+                or spu_mat.material_specification == material_specification
             )
-            and (not supplier_name or ms.Supplier.supplier_name == supplier_name)
+            and (not supplier_name or supplier.supplier_name == supplier_name)
         ):
-            # Handle missing inbound record
             purchase_date = (
-                ms.InboundRecord.inbound_datetime.strftime("%Y-%m-%d")
-                if ms.InboundRecord and ms.InboundRecord.inbound_datetime
+                record.inbound_datetime.strftime("%Y-%m-%d")
+                if record.inbound_datetime
                 else "未入库"
             )
+            inbound_amount = ms.inbound_amount or 0
+            unit_price = ms.unit_price or 0
+            purchase_cost = round(inbound_amount * unit_price, 3)
 
             material_price_info.append(
                 {
                     "type": "N",
-                    "materialType": ms.MaterialType.material_type_name,
-                    "materialStorageId": ms.MaterialStorage.material_storage_id,
-                    "materialName": ms.Material.material_name,
-                    "materialModel": ms.MaterialStorage.material_model,
-                    "materialSpecification": ms.MaterialStorage.material_specification,
-                    "supplierName": ms.Supplier.supplier_name,
-                    "unitPrice": ms.MaterialStorage.unit_price,
-                    "color": ms.MaterialStorage.material_storage_color,
-                    "purchaseAmount": ms.MaterialStorage.actual_inbound_amount,  # Assuming 'amount' is the quantity field
-                    "purchaseDate": purchase_date,  # Set to "未入库" if no inbound record exists,
-                    "purchaseCost": round(ms.MaterialStorage.actual_inbound_amount * ms.MaterialStorage.unit_price, 3),
+                    "spuMaterialId": spu_mat.spu_material_id,
+                    "materialType": mat_type.material_type_name,
+                    "materialStorageId": ms.material_storage_id,
+                    "materialName": mat.material_name,
+                    "materialModel": spu_mat.material_model,
+                    "materialSpecification": spu_mat.material_specification,
+                    "supplierName": supplier.supplier_name,
+                    "unitPrice": float(unit_price),
+                    "color": spu_mat.color,
+                    "purchaseAmount": float(inbound_amount),
+                    "purchaseDate": purchase_date,
+                    "purchaseCost": float(purchase_cost),
                 }
             )
 
-    # Process results for size material storage
-    for sms in size_material_storage:
-        if (
-            (not material_name or sms.Material.material_name == material_name)
-            and (not material_model or sms.SizeMaterialStorage.size_material_model == material_model)
-            and (
-                not material_specification
-                or sms.SizeMaterialStorage.material_specification == material_specification
-            )
-            and (not supplier_name or sms.Supplier.supplier_name == supplier_name)
-        ):
-            # Handle missing inbound record
-            purchase_date = (
-                sms.InboundRecord.inbound_datetime.strftime("%Y-%m-%d")
-                if sms.InboundRecord and sms.InboundRecord.inbound_datetime
-                else "未入库"
-            )
-
-            material_price_info.append(
-                {
-                    "type": "S",
-                    "materialType": sms.MaterialType.material_type_name, 
-                    "materialStorageId": sms.SizeMaterialStorage.size_material_storage_id,
-                    "materialName": sms.Material.material_name,
-                    "materialModel": sms.SizeMaterialStorage.size_material_model,
-                    "materialSpecification": sms.SizeMaterialStorage.size_material_specification,
-                    "supplierName": sms.Supplier.supplier_name,
-                    "unitPrice": sms.SizeMaterialStorage.unit_price,
-                    "color": sms.SizeMaterialStorage.size_material_color,
-                    "purchaseAmount": sms.SizeMaterialStorage.total_actual_inbound_amount,  # Assuming 'amount' is the quantity field
-                    "purchaseDate": purchase_date,  # Set to "未入库" if no inbound record exists
-                    "purchaseCost": round(sms.SizeMaterialStorage.total_actual_inbound_amount * sms.SizeMaterialStorage.unit_price, 3),
-                }
-            )
-    time_t = time.time()
-    time_taken = time_t - time_s
-    logger.debug("time taken for get_material price info is " + str(time_taken))
     return jsonify(material_price_info)
 
 
 @head_manager_bp.route("/headmanager/getmaterialinboundcurve", methods=["GET"])
 def get_material_inbound_curve():
     """Get the inbound curve of the materials."""
-    material_type = request.args.get("materialType", None)
-    material_storage_id = request.args.get("materialStorageId", None)
-    if not material_type or not material_storage_id:
-        return jsonify({"msg": "Missing query parameters."}), 400
-    curve_data = []
-    if material_type == "N":
-        material_storage = (
-            db.session.query(MaterialStorage, InboundRecord)
-            .join(
-                InboundRecord,
-                MaterialStorage.material_storage_id
-                == InboundRecord.material_storage_id,
-            )
-            .filter(MaterialStorage.material_storage_id == material_storage_id)
-            .all()
+    spu_material_id = request.args.get("spuMaterialId")
+    if not spu_material_id:
+        return jsonify({"error": "Missing spuMaterialId"}), 400
+
+    # 查询非零价格的记录
+    records = (
+        db.session.query(
+            func.date(InboundRecord.inbound_datetime).label("date"),
+            MaterialStorage.unit_price,
         )
-        for ms in material_storage:
-            curve_data.append(
-                {
-                    "date": ms.InboundRecord.inbound_datetime.strftime("%Y-%m-%d"),
-                    "unitPrice": ms.MaterialStorage.unit_price,
-                }
-            )
-        return jsonify(curve_data)
-    elif material_type == "S":
-        size_material_storage = (
-            db.session.query(SizeMaterialStorage, InboundRecord)
-            .join(
-                InboundRecord,
-                SizeMaterialStorage.size_material_storage_id
-                == InboundRecord.size_material_storage_id,
-            )
-            .filter(SizeMaterialStorage.size_material_storage_id == material_storage_id)
-            .all()
+        .join(
+            SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id
         )
-        for sms in size_material_storage:
-            curve_data.append(
-                {
-                    "date": sms.InboundRecord.inbound_datetime.strftime("%Y-%m-%d"),
-                    "unitPrice": sms.SizeMaterialStorage.unit_price,
-                }
-            )
-        return jsonify(curve_data)
-    return jsonify({"msg": "Invalid material type."}), 400
+        .join(
+            InboundRecordDetail,
+            MaterialStorage.material_storage_id
+            == InboundRecordDetail.material_storage_id,
+        )
+        .join(
+            InboundRecord,
+            InboundRecordDetail.inbound_record_id == InboundRecord.inbound_record_id,
+        )
+        .filter(SPUMaterial.spu_material_id == spu_material_id)
+        .filter(MaterialStorage.unit_price != 0)
+        .all()
+    )
+
+    # 按日期聚合计算平均
+    date_group = defaultdict(list)
+    for row in records:
+        date_group[row.date.strftime("%Y-%m-%d")].append(float(row.unit_price))
+
+    curve_data = [
+        {"date": date, "unitPrice": round(sum(prices) / len(prices), 4)}
+        for date, prices in sorted(date_group.items())
+    ]
+
+    return jsonify(curve_data)
     # Get query parameters
 
 
@@ -686,7 +716,12 @@ def get_financial_status():
         order = Order.query.filter(Order.order_rid.like(f"%{order_rid}%")).all()
     financial_list = []
     for o in order:
-        customer_name = db.session.query(Customer).filter(Customer.customer_id == o.customer_id).first().customer_name
+        customer_name = (
+            db.session.query(Customer)
+            .filter(Customer.customer_id == o.customer_id)
+            .first()
+            .customer_name
+        )
         order_shoes = (
             db.session.query(OrderShoe, Shoe)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
@@ -767,29 +802,36 @@ def get_financial_status():
         }
         financial_list.append(order_info)
     time_t = time.time()
-    logger.debug("financial status time taken is " + str(time_t - time_s))
     return jsonify(financial_list)
+
 
 @head_manager_bp.route("/headmanager/saveProductionOrderPrice", methods=["POST"])
 def save_production_order_Price():
     """Confirm the production order."""
-    unit_price_form = request.json.get('unitPriceForm')
-    currency_type_form = request.json.get('currencyTypeForm')
+    unit_price_form = request.json.get("unitPriceForm")
+    currency_type_form = request.json.get("currencyTypeForm")
     for order_shoe_type_id in unit_price_form.keys():
         unit_price = Decimal(unit_price_form[order_shoe_type_id])
         currency_type = currency_type_form[order_shoe_type_id]
         # find order_shoe_type
-        order_shoe_type = db.session.query(OrderShoeType).filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id).first()
+        order_shoe_type = (
+            db.session.query(OrderShoeType)
+            .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
+            .first()
+        )
         order_shoe_type.unit_price = unit_price
         order_shoe_type.currency_type = currency_type
-        entities = (db.session.query(OrderShoeBatchInfo)
+        entities = (
+            db.session.query(OrderShoeBatchInfo)
             .filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
-			.all())
+            .all()
+        )
         for entity in entities:
             entity.total_price = unit_price * entity.total_amount
     db.session.commit()
 
     return jsonify({"msg": "Production order confirmed."})
+
 
 @head_manager_bp.route("/headmanager/confirmProductionOrder", methods=["POST"])
 def confirm_production_order():
@@ -798,7 +840,13 @@ def confirm_production_order():
     if not order:
         return jsonify({"msg": "Order not found."}), 404
     order_rid = order.order_rid
-    order_shoe_rid = db.session.query(OrderShoe, Shoe).join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id).filter(OrderShoe.order_id == order_id).first().Shoe.shoe_rid
+    order_shoe_rid = (
+        db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .first()
+        .Shoe.shoe_rid
+    )
     order_status = OrderStatus.query.filter(OrderStatus.order_id == order_id).first()
     if order_status.order_current_status == 7:
         processor = EventProcessor()
@@ -841,7 +889,9 @@ def confirm_production_order():
         )
         result = processor.processEvent(event)
         db.session.add(event)
-        message = f"订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        message = (
+            f"订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        )
         users = "YangShuYao"
         send_massage_to_users(message, users)
         db.session.commit()
@@ -849,19 +899,25 @@ def confirm_production_order():
     else:
         return jsonify({"msg": "Error Order Status"}), 400
 
-
     # Get the total number of shoes in transit
-    
+
+
 @head_manager_bp.route("/headmanager/getallrevertevent", methods=["GET"])
 def get_all_revert_event():
     result = []
-    revert_events = db.session.query(RevertEvent, Order).join(Order, RevertEvent.order_id == Order.order_id).all()
+    revert_events = (
+        db.session.query(RevertEvent, Order)
+        .join(Order, RevertEvent.order_id == Order.order_id)
+        .all()
+    )
     for revert_event, order in revert_events:
         result.append(
             {
                 "revertEventId": revert_event.revert_event_id,
                 "orderRid": order.order_rid,
-                "revertEventTime": revert_event.event_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "revertEventTime": revert_event.event_time.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
                 "revertEventReason": revert_event.revert_reason,
                 "initialingDepartment": revert_event.initialing_department,
                 "responsibleDepartment": revert_event.responsible_department,
@@ -870,7 +926,9 @@ def get_all_revert_event():
     return jsonify(result)
 
 
-@head_manager_bp.route("/headmanager/approvepricereportbyheadmanager", methods=["PATCH"])
+@head_manager_bp.route(
+    "/headmanager/approvepricereportbyheadmanager", methods=["PATCH"]
+)
 def approve_price_report_by_head_manager():
     data = request.get_json()
     order_shoe_id = data["orderShoeId"]
@@ -939,7 +997,7 @@ def reject_price_report_by_head_manager():
         report.status = PRICE_REPORT_GM_REJECTED
         report.rejection_reason = data["rejectionReason"]
         team = report.team
-    
+
     if team == "裁断":
         operation = 78
         current_status = 22
@@ -965,3 +1023,242 @@ def reject_price_report_by_head_manager():
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})
+
+
+# 主页看板api
+@head_manager_bp.route("/headmanager/getdashboardstatistic", methods=["GET"])
+def get_dashboard_statistic():
+    """Get the dashboard statistics."""
+    # Get the total number of orders
+    active_orders = (
+        db.session.query(Order, OrderStatus)
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .filter(OrderStatus.order_current_status < 18)
+        .count()
+    )
+    total_finished_shoes = (
+        db.session.query(func.sum(FinishedShoeStorage.finished_actual_amount)).scalar()
+    )
+
+    # 昨天完成鞋数量（24小时内）
+    yesterday_finished_shoes = (
+        db.session.query(func.sum(ShoeInboundRecordDetail.inbound_amount))
+        .join(
+            ShoeInboundRecord,
+            ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id,
+        )
+        .filter(
+            ShoeInboundRecord.inbound_datetime >= datetime.now() - timedelta(days=1),
+            ShoeInboundRecord.inbound_datetime < datetime.now(),
+        )
+        .scalar()
+    )
+    today_new_orders = (
+        db.session.query(Order)
+        .filter(
+            Order.start_date >= datetime.now().date(),
+            Order.start_date < (datetime.now() + timedelta(days=1)).date(),
+        )
+        .count()
+    )
+
+    dashboard_stats = [
+        {
+            "title": "活跃订单数",
+            "value": active_orders,
+        },
+        {
+            "title": "今日新增订单数",
+            "value": today_new_orders,
+        },
+        {
+            "title": "昨日完工鞋数",
+            "value": yesterday_finished_shoes.scalar() if yesterday_finished_shoes else 0,
+        },
+        {
+            "title": "总完工鞋数",
+            "value": total_finished_shoes,
+        },
+    ]
+
+    return jsonify(dashboard_stats)
+
+@head_manager_bp.route("/headmanager/businessorderstatuspiechartoption", methods=["GET"])
+def get_business_order_status_bussiness_pie_chart_option():
+    business_orders_count = (
+        db.session.query(Order, OrderStatus).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(
+            OrderStatus.order_current_status.in_([6, 11])
+        )
+        .count()
+    )
+    head_manager_orders_count = (
+        db.session.query(Order, OrderStatus).join(OrderStatus, Order.order_id == OrderStatus.order_id).filter(
+            OrderStatus.order_current_status.in_([7, 14])
+        )
+        .count()
+    )
+    dev_and_tech_orders_subquery = (
+        db.session.query(Order.order_id)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .filter(OrderShoeStatus.current_status.in_([0, 4, 9]))
+        .filter(OrderStatus.order_current_status == 9)
+        .distinct()
+        .subquery()
+    )
+    dev_and_tech_orders_count = db.session.query(func.count()).select_from(dev_and_tech_orders_subquery).scalar()
+    logistics_orders_subquery = (
+        db.session.query(Order.order_id)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeStatus, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .filter(OrderShoeStatus.current_status.in_([6, 7]))
+        .filter(OrderStatus.order_current_status == 9)
+        .distinct()
+        .subquery()
+    )
+    logistics_orders_count = db.session.query(func.count()).select_from(logistics_orders_subquery).scalar()
+    result = [
+        {
+            "value": business_orders_count,
+            "name": "业务部",
+        },
+        {
+            "value": head_manager_orders_count,
+            "name": "总经理",
+        },
+        {
+            "value": dev_and_tech_orders_count,
+            "name": "开发部，技术部",
+        },
+        {
+            "value": logistics_orders_count,
+            "name": "物控部，总仓",
+        },
+    ]
+    return jsonify(result)
+
+@head_manager_bp.route("/headmanager/productionorderstatuspieoption", methods=["GET"])
+def get_production_order_status_pie_option():
+    """Get the production order status pie chart option."""
+    # Get the total number of production orders
+    cutting_orders_count = (
+        db.session.query(Order, OrderShoe, OrderShoeProductionInfo)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeProductionInfo, OrderShoe.order_shoe_id == OrderShoeProductionInfo.order_shoe_id)
+        .filter(OrderShoeProductionInfo.cutting_end_date > datetime.now())
+        .filter(OrderShoeProductionInfo.cutting_start_date <= datetime.now())
+        .count()
+    )
+    pre_sewing_orders_count = (
+        db.session.query(Order, OrderShoe, OrderShoeProductionInfo)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeProductionInfo, OrderShoe.order_shoe_id == OrderShoeProductionInfo.order_shoe_id)
+        .filter(OrderShoeProductionInfo.pre_sewing_end_date > datetime.now())
+        .filter(OrderShoeProductionInfo.pre_sewing_start_date <= datetime.now())
+        .count()
+    )
+    sewing_orders_count = (
+        db.session.query(Order, OrderShoe, OrderShoeProductionInfo)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeProductionInfo, OrderShoe.order_shoe_id == OrderShoeProductionInfo.order_shoe_id)
+        .filter(OrderShoeProductionInfo.sewing_end_date > datetime.now())
+        .filter(OrderShoeProductionInfo.sewing_start_date <= datetime.now())
+        .count()
+    )   
+    molding_orders_count = (
+        db.session.query(Order, OrderShoe, OrderShoeProductionInfo)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(OrderShoeProductionInfo, OrderShoe.order_shoe_id == OrderShoeProductionInfo.order_shoe_id)
+        .filter(OrderShoeProductionInfo.molding_end_date > datetime.now())
+        .filter(OrderShoeProductionInfo.molding_start_date <= datetime.now())
+        .count()
+    )
+    
+    result = [
+        {
+            "value": cutting_orders_count,
+            "name": "裁断",
+        },
+        {
+            "value": pre_sewing_orders_count,
+            "name": "针车预备",
+        },
+        {
+            "value": sewing_orders_count,
+            "name": "针车",
+        },
+        {
+            "value": molding_orders_count,
+            "name": "成型",
+        },
+    ]
+    
+    return jsonify(result)
+
+@head_manager_bp.route("/headmanager/newordermonthlylinechart", methods=["GET"])
+def get_new_order_monthly_line_chart():
+    """Get the new order monthly line chart data."""
+    current_date = datetime.now()
+    current_year = current_date.year
+    current_month = current_date.month
+
+    # Get the new orders grouped by month for the current year, up to current month
+    new_orders = (
+        db.session.query(
+            func.extract('month', Order.start_date).label('month'),
+            func.count(Order.order_id).label('order_count')
+        )
+        .filter(
+            func.extract('year', Order.start_date) == current_year,
+            func.extract('month', Order.start_date) <= current_month
+        )
+        .group_by(func.extract('month', Order.start_date))
+        .order_by(func.extract('month', Order.start_date))
+        .all()
+    )
+
+    monthly_data = [
+        {"month": int(month), "orderCount": int(order_count)}
+        for month, order_count in new_orders
+    ]
+
+    return jsonify(monthly_data)
+
+@head_manager_bp.route("/headmanager/scheduleproductionordermothlylinechart", methods=["GET"])
+def get_schedule_production_order_monthly_line_chart():
+    """Get the scheduled production order monthly line chart data for the full year (including future months)."""
+    current_year = datetime.now().year
+
+    def get_stage_counts(stage_column):
+        return dict(
+            db.session.query(
+                func.extract('month', stage_column).label('month'),
+                func.count().label('count')
+            )
+            .filter(
+                stage_column.isnot(None),
+                func.extract('year', stage_column) == current_year
+            )
+            .group_by(func.extract('month', stage_column))
+            .all()
+        )
+
+    cutting_counts = get_stage_counts(OrderShoeProductionInfo.cutting_start_date)
+    presewing_counts = get_stage_counts(OrderShoeProductionInfo.pre_sewing_start_date)
+    sewing_counts = get_stage_counts(OrderShoeProductionInfo.sewing_start_date)
+    molding_counts = get_stage_counts(OrderShoeProductionInfo.molding_start_date)
+
+    # 统一构造 1~12 月的结构
+    monthly_data = []
+    for month in range(1, 13):
+        monthly_data.append({
+            "month": month,
+            "cutting": cutting_counts.get(month, 0),
+            "presewing": presewing_counts.get(month, 0),
+            "sewing": sewing_counts.get(month, 0),
+            "molding": molding_counts.get(month, 0),
+        })
+
+    return jsonify(monthly_data)

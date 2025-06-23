@@ -15,6 +15,7 @@
                 :materialStorageId="item.materialStorageId"
                 :materialType="item.materialType"
                 :materialName="item.needQuery ? item.name : undefined"
+                :spuMaterialId="item.spuMaterialId"
             ></component>
         </el-tab-pane>
     </el-tabs>
@@ -31,6 +32,7 @@ const handleTabsEdit = (targetName, action) => {
     const tabName = targetName.split('>')[0];
     const materialStorageId = targetName.split('>')[1]
     const materialType = targetName.split('>')[2]
+    const spuMaterialId = targetName.split('>')[3]
     if (action === 'add') {
         editableTabs.value.push({
             title: tabName + '历史价格数据曲线',
@@ -39,7 +41,9 @@ const handleTabsEdit = (targetName, action) => {
             closable: true,
             needQuery: true,
             materialStorageId: materialStorageId,
-            materialType: materialType
+            materialType: materialType,
+            spuMaterialId: spuMaterialId
+            
         });
         editableTabsValue.value = tabName;
     } else if (action === 'remove') {
