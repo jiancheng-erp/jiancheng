@@ -39,10 +39,11 @@ import { onMounted, watch, ref, nextTick, getCurrentInstance, onUnmounted } from
 import useHistoryMaterial from '../../hooks/useHistoryMaterial'
 import * as echarts from 'echarts'
 
-const { materialStorageId, materialType, materialName } = defineProps([
+const { materialStorageId, materialType, materialName, spuMaterialId } = defineProps([
     'materialStorageId',
     'materialType',
-    'materialName'
+    'materialName',
+    'spuMaterialId'
 ])
 
 const { materialData, getMaterialData } = useHistoryMaterial()
@@ -61,7 +62,7 @@ const resizeFun = () => {
         })
     }
 onMounted(() => {
-    getMaterialData({ materialStorageId, materialType, routeMsg })
+    getMaterialData({ materialStorageId, materialType, spuMaterialId, routeMsg })
     window.addEventListener('resize', resizeFun)
 })
 onUnmounted(() => {
