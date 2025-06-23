@@ -1,4 +1,4 @@
-<template>
+  <template>
     <el-row>
         <el-col>
             <el-radio-group v-model="detailOrSummary" @change="switchColumnNDisplay">
@@ -201,7 +201,6 @@ function updateCheckBox() {
         });
     });
     selectedColumns.value = temp;
-    console.log(selectedColumns.value)
 }
 function getCurrentPageInfo() {
     if (dateRangeFilter.value == null) {

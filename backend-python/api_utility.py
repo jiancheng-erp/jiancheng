@@ -264,7 +264,11 @@ def db_obj_to_res(
         attr_name_list = db_model.__table__.columns.keys()
     else:
         if not set(db_model.__table__.columns.keys()).issuperset(set(attr_name_list)):
-            print("ERROR attr name wrong")
+            for attr in attr_name_list:
+                if attr not in db_model.__table__.columns.keys():
+                    print(attr)
+            # print(db_model)
+            # print("ERROR attr name wrong")
             return res
     if attr_name_offset == 0:
         for attr in attr_name_list:
