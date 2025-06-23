@@ -15,25 +15,49 @@ from app_config import db
 
 accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
 
+# outbound attrnames
 OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["outbound_rid", "outbound_datetime", "outbound_type", "outbound_department","picker"]
 OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["outbound_amount",]
 OUTBOUND_MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name", "material_unit"]
 
+# inbound attrnames
 INBOUND_RECORD_SUBQUERY_SUMMARY_COLUMNS = ["unit_price", "total_amount"]
 INBOUND_SUMMARY_MATERIAL_COLUMNS = ["material_name","material_unit"]
 
-
 INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","approval_status"]
 INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
+
+# inventory attrnames
+INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["inbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
+                                        "material_estimated_arrival_date", "actual_inbound_unit", "average_price", "material_storage_status"]
+
 MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name"]
 
 SPU_MATERIAL_TABLE_ATTRNAMES = ['material_model','material_specification','color','spu_rid']
-
 SUPPLIER_SELECTABLE_TABLE_ATTRNAMES = ["supplier_name"]
-
 SELECTABLE_ATTRNAMES = [INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES,SUPPLIER_SELECTABLE_TABLE_ATTRNAMES
                         ,INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,
                         MATERIAL_SELECTABLE_TABLE_ATTRNAMES]
+
+name_mapping_inventory = {
+    "material_warehouse":"仓库",
+    "supplier_name":"供应商",
+    "material_type":"材料类型",
+    "material_name":"材料名称",
+    "material_model":"材料型号",
+    "color":"材料颜色",
+    "material_specification":"材料规格",
+    "order_rid":"订单号",
+    "customer_product_name":"客户鞋型号",
+    "shoe_rid":"工厂鞋型号",
+    "material_warehouse":"仓库",
+    "inbound_amount":"入库数量",
+    "current_amount":"库存数量",
+    "unit_price":"最新采购单价",
+    "actual_inbound_unit":"入库单位",
+    "average_price":"库存均价",
+}
+
 name_en_cn_mapping_inbound = {
     "inbound_rid":"入库单据号",
     "inbound_datetime":"入库时间",
@@ -71,6 +95,7 @@ col_width_mapping = {
     "remark":"85px"
 
 }
+
 name_mapping_inbound_summary = {
     "material_warehouse":"仓库",
     "supplier_name":"供应商",
@@ -138,7 +163,7 @@ def get_warehouse_outbound_record():
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    outbound_type_filter = request.args.get('outboudnTypeFilter', type=str)
+    outbound_type_filter = request.args.get('outboundTypeFilter', type=str)
     query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage.average_price)
              .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
              .join(MaterialStorage, OutboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
@@ -153,10 +178,6 @@ def get_warehouse_outbound_record():
         query = query.filter(MaterialWarehouse.warehouse_id == warehouse_filter)
     if supplier_name_filter:
         query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-    if date_range_filter_start:
-        query = query.filter(OutboundRecord.outbound_datetime >= date_range_filter_start)
-    if date_range_filter_end:
-        query = query.filter(OutboundRecord.outbound_datetime <= date_range_filter_end)
     if material_model_filter:
         query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
     total_count = query.distinct().count()
@@ -176,6 +197,76 @@ def get_warehouse_outbound_record():
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
     
+@accounting_warehouse_bp.route("/accounting/get_warehouse_inventory", methods=["GET"])
+def get_warehouse_inventory():
+    page_num = request.args.get('pageNumber',type=int)
+    page_size = request.args.get('pageSize', type=int)
+    warehouse_filter = request.args.get('selectedWarehouse')
+    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
+    material_model_filter = request.args.get('materialModelFilter', type=str)
+    material_name_filter = request.args.get('materialNameFilter', type=str)
+    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
+    material_color_filter = request.args.get('materialColorFilter', type=str)
+
+    order_rid_filter = request.args.get('orderRidFilter', type=str)
+    order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
+    shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
+    not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
+    print(not_zero_flag_filter)
+    query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
+             .join(Order,MaterialStorage.order_id == Order.order_id)
+             .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+             .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+             .join(Material, SPUMaterial.material_id == Material.material_id)
+             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+             .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+             .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
+    
+    if warehouse_filter:
+        query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+    if supplier_name_filter:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
+    if material_model_filter:
+        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
+    if material_name_filter:
+        query = query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
+    if material_model_filter:
+        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
+    if material_specification_filter:
+        query = query.filter(SPUMaterial.material_specification.ilike(f"%{material_specification_filter}%"))
+    if material_color_filter:
+        query = query.filter(SPUMaterial.color.ilike(f"%{material_color_filter}%"))
+    if order_rid_filter:
+        query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
+    if order_shoe_customer_name_filter:
+        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{order_shoe_customer_name_filter}"))
+    if shoe_rid_filter:
+        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
+    # TODO
+    if not_zero_flag_filter:
+        if not_zero_flag_filter == 'true':
+            query = query.filter(MaterialStorage.current_amount > 0)
+    total_count = query.distinct().count()
+    # 
+    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    current_inventory = []
+    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
+    for material_storage, order, order_shoe, shoe, spu_material, material, supplier, material_type, material_warehouse in response_entities:
+        res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES)
+        res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
+        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res[to_camel('order_rid')] = order.order_rid
+        res[to_camel('customer_product_name')] = order_shoe.customer_product_name
+        res[to_camel('shoe_rid')] = shoe.shoe_rid
+        res[to_camel('material_type')] = material_type.material_type_name
+        res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
+
+        current_inventory.append(res)
+    return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
+    
+
 @accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_record", methods=["GET"])
 def get_warehouse_inbound_record():
     page_num = request.args.get('pageNumber',type=int)
@@ -339,8 +430,16 @@ def get_warehouse_inbound_summery():
     return jsonify({"inboundSummary":inbound_summary, "total":total_count}), 200
 
 
-
-
+@accounting_warehouse_bp.route("/accounting/get_inventory_display_columns", methods=["GET"])
+def get_inventory_display_columns():
+    res_data = []
+    res_id = 0
+    for attr in name_mapping_inventory.keys():
+        res_data.append({"attrName":to_camel(attr),
+                         "labelName":name_mapping_inventory[attr],
+                         "id":res_id,})
+        res_id += 1
+    return jsonify({"selectableColumns":res_data}), 200
 @accounting_warehouse_bp.route("/accounting/get_inbound_display_columns", methods=["GET"])
 def get_inbound_display_columns():
     res_data = []
@@ -528,3 +627,4 @@ def create_inbound_summary_excel_and_download():
     time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
     generate_accounting_summary_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_summary)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
