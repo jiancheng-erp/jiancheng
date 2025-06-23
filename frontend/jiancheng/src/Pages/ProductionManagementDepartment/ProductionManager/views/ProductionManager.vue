@@ -16,6 +16,9 @@
             default-active="2"
             class="el-menu-vertical-demo"
           >
+            <el-menu-item index="1" @click="handleMenuClick(1)">
+              <span>主页看板</span>
+            </el-menu-item>
             <el-menu-item index="2" @click="handleMenuClick(2)">
               <span>生产排期表</span>
             </el-menu-item>
@@ -27,6 +30,9 @@
             </el-menu-item>
             <el-menu-item index="6" @click="handleMenuClick(6)">
               <span>工价审批</span>
+            </el-menu-item>
+            <el-menu-item index="9" @click="handleMenuClick(9)">
+              <span>退回订单统计</span>
             </el-menu-item>
             <el-menu-item index="8" @click="handleMenuClick(8)">
               <span>个人信息</span>
@@ -54,6 +60,8 @@ import OutSourceApproval from '../components/OutSourceApproval.vue'
 import WagesApproval from '../components/WagesApproval.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import MainBoardPage from '@/Pages/CompanyManger/components/MainBoardPage.vue'
+import RevertEventAnalyse from '@/Pages/CompanyManger/components/RevertEventAnalyse/RevertEventAnalyse.vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 export default {
@@ -66,7 +74,9 @@ export default {
     OutSourceApproval,
     WagesApproval,
     OrderProgress,
-    PersonalInfo
+    PersonalInfo,
+    MainBoardPage,
+    RevertEventAnalyse
   },
   data() {
     return {
@@ -87,6 +97,9 @@ export default {
     handleMenuClick(index) {
       console.log(index)
       switch (index) {
+        case 1:
+          this.currentComponent = 'MainBoardPage'
+          break
         case 2:
           this.currentComponent = 'OrderProgress'
           break
@@ -101,6 +114,9 @@ export default {
           break
         case 6:
           this.currentComponent = 'WagesApproval'
+          break
+        case 9:
+          this.currentComponent = 'RevertEventAnalyse'
           break
         case 8:
           this.currentComponent = 'PersonalInfo'
