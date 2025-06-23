@@ -25,6 +25,7 @@
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
         <el-table-column prop="customerName" label="客户名称"></el-table-column>
+        <el-table-column prop="customerProductName" label="客户型号"></el-table-column>
         <el-table-column prop="teamName" label="工组"></el-table-column>
         <el-table-column prop="statusName" label="状态">
             <template v-slot="scope">
@@ -41,7 +42,7 @@
         </el-table-column>
     </el-table>
     <el-row :gutter="20">
-        <el-col :span="12" :offset="15">
+        <el-col>
             <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
                 :page-sizes="[10, 20, 30, 40]" layout="total, sizes, prev, pager, next, jumper" :total="totalPages"
                 @size-change="handleSizeChange" @current-change="handlePageChange" />

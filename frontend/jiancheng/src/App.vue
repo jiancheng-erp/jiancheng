@@ -42,6 +42,12 @@ nav a:first-of-type {
   border: 0;
 }
 
+/* custome css */
+.search-input {
+    width: 200px;
+    margin-right: 10px;
+}
+
 @media (min-width: 1024px) {
   header {
     display: flex;

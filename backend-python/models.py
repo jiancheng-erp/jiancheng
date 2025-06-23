@@ -1,5 +1,14 @@
 from app_config import db
-from sqlalchemy.dialects.mysql import BIGINT, DECIMAL, TINYINT, CHAR, JSON, DATE, INTEGER, VARCHAR
+from sqlalchemy.dialects.mysql import (
+    BIGINT,
+    DECIMAL,
+    TINYINT,
+    CHAR,
+    JSON,
+    DATE,
+    INTEGER,
+    VARCHAR,
+)
 
 
 class User(db.Model):
@@ -195,7 +204,7 @@ class Event(db.Model):
 
 
 class MaterialStorage(db.Model):
-    __tablename__ = 'material_storage'
+    __tablename__ = "material_storage"
 
     material_storage_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
     order_id = db.Column(BIGINT, nullable=True)
@@ -244,7 +253,12 @@ class MaterialStorage(db.Model):
     size_46_inbound_amount = db.Column(INTEGER, nullable=False, default=0)
 
     __table_args__ = (
-        db.UniqueConstraint('spu_material_id', 'order_shoe_id', 'actual_inbound_unit', name='unq_material_storage_0'),
+        db.UniqueConstraint(
+            "spu_material_id",
+            "order_shoe_id",
+            "actual_inbound_unit",
+            name="unq_material_storage_0",
+        ),
     )
 
     def __repr__(self):
@@ -257,7 +271,6 @@ class MaterialStorage(db.Model):
         """Convert SQLAlchemy object to dictionary."""
         return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
 
-    
 
 class Operation(db.Model):
     __tablename__ = "operation"
@@ -597,12 +610,12 @@ class ProcedureReference(db.Model):
 
 
 class PurchaseOrderItem(db.Model):
-    __tablename__ = 'purchase_order_item'
+    __tablename__ = "purchase_order_item"
 
     purchase_order_item_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
     bom_item_id = db.Column(BIGINT, nullable=False)
     purchase_divide_order_id = db.Column(BIGINT, nullable=False)
-    
+
     purchase_amount = db.Column(DECIMAL(12, 5), default=0.00000)
     adjust_purchase_amount = db.Column(DECIMAL(12, 5), default=0.00000)
     approval_amount = db.Column(DECIMAL(12, 5), default=0.00000)
@@ -635,8 +648,8 @@ class PurchaseOrderItem(db.Model):
     related_selected_material_storage = db.Column(JSON, nullable=True)
 
     __table_args__ = (
-        db.Index('fk_purchase_order_items_bom_item_0', 'bom_item_id'),
-        db.Index('fk_purchase_order_items_0', 'purchase_divide_order_id'),
+        db.Index("fk_purchase_order_items_bom_item_0", "bom_item_id"),
+        db.Index("fk_purchase_order_items_0", "purchase_divide_order_id"),
     )
 
     def __repr__(self):
@@ -802,6 +815,7 @@ class ShoeInboundRecord(db.Model):
     )
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
+
     def __repr__(self):
         return f"<ShoeInboundRecord(id={self.shoe_inbound_record_id}, rid={self.shoe_inbound_rid})>"
 
@@ -833,9 +847,11 @@ class ShoeInboundRecordDetail(db.Model):
 
 
 class ShoeOutboundRecord(db.Model):
-    __tablename__ = 'shoe_outbound_record'
+    __tablename__ = "shoe_outbound_record"
 
-    shoe_outbound_record_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    shoe_outbound_record_id = db.Column(
+        db.BigInteger, primary_key=True, autoincrement=True
+    )
     shoe_outbound_rid = db.Column(db.String(60), default=None)
     outbound_amount = db.Column(db.Integer, default=None)
     outbound_revenue = db.Column(db.DECIMAL(10, 3), default=None)
@@ -848,7 +864,7 @@ class ShoeOutboundRecord(db.Model):
 
 
 class ShoeOutboundRecordDetail(db.Model):
-    __tablename__ = 'shoe_outbound_record_detail'
+    __tablename__ = "shoe_outbound_record_detail"
 
     record_detail_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     shoe_outbound_record_id = db.Column(db.BigInteger, nullable=False)
@@ -949,12 +965,12 @@ class UnitPriceReport(db.Model):
     report_id = db.Column(
         db.BigInteger, primary_key=True, nullable=False, autoincrement=True
     )
-    order_shoe_id = db.Column(
-        db.BigInteger,
-    )
+    order_shoe_id = db.Column(db.BigInteger, nullable=False)
     submission_date = db.Column(db.Date, nullable=True)
     team = db.Column(db.String(10), nullable=True)
-    status = db.Column(db.SmallInteger, nullable=False, default=1)
+    status = db.Column(
+        db.SmallInteger, nullable=False, default=1
+    )  # 1: "未提交", 2: "生产副总审核中", 3: "生产副总驳回", 4: "总经理审核中", 5: "总经理驳回", 6: "已审批"
     rejection_reason = db.Column(db.String(40), nullable=True)
     price_sum = db.Column(db.DECIMAL(13, 4), default=0)
 

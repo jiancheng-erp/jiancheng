@@ -9,23 +9,22 @@
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-descriptions title="订单信息" border column="2">
+                    <el-descriptions title="订单信息" border>
                         <el-descriptions-item label="订单号">{{ orderInfo.orderRId }}</el-descriptions-item>
                         <el-descriptions-item label="鞋型号">{{ orderInfo.shoeRId }}</el-descriptions-item>
-                        <el-descriptions-item label="客户号">{{ orderInfo.customerName }}</el-descriptions-item>
+                        <el-descriptions-item label="客户名称">{{ orderInfo.customerName }}</el-descriptions-item>
+                        <el-descriptions-item label="客户鞋型">{{ orderInfo.customerProductName }}</el-descriptions-item>
+                        <el-descriptions-item label="开始日期">{{ orderInfo.orderStartDate }}</el-descriptions-item>
                         <el-descriptions-item label="截止日期">{{ orderInfo.orderEndDate }}</el-descriptions-item>
                     </el-descriptions>
                 </el-col>
             </el-row>
             <el-row :gutter="20" style="margin-top: 20px">
                 <el-col :span="24" :offset="0">
-                    鞋型配码信息
-                    <el-table :data="shoeInfo" border stripe :span-method="spanMethod"
-                        :max-height="500">
+                    订单鞋双数量
+                    <el-table :data="shoeInfo" border stripe :max-height="500">
                         <el-table-column prop="colorName" label="颜色"></el-table-column>
                         <el-table-column prop="totalAmount" label="颜色总数"></el-table-column>
-                        <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
-                            :label="column.label"></el-table-column>
                     </el-table>
                 </el-col>
             </el-row>
@@ -55,7 +54,7 @@
         </el-main>
     </el-container>
     <el-dialog title="工价审核界面" v-model="isWagesApprovalVis" width="80%">
-        <el-table :data="reportDetail" border stripe max-height="500">
+        <el-table :data="reportDetail" border stripe max-height="500" :summary-method="summaryMethod" show-summary>
             <el-table-column prop="rowId" label="序号"></el-table-column>
             <el-table-column v-if="currentRow.team === '成型'" prop="productionSection" label="工段"></el-table-column>
             <el-table-column prop="procedure" label="工序名称"></el-table-column>
@@ -65,10 +64,12 @@
         <template #footer>
             <span>
                 <el-button @click="isWagesApprovalVis = false">关闭</el-button>
-                <el-button v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')" type="danger"
-                    @click="openRefusalDialog">驳回请求</el-button>
-                <el-button v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')" type="primary"
-                    @click="approveReport">审批通过</el-button>
+                <el-button
+                    v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')"
+                    type="danger" @click="openRefusalDialog">驳回请求</el-button>
+                <el-button
+                    v-if="(role == 3 && currentRow.reportStatus === '生产副总审核中') || (role == 2 && currentRow.reportStatus === '总经理审核中')"
+                    type="primary" @click="approveReport">审批通过</el-button>
             </span>
         </template>
     </el-dialog>
@@ -92,8 +93,6 @@
 import axios from 'axios'
 import AllHeader from '@/components/AllHeader.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { shoeBatchInfoTableSpanMethod } from '../../utils';
-import { getShoeSizesName } from '@/Pages/utils/getShoeSizesName';
 export default {
     components: {
         AllHeader
@@ -109,38 +108,42 @@ export default {
             priceReports: [],
             isWagesApprovalVis: false,
             currentRow: {},
-            spanMethod: null,
             orderInfo: [],
-            shoeSizeColumns: [],
-            getShoeSizesName
         }
     },
     async mounted() {
-        this.shoeSizeColumns = await this.getShoeSizesName(this.$props.orderId)
         this.getOrderInfo()
         this.getOrderShoeBatchInfo()
         this.getPriceReportInfo()
     },
-    computed: {
-        filteredColumns() {
-            return this.shoeSizeColumns.filter(column =>
-                this.shoeInfo.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-            );
-        }
-    },
     methods: {
+        summaryMethod(param) {
+            const { columns, data } = param;
+            const sums = [];
+            columns.forEach((column, index) => {
+                if (column.property === 'price') {
+                    const total = data.reduce((sum, row) => {
+                        const value = Number(row.price);
+                        return sum + (isNaN(value) ? 0 : value);
+                    }, 0);
+                    sums[index] = total;
+                } else {
+                    sums[index] = index === 0 ? '合计' : '';
+                }
+            });
+
+            return sums;
+        },
         async getOrderInfo() {
             let params = { "orderId": this.$props.orderId, "orderShoeId": this.$props.orderShoeId }
             let response = await axios.get(`${this.$apiBaseUrl}/production/productionmanager/getorderinfo`, { params })
             this.orderInfo = response.data
-            console.log(this.orderInfo)
         },
         async getOrderShoeBatchInfo() {
             try {
                 const params = { "orderShoeId": this.$props.orderShoeId }
                 const response = await axios.get(`${this.$apiBaseUrl}/production/getordershoebatchinfo`, { params })
                 this.shoeInfo = response.data
-                this.spanMethod = shoeBatchInfoTableSpanMethod(this.shoeInfo)
             }
             catch (error) {
                 console.log(error)
