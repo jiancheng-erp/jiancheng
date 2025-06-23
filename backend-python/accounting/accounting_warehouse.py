@@ -172,7 +172,7 @@ def get_warehouse_outbound_record():
         res[to_camel('unit_price')] = avg_price
         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
-        res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department]
+        res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department] if outbound_record.outbound_department else ''
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
     

@@ -23,7 +23,7 @@
                             :label="item.label"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item v-if="outboundForm.outboundType == 0" prop="departmentId" label="部门">
+                <el-form-item prop="departmentId" label="部门">
                     <el-select v-model="outboundForm.departmentId" filterable clearable>
                         <el-option v-for="item in departmentOptions" :label="item.label"
                             :value="item.value"></el-option>
@@ -106,7 +106,7 @@
 
     <el-dialog title="搜索材料" v-model="isMaterialSelectDialogVis" fullscreen destroy-on-close @close="handleCloseDialog">
         <MaterialStorage :readonly="false" ref="materialStorageRef"
-            :input-search-params="{ materialSupplierSearch: outboundForm.supplierName }" />
+            :input-search-params="{ materialSupplierSearch: outboundForm.supplierName, warehouseId: filterWarehouse() }" />
         <template #footer>
             <el-button type="primary" @click="confirmUpdateData">确认选择</el-button>
         </template>
@@ -131,6 +131,9 @@
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">供应商:{{
                                         previewOutboundForm.supplierName }}</td>
+                                    <td style="padding:5px; width: 300px;" align="left">出库部门:{{
+                                        determineDepartment(previewOutboundForm.departmentId) }}
+                                    </td>
                                     <td style="padding:5px; width: 300px;" align="left">出库时间:{{
                                         previewOutboundForm.timestamp }}
                                     </td>
@@ -261,6 +264,7 @@ export default {
     },
     data() {
         return {
+            staffId: localStorage.getItem('staffid'),
             materialTableData: [],
             previewOutboundForm: {},
             outboundForm: {},
@@ -381,6 +385,25 @@ export default {
         },
     },
     methods: {
+        filterWarehouse() {
+            // 面料仓文员
+            if (this.staffId == 40) {
+                return 1
+            }
+            // 底材仓文员
+            else if (this.staffId == 41) {
+                return 7
+            }
+            // 包材仓文员
+            else if (this.staffId == 42) {
+                return 6
+            }
+            return null
+        },
+        determineDepartment(departmentId) {
+            const department = this.departmentOptions.find(item => item.value === departmentId);
+            return department ? department.label : '';
+        },
         async getDepartmentOptions() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getalldepartments`)
             this.departmentOptions = response.data
@@ -555,9 +578,12 @@ export default {
         },
         handleOutboundType(value) {
             this.outboundForm.outboundType = value
-            if (value == 1) {
+            if (value == 0) {
+                this.rules.departmentId = [{ required: true, message: '此项为必填项', trigger: 'change' }]
                 this.rules.supplierName = []
-            } else {
+            } 
+            else {
+                this.rules.departmentId = []
                 this.rules.supplierName = [
                     { required: true, message: '此项为必填项', trigger: 'change' },
                 ]
