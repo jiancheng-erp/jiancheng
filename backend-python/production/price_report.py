@@ -3,7 +3,7 @@ from datetime import datetime
 
 from api_utility import format_date
 from app_config import db
-from constants import END_OF_PRODUCTION_NUMBER, PRICE_REPORT_REFERENCE
+from constants import *
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, send_file
 from models import *
@@ -31,6 +31,7 @@ def report_status_to_number(status_name):
 
 @price_report_bp.route("/production/getnewpricereports", methods=["GET"])
 def get_new_price_reports():
+    character, staff, _ = current_user_info()
     page = request.args.get("page", type=int)
     page_size = request.args.get("pageSize", type=int)
     order_rid = request.args.get("orderRId")
@@ -38,6 +39,8 @@ def get_new_price_reports():
     status_name = request.args.get("statusName")
     teams = request.args.get("team")
     team_list = teams.split(",")
+    customerName = request.args.get("customerName")
+    customerProductName = request.args.get("customerProductName")
     query = db.session.query(
         Order,
         OrderShoe,
@@ -62,6 +65,14 @@ def get_new_price_reports():
         query = query.filter(
             UnitPriceReport.status == status_name,
         )
+    if customerName and customerName != "":
+        query = query.filter(Customer.customer_name.ilike(f"%{customerName}%"))
+    if customerProductName and customerProductName != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customerProductName}%")
+        )
+    if character.character_id == GENERAL_MANAGER_ROLE or character.character_id == PRODUCTION_MANAGER_ROLE:
+        query = query.filter(UnitPriceReport.status != PRICE_REPORT_NOT_SUBMITTED)
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
@@ -81,6 +92,7 @@ def get_new_price_reports():
             "orderStartDate": format_date(order.start_date),
             "orderEndDate": format_date(order.end_date),
             "customerName": customer.customer_name,
+            "customerProductName": order_shoe.customer_product_name,
             "statusName": report.status,
             "teamName": report.team,
             "rejectionReason": report.rejection_reason,

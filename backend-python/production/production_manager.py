@@ -1313,62 +1313,6 @@ def reject_quantity_report():
 
 
 @production_manager_bp.route(
-    "/production/productionmanager/getpricereportapprovaloverview", methods=["GET"]
-)
-def get_price_report_approval_overview():
-    page = request.args.get("page", type=int)
-    page_size = request.args.get("pageSize", type=int)
-    order_rid = request.args.get("orderRId")
-    shoe_rid = request.args.get("shoeRId")
-    team = request.args.get("team")
-    status = request.args.get("status")
-
-    character, staff, department = current_user_info()
-    query = (
-        db.session.query(Order, OrderShoe, Customer, Shoe, UnitPriceReport)
-        .join(
-            OrderShoe,
-            Order.order_id == OrderShoe.order_id,
-        )
-        .join(Customer, Order.customer_id == Customer.customer_id)
-        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-        .join(UnitPriceReport, UnitPriceReport.order_shoe_id == OrderShoe.order_shoe_id)
-        .filter(
-            UnitPriceReport.status > 1,
-        )
-    )
-
-    if order_rid and order_rid != "":
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
-    if shoe_rid and shoe_rid != "":
-        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
-    if team and team != "":
-        query = query.filter(UnitPriceReport.team == team)
-
-    if status and status != "":
-        query = query.filter(UnitPriceReport.status == status)
-    count_result = query.distinct().count()
-    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
-    result = []
-    for row in response:
-        order, order_shoe, customer, shoe, report = row
-        obj = {
-            "orderId": order.order_id,
-            "orderRId": order.order_rid,
-            "orderEndDate": format_date(order.end_date),
-            "orderShoeId": order_shoe.order_shoe_id,
-            "shoeRId": shoe.shoe_rid,
-            "customerName": customer.customer_name,
-            "customerProductName": order_shoe.customer_product_name,
-            "reportId": report.report_id,
-            "team": report.team,
-            "status": report.status,
-        }
-        result.append(obj)
-    return {"result": result, "totalLength": count_result}
-
-
-@production_manager_bp.route(
     "/production/productionmanager/getallpricereportsforordershoe", methods=["GET"]
 )
 def get_all_price_reports_for_order_shoe():

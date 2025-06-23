@@ -399,9 +399,6 @@ export default {
     }
 }
 </script>
-<style scoped>
-.search-input {
-    width: 200px;
-    margin-right: 10px;
-}
+<style>
+
 </style>
