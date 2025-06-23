@@ -1018,7 +1018,6 @@ def _handle_reject_material_outbound(data):
     supplier_name = data.get("supplierName", None)
     supplier_obj = _handle_supplier_obj(supplier_name)
     data["supplierId"] = supplier_obj.supplier_id
-    data["departmentId"] = None
     data["outsourceInfoId"] = None
     outbound_record = _create_outbound_record(data, 0)
     items = data.get("items", [])
@@ -1142,7 +1141,6 @@ def _handle_production_outbound(data):
 def _handle_waste_outbound(data):
     items = data.get("items", [])
     data["supplierId"] = None
-    data["departmentId"] = None
     data["outsourceInfoId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
@@ -1152,7 +1150,6 @@ def _handle_waste_outbound(data):
 def _handle_outsource_outbound(data):
     items = data.get("items", [])
     data["supplierId"] = None
-    data["departmentId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
     return outbound_record
@@ -1163,7 +1160,6 @@ def _handle_composite_outbound(data):
     supplier_name = data.get("supplierName", None)
     supplier_obj = _handle_supplier_obj(supplier_name)
     data["supplierId"] = supplier_obj.supplier_id
-    data["departmentId"] = None
     data["outsourceInfoId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
