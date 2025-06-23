@@ -48,7 +48,7 @@
                                     scope.row.supplierName + '_' +
                                         scope.row.materialName + '_' +
                                         scope.row.materialModel + '_' +
-                                        scope.row.materialSpecification + '>' + scope.row.materialStorageId + '>' + scope.row.type,
+                                        scope.row.materialSpecification + '>' + scope.row.materialStorageId + '>' + scope.row.type + '>' + scope.row.spuMaterialId,
                                     'add'
                                 )
                             "

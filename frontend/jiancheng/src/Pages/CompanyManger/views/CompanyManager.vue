@@ -14,7 +14,13 @@
                     {{ userName }}
                 </div>
                 <div class="aside-menu" style="width: 100%; margin-top: 50px">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
+                    <el-menu default-active="0" class="el-menu-vertical-demo">
+                        <el-menu-item
+                            index="0"
+                            @click="handleMenuClick('MainBoardPage')"
+                        >
+                            <span>主页看板</span>
+                        </el-menu-item>
                         <el-menu-item
                             index="1"
                             @click="handleMenuClick('CostCalcAndProfitAnalysis')"
@@ -83,6 +89,7 @@ import RevertEventAnalyse from '../components/RevertEventAnalyse/RevertEventAnal
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import WagesApproval from '@/Pages/ProductionManagementDepartment/ProductionManager/components/WagesApproval.vue'
+import MainBoardPage from '../components/MainBoardPage.vue'
 import { useRouter } from "vue-router";
 
 const components = {
@@ -95,9 +102,10 @@ const components = {
     PersonalInfo,
     OrderImportantStatus,
     RevertEventAnalyse,
-    WagesApproval
+    WagesApproval,
+    MainBoardPage
 }
-let currentComponent = ref('CostCalcAndProfitAnalysis')
+let currentComponent = ref('MainBoardPage')
 let userName = ref('')
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
@@ -106,7 +114,7 @@ const router = useRouter();
 onMounted(() => {
     setAxiosToken()
     getUserAndCharacter()
-    handleMenuClick('CostCalcAndProfitAnalysis')
+    handleMenuClick('MainBoardPage')
 })
 
 // 接口预留，请求后台获取当前登录用户信息
