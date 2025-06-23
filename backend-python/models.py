@@ -1103,6 +1103,7 @@ class InboundRecord(db.Model):
     pay_method = db.Column(db.String(10), nullable=True)
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
+    staff_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<InboundRecord {self.inbound_rid}>"
@@ -1159,6 +1160,7 @@ class OutboundRecord(db.Model):
     total_price = db.Column(db.DECIMAL(13, 4), nullable=True)
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
+    staff_id = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"

@@ -112,8 +112,14 @@ def current_user_info():
     return current character, staff and department object
     """
     username = get_jwt_identity()
-    user = User.query.filter_by(user_name=username).first()
-    staff = Staff.query.filter_by(staff_id=user.staff_id).first()
-    department = Department.query.filter_by(department_id = staff.department_id).first()
-    character = Character.query.filter_by(character_id = staff.character_id).first()
+    user_info = db.session.query(User, Staff, Character, Department).join(
+        Staff, User.staff_id == Staff.staff_id
+    ).join(
+        Character, Staff.character_id == Character.character_id
+    ).join(
+        Department, Staff.department_id == Department.department_id
+    ).filter(User.user_name == username).first()
+    character = user_info.Character
+    staff = user_info.Staff
+    department = user_info.Department
     return character, staff, department

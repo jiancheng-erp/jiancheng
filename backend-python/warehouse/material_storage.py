@@ -4,15 +4,7 @@ from decimal import Decimal
 from api_utility import format_date, format_datetime, to_camel
 from app_config import db
 from shared_apis.batch_info_type import get_order_batch_type_helper
-from constants import (
-    END_OF_PRODUCTION_NUMBER,
-    IN_PRODUCTION_ORDER_NUMBER,
-    PRODUCTION_LINE_REFERENCE,
-    SHOESIZERANGE,
-    MATERIAL_PURCHASE_PAYABLE_ID,
-    OUTBOUND_TYPE_MAPPING,
-    ACCOUNTING_AUDIT_ROLE,
-)
+from constants import *
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, abort, Response
 from models import *
@@ -873,7 +865,7 @@ def _handle_purchase_inbound(data, next_group_id):
             setattr(record_detail, column_name, int(item[f"amount{i}"]))
         db.session.add(record_detail)
     inbound_record.total_price = total_price
-    return inbound_record.inbound_rid, inbound_record.inbound_datetime
+    return inbound_record
 
 
 def _handle_production_remain_inbound(data, next_group_id):
@@ -999,12 +991,16 @@ def create_inbound_record(data):
     # 5) dispatch
     itype = data.get("inboundType", 0)
     if itype == 0:
-        rid, ts = _handle_purchase_inbound(data, 0)
+        record = _handle_purchase_inbound(data, 0)
     elif itype == 1:
-        rid, ts = _handle_production_remain_inbound(data, 0)
+        record = _handle_production_remain_inbound(data, 0)
     else:
         abort(Response(json.dumps({"message": "invalid inbound type"}), 400))
 
+    _, staff, _ = current_user_info()
+    record.staff_id = staff.staff_id
+    rid = record.inbound_rid
+    ts = record.inbound_datetime
     return rid, ts, warehouse_name
 
 
@@ -1028,7 +1024,7 @@ def _handle_reject_material_outbound(data):
     items = data.get("items", [])
 
     _create_outbound_record_details(items, outbound_record)
-    return outbound_record.outbound_rid
+    return outbound_record
 
 
 def _create_outbound_record(data, approval_status):
@@ -1140,7 +1136,7 @@ def _handle_production_outbound(data):
     data["supplierId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
-    return outbound_record.outbound_rid
+    return outbound_record
 
 
 def _handle_waste_outbound(data):
@@ -1150,7 +1146,7 @@ def _handle_waste_outbound(data):
     data["outsourceInfoId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
-    return outbound_record.outbound_rid
+    return outbound_record
 
 
 def _handle_outsource_outbound(data):
@@ -1159,7 +1155,7 @@ def _handle_outsource_outbound(data):
     data["departmentId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
-    return outbound_record.outbound_rid
+    return outbound_record
 
 
 def _handle_composite_outbound(data):
@@ -1171,7 +1167,7 @@ def _handle_composite_outbound(data):
     data["outsourceInfoId"] = None
     outbound_record = _create_outbound_record(data, 1)
     _create_outbound_record_details(items, outbound_record)
-    return outbound_record.outbound_rid
+    return outbound_record
 
 
 def _outbound_material_helper(data):
@@ -1180,27 +1176,27 @@ def _outbound_material_helper(data):
     data["currentDateTime"] = format_datetime(datetime.now())
     # 工厂使用
     if outbound_type == 0:
-        outbound_rid = _handle_production_outbound(data)
+        record = _handle_production_outbound(data)
     # 废料处理
     elif outbound_type == 1:
-        outbound_rid = _handle_waste_outbound(data)
+        record = _handle_waste_outbound(data)
     # 外包出库
     elif outbound_type == 2:
-        outbound_rid = _handle_outsource_outbound(data)
+        record = _handle_outsource_outbound(data)
     # 复合出库
     elif outbound_type == 3:
-        outbound_rid = _handle_composite_outbound(data)
+        record = _handle_composite_outbound(data)
     # 材料退回
     elif outbound_type == 4:
-        outbound_rid = _handle_reject_material_outbound(data)
+        record = _handle_reject_material_outbound(data)
     else:
         error_message = json.dumps({"message": "无效的出库类型"})
         abort(Response(error_message, 400))
 
-    return outbound_rid, data["currentDateTime"]
+    record.staff_id = current_user_info()[1].staff_id
+    return record.outbound_rid, data["currentDateTime"]
 
 
-# check whether materials for order_shoe has inbounded
 @material_storage_bp.route("/warehouse/outboundmaterial", methods=["POST"])
 def outbound_material():
     data = request.get_json()
@@ -1245,6 +1241,7 @@ def notify_required_material_arrival():
 
 @material_storage_bp.route("/warehouse/getmaterialinboundrecords", methods=["GET"])
 def get_material_inbound_records():
+    character, staff, department = current_user_info()
     start_date_search = request.args.get("startDate")
     end_date_search = request.args.get("endDate")
     page = int(request.args.get("page", 1))
@@ -1265,6 +1262,10 @@ def get_material_inbound_records():
             Supplier.supplier_id == InboundRecord.supplier_id,
         )
     )
+    # 如果是仓库文员角色，入库记录只能查询自己的
+    character_id = character.character_id
+    if character_id == WAREHOUSE_CLERK_ROLE:
+        query = query.filter(InboundRecord.staff_id == staff.staff_id)
     if start_date_search:
         query1 = query1.filter(InboundRecord.inbound_datetime >= start_date_search)
     if end_date_search:
@@ -1587,6 +1588,10 @@ def get_material_outbound_records():
             OutboundRecord.supplier_id == Supplier.supplier_id,
         )
     )
+    # 如果是仓库文员角色，出库记录只能查询自己的
+    character_id = character.character_id
+    if character_id == WAREHOUSE_CLERK_ROLE:
+        query = query.filter(OutboundRecord.staff_id == staff.staff_id)
 
     if start_date_search and end_date_search:
         try:

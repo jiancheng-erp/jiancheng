@@ -12,8 +12,8 @@
                     {{ userName }}
                 </div>
                 <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
+                    <el-menu :default-active="defaultPage()" class="el-menu-vertical-demo">
+                        <el-menu-item v-if="[35, 39].includes(this.staffId)" index="1" @click="handleMenuClick(1)">
                             <span>材料入库</span>
                         </el-menu-item>
                         <el-menu-item index="2" @click="handleMenuClick(2)">
@@ -72,9 +72,10 @@ export default {
     data() {
         return {
             UserFilled,
-            currentComponent:'InboundView',
+            currentComponent: null,
             userName: '',
-            logout
+            logout,
+            staffId: localStorage.getItem('staffid'),
         }
     },
     mounted() {
@@ -85,6 +86,14 @@ export default {
         async getUserAndCharacter() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getcurrentstaffandcharacter`)
             this.userName = response.data.staffName + '-' + response.data.characterName
+            this.currentComponent = [35, 39].includes(this.staffId) ? 'InboundView' : 'OutboundMaterial'
+        },
+        defaultPage() {
+            if ([35, 39].includes(this.staffId)) {
+                return '1'
+            } else {
+                return '2'
+            }
         },
         handleMenuClick(index){
             switch(index) {
