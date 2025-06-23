@@ -207,7 +207,12 @@ async function deleteOrder(value) {
 function openOrderDetail(orderId) {
     let url = ''
     url = `${window.location.origin}/companyManager/orderConfirmDetail/orderid=${orderId}`
-    window.open(url, '_blank')
+    if (url) {
+        window.callRefreshTaskData = function () {
+            getAllOrders()
+        }.bind(this);
+        window.open(url, '_blank')
+    }
 }
 
 function chageCurrentPageSize(val) {
@@ -219,6 +224,7 @@ function changeCurrentPage(val) {
     currentPage.value = val
     dataPagination()
 }
+
 </script>
 
 <style scoped>
