@@ -14,7 +14,7 @@
                     {{ userName }}
                 </div>
                 <div class="aside-menu" style="width: 100%; margin-top: 50px">
-                    <el-menu default-active="13" class="el-menu-vertical-demo">
+                    <el-menu default-active="0" class="el-menu-vertical-demo">
                         <el-menu-item
                             index="0"
                             @click="handleMenuClick('MainBoardPage')"
