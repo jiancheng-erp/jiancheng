@@ -1,7 +1,7 @@
 <template>
     <el-tabs style="">
         <!-- 如果character不是总仓文员，或者总仓文员身份是出入库文员，则可以查询自己的入库记录 -->
-        <el-tab-pane v-if="role != 23 || (role == 23 && [35, 39].includes(staffId))" label="入库记录"> 
+        <el-tab-pane v-if="role !== '23' || (role === '23' && ['35', '39'].includes(staffId))" label="入库记录"> 
             <InboundRecords :materialSupplierOptions="materialSupplierOptions" :warehouseOptions="warehouseOptions"/>
         </el-tab-pane>
         <el-tab-pane label="出库记录">
