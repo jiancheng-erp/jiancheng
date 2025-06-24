@@ -40,6 +40,7 @@
                     </el-select> -->
                     <!-- <el-button type="primary" @click="createAndDownloadInboundExcel">生成并下载excel</el-button> -->
                     <el-button type="primary" @click="toggleDisplayZero">更改空库存显示</el-button>
+                    <el-button type="primary" @click="createAndDownloadWarehouseExcel">生成并下载excel</el-button>
                 </div>
 
             </el-col>
@@ -204,6 +205,39 @@ function getCurrentPageInfo() {
         'includeZeroFilter':displayZeroInventory.value
         // 'statusFilter':statusFilter.value
         // 'approvalStatusFilter':[0,1,2]
+    }
+}
+async function createAndDownloadWarehouseExcel() {
+    const apiParams = getCurrentPageInfo();
+        try {
+            const res = await axios.get($api_baseUrl + `/accounting/createinventoryexcelanddownload`, {
+                params: apiParams,
+                responseType: 'blob', // Important: this tells Axios to handle binary data
+            });
+
+            // Create a Blob from the response data
+            const blob = new Blob([res.data], { type: res.headers['content-type'] });
+
+            // Use the filename from the Content-Disposition header if available
+            const disposition = res.headers['content-disposition'];
+            let filename = '财务部库存总单.xlsx'; // fallback name
+            if (disposition && disposition.includes('filename=')) {
+                const match = disposition.match(/filename="?(.+?)"?$/);
+                if (match.length > 1) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
+
+            // Create a link and trigger the download
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (error) {
+            console.error("Failed to download Excel:", error);
     }
 }
 
