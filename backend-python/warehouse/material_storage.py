@@ -1261,7 +1261,7 @@ def get_material_inbound_records():
     # 如果是仓库文员角色，入库记录只能查询自己的
     character_id = character.character_id
     if character_id == WAREHOUSE_CLERK_ROLE:
-        query = query.filter(InboundRecord.staff_id == staff.staff_id)
+        query1 = query1.filter(InboundRecord.staff_id == staff.staff_id)
     if start_date_search:
         query1 = query1.filter(InboundRecord.inbound_datetime >= start_date_search)
     if end_date_search:
