@@ -1,6 +1,6 @@
 <template>
     <el-tabs style="">
-        <el-tab-pane label="库存">
+        <el-tab-pane label="总仓库存">
             <Inventory />
         </el-tab-pane>
     </el-tabs>

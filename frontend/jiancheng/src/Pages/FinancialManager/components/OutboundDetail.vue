@@ -10,20 +10,6 @@
 
     <el-row >
         <el-col :span="4" :offset="0">
-            <el-select v-model="currentWarehouse" clearable filterable @change="updateInboundDisplayRecord">
-            <el-option v-for="item in warehouseOptions"
-            :key="item.warehouseId"
-            :label="item.warehouseName"
-            :value="item.warehouseId">
-            </el-option>
-            </el-select>
-        </el-col>
-
-        <el-col :span="4" :offset="1">
-            <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable @change="updateInboundDisplayRecord"></el-input>
-        </el-col>
-        
-        <el-col :span="4" :offset="1">
             <el-date-picker
                 v-model="dateRangeFilter"
                 type="daterange"
@@ -37,9 +23,19 @@
                 @change="updateInboundDisplayRecord"
                 @clear="updateInboundDisplayRecord"
             />
-            
-
         </el-col>
+        <el-col :span="2" :offset="1">
+            <el-select v-model="outboundTypeFilter" 
+            placeholder="出库类型选择" clearable @change="updateInboundDisplayRecord">
+            <el-option v-for="option in outboundTypeOptions" :key="option.key" :label="option.label" :value="option.value">
+
+            </el-option>
+        </el-select>
+        </el-col>
+        <el-col :span="4" :offset="1">
+            <el-input v-model="supplierNameFilter" placeholder="材料供应商搜索" clearable @change="updateInboundDisplayRecord"></el-input>
+        </el-col>
+
            <el-col :span="4" :offset="2">
             <el-button type="primary" @click="deselectAllColumns">
                 清空选择
@@ -51,14 +47,6 @@
         
     </el-row>
 
-    <!-- <<el-row :gutter="20">
-        <el-col :span="12" :offset="0"></el-col>
-            <el-option v-for="selectedWarehouse in warehouseOptions" :key="selectedWarehouse.warehouseId" :label="selectedWarehouse.warehouseName" 
-            :value="selectedWarehouse.warehouseId"></el-option>
-            
-        <el-col :span="12" :offset="0"></el-col>
-    </el-row>
-     -->
  
     
     <el-row :gutter="20">
@@ -120,6 +108,29 @@ const selectedColumns = ref([])
 const allColumns = ref([])
 const dateRangeFilter = ref(['',''])
 const supplierNameFilter = ref('')
+const outboundTypeFilter = ref('')
+const outboundTypeOptions = ref([
+    {
+        key:0,
+        value:'0',
+        label:"自产出库"
+    },
+    {
+        key:1,
+        value:'1',
+        label:'废料出库'
+    },
+    {
+        key:2,
+        value:'2',
+        label:'外包出库'
+    },
+    {
+        key:3,
+        value:'3',
+        label:'复合出库'
+    }
+])
 // const shortcuts: [
 //                 {
 //                     text: '过去一周',
@@ -181,7 +192,8 @@ function getCurrentPageInfo()
             'selectedWarehouse':currentWarehouse.value,
             'dateRangeFilterStart':dateRangeFilter.value[0],
             'dateRangeFilterEnd':dateRangeFilter.value[1],
-            'supplierNameFilter':supplierNameFilter.value
+            'supplierNameFilter':supplierNameFilter.value,
+            'outboundTypeFilter':outboundTypeFilter.value
     }
 }
 function pageSizeChange(newSize)
@@ -195,8 +207,6 @@ async function pageCurrentChange(page)
     await updateInboundDisplayRecord()
 }
 async function paginationChange(){
-    console.log("pagination change")
-    console.log(getCurrentPageInfo())
     await updateInboundDisplayRecord()
 }
 async function getSelectableColumns()
