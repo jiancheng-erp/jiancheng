@@ -166,7 +166,7 @@ def get_warehouse_outbound_record():
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
     outbound_type_filter = request.args.get('outboundTypeFilter', type=str)
-    query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage.average_price)
+    query = (db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage)
              .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
              .join(MaterialStorage, OutboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
              .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
@@ -182,20 +182,31 @@ def get_warehouse_outbound_record():
         query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
     if material_model_filter:
         query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
+    if date_range_filter_start:
+        query = query.filter(OutboundRecord.outbound_datetime >= date_range_filter_start)
+    if date_range_filter_end:
+        ### next day
+        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
+        next_day_delta = timedelta(days=1)
+        query_compare_date = format_date((input_date_time + next_day_delta))
+        query = query.filter(OutboundRecord.outbound_datetime <= query_compare_date)
+    
     total_count = query.distinct().count()
     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     outbound_records = []
     department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
-    for outbound_record, outbound_record_detail, material, supplier, material_type, material_warehouse, spu, avg_price in response_entities:
+    for outbound_record, outbound_record_detail, material, supplier, material_type, material_warehouse, spu, material_storage in response_entities:
         res = db_obj_to_res(outbound_record, OutboundRecord, attr_name_list=OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES)
         res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
         res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res[to_camel('unit_price')] = avg_price
+        res[to_camel('unit_price')] = material_storage.average_price
         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
         res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department] if outbound_record.outbound_department else ''
+        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
+
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
     
@@ -214,7 +225,6 @@ def get_warehouse_inventory():
     order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
     shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
     not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
-    print(not_zero_flag_filter)
     query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
              .join(Order,MaterialStorage.order_id == Order.order_id)
              .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
@@ -245,6 +255,7 @@ def get_warehouse_inventory():
         query = query.filter(OrderShoe.customer_product_name.ilike(f"%{order_shoe_customer_name_filter}"))
     if shoe_rid_filter:
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
+    
     # TODO
     if not_zero_flag_filter:
         if not_zero_flag_filter == 'true':
