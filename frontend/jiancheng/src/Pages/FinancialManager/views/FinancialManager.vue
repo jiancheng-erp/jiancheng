@@ -20,6 +20,7 @@
                 <!-- <el-tab-pane label="订单状态确认"><OrderStatusConfirm /></el-tab-pane> -->
                 <el-tab-pane label="总仓出入库记录"><FinancialWarehouseDetail/></el-tab-pane>
                 <el-tab-pane label="库存"><FinancialWarehouseInventory/></el-tab-pane>
+                <el-tab-pane label="应收记录"><FinancialRecievableDetail/></el-tab-pane>
                 <!-- <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
                 <el-tab-pane label="入库记录"><InboundRecords /></el-tab-pane> -->
             </el-tabs>
@@ -39,6 +40,7 @@ import InventoryView from '../components/InventoryView.vue'
 import OrderStatusConfirm from '../components/OrderStatusConfirm.vue'
 import FinancialAccountDetail from '../components/FinancialAccountDetail.vue'
 import FinancialAccountManagement from '../components/FinancialAccountManagement.vue'
+import FinancialRecievableDetail from '../components/FinancialRecievableDetail.vue'
 import FinancialWarehouseDetail from '../components/FinancialWarehouseDetail.vue'
 import FinancialWarehouseInventory from '../components/FinancialWarehouseInventory.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
