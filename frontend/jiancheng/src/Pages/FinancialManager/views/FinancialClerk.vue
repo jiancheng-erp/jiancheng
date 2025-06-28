@@ -14,6 +14,7 @@
                 <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
                 <el-tab-pane label="入库待审核"><InOutboundRecords /></el-tab-pane>
                 <el-tab-pane label="入库明细"><InboundDetails /></el-tab-pane>
+                <el-tab-pane label="应收记录"><FinancialRecievableDetail /></el-tab-pane>
                 <!-- <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane> -->
 
             </el-tabs>
@@ -31,6 +32,7 @@ import { ref, onMounted, getCurrentInstance } from 'vue'
 import InOutboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InOutboundRecords.vue'
 import InboundDetails from '../components/FinancialWarehouseDetail.vue'
 import FinancialPayableDetail from '../components/FinancialPayableDetail.vue'
+import FinancialRecievableDetail from '../components/FinancialRecievableDetail.vue'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { useRouter } from 'vue-router'
 

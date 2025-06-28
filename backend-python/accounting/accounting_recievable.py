@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 from logger import logger
 from decimal import Decimal
 from app_config import db
+from shared_apis import customer
 
 accounting_recievable_bp = Blueprint("accounting_recievable_bp", __name__)
 
@@ -78,6 +79,7 @@ def get_receivable_list():
         db.session.query(Customer).filter(Customer.customer_id.in_(customer_ids)).all()
     )
     customer_dict = {c.customer_id: c.customer_name for c in customers}
+    customer_brand_dict = {c.customer_id: c.customer_brand for c in customers if c.customer_brand}
 
     order_shoes = (
         db.session.query(OrderShoe).filter(OrderShoe.order_id.in_(order_ids)).all()
@@ -180,15 +182,24 @@ def get_receivable_list():
             {
                 "orderCode": order.order_rid,
                 "customerName": customer_dict.get(order.customer_id, ""),
+                "customerBrand": (
+                    customer_brand_dict.get(order.customer_id, "")
+                    if order.customer_id in customer_brand_dict
+                    else ""
+                ),  
                 "orderDate": (
                     order.start_date.strftime("%Y-%m-%d") if order.start_date else ""
                 ),
                 "orderEndDate": (
                     order.end_date.strftime("%Y-%m-%d") if order.end_date else ""
                 ),
+                "orderActualEndDate": (
+                    order.order_actual_end_date.strftime("%Y-%m-%d")
+                    if order.order_actual_end_date
+                    else ""
+                ),
                 "totalAmount": float(receivable_total),
-                "paidAmount": float(paid_total),
-                "transactionCount": 0,
+                "isPaid": order.is_paid,
                 "shoes": shoe_items,
             }
         )
@@ -245,6 +256,7 @@ def download_receivable_excel():
         db.session.query(Customer).filter(Customer.customer_id.in_(customer_ids)).all()
     )
     customer_dict = {c.customer_id: c.customer_name for c in customers}
+    customer_brand_dict = {c.customer_id: c.customer_brand for c in customers if c.customer_brand}
 
     order_shoes = (
         db.session.query(OrderShoe).filter(OrderShoe.order_id.in_(order_ids)).all()
@@ -347,15 +359,24 @@ def download_receivable_excel():
             {
                 "orderCode": order.order_rid,
                 "customerName": customer_dict.get(order.customer_id, ""),
+                "customerBrand": (
+                    customer_brand_dict.get(order.customer_id, "")
+                    if order.customer_id in customer_brand_dict
+                    else ""
+                ),  
                 "orderDate": (
                     order.start_date.strftime("%Y-%m-%d") if order.start_date else ""
                 ),
                 "orderEndDate": (
                     order.end_date.strftime("%Y-%m-%d") if order.end_date else ""
                 ),
+                "orderActualEndDate": (
+                    order.order_actual_end_date.strftime("%Y-%m-%d")
+                    if order.order_actual_end_date
+                    else ""
+                ),
                 "totalAmount": float(receivable_total),
-                "paidAmount": float(paid_total),
-                "transactionCount": 0,
+                "isPaid": order.is_paid,
                 "shoes": shoe_items,
             }
         )
@@ -374,3 +395,52 @@ def download_receivable_excel():
         as_attachment=True,
         download_name=f"应收明细{search_customer if search_customer else ''}_{start_date if start_date else ''}_{end_date if end_date else ''}.xlsx",
     )
+    
+@accounting_recievable_bp.route("/finance/confirm_paid", methods=["POST"])
+def confirm_paid():
+    data = request.get_json()
+    order_rid = data.get("orderCode", "").strip()
+    if not order_rid:
+        return jsonify({"error": "Order RID is required"}), 400
+
+    order = db.session.query(Order).filter(Order.order_rid == order_rid).first()
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    if order.is_paid:
+        return jsonify({"error": "Order is already paid"}), 400
+
+    order.is_paid = True
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Order marked as paid successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error confirming payment for order {order_rid}: {e}")
+        return jsonify({"error": "Failed to confirm payment"}), 500
+
+
+@accounting_recievable_bp.route("/finance/revert_status", methods=["POST"])
+def revert_status():
+    data = request.get_json()
+    order_rid = data.get("orderCode", "").strip()
+    if not order_rid:
+        return jsonify({"error": "Order RID is required"}), 400
+
+    order = db.session.query(Order).filter(Order.order_rid == order_rid).first()
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    if not order.is_paid:
+        return jsonify({"error": "Order is not paid"}), 400
+
+    order.is_paid = False
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "Order status reverted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error reverting status for order {order_rid}: {e}")
+        return jsonify({"error": "Failed to revert status"}), 500

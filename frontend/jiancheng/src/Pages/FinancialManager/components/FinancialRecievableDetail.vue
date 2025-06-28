@@ -50,12 +50,18 @@
 
                 <el-table-column label="订单编号" prop="orderCode" />
                 <el-table-column label="客户名称" prop="customerName" />
+                <el-table-column label="客户商标" prop="customerBrand"></el-table-column>
                 <el-table-column label="订单总金额" prop="totalAmount" :formatter="totalFormatter" />
-                <el-table-column label="已付款" prop="paidAmount" :formatter="paidFormatter" />
-                <el-table-column label="未付款" :formatter="unpaidFormatter" />
-                <el-table-column label="款数" prop="transactionCount" />
+                <el-table-column label="是否结清" prop="isPaid" :formatter="paidFormatter"/>
                 <el-table-column label="下单日期" prop="orderDate" />
-                <el-table-column label="结束日期" prop="orderEndDate"></el-table-column>
+                <el-table-column label="预计结束日期" prop="orderEndDate"></el-table-column>
+                <el-table-column label="实际结束日期" prop="orderActualEndDate"></el-table-column>
+                <el-table-column label="操作" width="240">
+                    <template #default="scope">
+                        <el-button type="primary" @click="confirmPaid(scope.row)" :disabled="confirmAvaliable(scope.row)">确认结清</el-button>
+                        <el-button type="danger" @click="RevertStatus(scope.row)" :disabled="revertAvaliable(scope.row)">退回状态</el-button>
+                    </template>
+                </el-table-column>
             </el-table>
 
             <!-- 分页 -->
@@ -68,11 +74,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, getCurrentInstance } from 'vue'
+import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
+const role = localStorage.getItem('role')
 
 interface ShoeItem {
     factoryModel: string
@@ -145,7 +153,7 @@ const subtotalFormatter = (row: any) => {
 
 const paidFormatter = (row: any) => {
     if (!row) return '-'
-    return row.paidAmount.toFixed(2)
+    return row.isPaid ? '是' : '否'
 }
 
 const totalFormatter = (row: any) => {
@@ -196,6 +204,46 @@ async function downloadExcel() {
     } catch (error) {
         console.error('Failed to download Excel:', error)
     }
+}
+async function confirmPaid(row) {
+    console.log('Confirming paid for order:', row.orderCode)
+    try {
+        const response = await axios.post(`${$api_baseUrl}/finance/confirm_paid`, {
+            orderCode: row.orderCode
+        })
+        if (response.status === 200) {
+            ElMessage.success('确认结清成功')
+            loadReceivables()
+        } else {
+            ElMessage.error('确认结清失败: ' + response.data.message)
+        }
+    } catch (error) {
+        console.error('Error confirming paid:', error)
+        ElMessage.error('确认结清失败，请稍后再试')
+    }
+}
+
+async function RevertStatus(row) {
+    try {
+        const response = await axios.post(`${$api_baseUrl}/finance/revert_status`, {
+            orderCode: row.orderCode
+        })
+        if (response.status === 200) {
+            ElMessage.success('退回状态成功')
+            loadReceivables()
+        } else {
+            ElMessage.error('退回状态失败: ' + response.data.message)
+        }
+    } catch (error) {
+        console.error('Error reverting status:', error)
+        ElMessage.error('退回状态失败，请稍后再试')
+    }
+}
+function confirmAvaliable(row: { isPaid: any }) {
+    return !((role === '10' || role === '24') && !row.isPaid)
+}
+function revertAvaliable(row: { isPaid: any }) {
+    return !(role === '10' && row.isPaid)
 }
 </script>
 
