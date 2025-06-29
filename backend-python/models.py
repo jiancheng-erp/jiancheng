@@ -314,6 +314,8 @@ class Order(db.Model):
     order_paper_color_document_status = db.Column(
         db.String(1), nullable=False, default="0"
     )
+    is_paid = db.Column(db.SmallInteger, nullable=False, default=0)
+    order_actual_end_date = db.Column(db.Date, nullable=True)
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"

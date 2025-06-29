@@ -54,6 +54,7 @@ from accounting.accounting_warehouse import accounting_warehouse_bp
 from accounting.accounting_term_management import accounting_term_management_bp
 from accounting.audit_material_outbound import audit_material_outbound_bp
 from development.dev_performance import dev_performance_bp
+from accounting.accounting_recievable import accounting_recievable_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -112,3 +113,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(accounting_term_management_bp)
     app.register_blueprint(audit_material_outbound_bp)
     app.register_blueprint(dev_performance_bp)
+    app.register_blueprint(accounting_recievable_bp)

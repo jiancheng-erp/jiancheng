@@ -51,6 +51,9 @@
                         <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation')">
                             <span>生产订单确认</span>
                         </el-menu-item>
+                        <el-menu-item index="7" @click="handleMenuClick('FinancialRecievableDetail')">
+                            <span>财务应收明细</span>
+                        </el-menu-item>
                         <el-menu-item index="10" @click="handleMenuClick('OutboundProduct')">
                             <span>订单出库</span>
                         </el-menu-item>
@@ -90,6 +93,7 @@ import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import WagesApproval from '@/Pages/ProductionManagementDepartment/ProductionManager/components/WagesApproval.vue'
 import MainBoardPage from '../components/MainBoardPage.vue'
+import FinancialRecievableDetail from '@/Pages/FinancialManager/components/FinancialRecievableDetail.vue'
 import { useRouter } from "vue-router";
 
 const components = {
@@ -103,7 +107,8 @@ const components = {
     OrderImportantStatus,
     RevertEventAnalyse,
     WagesApproval,
-    MainBoardPage
+    MainBoardPage,
+    FinancialRecievableDetail
 }
 let currentComponent = ref('MainBoardPage')
 let userName = ref('')
