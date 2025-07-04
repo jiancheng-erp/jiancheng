@@ -1507,6 +1507,7 @@ export default {
                 page: this.currentOrderCreatePage,
                 pageSize: this.orderCreatePageSize,
                 shoerid: this.shoeRidFilter,
+                available: 1
             }
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {params})
             this.shoeTableData = response.data.shoeTable

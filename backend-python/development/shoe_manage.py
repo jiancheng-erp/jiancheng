@@ -277,3 +277,44 @@ def confirm_edit_shoe_rid():
         return jsonify({"message": "edit shoe rid OK"}), 200
     else:
         return jsonify({"error": "shoe not found given shoe_id"}), 400
+    
+@shoe_manage_bp.route("/shoemanage/deprecateshoe", methods=["POST"])
+def deprecate_shoe():
+    shoe_id = request.json.get("shoeId")
+    existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
+    if existing_shoe:
+        existing_shoe.shoe_available = False
+        db.session.commit()
+        return jsonify({"message": "deprecate shoe OK"}), 200
+    else:
+        return jsonify({"error": "shoe not found given shoe_id"}), 400
+    
+@shoe_manage_bp.route("/shoemanage/revertshoe", methods=["POST"])
+def revert_shoe():
+    shoe_id = request.json.get("shoeId")
+    existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
+    if existing_shoe:
+        existing_shoe.shoe_available = True
+        db.session.commit()
+        return jsonify({"message": "revert shoe OK"}), 200
+    else:
+        return jsonify({"error": "shoe not found given shoe_id"}), 400
+    
+@shoe_manage_bp.route("/shoemanage/deleteshoe", methods=["POST"])
+def delete_shoe():
+    shoe_id = request.json.get("shoeId")
+    existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
+    linked_order = db.session.query(OrderShoe).filter(OrderShoe.shoe_id == shoe_id).first()
+    if linked_order:
+        return jsonify({"error": "shoe is linked to an order, cannot delete"}), 400
+    if existing_shoe:
+        # delete the shoe image folder
+        shoe_rid = existing_shoe.shoe_rid
+        path_to_delete = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', shoe_rid)
+        if os.path.exists(path_to_delete):
+            os.rmdir(path_to_delete)
+        db.session.delete(existing_shoe)
+        db.session.commit()
+        return jsonify({"message": "delete shoe OK"}), 200
+    else:
+        return jsonify({"error": "shoe not found given shoe_id"}), 400
