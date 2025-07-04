@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from matplotlib.style import available
 
 from app_config import db
 from sqlalchemy import func
@@ -58,6 +59,7 @@ def get_all_shoes():
 def get_all_shoes_new():
     time_s = time.time()
     shoe_rid = request.args.get("shoerid")
+    available = request.args.get("available", type=int)
     _, _, department = current_user_info()
     user_department = department.department_name
     page = request.args.get("page", type=int)
@@ -75,7 +77,8 @@ def get_all_shoes_new():
 
     if shoe_rid is not None and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
-
+    if available:
+        query = query.filter(Shoe.shoe_available == True)
     total_count = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     shoe_id_list = [shoe.shoe_id for shoe in response]

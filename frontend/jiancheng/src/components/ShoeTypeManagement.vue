@@ -7,16 +7,17 @@
             鞋型号搜索：
             <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes" :suffix-icon="Search"></el-input>
         </el-col>
-        <el-col :span="6" :offset="10">
+        <el-col :span="6" :offset="4">
+            <el-switch v-model="availableFilter" @change="getFilterShoes" active-text="仅显示可用鞋型" inactive-text="显示所有鞋型" :active-value="1" :inactive-value="0"></el-switch>
+        </el-col>
+        <el-col :span="6" :offset="4">
             <el-button type="primary" @click="openAddShoeDialog">添加新鞋型</el-button>
             <el-button type="primary" icon="Edit" @click="openShoeColorDialog">添加鞋款颜色</el-button>
         </el-col>
 
         <el-col :span="2" :offset="0">
-            <el-button v-if='userRole == 4' type="warning" @click="openShoeColorManagementDialog"> 颜色管理 </el-button>
+            <el-button v-if="userRole == 4" type="warning" @click="openShoeColorManagementDialog"> 颜色管理 </el-button>
         </el-col>
-        
-
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
@@ -51,18 +52,20 @@
                 <el-table-column prop="shoeRid" label="鞋型编号" width="300px"></el-table-column>
                 <el-table-column prop="shoeDesigner" label="设计师"></el-table-column>
                 <el-table-column prop="shoeDepartmentId" label="设计部门"></el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="625px">
                     <template #default="scope">
                         <el-button type="primary" @click="openEditShoeDialog(scope.row)">编辑鞋型信息</el-button>
                         <el-button type="primary" size="default" @click="addShoeModel(scope.row)">添加鞋款</el-button>
                         <el-button type="warning" size="default" @click="editShoeRId(scope.row)">编辑鞋型号</el-button>
+                        <el-button v-if="scope.row.shoeAvailable" type="danger" size="default" @click="deprecateShoe(scope.row)">弃用鞋型</el-button>
+                        <el-button v-else type="success" size="default" @click="revertShoe(scope.row)">启用鞋型</el-button>
+                        <el-button type="danger" size="default" @click="deleteShoe(scope.row)" :disabled="deleteAbled()">删除鞋型</el-button>
                     </template>
                 </el-table-column>
             </el-table>
         </el-col>
     </el-row>
     <el-row :gutter="0">
-        
         <el-col :span="8" :offset="2">
             <el-pagination
                 @size-change="handleSizeChange"
@@ -93,8 +96,8 @@
         </el-table>
     </el-dialog>
     <el-dialog title="添加鞋款颜色" v-model="addShoeColorDialogVis" width="50%">
-                <el-input placeholder="输入新颜色中文名字" v-model="colorForm.colorName" @input="filterColorInfoList"></el-input>
-            <!-- <el-form-item label="颜色英文名称">
+        <el-input placeholder="输入新颜色中文名字" v-model="colorForm.colorName" @input="filterColorInfoList"></el-input>
+        <!-- <el-form-item label="颜色英文名称">
                 <el-input v-model="colorForm.colorNameEN"></el-input>
             </el-form-item>
             <el-form-item label="颜色西语名称">
@@ -103,7 +106,7 @@
             <el-form-item label="颜色意语名称">
                 <el-input v-model="colorForm.colorNameIT"></el-input>
             </el-form-item> -->
-        <el-table :data="displayColorInfoList" row-key="colorId" ref="colorSelectionTable" >
+        <el-table :data="displayColorInfoList" row-key="colorId" ref="colorSelectionTable">
             <el-table-column sortable prop="colorNameCN" label="颜色中文"></el-table-column>
             <el-table-column prop="colorNameEN" label="颜色英文"></el-table-column>
             <el-table-column prop="colorNameSP" label="颜色西语"></el-table-column>
@@ -197,14 +200,7 @@
         <input type="file" accept="image/*" @change="onFileChange" />
 
         <!-- 裁剪器 -->
-        <cropper
-            v-if="imageUrl"
-            ref="cropper"
-            :src="imageUrl"
-            :auto-zoom="true"
-            :resize-image="true"
-            :background-class="'cropper-background'"
-        />
+        <cropper v-if="imageUrl" ref="cropper" :src="imageUrl" :auto-zoom="true" :resize-image="true" :background-class="'cropper-background'" />
 
         <!-- 底部按钮 -->
         <template #footer>
@@ -285,7 +281,7 @@ export default {
             addShoeColorDialogVis: false,
             colorManagementDialogVis: false,
             colorInfoList: [],
-            mergeColorInfoList:[],
+            mergeColorInfoList: [],
             Search,
             inheritIdSearch: '',
             shoeTableData: [],
@@ -299,11 +295,12 @@ export default {
             expandedRows: [],
             imageUrl: '',
             orderAssociation: [],
+            availableFilter: 1 // 是否只显示可用鞋型
         }
     },
     mounted() {
         this.getAllColors()
-        this.getAllShoes()
+        this.getFilterShoes()
         this.updateColorInfo()
     },
     computed: {
@@ -315,10 +312,10 @@ export default {
         allowDelete() {
             return userRole != 21
         },
-        userIsManager(){
+        userIsManager() {
             return userRole == 4
         },
-        userIsClerk(){
+        userIsClerk() {
             return userRole == 21
         }
     },
@@ -333,7 +330,7 @@ export default {
         async getAllShoes() {
             // new api call
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
-                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize }
+                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize, available: this.availableFilter }
             })
             this.shoeTableData = response.data.shoeTable
             this.totalItems = response.data.total
@@ -341,7 +338,7 @@ export default {
         async getFilterShoes() {
             this.currentPage = 1
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
-                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize }
+                params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize, available: this.availableFilter }
             })
             this.shoeTableData = response.data.shoeTable
             this.totalItems = response.data.total
@@ -349,13 +346,12 @@ export default {
         async updateColorInfo() {
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/shoecolorinfo`)
             this.colorInfoList = response.data.colorInfo
-            this.mergeColorInfoList = this.colorInfoList.filter(color => color.colorBoundCount != 0)
+            this.mergeColorInfoList = this.colorInfoList.filter((color) => color.colorBoundCount != 0)
             this.displayColorInfoList = this.colorInfoList
-            
         },
-        filterColorInfoList(){
-            this.displayColorInfoList = this.colorInfoList.filter(color => color.colorNameCN.includes(this.colorForm.colorName))
-            
+        filterColorInfoList() {
+            this.displayColorInfoList = this.colorInfoList.filter((color) => color.colorNameCN.includes(this.colorForm.colorName))
+
             // this.displayColorInfoList = this.colorInfoList.filter(color => color.)
         },
         openShoeColorManagementDialog() {
@@ -369,11 +365,11 @@ export default {
         },
         handleSizeChange(value) {
             this.pageSize = value
-            this.getAllShoes()
+            this.getFilterShoes()
         },
         handlePageChange(value) {
             this.currentPage = value
-            this.getAllShoes()
+            this.getFilterShoes()
         },
         async mergeSelectedColor() {
             console.log(this.$refs.colorSelectionTable.getSelectionRows())
@@ -474,7 +470,7 @@ export default {
                         colorId: ''
                     }
                     this.inheritIdSearch = ''
-                    await this.getAllShoes()
+                    await this.getFilterShoes()
                 }
             })
         },
@@ -498,7 +494,7 @@ export default {
                         shoeAdjuster: '',
                         shoeDepartmentId: ''
                     }
-                    this.getAllShoes()
+                    this.getFilterShoes()
                 }
             })
         },
@@ -535,7 +531,7 @@ export default {
                             }
                             this.colorModel = ''
                             this.idModel = ''
-                            this.getAllShoes()
+                            this.getFilterShoes()
                         }
                     }
                 })
@@ -559,7 +555,7 @@ export default {
                         type: 'success',
                         message: '删除成功'
                     })
-                    this.getAllShoes()
+                    this.getFilterShoes()
                 }
             })
         },
@@ -626,25 +622,87 @@ export default {
                     const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/confirmeditshoerid`, {
                         shoeRId: this.shoeForm.shoeRid,
                         shoeId: this.shoeForm.shoeId
-                    });
+                    })
 
                     if (response.status === 200) {
                         this.$message({
                             type: 'success',
                             message: '修改成功'
-                        });
+                        })
                     }
                 } catch (error) {
                     this.$message({
                         type: 'error',
                         message: error?.response?.data?.message || '与其他已存在鞋型同名，请联系管理员更改'
-                    });
+                    })
                 } finally {
-                    this.editShoeRIdDialogConfirmVis = false;
-                    this.editShoeRIdDialogVis = false;
-                    this.getAllShoes();
+                    this.editShoeRIdDialogConfirmVis = false
+                    this.editShoeRIdDialogVis = false
+                    this.getFilterShoes()
                 }
-            });
+            })
+        },
+        deleteAbled() {
+            console.log(this.userRole)
+            return this.userRole == 4 || this.userRole == 21
+        },
+        deprecateShoe(row) {
+            this.$confirm('确认弃用鞋型？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/deprecateshoe`, { shoeId: row.shoeId })
+                if (response.status === 200) {
+                    this.$message({
+                        type: 'success',
+                        message: '弃用成功'
+                    })
+                    this.getFilterShoes()
+                }
+            })
+        },
+        deleteShoe(row) {
+            this.$confirm('确认删除鞋型？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/deleteshoe`, {
+                        shoeId: row.shoeId
+                    })
+                    console.log(response)
+                    this.$message({
+                        type: 'success',
+                        message: '删除成功'
+                    })
+                    this.getFilterShoes()
+                } catch (error) {
+                    console.error(error)
+                    // 后端返回的错误信息（比如 400/500）
+                    this.$message({
+                        type: 'error',
+                        message: error.response?.data?.message || '该鞋型已被绑定订单，无法删除'
+                    })
+                }
+            })
+        },
+        revertShoe(row) {
+            this.$confirm('确认启用鞋型？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/revertshoe`, { shoeId: row.shoeId })
+                if (response.status === 200) {
+                    this.$message({
+                        type: 'success',
+                        message: '启用成功'
+                    })
+                    this.getFilterShoes()
+                }
+            })
         }
     }
 }
