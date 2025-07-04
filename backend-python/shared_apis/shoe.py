@@ -60,7 +60,6 @@ def get_all_shoes_new():
     time_s = time.time()
     shoe_rid = request.args.get("shoerid")
     available = request.args.get("available", type=int)
-    print("available is ", available)
     _, _, department = current_user_info()
     user_department = department.department_name
     page = request.args.get("page", type=int)
