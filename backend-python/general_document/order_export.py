@@ -138,7 +138,11 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
 
                         for i in SHOESIZERANGE:
-                            ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get(f"size{i}Ratio")
+                            if packaging.get(f"size{i}Ratio") == 0:
+                                ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            else:
+                                # Multiply by count to get the total for this packaging
+                                ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get(f"size{i}Ratio")
                             col_idx += 1
 
                         total_quantity = packaging.get("totalQuantityRatio", 0)
@@ -291,7 +295,10 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
 
                         for i in SHOESIZERANGE:
-                            ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get(f"size{i}Ratio") * count
+                            if packaging.get(f"size{i}Ratio") == 0:
+                                ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            else:
+                                ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get(f"size{i}Ratio") * count
                             col_idx += 1
 
                         total_quantity = packaging.get("totalQuantityRatio", 0)
