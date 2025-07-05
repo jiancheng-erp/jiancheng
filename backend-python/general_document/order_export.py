@@ -41,9 +41,65 @@ def insert_row_with_format(ws, row_to_copy, new_row_idx):
             new_cell.border = cell.border.copy()
             new_cell.alignment = cell.alignment.copy()
             new_cell.number_format = cell.number_format
+            
+def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_size_count=13):
+    """
+    删除从 start_col_letter 开始的尺码列，只保留非空名称对应的列。
+    size_name_list: 尺码名称列表（可能含 '', None）
+    total_size_count: 模板中总共预留了多少尺码列（默认 13）
+    """
+    start_col_idx = column_index_from_string(start_col_letter)
+    actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
+    extra_count = total_size_count - actual_size_cols
+    if extra_count > 0:
+        delete_start_col = start_col_idx + actual_size_cols
+        print(f"Deleting {extra_count} extra size columns starting from column {get_column_letter(delete_start_col)}")
+        ws.delete_cols(delete_start_col, extra_count)
+    for merged_range in list(ws.merged_cells.ranges):
+        if f"{start_col_letter}7" in str(merged_range):
+            ws.merged_cells.ranges.remove(merged_range)
 
+    if actual_size_cols > 0:
+        end_col_letter = get_column_letter(start_col_idx + actual_size_cols - 1)
+        merge_range = f"{start_col_letter}7:{end_col_letter}7"
+        ws.merge_cells(merge_range)
+        title_cell = ws[f"{start_col_letter}7"]
+        title_cell.value = "尺码"
+        title_cell.font = Font(bold=True)
+def fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=None, total_size_count=13):
+    """
+    删除尺码列后，从其下一列开始，将所有列的第7行和第8行重新合并，修复双行表头。
+    """
+    if size_name_list is None:
+        size_name_list = []
+
+    size_start_idx = column_index_from_string(size_start_col_letter)
+    actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
+    size_end_idx = size_start_idx + actual_size_cols - 1
+
+    # 下一列就是合并起始列
+    merge_start_idx = size_end_idx + 1
+    max_col_idx = ws.max_column
+
+    for col_idx in range(merge_start_idx, max_col_idx + 1):
+        col_letter = get_column_letter(col_idx)
+
+        # 删除原本在这一列的 7~8 行合并区域（如果存在）
+        for merged_range in list(ws.merged_cells.ranges):
+            if f"{col_letter}7:{col_letter}8" in str(merged_range):
+                ws.merged_cells.ranges.remove(merged_range)
+
+        # 合并新的 7~8 行
+        ws.merge_cells(f"{col_letter}7:{col_letter}8")
+        cell = ws[f"{col_letter}7"]
+        cell.font = Font(bold=True)
+
+        # 可选：继承对齐样式（假设 E7 是模板参考）
+        if "E7" in ws:
+            cell.alignment = ws["E7"].alignment
 
 def insert_series_data(wb: Workbook, series_data, col, row):
+    all_size_names = []
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     NORMAL_ROW_HEIGHT = 20
@@ -84,6 +140,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         break
                 if found:
                     break
+            if len([s for s in size_names if s not in ("", None)]) > len([s for s in all_size_names if s not in ("", None)]):
+                all_size_names = size_names  # 记录下最长的那组有效尺码名
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
@@ -198,8 +256,11 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             # Merge column C (customer_product_name)
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
+    delete_extra_size_columns(ws, all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
+    all_size_names = []
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     NORMAL_ROW_HEIGHT = 20
@@ -240,6 +301,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         break
                 if found:
                     break
+            if len([s for s in size_names if s not in ("", None)]) > len([s for s in all_size_names if s not in ("", None)]):
+                all_size_names = size_names  # 记录下最长的那组有效尺码名
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
@@ -354,6 +417,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             # Merge column C (customer_product_name)
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
+    delete_extra_size_columns(ws, all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
 
 
 # Function to save the workbook after modification
