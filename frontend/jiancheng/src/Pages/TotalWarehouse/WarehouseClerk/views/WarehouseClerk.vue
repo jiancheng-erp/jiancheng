@@ -20,7 +20,10 @@
                             <span>材料出库</span>
                         </el-menu-item>
                         <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>出入库记录</span>
+                            <span>出入库审核</span>
+                        </el-menu-item>
+                        <el-menu-item index="13" @click="handleMenuClick(13)">
+                            <span>出入库明细</span>
                         </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>库存</span>
@@ -57,6 +60,7 @@ import InOutboundRecords from '../../HeadOfWarehouse/components/InOutboundRecord
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue'
 import OutboundMaterial from '../../HeadOfWarehouse/components/OutboundMaterial.vue'
+import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 
 export default {
     components: {
@@ -67,7 +71,8 @@ export default {
         InOutboundRecords,
         PersonalInfo,
         GeneralOrderSearch,
-        OutboundMaterial
+        OutboundMaterial,
+        FinancialWarehouseDetail
     },
     data() {
         return {
@@ -115,6 +120,8 @@ export default {
                 case 12:
                     this.currentComponent = 'PersonalInfo'
                     break
+                case 13:
+                    this.currentComponent = 'FinancialWarehouseDetail'
             }
         }
     }

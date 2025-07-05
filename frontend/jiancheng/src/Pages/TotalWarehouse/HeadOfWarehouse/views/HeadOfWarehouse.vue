@@ -29,7 +29,10 @@
                             <span>材料待出库</span>
                         </el-menu-item> -->
                         <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>出入库记录</span>
+                            <span>出入库审核</span>
+                        </el-menu-item>
+                        <el-menu-item index="16" @click="handleMenuClick(16)">
+                            <span>出入库明细</span>
                         </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>库存</span>
@@ -90,6 +93,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue'
 import OrderSearch from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/OrderSearch.vue'
 import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
 import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SupplierManagementView.vue'
+import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 
 export default {
     components: {
@@ -109,7 +113,8 @@ export default {
         PersonalInfo,
         OrderSearch,
         MaterialManagementView,
-        SupplierManagement
+        SupplierManagement,
+        FinancialWarehouseDetail
     },
     data() {
         return {
@@ -171,6 +176,9 @@ export default {
                     break
                 case 15:
                     this.currentComponent = 'SupplierManagement'
+                    break
+                case 16:
+                    this.currentComponent = 'FinancialWarehouseDetail'
                     break
             }
         }
