@@ -53,7 +53,6 @@ def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_si
     extra_count = total_size_count - actual_size_cols
     if extra_count > 0:
         delete_start_col = start_col_idx + actual_size_cols
-        print(f"Deleting {extra_count} extra size columns starting from column {get_column_letter(delete_start_col)}")
         ws.delete_cols(delete_start_col, extra_count)
     for merged_range in list(ws.merged_cells.ranges):
         if f"{start_col_letter}7" in str(merged_range):
