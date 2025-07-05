@@ -8,6 +8,7 @@ import os
 from collections import defaultdict
 from openpyxl.drawing.image import Image
 from openpyxl.utils import units
+from openpyxl.styles import Font
 from logger import logger
 
 # Function to load the Excel template and prepare for modification
@@ -42,7 +43,61 @@ def insert_row_with_format(ws, row_to_copy, new_row_idx):
             new_cell.alignment = cell.alignment.copy()
             new_cell.number_format = cell.number_format
 
+def delete_extra_size_columns(ws, size_name_list, start_col_letter="G", total_size_count=13):
+    """
+    删除从 start_col_letter 开始的尺码列，只保留有效列。
+    并重新设置第7~8行的“尺码”标题区域（用于生产单模板）。
+    """
+    start_col_idx = column_index_from_string(start_col_letter)
+    actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
+    extra_count = total_size_count - actual_size_cols
 
+    # 删除多余列（从 G + 有效数量 开始）
+    if extra_count > 0:
+        delete_start_col = start_col_idx + actual_size_cols
+        ws.delete_cols(delete_start_col, extra_count)
+
+    # 移除原 G7:G8 合并区域
+    for merged_range in list(ws.merged_cells.ranges):
+        if str(merged_range).startswith(f"{start_col_letter}4:"):
+            ws.merged_cells.ranges.remove(merged_range)
+
+    # 重新设置“尺码”标题区域合并 G7:??8
+    if actual_size_cols > 0:
+        end_col_letter = get_column_letter(start_col_idx + actual_size_cols - 1)
+        merge_range = f"{start_col_letter}4:{end_col_letter}4"
+        ws.merge_cells(merge_range)
+        cell = ws[f"{start_col_letter}4"]
+        cell.value = "尺码"
+        cell.font = Font(bold=True)
+        
+def fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=None, total_size_count=13):
+    """
+    删除尺码列后，从其下一列开始，将所有列的第7行和第8行重新合并，修复双行表头。
+    用于处理“生成生产单”类模板（尺码列从 G 列起）。
+    """
+    if size_name_list is None:
+        size_name_list = []
+
+    size_start_idx = column_index_from_string(size_start_col_letter)
+    actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
+    size_end_idx = size_start_idx + actual_size_cols - 1
+    merge_start_idx = size_end_idx + 1
+    max_col_idx = ws.max_column
+
+    for col_idx in range(merge_start_idx, max_col_idx + 1):
+        col_letter = get_column_letter(col_idx)
+
+        # 删除原合并区域（如果还存在）
+        for merged_range in list(ws.merged_cells.ranges):
+            if f"{col_letter}4:{col_letter}5" in str(merged_range):
+                ws.merged_cells.ranges.remove(merged_range)
+
+        # 重新合并第7~8行
+        ws.merge_cells(f"{col_letter}4:{col_letter}5")
+        cell = ws[f"{col_letter}4"]
+        cell.font = cell.font.copy(bold=True)
+        
 def insert_series_data(wb: Workbook, series_data, col, row):
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -178,7 +233,6 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             ws.merge_cells(f"B{shoe_start}:B{row - 1}")
             ws.merge_cells(f"W{shoe_start}:W{row - 1}")
         ws[f"B{shoe_start}"] = shoe_rid
-
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
     ws = wb.active
@@ -331,12 +385,22 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     # Insert the series data
     insert_series_data(wb, order_data, "A", 6)
 
+
     # insert shoe size name
     column = "G"
     row = 5
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)
+    delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    order_shoe_id = next(iter(order_data))  # Get the first key from order_data
+    start_date = order_data[order_shoe_id].get("orderStartDate")
+    end_date = order_data[order_shoe_id].get("orderEndDate")
+    customer_rid = order_data[order_shoe_id].get("orderCId")
+    ws["D3"] = start_date
+    ws["I3"] = end_date
+    ws["Q3"] = customer_rid
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
@@ -355,7 +419,15 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)
-
+    delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    order_shoe_id = next(iter(order_data))  # Get the first key from order_data
+    start_date = order_data[order_shoe_id].get("orderStartDate")
+    end_date = order_data[order_shoe_id].get("orderEndDate")
+    customer_rid = order_data[order_shoe_id].get("orderCId")
+    ws["D3"] = start_date
+    ws["I3"] = end_date
+    ws["Q3"] = customer_rid
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
