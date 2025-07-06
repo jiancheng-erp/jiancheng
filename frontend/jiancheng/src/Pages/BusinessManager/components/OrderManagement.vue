@@ -363,6 +363,18 @@
                     >
                     </el-input>
                 </el-col>
+                <el-col :span="4" :offset="2">
+                    <el-input
+                        v-model="customerNameFilter"
+                        placeholder="客户型号搜索"
+                        size="default"
+                        :suffix-icon="'el-icon-search'"
+                        @change="getAllShoes()"
+                        @clear="getAllShoes()"
+                        clearable
+                    >
+                    </el-input>
+                </el-col>
                 <el-col :span="2" :offset="2">
                     <el-button type="primary" size="default" @click="openAddShoeDialog">
                         添加新鞋型
@@ -871,6 +883,7 @@ export default {
             customerProductNameFilter: '',
             templateFilter:'',
             shoeRIdSearch: '',
+            customerNameFilter: '',
             displayData: [],
             prevDisplayData: [],
             filterData: [],
@@ -1507,6 +1520,7 @@ export default {
                 page: this.currentOrderCreatePage,
                 pageSize: this.orderCreatePageSize,
                 shoerid: this.shoeRidFilter,
+                customerName: this.customerNameFilter,
                 available: 1
             }
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {params})

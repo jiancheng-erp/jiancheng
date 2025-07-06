@@ -59,6 +59,7 @@ def get_all_shoes():
 def get_all_shoes_new():
     time_s = time.time()
     shoe_rid = request.args.get("shoerid")
+    customer_name = request.args.get("customerName", None)
     available = request.args.get("available", type=int)
     _, _, department = current_user_info()
     user_department = department.department_name
@@ -79,6 +80,8 @@ def get_all_shoes_new():
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if available:
         query = query.filter(Shoe.shoe_available == True)
+    if customer_name is not None and customer_name != "":
+        query = query.join(OrderShoe, Shoe.shoe_id == OrderShoe.shoe_id).filter(OrderShoe.customer_product_name.ilike(f"%{customer_name}%"))
     total_count = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     shoe_id_list = [shoe.shoe_id for shoe in response]
