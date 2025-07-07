@@ -127,31 +127,84 @@ def get_product_overview():
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
     approval_status = request.args.get("approvalStatus")
-    query = (
+    order_amount_subquery = (
         db.session.query(
-            Order,
-            Customer,
-            func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
-            func.sum(FinishedShoeStorage.finished_amount),
-            func.coalesce(func.sum(ShoeOutboundRecordDetail.outbound_amount), 0),
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_amount"),
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-        .join(Customer, Customer.customer_id == Order.customer_id)
-        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(
+            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
+        )
         .join(
             OrderShoeBatchInfo,
             OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    finished_amount_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(FinishedShoeStorage.finished_amount).label("finished_amount"),
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(
+            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
         )
         .join(
             FinishedShoeStorage,
             FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
-        .outerjoin(
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    outbounded_amount_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(ShoeOutboundRecordDetail.outbound_amount).label("outbounded_amount"),
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(
+            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .join(
             ShoeOutboundRecordDetail,
             ShoeOutboundRecordDetail.finished_shoe_storage_id
             == FinishedShoeStorage.finished_shoe_id,
         )
         .group_by(Order.order_id)
+        .subquery()
+    )
+    query = (
+        db.session.query(
+            Order,
+            Customer,
+            order_amount_subquery.c.total_amount,
+            finished_amount_subquery.c.finished_amount,
+            outbounded_amount_subquery.c.outbounded_amount,
+        )
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(
+            order_amount_subquery,
+            order_amount_subquery.c.order_id == Order.order_id,
+        )
+        .join(
+            finished_amount_subquery,
+            finished_amount_subquery.c.order_id == Order.order_id,
+        )
+        .outerjoin(
+            outbounded_amount_subquery,
+            outbounded_amount_subquery.c.order_id == Order.order_id,
+        )
         .order_by(Order.order_rid)
     )
     if order_rid and order_rid != "":
@@ -179,7 +232,7 @@ def get_product_overview():
             "endDate": format_date(order.end_date),
             "orderAmount": order_amount,
             "currentStock": current_stock,
-            "outboundedAmount": outbounded_amount,
+            "outboundedAmount": outbounded_amount if outbounded_amount else 0,
             "orderShoeTable": [],
             "isOutboundAllowed": order.is_outbound_allowed,
         }
