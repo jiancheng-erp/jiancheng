@@ -781,6 +781,7 @@ export default {
                 "materialColor": this.currentKeyDownRow.materialColor,
                 "supplierName": this.inboundForm.supplierName,
                 "materialTypeId": this.inboundForm.materialTypeId,
+                "showUnfinishedOrders": true,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
             this.searchedSizeMaterials = response.data
