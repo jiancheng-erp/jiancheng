@@ -180,7 +180,6 @@ def get_all_material_info():
             shoe_size = SHOESIZERANGE[i]
             estimated_amount = (
                 getattr(purchase_order_item, f"size_{shoe_size}_purchase_amount", None)
-                or 0
                 if purchase_order_item
                 else 0
             )
@@ -212,7 +211,11 @@ def get_size_material_storage_by_storage_id():
     if not storage_id:
         _no_storage_id_error()
     storage = (
-        db.session.query(MaterialStorage)
+        db.session.query(MaterialStorage, PurchaseOrderItem)
+        .outerjoin(
+            PurchaseOrderItem,
+            MaterialStorage.purchase_order_item_id == PurchaseOrderItem.purchase_order_item_id,
+        )
         .filter(MaterialStorage.material_storage_id == storage_id)
         .first()
     )
@@ -220,16 +223,18 @@ def get_size_material_storage_by_storage_id():
         return jsonify({"message": "没有找到该材料库存"}), 404
 
     obj = {
-        "materialStorageId": storage.material_storage_id,
+        "materialStorageId": storage.MaterialStorage.material_storage_id,
         "estimatedInboundAmount": 0,
-        "actualInboundAmount": storage.inbound_amount,
-        "currentAmount": storage.current_amount,
-        "shoeSizeColumns": storage.shoe_size_columns,
+        "actualInboundAmount": storage.MaterialStorage.inbound_amount,
+        "currentAmount": storage.MaterialStorage.current_amount,
+        "shoeSizeColumns": storage.MaterialStorage.shoe_size_columns,
     }
     for i, shoe_size in enumerate(SHOESIZERANGE):
-        estimated_inbound_amount = 0
-        inbound_amount = getattr(storage, f"size_{shoe_size}_inbound_amount")
-        current_amount = getattr(storage, f"size_{shoe_size}_current_amount")
+        estimated_inbound_amount = getattr(
+            storage.PurchaseOrderItem, f"size_{shoe_size}_purchase_amount", 0
+        )
+        inbound_amount = getattr(storage.MaterialStorage, f"size_{shoe_size}_inbound_amount")
+        current_amount = getattr(storage.MaterialStorage, f"size_{shoe_size}_current_amount")
         obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
         obj[f"actualInboundAmount{i}"] = inbound_amount
         obj[f"currentAmount{i}"] = current_amount
@@ -238,6 +243,7 @@ def get_size_material_storage_by_storage_id():
 
 @material_storage_bp.route("/warehouse/getsizematerials", methods=["GET"])
 def get_size_materials():
+    show_unfinished_orders = request.args.get("showUnfinishedOrders")
     filters = {
         "material_name": request.args.get("materialName", ""),
         "material_spec": request.args.get("materialSpec", ""),
@@ -291,7 +297,12 @@ def get_size_materials():
     for key, value in filters.items():
         if value and value != "":
             query = query.filter(material_filter_map[key].ilike(f"%{value}%"))
-
+    if show_unfinished_orders == "true":
+        query = query.filter(
+            PurchaseOrderItem.purchase_amount
+            - func.coalesce(MaterialStorage.inbound_amount, 0)
+            > 0
+        )
     material_type_id = request.args.get("materialTypeId")
     if material_type_id and material_type_id != "":
         query = query.filter(Material.material_type_id == material_type_id)

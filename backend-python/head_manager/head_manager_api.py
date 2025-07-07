@@ -908,6 +908,7 @@ def get_all_revert_event():
     revert_events = (
         db.session.query(RevertEvent, Order)
         .join(Order, RevertEvent.order_id == Order.order_id)
+        .order_by(RevertEvent.event_time.desc())
         .all()
     )
     for revert_event, order in revert_events:

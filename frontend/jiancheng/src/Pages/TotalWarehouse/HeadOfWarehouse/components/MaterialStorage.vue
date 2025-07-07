@@ -404,6 +404,7 @@ export default {
                 return
             }
             for (let i = 0; i < response.data.shoeSizeColumns.length; i++) {
+                console.log("response.data", response.data[`estimatedInboundAmount${i}`])
                 let obj = {
                     "shoeSizeName": response.data.shoeSizeColumns[i],
                     "predictQuantity": response.data[`estimatedInboundAmount${i}`],
