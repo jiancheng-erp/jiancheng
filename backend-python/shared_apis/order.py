@@ -1262,6 +1262,21 @@ def get_order_full_info():
         shoe_key = order_shoe.order_shoe_id if order_shoe else "N/A"
 
         if shoe_key not in orders_dict[order.order_id]["shoes"]:
+            purchase_status_string = ""
+            if order_status_reference.order_status_name == "生产订单创建":
+                purchase_status_string = "业务部正在处理中"
+            else:
+                if "一次采购入库" in order_shoe_status_reference_names:
+                    purchase_status_string += "一次采购已完成, 等待入库 | "
+                if "二次采购入库" in order_shoe_status_reference_names:
+                    purchase_status_string += "二次采购已完成，等待入库 | "
+                if "投产指令单创建" in order_shoe_status_reference_names or "面料单位用量计算" in order_shoe_status_reference_names:
+                    purchase_status_string += "技术部正在处理中 | "
+                if "一次采购订单创建" in order_shoe_status_reference_names:
+                    purchase_status_string += "物控经理正在处理中 | "
+                if "总仓采购订单创建" in order_shoe_status_reference_names:
+                    purchase_status_string += "总仓经理正在处理中 | "
+                
             # Prepare shoe information for the first occurrence
             orders_dict[order.order_id]["shoes"][shoe_key] = {
                 "shoeRid": shoe.shoe_rid if shoe else "N/A",
@@ -1273,6 +1288,7 @@ def get_order_full_info():
                 "statuses": "".join(
                     order_shoe_status_reference_names.split(" | ")
                 ),  # To hold the combined statuses as a string
+                "purchaseStatus": purchase_status_string.strip(" | "),  # Clean up trailing separator
             }
 
         # # Assign BOM based on bom_type

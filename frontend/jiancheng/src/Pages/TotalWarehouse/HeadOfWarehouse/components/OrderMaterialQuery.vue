@@ -18,7 +18,7 @@
 import PurchaseOrderInfo from './PurchaseOrderInfo.vue';
 import LogisticInfo from '@/Pages/ProductionManagementDepartment/ProductionManagementDepartmentGeneral/components/LogisticInfo.vue';
 import BOMInfo from './BOMInfo.vue';
-import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue';
+import GeneralOrderSearch from '@/components/GeneralOrderSearchForWarehouse.vue';
 export default {
     components: {
         LogisticInfo,
