@@ -35,6 +35,7 @@ def get_finished_in_out_overview():
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
     customer_product_name = request.args.get("customerProductName")
+    storage_status = request.args.get("storageStatus")
     show_all = request.args.get("showAll", default=0, type=int)
     query = (
         db.session.query(
@@ -64,6 +65,10 @@ def get_finished_in_out_overview():
     if customer_product_name and customer_product_name != "":
         query = query.filter(
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
+    if storage_status and storage_status != "":
+        query = query.filter(
+            FinishedShoeStorage.finished_status == int(storage_status)
         )
     if show_all == 0:
         query = query.filter(FinishedShoeStorage.finished_status == 0)
