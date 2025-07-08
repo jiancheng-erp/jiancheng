@@ -35,6 +35,8 @@ def get_finished_in_out_overview():
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
     customer_product_name = request.args.get("customerProductName")
+    order_cid = request.args.get("orderCId")
+    customer_brand = request.args.get("customerBrand")
     storage_status = request.args.get("storageStatus")
     show_all = request.args.get("showAll", default=0, type=int)
     query = (
@@ -70,6 +72,10 @@ def get_finished_in_out_overview():
         query = query.filter(
             FinishedShoeStorage.finished_status == int(storage_status)
         )
+    if order_cid and order_cid != "":
+        query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
+    if customer_brand and customer_brand != "":
+        query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if show_all == 0:
         query = query.filter(FinishedShoeStorage.finished_status == 0)
     count_result = query.distinct().count()
@@ -91,6 +97,8 @@ def get_finished_in_out_overview():
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
+            "orderCId": order.order_cid,
+            "customerBrand": customer.customer_brand,
             "customerName": customer.customer_name,
             "orderShoeId": order_shoe.order_shoe_id,
             "shoeRId": shoe.shoe_rid,
@@ -660,14 +668,15 @@ def get_finished_inbound_records():
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
     customer_product_name = request.args.get("customerProductName")
+    order_cid = request.args.get("orderCId")
+    customer_brand = request.args.get("customerBrand")
     query = (
         db.session.query(
-            Order.order_id,
-            Order.order_rid,
+            Order,
             Shoe.shoe_rid,
             OrderShoe.customer_product_name,
             Color.color_name,
-            Customer.customer_name,
+            Customer,
             ShoeInboundRecord,
             ShoeInboundRecordDetail,
         )
@@ -713,23 +722,26 @@ def get_finished_inbound_records():
         query = query.filter(
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
         )
+    if order_cid and order_cid != "":
+        query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
+    if customer_brand and customer_brand != "":
+        query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
     for row in response:
         (
-            order_id,
-            order_rid,
+            order,
             shoe_rid,
             customer_product_name,
             color_name,
-            customer_name,
+            customer,
             record,
             inbound_detail,
         ) = row
         obj = {
-            "orderId": order_id,
-            "orderRId": order_rid,
+            "orderId": order.order_id,
+            "orderRId": order.order_rid,
             "shoeRId": shoe_rid,
             "colorName": color_name,
             "inboundRId": record.shoe_inbound_rid,
@@ -737,8 +749,10 @@ def get_finished_inbound_records():
             "inboundDetailId": inbound_detail.record_detail_id,
             "detailAmount": inbound_detail.inbound_amount,
             "remark": inbound_detail.remark,
-            "customerName": customer_name,
+            "customerName": customer.customer_name,
             "customerProductName": customer_product_name,
+            "customerBrand": customer.customer_brand,
+            "orderCId": order.order_cid,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -756,14 +770,14 @@ def get_finished_outbound_records():
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
     customer_product_name = request.args.get("customerProductName")
+    order_cid = request.args.get("orderCId")
+    customer_brand = request.args.get("customerBrand")
     query = (
         db.session.query(
-            Order.order_id,
-            Order.order_rid,
-            Order.order_cid,
+            Order,
             Shoe.shoe_rid,
             Color.color_name,
-            Customer.customer_name,
+            Customer,
             OrderShoe.customer_product_name,
             ShoeOutboundRecord.shoe_outbound_rid,
             ShoeOutboundRecord.outbound_datetime,
@@ -809,34 +823,37 @@ def get_finished_outbound_records():
         query = query.filter(
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
         )
+    if order_cid and order_cid != "":
+        query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
+    if customer_brand and customer_brand != "":
+        query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
 
     for row in response:
         (
-            order_id,
-            order_rid,
-            order_cid,
+            order,
             shoe_rid,
             color_name,
-            customer_name,
+            customer,
             customer_product_name,
             outbound_rid,
             outbound_datetime,
             record_detail,
         ) = row
         obj = {
-            "orderId": order_id,
-            "orderRId": order_rid,
-            "orderCId": order_cid,
+            "orderId": order.order_id,
+            "orderRId": order.order_rid,
+            "orderCId": order.order_cid,
             "shoeRId": shoe_rid,
             "colorName": color_name,
-            "customerName": customer_name,
+            "customerName": customer.customer_name,
             "customerProductName": customer_product_name,
             "outboundRId": outbound_rid,
             "timestamp": format_datetime(outbound_datetime),
             "detailAmount": record_detail.outbound_amount,
+            "customerBrand": customer.customer_brand,
         }
         result.append(obj)
     return {"result": result, "total": count_result}

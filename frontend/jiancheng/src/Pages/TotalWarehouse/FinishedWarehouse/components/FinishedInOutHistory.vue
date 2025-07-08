@@ -1,14 +1,7 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <el-input v-model="orderNumberSearch" placeholder="订单号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerNameSearch" placeholder="客户名称筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
+            <FinishedSearchBar :searchFilters="searchFilters" @confirm="confirmTableData" />
             <el-radio-group v-model="selectedStatus" @change="getTableData">
                 <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value"
                     v-model="selectedStatus">
@@ -26,7 +19,9 @@
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
         <el-table-column prop="customerName" label="客户名称"></el-table-column>
+        <el-table-column prop="orderCId" label="客户订单号"></el-table-column>
         <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
+        <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
         <el-table-column prop="colorName" label="颜色"></el-table-column>
         <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
@@ -86,14 +81,22 @@
 <script>
 import axios from 'axios'
 import { PAGESIZE, PAGESIZES } from '../../warehouseUtils';
+import FinishedSearchBar from './FinishedSearchBar.vue';
 export default {
+    components: {
+        FinishedSearchBar
+    },
     data() {
         return {
             isRecordDialogVisible: false,
-            orderNumberSearch: null,
-            shoeNumberSearch: null,
-            customerNameSearch: null,
-            customerProductNameSearch: null,
+            searchFilters: {
+                orderRIdSearch: null,
+                shoeRIdSearch: null,
+                customerNameSearch: null,
+                customerProductNameSearch: null,
+                orderCIdSearch: null,
+                customerBrandSearch: null
+            },
             pageSize: PAGESIZE,
             pageSizes: PAGESIZES,
             currentPage: 1,
@@ -129,6 +132,10 @@ export default {
         this.getTableData()
     },
     methods: {
+        confirmTableData(filters) {
+            this.searchFilters = { ...filters }
+            this.getTableData()
+        },
         async viewStock(row) {
             let params = { "orderId": row.orderId, "storageId": row.storageId, "storageType": 1 }
             let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoesizecolumns`, { params })
@@ -148,10 +155,12 @@ export default {
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
-                "orderRId": this.orderNumberSearch,
-                "shoeRId": this.shoeNumberSearch,
-                "customerName": this.customerNameSearch,
-                "customerProductName": this.customerProductNameSearch,
+                "orderRId": this.searchFilters.orderRIdSearch,
+                "shoeRId": this.searchFilters.shoeRIdSearch,
+                "customerName": this.searchFilters.customerNameSearch,
+                "customerProductName": this.searchFilters.customerProductNameSearch,
+                "orderCId": this.searchFilters.orderCIdSearch,
+                "customerBrand": this.searchFilters.customerBrandSearch,
                 "storageStatus": this.selectedStatus,
                 "showAll": 1
             }

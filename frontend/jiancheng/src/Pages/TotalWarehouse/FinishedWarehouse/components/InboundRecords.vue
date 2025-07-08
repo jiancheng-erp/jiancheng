@@ -1,25 +1,7 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
-                end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable>
-            </el-date-picker>
-            <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" style="width: 200px;"
-                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
-            </el-input>
-            <el-input v-model="orderRIdSearch" placeholder="订单号搜索" style="width: 200px;"
-                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
-            </el-input>
-            <el-input v-model="shoeRIdSearch" placeholder="工厂型号搜索" style="width: 200px;"
-                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
-            </el-input>
-            <el-input v-model="customerNameSearch" placeholder="客户名称搜索" style="width: 200px;"
-                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
-            </el-input>
-            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型搜索" style="width: 200px;"
-                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
-            </el-input>
+            <FinishedSearchBar :search-filters="searchFilters" @confirm="confirmSearchFilters"/>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -30,7 +12,9 @@
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
                 <el-table-column prop="customerName" label="客户名称"></el-table-column>
+                <el-table-column prop="orderCId" label="客户订单号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
+                <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="detailAmount" label="数量"></el-table-column>
                 <el-table-column label="操作" width="100">
@@ -106,7 +90,11 @@ import { ElMessage } from 'element-plus';
 import htmlToPdf from '@/Pages/utils/htmlToPdf';
 import print from 'vue3-print-nb'
 import { getSummaries, PAGESIZE, PAGESIZES } from '../../warehouseUtils';
+import FinishedSearchBar from './FinishedSearchBar.vue';
 export default {
+    components: {
+        FinishedSearchBar
+    },
     directives: {
         print
     },
@@ -137,12 +125,16 @@ export default {
             currentRow: {},
             recordData: {},
             dialogVisible: false,
-            dateRange: [null, null],
-            inboundRIdSearch: null,
-            orderRIdSearch: null,
-            shoeRIdSearch: null,
-            customerNameSearch: null,
-            customerProductNameSearch: null,
+            searchFilters: {
+                dateRange: [],
+                boundRIdSearch: null,
+                orderRIdSearch: null,
+                shoeRIdSearch: null,
+                customerNameSearch: null,
+                customerProductNameSearch: null,
+                orderCIdSearch: null,
+                customerBrandSearch: null
+            },
             getSummaries: getSummaries,
         }
     },
@@ -167,21 +159,28 @@ export default {
         downloadPDF(title, domName) {
             htmlToPdf.getPdf(title, domName);
         },
+        confirmSearchFilters(filters) {
+            this.searchFilters = { ...filters }
+            console.log('搜索条件:', this.searchFilters)
+            this.getInboundRecordsTable()
+        },
         async getInboundRecordsTable() {
-            if (this.dateRange === null) {
-                this.dateRange = [null, null]
+            if (this.searchFilters.dateRange === null) {
+                this.searchFilters.dateRange = [null, null]
             }
             try {
                 let params = {
                     page: this.currentPage,
                     pageSize: this.pageSize,
-                    startDate: this.dateRange[0],
-                    endDate: this.dateRange[1],
-                    inboundRId: this.inboundRIdSearch,
-                    orderRId: this.orderRIdSearch,
-                    shoeRId: this.shoeRIdSearch,
-                    customerName: this.customerNameSearch,
-                    customerProductName: this.customerProductNameSearch
+                    startDate: this.searchFilters.dateRange[0],
+                    endDate: this.searchFilters.dateRange[1],
+                    inboundRId: this.searchFilters.boundRIdSearch,
+                    orderRId: this.searchFilters.orderRIdSearch,
+                    shoeRId: this.searchFilters.shoeRIdSearch,
+                    customerName: this.searchFilters.customerNameSearch,
+                    customerProductName: this.searchFilters.customerProductNameSearch,
+                    orderCId: this.searchFilters.orderCIdSearch,
+                    customerBrand: this.searchFilters.customerBrandSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecords`, { params })
                 this.tableData = response.data.result
