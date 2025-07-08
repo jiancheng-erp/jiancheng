@@ -35,6 +35,7 @@ def get_finished_in_out_overview():
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
     customer_product_name = request.args.get("customerProductName")
+    storage_status = request.args.get("storageStatus")
     show_all = request.args.get("showAll", default=0, type=int)
     query = (
         db.session.query(
@@ -64,6 +65,10 @@ def get_finished_in_out_overview():
     if customer_product_name and customer_product_name != "":
         query = query.filter(
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
+    if storage_status and storage_status != "":
+        query = query.filter(
+            FinishedShoeStorage.finished_status == int(storage_status)
         )
     if show_all == 0:
         query = query.filter(FinishedShoeStorage.finished_status == 0)
@@ -653,18 +658,22 @@ def get_finished_inbound_records():
     inbound_rid = request.args.get("inboundRId")
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
+    customer_name = request.args.get("customerName")
+    customer_product_name = request.args.get("customerProductName")
     query = (
         db.session.query(
             Order.order_id,
             Order.order_rid,
             Shoe.shoe_rid,
+            OrderShoe.customer_product_name,
             Color.color_name,
-            ShoeInboundRecord.shoe_inbound_rid,
-            ShoeInboundRecord.inbound_datetime,
+            Customer.customer_name,
+            ShoeInboundRecord,
             ShoeInboundRecordDetail,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Color, Color.color_id == ShoeType.color_id)
@@ -682,6 +691,8 @@ def get_finished_inbound_records():
             ShoeInboundRecord.shoe_inbound_record_id
             == ShoeInboundRecordDetail.shoe_inbound_record_id,
         )
+        .filter(ShoeInboundRecord.transaction_type == 1)  # 1 for inbound
+        .filter(ShoeInboundRecordDetail.is_deleted == 0)  # 0 for not deleted
         .order_by(desc(ShoeInboundRecord.inbound_datetime))
     )
     if start_date and start_date != "":
@@ -696,6 +707,12 @@ def get_finished_inbound_records():
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if customer_name and customer_name != "":
+        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_product_name and customer_product_name != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -704,9 +721,10 @@ def get_finished_inbound_records():
             order_id,
             order_rid,
             shoe_rid,
+            customer_product_name,
             color_name,
-            shoe_inbound_rid,
-            inbound_datetime,
+            customer_name,
+            record,
             inbound_detail,
         ) = row
         obj = {
@@ -714,10 +732,13 @@ def get_finished_inbound_records():
             "orderRId": order_rid,
             "shoeRId": shoe_rid,
             "colorName": color_name,
-            "inboundRId": shoe_inbound_rid,
-            "timestamp": format_datetime(inbound_datetime),
+            "inboundRId": record.shoe_inbound_rid,
+            "timestamp": format_datetime(record.inbound_datetime),
+            "inboundDetailId": inbound_detail.record_detail_id,
             "detailAmount": inbound_detail.inbound_amount,
             "remark": inbound_detail.remark,
+            "customerName": customer_name,
+            "customerProductName": customer_product_name,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -733,6 +754,8 @@ def get_finished_outbound_records():
     outbound_rid = request.args.get("outboundRId")
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
+    customer_name = request.args.get("customerName")
+    customer_product_name = request.args.get("customerProductName")
     query = (
         db.session.query(
             Order.order_id,
@@ -741,6 +764,7 @@ def get_finished_outbound_records():
             Shoe.shoe_rid,
             Color.color_name,
             Customer.customer_name,
+            OrderShoe.customer_product_name,
             ShoeOutboundRecord.shoe_outbound_rid,
             ShoeOutboundRecord.outbound_datetime,
             ShoeOutboundRecordDetail,
@@ -779,6 +803,12 @@ def get_finished_outbound_records():
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if customer_name and customer_name != "":
+        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_product_name and customer_product_name != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -791,6 +821,7 @@ def get_finished_outbound_records():
             shoe_rid,
             color_name,
             customer_name,
+            customer_product_name,
             outbound_rid,
             outbound_datetime,
             record_detail,
@@ -802,6 +833,7 @@ def get_finished_outbound_records():
             "shoeRId": shoe_rid,
             "colorName": color_name,
             "customerName": customer_name,
+            "customerProductName": customer_product_name,
             "outboundRId": outbound_rid,
             "timestamp": format_datetime(outbound_datetime),
             "detailAmount": record_detail.outbound_amount,
@@ -994,3 +1026,62 @@ def get_remaining_amount_of_finished_storage():
     )
     result = response if response is not None else 0
     return jsonify({"remainingAmount": result})
+
+
+@finished_storage_bp.route("/warehouse/deletefinishedinbounddetail", methods=["DELETE"])
+def delete_finished_inbound_detail():
+    """
+    Delete a finished inbound detail.
+    """
+    detail_id = request.args.get("inboundDetailId")
+    if not detail_id:
+        return jsonify({"message": "参数错误"}), 400
+
+    response = (
+        db.session.query(ShoeInboundRecord, ShoeInboundRecordDetail, FinishedShoeStorage, ShoeOutboundRecordDetail)
+        .join(ShoeInboundRecordDetail, ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id)
+        .join(FinishedShoeStorage, FinishedShoeStorage.finished_shoe_id == ShoeInboundRecordDetail.finished_shoe_storage_id)
+        .outerjoin(ShoeOutboundRecordDetail, ShoeOutboundRecordDetail.finished_shoe_storage_id == FinishedShoeStorage.finished_shoe_id)
+        .filter(ShoeInboundRecordDetail.record_detail_id == detail_id)
+        .first()
+    )
+
+    if not response:
+        return jsonify({"message": "入库记录不存在"}), 404
+    
+    record, detail, storage, outbound_detail = response
+
+    if outbound_detail:
+        return jsonify({"message": "订单已出库，无法删除入库记录"}), 409
+
+    amount = detail.inbound_amount
+    storage.finished_actual_amount -= amount
+    storage.finished_amount -= amount
+    storage.finished_status = 0
+
+    # 标记入库记录明细为已删除
+    detail.is_deleted = 1
+
+    # 新增撤回入库单记录
+    timestamp = format_datetime(datetime.now())
+    formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    rid = "FIR" + formatted_timestamp + "T0"
+    reversal_record = ShoeInboundRecord(
+        shoe_inbound_rid=rid,
+        inbound_datetime=formatted_timestamp,
+        inbound_type=record.inbound_type,
+        inbound_amount=-amount,  # 负数表示撤回
+        transaction_type=2,  # 2表示撤回入库
+        related_inbound_record_id=record.shoe_inbound_record_id,
+    )
+    db.session.add(reversal_record)
+    db.session.flush()
+    new_detail = ShoeInboundRecordDetail(
+        shoe_inbound_record_id=reversal_record.shoe_inbound_record_id,
+        finished_shoe_storage_id=storage.finished_shoe_id,
+        inbound_amount=-amount,  # 负数表示撤回
+        is_deleted=0
+    )
+    db.session.add(new_detail)
+    db.session.commit()
+    return jsonify({"message": "删除成功"})

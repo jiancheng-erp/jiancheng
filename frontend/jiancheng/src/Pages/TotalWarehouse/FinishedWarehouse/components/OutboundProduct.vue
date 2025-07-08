@@ -200,7 +200,7 @@ export default {
                 { value: 2, label: "已批准" },
                 { value: 3, label: "已完成出库" },
             ],
-            selectedStatus: -1,
+            selectedStatus: null,
             isOpenShoeSizeDialogVisible: false,
             activeStockTab: null,
         }

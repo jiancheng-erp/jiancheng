@@ -818,6 +818,8 @@ class ShoeInboundRecord(db.Model):
     )
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
+    transaction_type = db.Column(db.SmallInteger, nullable=False, default=1) # 1: 入库, 2: 撤回
+    related_inbound_record_id = db.Column(db.BigInteger, nullable=True, comment="撤回时关联的入库记录ID")
 
     def __repr__(self):
         return f"<ShoeInboundRecord(id={self.shoe_inbound_record_id}, rid={self.shoe_inbound_rid})>"
@@ -847,6 +849,7 @@ class ShoeInboundRecordDetail(db.Model):
     remark = db.Column(db.String(40), nullable=True)
     semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
 
 
 class ShoeOutboundRecord(db.Model):

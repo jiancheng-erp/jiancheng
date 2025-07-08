@@ -5,10 +5,20 @@
                 @clear="getTableData" />
             <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
-            <el-input v-model="customerNameSearch" placeholder="客户号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
+            <el-input v-model="customerNameSearch" placeholder="客户名称筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
             <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
                 @clear="getTableData" />
+            <el-radio-group v-model="selectedStatus" @change="getTableData">
+                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value"
+                    v-model="selectedStatus">
+                    {{ option.label }}
+                </el-radio-button>
+            </el-radio-group>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" style="margin-top: 10px;">
+        <el-col>
             <span>成品仓库存：{{ this.totalStock }}</span>
         </el-col>
     </el-row>
@@ -97,6 +107,13 @@ export default {
             shoeStockTable: [],
             currentRow: {},
             totalStock: 0,
+            statusOptions: [
+                { value: null, label: "全部" },
+                { value: 0, label: "未完成入库" },
+                { value: 1, label: "已完成入库" },
+                { value: 2, label: "已完成出库" },
+            ],
+            selectedStatus: null,
         }
     },
     computed: {
@@ -135,6 +152,7 @@ export default {
                 "shoeRId": this.shoeNumberSearch,
                 "customerName": this.customerNameSearch,
                 "customerProductName": this.customerProductNameSearch,
+                "storageStatus": this.selectedStatus,
                 "showAll": 1
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedstorages`, { params })
