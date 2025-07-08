@@ -653,18 +653,23 @@ def get_finished_inbound_records():
     inbound_rid = request.args.get("inboundRId")
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
+    customer_name = request.args.get("customerName")
+    customer_product_name = request.args.get("customerProductName")
     query = (
         db.session.query(
             Order.order_id,
             Order.order_rid,
             Shoe.shoe_rid,
+            OrderShoe.customer_product_name,
             Color.color_name,
+            Customer.customer_name,
             ShoeInboundRecord.shoe_inbound_rid,
             ShoeInboundRecord.inbound_datetime,
             ShoeInboundRecordDetail,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Color, Color.color_id == ShoeType.color_id)
@@ -696,6 +701,12 @@ def get_finished_inbound_records():
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if customer_name and customer_name != "":
+        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_product_name and customer_product_name != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -704,7 +715,9 @@ def get_finished_inbound_records():
             order_id,
             order_rid,
             shoe_rid,
+            customer_product_name,
             color_name,
+            customer_name,
             shoe_inbound_rid,
             inbound_datetime,
             inbound_detail,
@@ -718,6 +731,8 @@ def get_finished_inbound_records():
             "timestamp": format_datetime(inbound_datetime),
             "detailAmount": inbound_detail.inbound_amount,
             "remark": inbound_detail.remark,
+            "customerName": customer_name,
+            "customerProductName": customer_product_name,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -733,6 +748,8 @@ def get_finished_outbound_records():
     outbound_rid = request.args.get("outboundRId")
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
+    customer_name = request.args.get("customerName")
+    customer_product_name = request.args.get("customerProductName")
     query = (
         db.session.query(
             Order.order_id,
@@ -741,6 +758,7 @@ def get_finished_outbound_records():
             Shoe.shoe_rid,
             Color.color_name,
             Customer.customer_name,
+            OrderShoe.customer_product_name,
             ShoeOutboundRecord.shoe_outbound_rid,
             ShoeOutboundRecord.outbound_datetime,
             ShoeOutboundRecordDetail,
@@ -779,6 +797,12 @@ def get_finished_outbound_records():
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if customer_name and customer_name != "":
+        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_product_name and customer_product_name != "":
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
@@ -791,6 +815,7 @@ def get_finished_outbound_records():
             shoe_rid,
             color_name,
             customer_name,
+            customer_product_name,
             outbound_rid,
             outbound_datetime,
             record_detail,
@@ -802,6 +827,7 @@ def get_finished_outbound_records():
             "shoeRId": shoe_rid,
             "colorName": color_name,
             "customerName": customer_name,
+            "customerProductName": customer_product_name,
             "outboundRId": outbound_rid,
             "timestamp": format_datetime(outbound_datetime),
             "detailAmount": record_detail.outbound_amount,

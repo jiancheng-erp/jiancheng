@@ -14,6 +14,12 @@
             <el-input v-model="shoeRIdSearch" placeholder="工厂型号搜索" style="width: 200px;"
                 @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
+            <el-input v-model="customerNameSearch" placeholder="客户名称搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
+            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型搜索" style="width: 200px;"
+                @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
+            </el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -23,6 +29,8 @@
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                <el-table-column prop="customerName" label="客户名称"></el-table-column>
+                <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="detailAmount" label="数量"></el-table-column>
             </el-table>
@@ -128,6 +136,8 @@ export default {
             inboundRIdSearch: null,
             orderRIdSearch: null,
             shoeRIdSearch: null,
+            customerNameSearch: null,
+            customerProductNameSearch: null,
             getSummaries: getSummaries,
         }
     },
@@ -164,7 +174,9 @@ export default {
                     endDate: this.dateRange[1],
                     inboundRId: this.inboundRIdSearch,
                     orderRId: this.orderRIdSearch,
-                    shoeRId: this.shoeRIdSearch
+                    shoeRId: this.shoeRIdSearch,
+                    customerName: this.customerNameSearch,
+                    customerProductName: this.customerProductNameSearch
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecords`, { params })
                 this.tableData = response.data.result
