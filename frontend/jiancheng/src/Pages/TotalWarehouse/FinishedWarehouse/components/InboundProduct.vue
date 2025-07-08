@@ -1,14 +1,7 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <el-input v-model="orderNumberSearch" placeholder="订单号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="shoeNumberSearch" placeholder="鞋型号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerNameSearch" placeholder="客户号筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
-            <el-input v-model="customerProductNameSearch" placeholder="客户鞋型筛选" clearable @change="getTableData()" style="width: 200px; margin-right: 10px;"
-                @clear="getTableData" />
+            <FinishedSearchBar :searchFilters="searchFilters" @confirm="confirmTableData" />
             <span style="color: red">成品总欠数: {{ this.totalRemainingAmount }}</span>
         </el-col>
     </el-row>
@@ -30,8 +23,10 @@
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
-                <el-table-column prop="customerName" label="客户号"></el-table-column>
+                <el-table-column prop="customerName" label="客户名称"></el-table-column>
+                <el-table-column prop="orderCId" label="客户订单号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
+                <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
                 <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
@@ -111,7 +106,11 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus';
 import * as constants from '@/Pages/utils/constants'
 import { PAGESIZE, PAGESIZES } from '../../warehouseUtils';
+import FinishedSearchBar from './FinishedSearchBar.vue';
 export default {
+    components: {
+        FinishedSearchBar
+    },
     data() {
         return {
             formItemTemplate: {
@@ -126,10 +125,14 @@ export default {
             pageSizes: PAGESIZES,
             tableData: [],
             totalRows: 0,
-            orderNumberSearch: '',
-            shoeNumberSearch: '',
-            customerNameSearch: '',
-            customerProductNameSearch: '',
+            searchFilters: {
+                orderRIdSearch: '',
+                shoeRIdSearch: '',
+                customerNameSearch: '',
+                customerProductNameSearch: '',
+                orderCIdSearch: '',
+                customerBrandSearch: ''
+            },
             currentRow: {},
             isMultipleSelection: false,
             selectedRows: [],
@@ -159,6 +162,10 @@ export default {
         this.getTableData()
     },
     methods: {
+        confirmTableData(filters) {
+            this.searchFilters = { ...filters }
+            this.getTableData()
+        },
         getCellStyle({ row, column, rowIndex, columnIndex }) {
             if (column.property === 'remainingAmount') {
                 return { color: 'red' }
@@ -231,14 +238,15 @@ export default {
         },
         async getTableData() {
             const params = {
-                "page": this.currentPage,
-                "pageSize": this.pageSize,
-                "orderRId": this.orderNumberSearch,
-                "shoeRId": this.shoeNumberSearch,
-                "customerName": this.customerNameSearch,
-                "customerProductName": this.customerProductNameSearch,
-                "showAll": 0,
-                "status": this.statusSearch
+                page: this.currentPage,
+                pageSize: this.pageSize,
+                orderRId: this.searchFilters.orderRIdSearch,
+                shoeRId: this.searchFilters.shoeRIdSearch,
+                customerName: this.searchFilters.customerNameSearch,
+                customerProductName: this.searchFilters.customerProductNameSearch,
+                orderCId: this.searchFilters.orderCIdSearch,
+                customerBrand: this.searchFilters.customerBrandSearch,
+                showAll: 0,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedstorages`, { params })
             this.tableData = response.data.result
