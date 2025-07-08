@@ -668,8 +668,7 @@ def get_finished_inbound_records():
             OrderShoe.customer_product_name,
             Color.color_name,
             Customer.customer_name,
-            ShoeInboundRecord.shoe_inbound_rid,
-            ShoeInboundRecord.inbound_datetime,
+            ShoeInboundRecord,
             ShoeInboundRecordDetail,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
@@ -692,6 +691,8 @@ def get_finished_inbound_records():
             ShoeInboundRecord.shoe_inbound_record_id
             == ShoeInboundRecordDetail.shoe_inbound_record_id,
         )
+        .filter(ShoeInboundRecord.transaction_type == 1)  # 1 for inbound
+        .filter(ShoeInboundRecordDetail.is_deleted == 0)  # 0 for not deleted
         .order_by(desc(ShoeInboundRecord.inbound_datetime))
     )
     if start_date and start_date != "":
@@ -723,8 +724,7 @@ def get_finished_inbound_records():
             customer_product_name,
             color_name,
             customer_name,
-            shoe_inbound_rid,
-            inbound_datetime,
+            record,
             inbound_detail,
         ) = row
         obj = {
@@ -732,8 +732,9 @@ def get_finished_inbound_records():
             "orderRId": order_rid,
             "shoeRId": shoe_rid,
             "colorName": color_name,
-            "inboundRId": shoe_inbound_rid,
-            "timestamp": format_datetime(inbound_datetime),
+            "inboundRId": record.shoe_inbound_rid,
+            "timestamp": format_datetime(record.inbound_datetime),
+            "inboundDetailId": inbound_detail.record_detail_id,
             "detailAmount": inbound_detail.inbound_amount,
             "remark": inbound_detail.remark,
             "customerName": customer_name,
@@ -1025,3 +1026,62 @@ def get_remaining_amount_of_finished_storage():
     )
     result = response if response is not None else 0
     return jsonify({"remainingAmount": result})
+
+
+@finished_storage_bp.route("/warehouse/deletefinishedinbounddetail", methods=["DELETE"])
+def delete_finished_inbound_detail():
+    """
+    Delete a finished inbound detail.
+    """
+    detail_id = request.args.get("inboundDetailId")
+    if not detail_id:
+        return jsonify({"message": "参数错误"}), 400
+
+    response = (
+        db.session.query(ShoeInboundRecord, ShoeInboundRecordDetail, FinishedShoeStorage, ShoeOutboundRecordDetail)
+        .join(ShoeInboundRecordDetail, ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id)
+        .join(FinishedShoeStorage, FinishedShoeStorage.finished_shoe_id == ShoeInboundRecordDetail.finished_shoe_storage_id)
+        .outerjoin(ShoeOutboundRecordDetail, ShoeOutboundRecordDetail.finished_shoe_storage_id == FinishedShoeStorage.finished_shoe_id)
+        .filter(ShoeInboundRecordDetail.record_detail_id == detail_id)
+        .first()
+    )
+
+    if not response:
+        return jsonify({"message": "入库记录不存在"}), 404
+    
+    record, detail, storage, outbound_detail = response
+
+    if outbound_detail:
+        return jsonify({"message": "订单已出库，无法删除入库记录"}), 409
+
+    amount = detail.inbound_amount
+    storage.finished_actual_amount -= amount
+    storage.finished_amount -= amount
+    storage.finished_status = 0
+
+    # 标记入库记录明细为已删除
+    detail.is_deleted = 1
+
+    # 新增撤回入库单记录
+    timestamp = format_datetime(datetime.now())
+    formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    rid = "FIR" + formatted_timestamp + "T0"
+    reversal_record = ShoeInboundRecord(
+        shoe_inbound_rid=rid,
+        inbound_datetime=formatted_timestamp,
+        inbound_type=record.inbound_type,
+        inbound_amount=-amount,  # 负数表示撤回
+        transaction_type=2,  # 2表示撤回入库
+        related_inbound_record_id=record.shoe_inbound_record_id,
+    )
+    db.session.add(reversal_record)
+    db.session.flush()
+    new_detail = ShoeInboundRecordDetail(
+        shoe_inbound_record_id=reversal_record.shoe_inbound_record_id,
+        finished_shoe_storage_id=storage.finished_shoe_id,
+        inbound_amount=-amount,  # 负数表示撤回
+        is_deleted=0
+    )
+    db.session.add(new_detail)
+    db.session.commit()
+    return jsonify({"message": "删除成功"})

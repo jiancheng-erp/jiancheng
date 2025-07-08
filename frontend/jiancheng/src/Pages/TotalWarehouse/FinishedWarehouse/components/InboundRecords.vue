@@ -33,6 +33,11 @@
                 <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="detailAmount" label="数量"></el-table-column>
+                <el-table-column label="操作" width="100">
+                    <template #default="scope">
+                        <el-button type="danger" @click="deleteRecord(scope.row)" >删除</el-button>
+                    </template>
+                </el-table-column>
             </el-table>
         </el-col>
     </el-row>
@@ -208,6 +213,18 @@ export default {
             catch (error) {
                 console.log(error)
                 ElMessage.error('获取入库单详情失败')
+            }
+        },
+        async deleteRecord(row) {
+            try {
+                let params = { "inboundDetailId": row.inboundDetailId }
+                let response = await axios.delete(`${this.$apiBaseUrl}/warehouse/deletefinishedinbounddetail`, { params })
+                ElMessage.success(response.data.message)
+                this.getInboundRecordsTable()
+            } catch (error) {
+                console.error(error)
+                let errorMessage = error.response ? error.response.data.message : error.message;
+                ElMessage.error(errorMessage);
             }
         }
     }
