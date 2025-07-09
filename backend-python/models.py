@@ -1567,3 +1567,11 @@ class SPUMaterial(db.Model):
     material_specification = db.Column(db.String(100), nullable=True)
     color = db.Column(db.String(40), nullable=True)
     spu_rid = db.Column(db.String(50), nullable=True)
+    
+class BatchInfoTemplate(db.Model):
+    __tablename__ = "batch_info_template"
+    batch_info_template_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    customer_brand_id = db.Column(db.Integer, nullable=False)
+    pakaging_info_id_json = db.Column(db.JSON, nullable=False)
+    template_name = db.Column(db.String(50), nullable=False)
+    template_description = db.Column(db.String(200), nullable=True)

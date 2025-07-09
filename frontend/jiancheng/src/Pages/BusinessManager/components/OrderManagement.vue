@@ -1,63 +1,22 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
-            >订单管理</el-col
-        >
+        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单管理</el-col>
     </el-row>
     <el-row :gutter="10" style="margin-top: 20px">
         <el-col :span="4" :offset="0">
-            <el-button size="default" type="primary" @click="openCreateOrderDialog"
-                >创建订单</el-button
-            >
-            <el-button size="default" type="primary" @click="showTemplate">
-                模板
-            </el-button>
-            <el-select
-            v-model="selectedOrderStatus"
-            placeholder="请选择订单类型"
-            size="default"
-            :disabled="role === '21'"
-            @change="handleOrderStatusChange"
-            style="width: 200px;width: 150px;"
-            >
-            <el-option
-                v-for="item in orderStatusOption"
-                :key="item"
-                :label="item"
-                :value="item"
-            />
+            <el-button size="default" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
+            <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button>
+            <el-select v-model="selectedOrderStatus" placeholder="请选择订单类型" size="default" :disabled="role === '21'" @change="handleOrderStatusChange" style="width: 200px; width: 150px">
+                <el-option v-for="item in orderStatusOption" :key="item" :label="item" :value="item" />
             </el-select>
         </el-col>
         <el-col :span="4" :offset="1"
-            ><el-input
-                v-model="orderRidFilter"
-                placeholder="订单号筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(1)"
-            ></el-input>
+            ><el-input v-model="orderRidFilter" placeholder="订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(1)"></el-input>
         </el-col>
 
+        <el-col :span="4"><el-input v-model="orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(2)"></el-input> </el-col>
         <el-col :span="4"
-            ><el-input
-                v-model="orderCidFilter"
-                placeholder="客户订单号筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(2)"
-            ></el-input>
-        </el-col>
-        <el-col :span="4"
-            ><el-input
-                v-model="orderCustomerNameFilter"
-                placeholder="客户名称筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(3)"
-            ></el-input>
+            ><el-input v-model="orderCustomerNameFilter" placeholder="客户名称筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(3)"></el-input>
         </el-col>
         <el-col :span="4">
             <el-date-picker
@@ -82,34 +41,13 @@
             </el-radio-group>
         </el-col>
         <el-col :span="4">
-            <el-input
-                v-model="customerProductNameFilter"
-                placeholder="客户型号筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(7)"
-            ></el-input>
+            <el-input v-model="customerProductNameFilter" placeholder="客户型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(7)"></el-input>
         </el-col>
         <el-col :span="4">
-            <el-input
-                v-model="shoeRIdSearch"
-                placeholder="工厂型号筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(8)"
-            ></el-input>
+            <el-input v-model="shoeRIdSearch" placeholder="工厂型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(8)"></el-input>
         </el-col>
         <el-col :span="4"
-            ><el-input
-                v-model="orderCustomerBrandFilter"
-                placeholder="客户商标筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterDisplayOrder(4)"
-            ></el-input>
+            ><el-input v-model="orderCustomerBrandFilter" placeholder="客户商标筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterDisplayOrder(4)"></el-input>
         </el-col>
 
         <el-col :span="4">
@@ -133,13 +71,12 @@
                 <el-radio-button label="降序排列" value="desc" />
             </el-radio-group>
         </el-col> -->
-
     </el-row>
     <el-row :gutter="20">
         <el-table :data="paginatedDisplayData" border stripe height="500">
-            <el-table-column prop="orderRid" label="订单号" sortable/>
-            <el-table-column prop="orderSalesman" label="创建业务员"/>
-            <el-table-column prop="orderSupervisor" label="审核"/>
+            <el-table-column prop="orderRid" label="订单号" sortable />
+            <el-table-column prop="orderSalesman" label="创建业务员" />
+            <el-table-column prop="orderSupervisor" label="审核" />
             <el-table-column prop="orderCid" label="客户订单号" />
             <el-table-column prop="customerName" label="客户名" />
             <el-table-column prop="customerBrand" label="客户商标" />
@@ -151,19 +88,8 @@
             <el-table-column label="操作" width="200">
                 <template #default="scope">
                     <el-button-group>
-                        <el-button
-                        type="primary"
-                        size="default"
-                        @click="openOrderDetail(scope.row.orderDbId)"
-                        >查看订单详情</el-button
-                    >
-                    <el-button
-                        v-if="scope.row.orderStatusVal < 9 && this.userRole == 4"
-                        type="danger"
-                        size="default"
-                        @click="deleteOrder(scope.row)"
-                        >删除订单</el-button
-                    >
+                        <el-button type="primary" size="default" @click="openOrderDetail(scope.row.orderDbId)">查看订单详情</el-button>
+                        <el-button v-if="scope.row.orderStatusVal < 9 && this.userRole == 4" type="danger" size="default" @click="deleteOrder(scope.row)">删除订单</el-button>
                     </el-button-group>
                 </template>
             </el-table-column>
@@ -176,7 +102,6 @@
             layout="total,prev,pager,next,jumper"
             style="margin-top: 20px"
         ></el-pagination>
-        
     </el-row>
 
     <el-dialog title="创建订单鞋型填写" v-model="orderCreationInfoVis" width="100%" fullscreen :close-on-click-modal="false">
@@ -208,18 +133,8 @@
                     }
                 ]"
             >
-                <el-select
-                    v-model="newOrderForm.customerName"
-                    filterable
-                    placeholder="请选择客户"
-                    @change="updateCustomerBrand"
-                >
-                    <el-option
-                        v-for="item in this.customerNameList"
-                        :key="item"
-                        :label="item"
-                        :value="item"
-                    ></el-option>
+                <el-select v-model="newOrderForm.customerName" filterable placeholder="请选择客户" @change="updateCustomerBrand">
+                    <el-option v-for="item in this.customerNameList" :key="item" :label="item" :value="item"></el-option>
                 </el-select>
             </el-form-item>
             <el-form-item
@@ -233,18 +148,8 @@
                     }
                 ]"
             >
-                <el-select
-                    v-model="newOrderForm.customerBrand"
-                    filterable
-                    placeholder="请选择商标"
-                    @change="updateCustomerId"
-                >
-                    <el-option
-                        v-for="item in this.customerBrandList"
-                        :key="item"
-                        :label="item"
-                        :value="item"
-                    ></el-option>
+                <el-select v-model="newOrderForm.customerBrand" filterable placeholder="请选择商标" @change="updateCustomerId">
+                    <el-option v-for="item in this.customerBrandList" :key="item" :label="item" :value="item"></el-option>
                 </el-select>
             </el-form-item>
             <el-form-item
@@ -258,19 +163,8 @@
                     }
                 ]"
             >
-                <el-select
-                    v-model="newOrderForm.batchInfoTypeName"
-                    filterable
-                    placeholder="请选择种类"
-                    @change="updateBatchType"
-                >
-                    <el-option
-                        v-for="item in this.batchTypes"
-                        :key="item.batchInfoTypeId"
-                        :label="item.batchInfoTypeName"
-                        :value="item.batchInfoTypeName"
-                    >
-                    </el-option>
+                <el-select v-model="newOrderForm.batchInfoTypeName" filterable placeholder="请选择种类" @change="updateBatchType">
+                    <el-option v-for="item in this.batchTypes" :key="item.batchInfoTypeId" :label="item.batchInfoTypeName" :value="item.batchInfoTypeName"> </el-option>
                 </el-select>
             </el-form-item>
             <el-form-item
@@ -285,12 +179,7 @@
                     }
                 ]"
             >
-                <el-date-picker
-                    v-model="newOrderForm.orderStartDate"
-                    type="date"
-                    placeholder="选择日期"
-                    value-format="YYYY-MM-DD"
-                ></el-date-picker>
+                <el-date-picker v-model="newOrderForm.orderStartDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"></el-date-picker>
             </el-form-item>
             <el-form-item
                 label="订单结束日期"
@@ -303,12 +192,7 @@
                     }
                 ]"
             >
-                <el-date-picker
-                    v-model="newOrderForm.orderEndDate"
-                    type="date"
-                    placeholder="选择日期"
-                    value-format="YYYY-MM-DD"
-                ></el-date-picker>
+                <el-date-picker v-model="newOrderForm.orderEndDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"></el-date-picker>
             </el-form-item>
             <el-form-item
                 label="业务员"
@@ -335,61 +219,25 @@
                     }
                 ]"
             >
-                <el-select
-                    v-model="newOrderForm.supervisorId"
-                    filterable
-                    placeholder="请选择下发经理"
-                >
-                    <el-option
-                        v-for="item in this.departmentNameList"
-                        :key="item.staffId"
-                        :label="item.staffName"
-                        :value="item.staffId"
-                    ></el-option>
+                <el-select v-model="newOrderForm.supervisorId" filterable placeholder="请选择下发经理">
+                    <el-option v-for="item in this.departmentNameList" :key="item.staffId" :label="item.staffName" :value="item.staffId"></el-option>
                 </el-select>
             </el-form-item>
 
             <el-row :gutter="20">
                 <el-col :span="4" :offset="0" style="white-space: nowrap">
                     请选择鞋型号：
-                    <el-input
-                        v-model="shoeRidFilter"
-                        placeholder="鞋型号搜索"
-                        size="default"
-                        :suffix-icon="'el-icon-search'"
-                        @change="getAllShoes()"
-                        @clear="getAllShoes()"
-                        clearable
-                    >
-                    </el-input>
+                    <el-input v-model="shoeRidFilter" placeholder="鞋型号搜索" size="default" :suffix-icon="'el-icon-search'" @change="getAllShoes()" @clear="getAllShoes()" clearable> </el-input>
                 </el-col>
                 <el-col :span="4" :offset="2">
-                    <el-input
-                        v-model="customerNameFilter"
-                        placeholder="客户型号搜索"
-                        size="default"
-                        :suffix-icon="'el-icon-search'"
-                        @change="getAllShoes()"
-                        @clear="getAllShoes()"
-                        clearable
-                    >
+                    <el-input v-model="customerNameFilter" placeholder="客户型号搜索" size="default" :suffix-icon="'el-icon-search'" @change="getAllShoes()" @clear="getAllShoes()" clearable>
                     </el-input>
                 </el-col>
                 <el-col :span="2" :offset="2">
-                    <el-button type="primary" size="default" @click="openAddShoeDialog">
-                        添加新鞋型
-                    </el-button>
-                    
+                    <el-button type="primary" size="default" @click="openAddShoeDialog"> 添加新鞋型 </el-button>
                 </el-col>
             </el-row>
-            <el-table
-                :data="shoeTableData"
-                style="width: 100%"
-                stripe
-                border
-                height="500"
-                row-key="shoeId"
-            >
+            <el-table :data="shoeTableData" style="width: 100%" stripe border height="500" row-key="shoeId">
                 <el-table-column type="expand">
                     <template #default="props">
                         <el-table
@@ -399,16 +247,11 @@
                             @selection-change="(selection) => handleSelectionShoeType(selection, props.row.shoeId)"
                             ref="shoeSelectionTable"
                         >
-                            <el-table-column size="small" type="selection" align="center">
-                            </el-table-column>
+                            <el-table-column size="small" type="selection" align="center"> </el-table-column>
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px" />
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
-                                    <el-image
-                                        :src="scope.row.shoeImageUrl"
-                                        style="width: 150px; height: 100px"
-                                        :key="scope.row.shoeImageUrl"
-                                    />
+                                    <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px" :key="scope.row.shoeImageUrl" />
                                 </template>
                             </el-table-column>
                             <el-table-column label="操作">
@@ -422,7 +265,7 @@
                 <el-table-column prop="shoeRid" label="鞋型编号"></el-table-column>
                 <el-table-column>
                     <template #default="scope">
-                    <el-button type="primary" size="default" @click="openAddShoeTypeDialog(scope.row)">添加鞋款</el-button>
+                        <el-button type="primary" size="default" @click="openAddShoeTypeDialog(scope.row)">添加鞋款</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -442,7 +285,7 @@
             </span>
         </template>
     </el-dialog>
-    
+
     <el-dialog title="添加新鞋型" v-model="addShoeDialogVis" width="50%">
         <el-form :model="shoeForm" label-width="120px" :inline="false">
             <el-form-item label="鞋型编号">
@@ -461,11 +304,9 @@
             </el-form-item>
             <el-form-item label="选择颜色">
                 <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple>
-                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
-                        :value="item.value"></el-option>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
             </el-form-item>
-            
         </el-form>
         <template #footer>
             <span>
@@ -482,8 +323,7 @@
             </el-form-item>
             <el-form-item label="选择颜色">
                 <el-select v-model="shoeColorForm.shoeTypeColors" placeholder="请选择" multiple>
-                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label"
-                        :value="item.value"></el-option>
+                    <el-option v-for="item in colorOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
             </el-form-item>
         </el-form>
@@ -498,20 +338,12 @@
         <el-row :gutter="20">
             <el-col :span="24" :offset="0">
                 <el-descriptions title="" :column="2" border>
-                    <el-descriptions-item label="订单号" align="center">{{
-                        this.newOrderForm.orderRId
-                    }}</el-descriptions-item>
-                    <el-descriptions-item label="客户订单号" align="center">{{
-                        this.newOrderForm.orderCid
-                    }}</el-descriptions-item>
+                    <el-descriptions-item label="订单号" align="center">{{ this.newOrderForm.orderRId }}</el-descriptions-item>
+                    <el-descriptions-item label="客户订单号" align="center">{{ this.newOrderForm.orderCid }}</el-descriptions-item>
                 </el-descriptions>
                 <el-descriptions title="" :column="2" border>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        this.newOrderForm.customerName
-                    }}</el-descriptions-item>
-                    <el-descriptions-item label="客户商标" align="center">{{
-                        this.newOrderForm.customerBrand
-                    }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ this.newOrderForm.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="客户商标" align="center">{{ this.newOrderForm.customerBrand }}</el-descriptions-item>
                 </el-descriptions>
             </el-col>
         </el-row>
@@ -527,17 +359,15 @@
                 }
             "
             :row-class-name="'persistent-shadow-row'"
-                :default-expand-all="true"
-            >
+            :default-expand-all="true"
+        >
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.orderShoeTypeBatchInfo" border>
                         <el-table-column prop="packagingInfoName" label="配码名称" sortable />
                         <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
                         <el-table-column
-                            v-for="col in Object.keys(this.attrMapping).filter(
-                                (key) => this.curBatchType[key] != null
-                            )"
+                            v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)"
                             :label="this.curBatchType[col]"
                             :prop="this.attrMapping[col]"
                         ></el-table-column>
@@ -557,24 +387,13 @@
                         <el-table-column prop="totalQuantityRatio" label="比例和" />
                         <el-table-column label="单位数量">
                             <template #default="scope">
-                                <el-input
-                                    size="small"
-                                    v-model="props.row.quantityMapping[scope.row.packagingInfoId]"
-                                    @change="updateAmountMapping(props.row, scope.row)"
-                                    controls-position="right"
-                                >
+                                <el-input size="small" v-model="props.row.quantityMapping[scope.row.packagingInfoId]" @change="updateAmountMapping(props.row, scope.row)" controls-position="right">
                                 </el-input>
                             </template>
                         </el-table-column>
                         <el-table-column label="总数量">
                             <template #default="scope">
-                                <el-input
-                                    size="small"
-                                    v-model="props.row.amountMapping[scope.row.packagingInfoId]"
-                                    controls-position="right"
-                                    :disabled="true"
-                                >
-                                </el-input>
+                                <el-input size="small" v-model="props.row.amountMapping[scope.row.packagingInfoId]" controls-position="right" :disabled="true"> </el-input>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -584,28 +403,18 @@
             <el-table-column prop="colorName" label="鞋型颜色" />
             <el-table-column label="鞋型图片">
                 <template #default="scope">
-                    <el-image
-                        :src="scope.row.shoeImageUrl"
-                        style="width: 150px; height: 100px"
-                    ></el-image>
+                    <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px"></el-image>
                 </template>
             </el-table-column>
             <el-table-column>
                 <template #default="scope">
-                    <el-button
-                        type="primary"
-                        size="default"
-                        @click="openAddBatchInfoDialog(scope.row)"
-                        >编辑鞋型配码</el-button
-                    >
+                    <el-button type="primary" size="default" @click="openAddBatchInfoDialog(scope.row)">编辑鞋型配码</el-button>
+                    <el-button type="primary" size="default" @click="openLoadBatchTemplateDialog(scope.row)">加载配码模板</el-button>
                 </template>
             </el-table-column>
             <el-table-column label="添加客户鞋型编号">
                 <template #default="scope">
-                    <el-input
-                        size="default"
-                        v-model="this.newOrderForm.customerShoeName[scope.row.shoeRid]"
-                    ></el-input>
+                    <el-input size="default" v-model="this.newOrderForm.customerShoeName[scope.row.shoeRid]"></el-input>
                 </template>
             </el-table-column>
 
@@ -637,50 +446,25 @@
         </template>
     </el-dialog>
 
-    <el-dialog
-        title="配码添加"
-        v-model="addBatchInfoDialogVis"
-        width="90%"
-        @close="closeAddBatchInfoDialog()"
-    >
+    <el-dialog title="配码添加" v-model="addBatchInfoDialogVis" width="90%" @close="closeAddBatchInfoDialog()">
         <el-col :span="4" :offset="15"
-            ><el-input
-                v-model="batchNameFilter"
-                placeholder="请输入配码名称"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="filterBatchDataWithSelection"
-            ></el-input>
+            ><el-input v-model="batchNameFilter" placeholder="请输入配码名称" size="default" :suffix-icon="'el-icon-search'" clearable @input="filterBatchDataWithSelection"></el-input>
         </el-col>
         <el-row :gutter="20">
             <el-col :span="24" :offset="0">
                 <el-descriptions title="" :column="2" border>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        this.newOrderForm.customerName
-                    }}</el-descriptions-item>
-                    <el-descriptions-item label="客户商标" align="center">{{
-                        this.newOrderForm.customerBrand
-                    }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ this.newOrderForm.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="客户商标" align="center">{{ this.newOrderForm.customerBrand }}</el-descriptions-item>
                 </el-descriptions>
             </el-col>
         </el-row>
         <el-row :gutter="20">
-            <el-table
-                :data="customerDisplayBatchData"
-                border
-                stripe
-                height="500"
-                @selection-change="handleSelectionBatchData"
-                ref="batchInfoSelectionTable"
-            >
+            <el-table :data="customerDisplayBatchData" border stripe height="500" @selection-change="handleSelectionBatchData" ref="batchInfoSelectionTable">
                 <el-table-column size="small" type="selection" align="center"> </el-table-column>
                 <el-table-column prop="packagingInfoName" label="配码名称" sortable />
                 <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
                 <el-table-column
-                    v-for="col in Object.keys(this.attrMapping).filter(
-                        (key) => this.curBatchType[key] != null
-                    )"
+                    v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)"
                     :label="this.curBatchType[col]"
                     :prop="this.attrMapping[col]"
                 ></el-table-column>
@@ -712,31 +496,23 @@
         <template #footer>
             <el-button @click="closeAddBatchInfoDialog()">取消</el-button>
             <el-button @click="openAddCustomerBatchDialog()"> 添加新配码</el-button>
+            <el-button type="success" @click="openSaveBatchTemplateDialog"> 保存为新模板</el-button>
             <el-button type="primary" @click="addShoeTypeBatchInfo()"> 保存配码</el-button>
         </template>
     </el-dialog>
     <el-dialog title="选择模板" v-model="newOrderTemplateVis" width="50%">
-        <el-input v-model="templateFilter" @input="filterTemplateOptions()" >
-            search
-        </el-input>
-       <el-table
-       :data = this.templateDisplayData
-       >
-        <el-table-column
-        prop="customerName" label="客户名称"></el-table-column>
-        <el-table-column
-        prop="customerBrand" label="客户商标"></el-table-column>
-        <el-table-column
-        prop="batchInfoTypeName" label="配码名称"></el-table-column>
-        
-        <el-table-column>
-            <template #default="scope">
-                        <el-button type="primary" @click="openCreateOrderDialogFromTemplate(scope.row)">模板创建订单</el-button>
-            </template>
-            
-        </el-table-column>
-       </el-table>
+        <el-input v-model="templateFilter" @input="filterTemplateOptions()"> search </el-input>
+        <el-table :data="this.templateDisplayData">
+            <el-table-column prop="customerName" label="客户名称"></el-table-column>
+            <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
+            <el-table-column prop="batchInfoTypeName" label="配码名称"></el-table-column>
 
+            <el-table-column>
+                <template #default="scope">
+                    <el-button type="primary" @click="openCreateOrderDialogFromTemplate(scope.row)">模板创建订单</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
     </el-dialog>
     <el-dialog title="添加配码" v-model="addCustomerBatchDialogVisible" width="30%">
         <el-form :model="batchForm" label-width="120px" :inline="false" size="default">
@@ -746,12 +522,7 @@
             <el-form-item label="配码地区">
                 <el-input v-model="batchForm.packagingInfoLocale" disabled="true"></el-input>
             </el-form-item>
-            <el-form-item
-                v-for="col in Object.keys(this.attrMapping).filter(
-                    (key) => this.curBatchType[key] != null
-                )"
-                :label="this.curBatchType[col]"
-            >
+            <el-form-item v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)" :label="this.curBatchType[col]">
                 <el-input v-model="batchForm[attrMapping[col]]"></el-input>
             </el-form-item>
             <!-- <el-form-item label="34">
@@ -807,19 +578,76 @@
         <input type="file" accept="image/*" @change="onFileChange" />
 
         <!-- 裁剪器 -->
-        <cropper
-            v-if="imageUrl"
-            ref="cropper"
-            :src="imageUrl"
-            :auto-zoom="true"
-            :resize-image="true"
-            :background-class="'cropper-background'"
-        />
+        <cropper v-if="imageUrl" ref="cropper" :src="imageUrl" :auto-zoom="true" :resize-image="true" :background-class="'cropper-background'" />
 
         <!-- 底部按钮 -->
         <template #footer>
             <el-button @click="reUploadImageDialogVis = false">取消</el-button>
             <el-button type="primary" :disabled="!imageUrl" @click="uploadCroppedImage"> 确认上传 </el-button>
+        </template>
+    </el-dialog>
+    <el-dialog title="客户配码模板列表" v-model="customerBatchTemplateVis" width="60%" :close-on-click-modal="false">
+        <el-table :data="batchTemplateDisplayData" border stripe height="500" @selection-change="handleSelectionBatchTemplate" ref="batchTemplateSelectionTable">
+            <el-table-column type="selection" width="55"></el-table-column>
+            <el-table-column type="expand">
+                <template #default="scope">
+                    <el-table :data="scope.row.batchInfoData" border>
+                        <el-table-column prop="packagingInfoName" label="配码名称" sortable />
+                        <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
+                        <el-table-column
+                            v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)"
+                            :label="this.curBatchType[col]"
+                            :prop="this.attrMapping[col]"
+                        ></el-table-column>
+                        <el-table-column prop="totalQuantityRatio" label="比例和" sortable />
+                    </el-table>
+                </template>
+            </el-table-column>
+            <el-table-column prop="templateName" label="模板名称"></el-table-column>
+            <el-table-column prop="customerName" label="客户名称"></el-table-column>
+            <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
+            <el-table-column prop="templateDescription" label="模板描述"></el-table-column>
+            <el-table-column label="操作" width="200">
+                <template #default="scope">
+                    <el-button type="danger" @click="deleteBatchTemplateDialog(scope.row)">删除模板</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <template #footer>
+            <el-button @click="reUploadImageDialogVis = false">取消</el-button>
+            <el-button type="primary" @click="confirmLoadBatchTemplate"> 确认加载 </el-button>
+        </template>
+    </el-dialog>
+    <el-dialog title="新配码模板保存" v-model="customerBatchTemplateSaveVis" width="60%" :close-on-click-modal="false">
+        <el-form :model="batchTemplateForm" label-width="120px" :inline="false">
+            <el-form-item label="模板名称">
+                <el-input v-model="batchTemplateForm.templateName"></el-input>
+            </el-form-item>
+            <el-form-item label="客户名称">
+                <el-input v-model="batchTemplateForm.customerName" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="客户商标">
+                <el-input v-model="batchTemplateForm.customerBrand" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="模板描述">
+                <el-input v-model="batchTemplateForm.templateDescription"></el-input>
+            </el-form-item>
+        </el-form>
+        <el-table :data="batchTemplateForm.templateDetail" border stripe height="500">
+            <el-table-column prop="packagingInfoName" label="配码名称" sortable />
+            <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
+            <el-table-column
+                v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)"
+                :label="this.curBatchType[col]"
+                :prop="this.attrMapping[col]"
+            ></el-table-column>
+            <el-table-column prop="totalQuantityRatio" label="比例和" sortable />
+        </el-table>
+
+        <template #footer>
+            <el-button @click="customerBatchTemplateSaveVis = false">取消</el-button>
+            <el-button type="primary" @click="saveBatchTemplate"> 确认保存 </el-button>
         </template>
     </el-dialog>
 </template>
@@ -859,6 +687,7 @@ export default {
             currentBatch: [],
             expandedRowKeys: [],
             addCustomerBatchDialogVisible: false,
+            customerBatchTemplateSaveVis: false,
             previewOrderVis: false,
             orderInfoVis: false,
             fileList: [],
@@ -871,7 +700,7 @@ export default {
             addBatchInfoDialogVis: false,
             addShoeDialogVis: false,
             addShoeTypeDialogVis: false,
-            newOrderTemplateVis:false,
+            newOrderTemplateVis: false,
             Upload,
             batchNameFilter: '',
             orderRidFilter: '',
@@ -881,9 +710,10 @@ export default {
             orderCustomerNameFilter: '',
             orderCustomerBrandFilter: '',
             customerProductNameFilter: '',
-            templateFilter:'',
+            templateFilter: '',
             shoeRIdSearch: '',
             customerNameFilter: '',
+            batchTemplateDisplayData: [],
             displayData: [],
             prevDisplayData: [],
             filterData: [],
@@ -901,10 +731,18 @@ export default {
             curBatchType: {},
             userRole: '',
             userName: '',
-            templateData:[],
-            templateDisplayData:[],
-            templateCustomerBrandMatch:[],
-            templateCustomerNameMatch:[],
+            templateData: [],
+            templateDisplayData: [],
+            templateCustomerBrandMatch: [],
+            templateCustomerNameMatch: [],
+            customerBatchTemplateVis: false,
+            batchTemplateForm: {
+                templateName: '',
+                customerName: '',
+                customerBrand: '',
+                templateDescription: '',
+                templateDetail: []
+            },
             shoeForm: {
                 shoeId: '',
                 shoeRid: '',
@@ -981,10 +819,10 @@ export default {
                 size45Name: 'size45Ratio',
                 size46Name: 'size46Ratio'
             },
-            shoeColorForm:{
-                shoeId:'',
-                shoeTypeColors:'',
-                displayRid:'',
+            shoeColorForm: {
+                shoeId: '',
+                shoeTypeColors: '',
+                displayRid: ''
             },
             shortcuts: [
                 {
@@ -1013,14 +851,15 @@ export default {
             shoeTotalItems: 0,
             currentOrderCreatePage: 1,
             orderCreatePageSize: 20,
-            orderStatusOption: ["全部订单", "需审批订单", "我发起的订单"],
-            selectedOrderStatus: "全部订单", // default selection
+            orderStatusOption: ['全部订单', '需审批订单', '我发起的订单'],
+            selectedOrderStatus: '全部订单', // default selection
             currentShoeImageId: '',
             currentShoeColor: '',
             currentShoeColorId: 0,
             currentImageRow: {},
             reUploadImageDialogVis: false,
-            imageUrl: ''
+            imageUrl: '',
+            selectedBatchTemplate: {}
         }
     },
     computed: {
@@ -1060,11 +899,10 @@ export default {
         },
         initialStatusFilter() {
             if (this.role === '21') {
-                this.selectedOrderStatus = "我发起的订单"
+                this.selectedOrderStatus = '我发起的订单'
                 this.handleOrderStatusChange(this.selectedOrderStatus)
-            }
-            else {
-                this.selectedOrderStatus = "需审批订单"
+            } else {
+                this.selectedOrderStatus = '需审批订单'
                 this.handleOrderStatusChange(this.selectedOrderStatus)
             }
         },
@@ -1129,7 +967,7 @@ export default {
         openImportDialog() {
             this.isImportVis = true
         },
-        openCreateOrderDialogFromTemplate(row){
+        openCreateOrderDialogFromTemplate(row) {
             console.log(row)
             this.newOrderForm.batchInfoTypeId = row.batchInfoTypeId
             this.newOrderForm.batchInfoTypeName = row.batchInfoTypeName
@@ -1147,10 +985,12 @@ export default {
             this.newOrderForm.salesmanId = this.staffId
             this.orderCreationInfoVis = true
         },
-        async showTemplate(){
-            const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {params: {
-                    staffId:this.staffId
-                }})
+        async showTemplate() {
+            const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {
+                params: {
+                    staffId: this.staffId
+                }
+            })
             this.newOrderTemplateVis = true
             this.templateData = response.data
             this.templateDisplayData = this.templateData
@@ -1179,21 +1019,16 @@ export default {
             this.curShoeTypeId = row.shoeTypeId
             this.addBatchInfoDialogVis = true
             const idField = 'packagingInfoId'
-            this.reselectSelected(
-                this.$refs.batchInfoSelectionTable,
-                row.orderShoeTypeBatchInfo,
-                this.customerDisplayBatchData,
-                idField
-            )
+            this.reselectSelected(this.$refs.batchInfoSelectionTable, row.orderShoeTypeBatchInfo, this.customerDisplayBatchData, idField)
         },
-        openAddShoeDialog(){
+        openAddShoeDialog() {
             this.addShoeDialogVis = true
         },
-        openAddShoeTypeDialog(row){
+        openAddShoeTypeDialog(row) {
             this.shoeIdToAdd = row.shoeRid
             this.shoeColorForm.displayRid = row.shoeRid
             this.shoeColorForm.shoeId = row.shoeId
-            this.shoeColorForm.shoeTypeColors = row.shoeTypeColors.map(color => color.value)
+            this.shoeColorForm.shoeTypeColors = row.shoeTypeColors.map((color) => color.value)
             console.log(this.shoeIdToAdd)
             console.log(this.shoeColorForm)
             this.addShoeTypeDialogVis = true
@@ -1205,10 +1040,7 @@ export default {
                 type: 'warning'
             }).then(async () => {
                 // this.currentShoeImageId = this.shoeForm.shoeRid
-                const response = await axios.post(
-                    `${this.$apiBaseUrl}/shoemanage/addshoe`,
-                    this.shoeForm
-                )
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoe`, this.shoeForm)
                 if (response.status === 200) {
                     this.$message({
                         type: 'success',
@@ -1222,36 +1054,33 @@ export default {
                         shoeAdjuster: '',
                         shoeDepartmentId: ''
                     }
-                    this.shoeRidFilter=''
+                    this.shoeRidFilter = ''
                     await this.getAllShoes()
                 }
             })
         },
-        addShoeTypes(){
+        addShoeTypes() {
             console.log(this.shoeColorForm)
             this.shoeColorForm['colorId'] = this.shoeColorForm['shoeTypeColors']
-            this.$confirm('确认添加颜色？','提示',{
-                confirmButtonText:'确定',
-                cancelButtonText:'取消',
-                type:'warning'
-            }).then(async ()=> {
-                const response = await axios.post(
-                    `${this.$apiBaseUrl}/shoemanage/addshoetype`,
-                    this.shoeColorForm
-                )
+            this.$confirm('确认添加颜色？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, this.shoeColorForm)
                 if (response.status === 200) {
-                            this.$message({
-                                type: 'success',
-                                message: '上传成功'
-                            })
-                this.addShoeTypeDialogVis = false
-                this.shoeColorForm = {
-                    shoeId:'',
-                    shoeTypeColors:'',
-                    colorId:'',
-                    displayRid:''
-                }
-                await this.getAllShoes()
+                    this.$message({
+                        type: 'success',
+                        message: '上传成功'
+                    })
+                    this.addShoeTypeDialogVis = false
+                    this.shoeColorForm = {
+                        shoeId: '',
+                        shoeTypeColors: '',
+                        colorId: '',
+                        displayRid: ''
+                    }
+                    await this.getAllShoes()
                 }
             })
         },
@@ -1268,10 +1097,7 @@ export default {
                 type: 'warning'
             })
                 .then(async () => {
-                    const result = await axios.post(
-                        `${this.$apiBaseUrl}/customer/addcustomerbatchinfo`,
-                        this.batchForm
-                    )
+                    const result = await axios.post(`${this.$apiBaseUrl}/customer/addcustomerbatchinfo`, this.batchForm)
                 })
                 .then(async () => {
                     this.getCustomerBatchInfo(this.newOrderForm.customerId)
@@ -1346,16 +1172,14 @@ export default {
                 this.newOrderForm.customerShoeName[item.shoeRid] = ''
             })
             this.getCustomerBatchInfo(this.newOrderForm.customerId)
-
         },
         updateAmountMapping(out_row, inner_row) {
-            out_row.amountMapping[inner_row.packagingInfoId] =
-                out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
+            out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
         handleSelectionShoeType(selection, shoeId) {
             // only allow one shoe to be selected
             this.selectedShoeList = [...selection.map((item) => ({ ...item, shoeId }))]
-            this.newOrderForm.orderShoeTypes = [...selection.map((item) => ({ ...item, shoeId }))];
+            this.newOrderForm.orderShoeTypes = [...selection.map((item) => ({ ...item, shoeId }))]
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
@@ -1367,12 +1191,8 @@ export default {
                     customerid: customerId
                 }
             })
-            this.customerBatchData = response.data.filter(
-                (batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId
-            )[0].batchInfoList
-            this.customerDisplayBatchData = response.data.filter(
-                (batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId
-            )[0].batchInfoList
+            this.customerBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
+            this.customerDisplayBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
         },
         async getAllCutomers() {
             const response = await axios.get(`${this.$apiBaseUrl}/customer/getcustomerdetails`)
@@ -1380,34 +1200,20 @@ export default {
             this.customerNameList = [...new Set(response.data.map((item) => item.customerName))]
         },
         async getAllBatchTypes() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/batchtype/getallbatchtypesbusiness`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/batchtype/getallbatchtypesbusiness`)
             this.batchTypes = response.data.batchDataTypes
-            this.batchTypeNameList = [
-                ...new Set(this.batchTypes.map((item) => item.batchInfoTypeName))
-            ]
+            this.batchTypeNameList = [...new Set(this.batchTypes.map((item) => item.batchInfoTypeName))]
         },
         updateCustomerBrand() {
-            this.customerBrandList = [
-                ...new Set(
-                    this.customerDetails
-                        .filter((item) => item.customerName == this.newOrderForm.customerName)
-                        .map((item) => item.customerBrand)
-                )
-            ]
+            this.customerBrandList = [...new Set(this.customerDetails.filter((item) => item.customerName == this.newOrderForm.customerName).map((item) => item.customerBrand))]
         },
         updateCustomerId() {
             this.newOrderForm.customerId = this.customerDetails
                 .filter((item) => item.customerName == this.newOrderForm.customerName)
-                .filter(
-                    (item) => item.customerBrand == this.newOrderForm.customerBrand
-                )[0].customerId
+                .filter((item) => item.customerBrand == this.newOrderForm.customerBrand)[0].customerId
         },
         updateBatchType() {
-            this.curBatchType = this.batchTypes.filter(
-                (item) => item.batchInfoTypeName == this.newOrderForm.batchInfoTypeName
-            )[0]
+            this.curBatchType = this.batchTypes.filter((item) => item.batchInfoTypeName == this.newOrderForm.batchInfoTypeName)[0]
             this.newOrderForm.batchInfoTypeId = this.curBatchType.batchInfoTypeId
         },
         filterBatchData() {
@@ -1424,17 +1230,13 @@ export default {
         filterBatchDataWithSelection() {
             const selectedBatch = this.currentBatch
             if (!this.batchNameFilter) {
-                this.customerDisplayBatchData = Array.from(
-                    new Set([...selectedBatch.concat(this.customerBatchData)])
-                )
+                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerBatchData)]))
             } else {
                 this.customerFilteredBatchData = this.customerBatchData.filter((task) => {
                     const filteredData = task.packagingInfoName.includes(this.batchNameFilter)
                     return filteredData
                 })
-                this.customerDisplayBatchData = Array.from(
-                    new Set([...selectedBatch.concat(this.customerFilteredBatchData)])
-                )
+                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerFilteredBatchData)]))
             }
             this.$nextTick(() => {
                 selectedBatch.forEach((item) => {
@@ -1489,19 +1291,16 @@ export default {
 
             if (this.role == 21) {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
-                currentStaffId: staffId
-            }     
-            )
+                    currentStaffId: staffId
+                })
                 this.unfilteredData = response.data
-            }
-            else if (this.role == 4) {
+            } else if (this.role == 4) {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
                 this.unfilteredData = response.data
             }
             this.displayData = this.unfilteredData
             this.totalItems = this.unfilteredData.length
             this.currentPage = 1
-           
         },
         // async getAllOrderStatus() {
         //     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorderstatus`)
@@ -1523,7 +1322,7 @@ export default {
                 customerName: this.customerNameFilter,
                 available: 1
             }
-            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {params})
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, { params })
             this.shoeTableData = response.data.shoeTable
             this.shoeTotalItems = response.data.total
         },
@@ -1586,18 +1385,14 @@ export default {
         },
         filterOrderByShoeRId() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.shoeRId
-                    .toLowerCase()
-                    .includes(this.shoeRIdSearch.toLowerCase())
+                const filterMatch = task.shoeRId.toLowerCase().includes(this.shoeRIdSearch.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCustomerProductName() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerProductName
-                    .toLowerCase()
-                    .includes(this.customerProductNameFilter.toLowerCase())
+                const filterMatch = task.customerProductName.toLowerCase().includes(this.customerProductNameFilter.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
@@ -1613,9 +1408,7 @@ export default {
                 this.shoeRIdSearch,
                 this.customerProductNameFilter
             ]
-            this.indexToFilter = this.filterList
-                .filter((filter) => filter)
-                .map((filter) => this.filterList.indexOf(filter))
+            this.indexToFilter = this.filterList.filter((filter) => filter).map((filter) => this.filterList.indexOf(filter))
             this.displayData = this.unfilteredData
             this.indexToFilter.forEach((index) => this.filterOrderByFilterType(index + 1))
             this.filterOrderByStatus()
@@ -1645,78 +1438,60 @@ export default {
         },
         filterOrderByStartDate() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch =
-                    new Date(task.orderStartDate) >= this.orderStartDateFilter[0] &&
-                    new Date(task.orderStartDate) <= this.orderStartDateFilter[1]
+                const filterMatch = new Date(task.orderStartDate) >= this.orderStartDateFilter[0] && new Date(task.orderStartDate) <= this.orderStartDateFilter[1]
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterOrderByEndDate() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch =
-                    new Date(task.orderEndDate) >= this.orderEndDateFilter[0] &&
-                    new Date(task.orderEndDate) <= this.orderEndDateFilter[1]
+                const filterMatch = new Date(task.orderEndDate) >= this.orderEndDateFilter[0] && new Date(task.orderEndDate) <= this.orderEndDateFilter[1]
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCustomerName() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerName
-                    .toLowerCase()
-                    .includes(this.orderCustomerNameFilter.toLowerCase())
+                const filterMatch = task.customerName.toLowerCase().includes(this.orderCustomerNameFilter.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCustomerBrand() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerBrand
-                    .toLowerCase()
-                    .includes(this.orderCustomerBrandFilter.toLowerCase())
+                const filterMatch = task.customerBrand.toLowerCase().includes(this.orderCustomerBrandFilter.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCid() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.orderCid
-                    .toLowerCase()
-                    .includes(this.orderCidFilter.toLowerCase())
+                const filterMatch = task.orderCid.toLowerCase().includes(this.orderCidFilter.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByRid() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.orderRid
-                    .toLowerCase()
-                    .includes(this.orderRidFilter.toLowerCase())
+                const filterMatch = task.orderRid.toLowerCase().includes(this.orderRidFilter.toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
-        filterTemplateOptions(){
-        if (this.templateFilter != '')
-        {
-                this.templateCustomerBrandMatch = this.templateData.filter((task)=>
-            {
-                const templateCustomerBrandMatch = task.customerBrand.toLowerCase().includes(this.templateFilter.toLowerCase())
-                return templateCustomerBrandMatch
-            })
-                this.templateCustomerNameMatch = this.templateData.filter((task)=>
-            {
-                const templateCustomerNameMatch = task.customerName.toLowerCase().includes(this.templateFilter.toLowerCase())
-                return templateCustomerNameMatch
-            })
+        filterTemplateOptions() {
+            if (this.templateFilter != '') {
+                this.templateCustomerBrandMatch = this.templateData.filter((task) => {
+                    const templateCustomerBrandMatch = task.customerBrand.toLowerCase().includes(this.templateFilter.toLowerCase())
+                    return templateCustomerBrandMatch
+                })
+                this.templateCustomerNameMatch = this.templateData.filter((task) => {
+                    const templateCustomerNameMatch = task.customerName.toLowerCase().includes(this.templateFilter.toLowerCase())
+                    return templateCustomerNameMatch
+                })
                 this.templateDisplayData = this.templateCustomerBrandMatch.concat(this.templateCustomerNameMatch)
-        }
-        else
-        {
-            this.templateDisplayData = this.templateData
-        }
-            
+            } else {
+                this.templateDisplayData = this.templateData
+            }
         },
         handleUploadSuccess(response, file) {
             // Handle the successful response
@@ -1745,19 +1520,14 @@ export default {
             this.isSubmitDocVis = false
         },
         downloadDoc(type) {
-            window.open(
-                `${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${this.orderData.orderRid}&filetype=${type}`
-            )
+            window.open(`${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${this.orderData.orderRid}&filetype=${type}`)
         },
         mergeCells({ row, column, rowIndex, columnIndex }) {
             const mergeColumns = ['inheritId', 'customerId', 'colorCN', 'colorEN']
 
             if (mergeColumns.includes(column.property)) {
                 // Check if the previous row has the same value for the column
-                if (
-                    rowIndex > 0 &&
-                    row[column.property] === this.uploadData[rowIndex - 1][column.property]
-                ) {
+                if (rowIndex > 0 && row[column.property] === this.uploadData[rowIndex - 1][column.property]) {
                     return {
                         rowspan: 0, // Hide the current cell
                         colspan: 0
@@ -1788,8 +1558,7 @@ export default {
                     // For 'status', also check 'inheritId' to ensure they match before merging
                     if (
                         rowIndex > 0 &&
-                        row[column.property] ===
-                            this.orderShoePreviewData[rowIndex - 1][column.property] &&
+                        row[column.property] === this.orderShoePreviewData[rowIndex - 1][column.property] &&
                         row['inheritId'] === this.orderShoePreviewData[rowIndex - 1]['inheritId']
                     ) {
                         return {
@@ -1799,11 +1568,7 @@ export default {
                     } else {
                         let rowspan = 1
                         for (let i = rowIndex + 1; i < this.orderShoePreviewData.length; i++) {
-                            if (
-                                this.orderShoePreviewData[i][column.property] ===
-                                    row[column.property] &&
-                                this.orderShoePreviewData[i]['inheritId'] === row['inheritId']
-                            ) {
+                            if (this.orderShoePreviewData[i][column.property] === row[column.property] && this.orderShoePreviewData[i]['inheritId'] === row['inheritId']) {
                                 rowspan++
                             } else {
                                 break
@@ -1816,11 +1581,7 @@ export default {
                     }
                 } else {
                     // Default merging logic for other columns
-                    if (
-                        rowIndex > 0 &&
-                        row[column.property] ===
-                            this.orderShoePreviewData[rowIndex - 1][column.property]
-                    ) {
+                    if (rowIndex > 0 && row[column.property] === this.orderShoePreviewData[rowIndex - 1][column.property]) {
                         return {
                             rowspan: 0, // Hide the current cell
                             colspan: 0
@@ -1828,10 +1589,7 @@ export default {
                     } else {
                         let rowspan = 1
                         for (let i = rowIndex + 1; i < this.orderShoePreviewData.length; i++) {
-                            if (
-                                this.orderShoePreviewData[i][column.property] ===
-                                row[column.property]
-                            ) {
+                            if (this.orderShoePreviewData[i][column.property] === row[column.property]) {
                                 rowspan++
                             } else {
                                 break
@@ -1884,13 +1642,10 @@ export default {
                         text: '等待中，请稍后...',
                         background: 'rgba(0, 0, 0, 0.7)'
                     })
-                    const response = await axios.post(
-                        `${this.$apiBaseUrl}/orderimport/confirmimportorder`,
-                        {
-                            fileName: this.tempFileName,
-                            orderInfo: this.orderForm
-                        }
-                    )
+                    const response = await axios.post(`${this.$apiBaseUrl}/orderimport/confirmimportorder`, {
+                        fileName: this.tempFileName,
+                        orderInfo: this.orderForm
+                    })
                     loadingInstance.close()
                     if (response.status === 200) {
                         this.$message({
@@ -1940,17 +1695,14 @@ export default {
                         }).then(async () => {
                             try {
                                 const loadingInstance = this.$loading({
-                                lock: true,
-                                text: '等待中，请稍后...',
-                                background: 'rgba(0, 0, 0, 0.7)'
-                            })
-                            loadingInstance.close()
-                            const res = await axios.post(
-                                `${this.$apiBaseUrl}/ordercreate/createneworder`,
-                                {
+                                    lock: true,
+                                    text: '等待中，请稍后...',
+                                    background: 'rgba(0, 0, 0, 0.7)'
+                                })
+                                loadingInstance.close()
+                                const res = await axios.post(`${this.$apiBaseUrl}/ordercreate/createneworder`, {
                                     orderInfo: this.newOrderForm
-                                }
-                            )
+                                })
 
                                 ElMessage.success('创建订单成功')
                                 loadingInstance.close()
@@ -1975,12 +1727,10 @@ export default {
                                 }
                                 this.getAllOrders()
                                 this.openOrderDetail(res.data.newOrderId)
-                            }
-                            catch (error) {
+                            } catch (error) {
                                 console.error('Upload error:', error)
                                 ElMessage.error(error.data.message)
                             }
-
                         })
                     }
                 }
@@ -2013,41 +1763,32 @@ export default {
             console.log(value)
             if (value === 'asc') {
                 if (!this.buttonFlag) {
-                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
-                        {
-                            currentStaffId: this.staffId
-                        }
-                    )
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                        currentStaffId: this.staffId
+                    })
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
                     this.currentPage = 1
-                }
-                else {
+                } else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
                     this.currentPage = 1
                 }
-
-            }
-            else if (value === 'desc') {
+            } else if (value === 'desc') {
                 if (!this.buttonFlag) {
-                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`,
-                        {
-                            currentStaffId: this.staffId
-                        }
-                    )
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                        currentStaffId: this.staffId
+                    })
                     this.unfilteredData = response.data
                     console.log(this.unfilteredData)
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
                     this.currentPage = 1
-                }
-                else {
-                    const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`,
-                    )
+                } else {
+                    const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`)
                     this.unfilteredData = response.data
                     this.displayData = this.unfilteredData
                     this.totalItems = this.unfilteredData.length
@@ -2055,56 +1796,49 @@ export default {
                 }
             }
         },
-        async checkOrderRidExists(){
+        async checkOrderRidExists() {
             const queryRid = this.newOrderForm.orderRId
-            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`,
-            {
-                params:
-                {
+            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
+                params: {
                     pendingRid: queryRid
                 }
-            }
-            )
+            })
             const message = response.data.result
             const exists = response.data.exists
-            if (exists == true)
-            {
+            if (exists == true) {
                 this.$message.warning(message)
-            }
-            else
-            {
+            } else {
                 this.$message.success(message)
             }
-
         },
         async handleOrderStatusChange(value) {
             let response
-            if (value === "全部订单") {
-            response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-            } else if (value === "需审批订单") {
-            response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
-                params: {
-                currentStaffId: this.staffId,
-                filterStatus: 0,
-                }
-            })
-            } else if (value === "我发起的订单") {
+            if (value === '全部订单') {
+                response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
+            } else if (value === '需审批订单') {
                 response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
-                params: {
-                currentStaffId: this.staffId,
-                filterStatus: 1,
-                }
-            })
+                    params: {
+                        currentStaffId: this.staffId,
+                        filterStatus: 0
+                    }
+                })
+            } else if (value === '我发起的订单') {
+                response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
+                    params: {
+                        currentStaffId: this.staffId,
+                        filterStatus: 1
+                    }
+                })
             }
 
             if (response && response.data) {
-            this.unfilteredData = response.data
-            this.displayData = response.data
-            this.totalItems = response.data.length
-            this.currentPage = 1
-            
-            this.radio = "all"
-            this.sortRadio = "asc"
+                this.unfilteredData = response.data
+                this.displayData = response.data
+                this.totalItems = response.data.length
+                this.currentPage = 1
+
+                this.radio = 'all'
+                this.sortRadio = 'asc'
             }
         },
         openReUploadImageDialog(row) {
@@ -2150,7 +1884,6 @@ export default {
                         this.$message.error('上传失败')
                     })
             }, 'image/jpeg')
-            
         },
         async refreshRowImage(shoeId, shoeTypeId) {
             console.log(shoeId, shoeTypeId)
@@ -2163,8 +1896,155 @@ export default {
             const baseUrl = shoeType.shoeImageUrl.split('?')[0]
             const newUrl = `${baseUrl}?t=${Date.now()}`
             shoeType.shoeImageUrl = newUrl
+        },
+        async getAllBatchTemplates() {
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/getallbatchtemplates`, {
+                    params: {
+                        customerName: this.newOrderForm.customerName,
+                        customerBrand: this.newOrderForm.customerBrand
+                    }
+                })
+                this.batchTemplateData = response.data
+                this.batchTemplateDisplayData = response.data
+            } catch (error) {
+                console.error('Error fetching batch templates:', error)
+                ElMessage.error('加载模板失败')
+            }
+        },
+        async openLoadBatchTemplateDialog(row) {
+            await this.getAllBatchTemplates()
+            this.curShoeTypeId = row.shoeTypeId
+            this.customerBatchTemplateVis = true
+        },
+        openSaveBatchTemplateDialog() {
+            this.customerBatchTemplateSaveVis = true
+            this.batchTemplateName = ''
+            this.batchTemplateForm = {
+                templateName: this.batchTemplateName,
+                customerName: this.newOrderForm.customerName,
+                customerBrand: this.newOrderForm.customerBrand,
+                templateDescription: '',
+                templateDetail: this.currentBatch
+            }
+            console.log('Opening save batch template dialog with data:', this.batchTemplateForm)
+        },
+        async saveBatchTemplate() {
+            if (this.batchTemplateForm.templateName === '') {
+                ElMessage.error('请填写模板名称')
+                return
+            }
+            const templateData = {
+                templateName: this.batchTemplateForm.templateName,
+                customerName: this.batchTemplateForm.customerName,
+                customerBrand: this.batchTemplateForm.customerBrand,
+                templateDescription: this.batchTemplateForm.templateDescription,
+                templateDetail: this.batchTemplateForm.templateDetail
+            }
+            try {
+                const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/savebatchtemplate`, templateData)
+                if (response.status === 200) {
+                    ElMessage.success('模板保存成功')
+                    this.customerBatchTemplateSaveVis = false
+                    this.batchTemplateForm = {}
+                    this.batchTemplateName = ''
+                } else {
+                    ElMessage.error('模板保存失败')
+                }
+            } catch (error) {
+                console.error('Error saving batch template:', error)
+                ElMessage.error('模板保存失败')
+            }
 
-        }
+            console.log('Saving batch template:', templateData)
+        },
+        handleSelectionBatchTemplate(selection) {
+            const tableRef = this.$refs.batchTemplateSelectionTable
+
+            if (selection.length > 1) {
+                // 只保留最新选择的一项
+                const latest = selection[selection.length - 1]
+
+                // 清除所有选择
+                tableRef.clearSelection()
+
+                // 只选中最新的
+                tableRef.toggleRowSelection(latest, true)
+
+                this.selectedBatchTemplate = latest
+            } else if (selection.length === 1) {
+                this.selectedBatchTemplate = selection[0]
+            } else {
+                this.selectedBatchTemplate = {}
+            }
+        },
+        confirmLoadBatchTemplate() {
+            if (!this.selectedBatchTemplate) {
+                ElMessage.error('请选择一个模板')
+                return
+            }
+            this.newOrderForm.orderShoeTypes.find((row) => {
+                return row.shoeTypeId == this.curShoeTypeId
+            }).orderShoeTypeBatchInfo = this.selectedBatchTemplate.batchInfoData
+
+            const curQuantityMapping = this.newOrderForm.orderShoeTypes.find((row) => {
+                return row.shoeTypeId == this.curShoeTypeId
+            }).quantityMapping
+            const curAmountMapping = this.newOrderForm.orderShoeTypes.find((row) => {
+                return row.shoeTypeId == this.curShoeTypeId
+            }).amountMapping
+
+            this.selectedBatchTemplate.batchInfoData.forEach((batch) => {
+                {
+                    curQuantityMapping[batch.packagingInfoId] = 0
+                    curAmountMapping[batch.packagingInfoId] = 0
+                }
+            })
+            this.currentBatch = this.selectedBatchTemplate.batchInfoData
+            this.$nextTick(() => {
+                const tableRef = this.$refs.batchInfoSelectionTable
+                if (!tableRef) return
+
+                tableRef.clearSelection()
+
+                this.customerDisplayBatchData.forEach((row) => {
+                    const match = this.currentBatch.find((batch) => batch.packagingInfoId === row.packagingInfoId)
+                    if (match) {
+                        tableRef.toggleRowSelection(row, true)
+                    }
+                })
+            })
+            this.newOrderForm.flag = true
+
+            this.customerBatchTemplateVis = false
+        },
+        async deleteBatchTemplateDialog(row) {
+            this.$confirm(`确认删除模板 "${row.templateName}"?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+                .then(async () => {
+                    try {
+                        const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/deletebatchtemplate`, {
+                            batchInfoTemplateId: row.batchInfoTemplateId
+                        })
+                        if (response.status === 200) {
+                            ElMessage.success('模板删除成功')
+                            await this.getAllBatchTemplates()
+                        }
+                    } catch (error) {
+                        console.error('Error deleting batch template:', error)
+                        ElMessage.error('模板删除失败')
+                    }
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消删除'
+                    })
+                })
+        },
     },
     watch: {
         async orderCreationInfoVis(newValue, oldValue) {
@@ -2180,23 +2060,23 @@ export default {
 <style scoped>
 /* Clean base style */
 ::v-deep(.persistent-shadow-row > td) {
-  border-top: 5px solid #dcdfe6;
-  border-bottom: 5px solid #dcdfe6;
-  background-color: #fff;
-  padding: 12px 16px;
+    border-top: 5px solid #dcdfe6;
+    border-bottom: 5px solid #dcdfe6;
+    background-color: #fff;
+    padding: 12px 16px;
 }
 
 /* Left rounded corners */
 ::v-deep(.persistent-shadow-row > td:first-child) {
-  border-left: 5px solid #dcdfe6;
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+    border-left: 5px solid #dcdfe6;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
 }
 
 /* Right rounded corners */
 ::v-deep(.persistent-shadow-row > td:last-child) {
-  border-right: 5px solid #dcdfe6;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
+    border-right: 5px solid #dcdfe6;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
 }
 </style>
