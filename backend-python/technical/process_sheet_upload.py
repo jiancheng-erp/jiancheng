@@ -758,6 +758,11 @@ def save_craft_sheet():
                     if material_data.get("isPurchase")
                     else None
                 )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
+                    else None
+                )
                 material_type = "O"
                 order_shoe_type_id = order_shoe_type_id
                 craft_name_list = material_data.get("materialCraftNameList", None)
@@ -871,6 +876,11 @@ def save_craft_sheet():
                     if material_data.get("isPurchase")
                     else None
                 )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
+                    else None
+                )
                 material_type = "M"
                 order_shoe_type_id = order_shoe_type_id
                 craft_name_list = material_data.get("materialCraftNameList", None)
@@ -982,6 +992,11 @@ def save_craft_sheet():
                 is_pre_purchase = (
                     material_data.get("isPurchase")
                     if material_data.get("isPurchase")
+                    else None
+                )
+                material_second_type = (
+                    material_data.get("materialDetailType")
+                    if material_data.get("materialDetailType")
                     else None
                 )
                 material_type = "H"
