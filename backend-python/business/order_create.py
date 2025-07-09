@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request, send_file
-from regex import template
 from sqlalchemy.dialects.mysql import insert
 import pandas as pd
 import datetime
