@@ -28,16 +28,17 @@
                             <span>{{ shoeSize.label }}码到货数量：</span>
                             <el-input-number v-model="shoeSizeColumns[index].inboundQuantity"
                                 style="width: 150px; margin-right: 10px;" :min="0" :precision="5" :step="0.0001"
-                                size="small" @change="updateTotalShoes"></el-input-number>
+                                size="small" @change="updateTotalShoes" :disabled="isAmountInputBlock"></el-input-number>
                         </div>
                         <el-button size="small" type="primary" @click="autoSelectOrders">自动选择</el-button>
+                        <el-button size="small" type="primary" @click="revertInboundQuantityData">重置到货数量数据</el-button>
                         <span>材料单价：</span>
                         <el-input-number v-model="unitPrice" style="width: 150px;" :min="0" :precision="4"
                             :step="0.0001" size="small"></el-input-number>
                         <span>到货数量：</span>
                         <el-input-number v-model="totalInboundQuantity" style="width: 200px; margin-right: 10px;"
-                            :min="0" :precision="5" :step="0.0001" size="small"></el-input-number>
-                        <el-button size="small" type="primary" @click="reset">重置数据</el-button>
+                            :min="0" :precision="5" :step="0.0001" size="small" disabled></el-input-number>
+                        <el-button size="small" type="primary" @click="reset">重置自动分配表格数据</el-button>
                     </div>
                 </el-col>
             </el-row>
@@ -118,6 +119,7 @@ export default {
     emits: ['confirm', 'update-visible'],
     data() {
         return {
+            isAmountInputBlock: false,
             localVisible: this.visible,
             orderSelection: [],
             selectionPage: 0,
@@ -287,6 +289,7 @@ export default {
             this.bottomTableData = this.bottomTableData.filter(
                 item => !idSet.has(item.id)
             );
+            this.isAmountInputBlock = true;
         },
         resetVariables() {
             this.searchOrderRId = null
@@ -337,6 +340,7 @@ export default {
                 }
                 this.topTableData.push(remainObject)
             }
+            this.isAmountInputBlock = false;
             this.$emit("confirm", this.topTableData);
             this.handleClose();
         },
@@ -344,6 +348,13 @@ export default {
             this.$emit("update-visible", false);
             this.resetVariables();
             this.localVisible = false;
+        },
+        revertInboundQuantityData() {
+            this.shoeSizeColumns.forEach(item => {
+                item.inboundQuantity = 0;
+            });
+            this.isAmountInputBlock = false;
+            this.updateTotalShoes();
         },
     },
 }
