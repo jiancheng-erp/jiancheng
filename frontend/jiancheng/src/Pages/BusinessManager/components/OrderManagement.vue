@@ -1162,6 +1162,10 @@ export default {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
+            if (this.newOrderForm.supervisorId === '') {
+                ElMessage.error('未选择下发经理，不允许创建订单')
+                return
+            }
             this.orderCreationInfoVis = false
             this.orderCreationSecondInfoVis = true
             this.newOrderForm.orderShoeTypes.forEach((item) => {
