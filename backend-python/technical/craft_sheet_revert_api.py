@@ -157,11 +157,6 @@ def edit_revert_craft_sheet():
                 # Update Second BOM if it exists
                 if second_bom:
                     _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_id, bom_type=1)
-                if item_id:
-                    material_storage = db.session.query(MaterialStorage).filter(MaterialStorage.production_instruction_item_id == item_id).first()
-                    if material_storage:
-                        material_storage.craft_name = craft_name
-                        db.session.flush()
 
     # Delete Removed Items
     for existing_id in existing_items.keys():
