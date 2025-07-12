@@ -70,55 +70,13 @@
                     <el-table :data="props.row.shoes" :border="true">
                         <el-table-column label="工厂型号" prop="shoeRid" />
                         <el-table-column label="客户型号" prop="customerId" />
-                        <el-table-column label="一次BOM编号" prop="firstBom">
-                            <template #default="scope">
-                                <el-link
-                                    :disabled="scope.row.firstBom === 'N/A'"
-                                    :underline="false"
-                                    type="primary"
-                                    @click="handleFirstBomDetail(scope.row.firstBom)"
-                                >
-                                    {{ scope.row.firstBom }}
-                                </el-link>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="二次BOM编号" prop="secondBom">
-                            <template #default="scope">
-                                <el-link
-                                    :disabled="scope.row.secondBom === 'N/A'"
-                                    :underline="false"
-                                    type="primary"
-                                    @click="handleSecondBomDetail(scope.row.secondBom)"
-                                >
-                                    {{ scope.row.secondBom }}
-                                </el-link>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="一次采购订单编号" prop="firstOrder">
-                            <template #default="scope">
-                                <el-link
-                                    :disabled="scope.row.firstOrder === 'N/A'"
-                                    :underline="false"
-                                    type="primary"
-                                    @click="handlePurchaseOrderDetail(scope.row.firstOrder)"
-                                >
-                                    {{ scope.row.firstOrder }}
-                                </el-link>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="二次采购订单编号" prop="secondOrder">
-                            <template #default="scope">
-                                <el-link
-                                    :disabled="scope.row.secondOrder === 'N/A'"
-                                    :underline="false"
-                                    type="primary"
-                                    @click="handlePurchaseOrderDetail(scope.row.secondOrder)"
-                                >
-                                    {{ scope.row.secondOrder }}
-                                </el-link>
-                            </template>
-                        </el-table-column>
+                        <el-table-column label="业务下发时间" prop="bussinessEventTime" />
+                        <el-table-column label="投产指令单下发时间" prop="productionOrderIssueEventTime" />
+                        <el-table-column label="用量填写完成时间" prop="firstUsageInputIssueEventTime" />
+                        <el-table-column label="一次采购订单完成时间" prop="firstPurchaseOrderIssueEventTime" />
+                        <el-table-column label="二次采购订单完成时间" prop="secondPurchaseOrderIssueEventTime" />
                         <el-table-column prop="statuses" label="鞋型状态"></el-table-column>
+                        <el-table-column prop="purchaseStatus" label="采购状态"></el-table-column>
                     </el-table>
                 </template>
             </el-table-column>
