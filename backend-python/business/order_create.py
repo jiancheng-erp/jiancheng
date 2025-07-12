@@ -337,6 +337,8 @@ def order_next_step():
         )
         processor: EventProcessor = current_app.config["event_processor"]
         processor.processEvent(new_event)
+        db.session.add(new_event)
+        db.session.commit()
     message = f"订单已发出至总经理审核，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
     users = "070d09bbc28c2cec22535b7ec5d1316b"
     send_massage_to_users(message, users)

@@ -1289,6 +1289,11 @@ def get_order_full_info():
                     order_shoe_status_reference_names.split(" | ")
                 ),  # To hold the combined statuses as a string
                 "purchaseStatus": purchase_status_string.strip(" | "),  # Clean up trailing separator
+                "bussinessEventTime": "N/A",
+                "productionOrderIssueEventTime": "N/A",
+                "firstUsageInputIssueEventTime": "N/A",
+                "firstPurchaseOrderIssueEventTime": "N/A",
+                "secondPurchaseOrderIssueEventTime": "N/A",
             }
 
         # # Assign BOM based on bom_type
@@ -1317,7 +1322,71 @@ def get_order_full_info():
         order_data["shoes"] = list(
             order_data["shoes"].values()
         )  # Convert shoe dict to list
+        print(order_id)
+        all_order_event_times = (
+            db.session.query(Event).join(
+                Order, Event.event_order_id == Order.order_id
+            ).filter(
+                Order.order_id == order_id
+            ).all()
+        )
+        # bussiness event time : Event.operation_id == 13
+        business_event_times = [
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            for event in all_order_event_times
+            if event.operation_id == 15
+        ]
+        # production_order issue event time : Event.operation_id == 39
+        production_order_issue_event_times = [
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            for event in all_order_event_times
+            if event.operation_id == 39
+        ]
+        # first_usage_input_issue event time : Event.operation_id == 47
+        first_usage_input_issue_event_times = [
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            for event in all_order_event_times
+            if event.operation_id == 47
+        ]
+        # first_purchase_order_issue event time : Event.operation_id == 51
+        first_purchase_order_issue_event_times = [
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            for event in all_order_event_times
+            if event.operation_id == 51
+        ]
+        # second_usage_input_issue event time : Event.operation_id == 53
+        second_usage_input_issue_event_times = [
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            for event in all_order_event_times
+            if event.operation_id == 53
+        ]
+        for shoe in order_data["shoes"]:
+            shoe["bussinessEventTime"] = (
+                business_event_times[0] if business_event_times else "N/A"
+            )
+            shoe["productionOrderIssueEventTime"] = (
+                production_order_issue_event_times[0]
+                if production_order_issue_event_times
+                else "N/A"
+            )
+            shoe["firstUsageInputIssueEventTime"] = (
+                first_usage_input_issue_event_times[0]
+                if first_usage_input_issue_event_times
+                else "N/A"
+            )
+            shoe["firstPurchaseOrderIssueEventTime"] = (
+                first_purchase_order_issue_event_times[0]
+                if first_purchase_order_issue_event_times
+                else "N/A"
+            )
+            shoe["secondPurchaseInputIssueEventTime"] = (
+                second_usage_input_issue_event_times[0]
+                if second_usage_input_issue_event_times
+                else "N/A"
+            )
         result.append(order_data)
+
+        
 
     return jsonify({"result": result, "total": count_result})
 
