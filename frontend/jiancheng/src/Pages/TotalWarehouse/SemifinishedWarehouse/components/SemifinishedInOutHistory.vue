@@ -13,7 +13,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="6">
+        <el-col :span="6" v-if="role != 10" >
             <el-button v-if="isOutboundToggle == false" type="primary" @click="toggleOutbound">出库</el-button>
             <el-button v-if="isOutboundToggle == true" type="success" @click="outboundShoes">确认出库数量</el-button>
             <el-button v-if="isOutboundToggle == true" @click="toggleOutbound">取消</el-button>
@@ -46,7 +46,7 @@
             </el-button>
         </div>
     </div>
-    <el-table :data="bottomTableData" border stripe style="width: 100%; margin-bottom: 20px; height: 40vh"
+    <el-table :data="bottomTableData" border stripe style="width: 100%; margin-bottom: 20px; height: 55vh"
         @selection-change="handleBottomSelectionChange">
         <el-table-column v-if="isOutboundToggle" type="selection" width="55"></el-table-column>
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -194,6 +194,7 @@ import { ElMessage } from 'element-plus';
 export default {
     data() {
         return {
+            role: localStorage.getItem('role'),
             isRecordDialogVisible: false,
             orderNumberSearch: '',
             shoeNumberSearch: '',
