@@ -15,7 +15,7 @@
             <span>成品仓库存：{{ this.totalStock }}</span>
         </el-col>
     </el-row>
-    <el-table :data="tableData" border stripe height="600">
+    <el-table :data="tableData" border stripe height="500">
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
         <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
         <el-table-column prop="customerName" label="客户名称"></el-table-column>

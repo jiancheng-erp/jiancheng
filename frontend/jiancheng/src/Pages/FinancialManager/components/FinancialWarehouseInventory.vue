@@ -3,6 +3,12 @@
         <el-tab-pane label="总仓库存">
             <Inventory />
         </el-tab-pane>
+        <el-tab-pane label="半成品仓库库存">
+            <SemifinishedInOutHistory />
+        </el-tab-pane>
+        <el-tab-pane label="成品仓库库存">
+            <FinishedInOutHistory />
+        </el-tab-pane>
     </el-tabs>
 </template>
 
@@ -14,6 +20,8 @@ import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { ElRow } from 'element-plus'
 import Inventory from './FinancialInventory.vue'
 import OutboundRecords from './OutboundDetail.vue'
+import SemifinishedInOutHistory from '@/Pages/TotalWarehouse/SemifinishedWarehouse/components/SemifinishedInOutHistory.vue'
+import FinishedInOutHistory from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInOutHistory.vue'
 const { setAxiosToken } = useSetAxiosToken()
 const router = useRouter()
 
