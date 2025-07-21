@@ -389,7 +389,7 @@ def get_warehouse_inbound_summery():
     #          .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
     #                  .group_by(SPUMaterial.material_id ,SPUMaterial.material_model, InboundRecordDetail.unit_price)
     #                  )
-    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
+    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount), func.max(InboundRecordDetail.inbound_record_id).label("inbound_record_id"))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
              .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
              .join(SPUMaterial,MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
@@ -402,7 +402,8 @@ def get_warehouse_inbound_summery():
                       .join(Material, time_period_subquery.c.material_id == Material.material_id)
                       .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
                       .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
-                      .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                      .join(InboundRecord, InboundRecord.inbound_record_id == time_period_subquery.c.inbound_record_id)
+                      .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
                       )
     # inbound_record_summery_subquery = query.subquery()
     # response_query = (db.session.query(inbound_record_summery_subquery, MaterialStorage, Material, Supplier)
@@ -427,7 +428,7 @@ def get_warehouse_inbound_summery():
     total_count = response_query.distinct().count()
     response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_summary = []
-    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, material, warehouse_name, supplier in response_entities:
+    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum,inbound_record_id, material, warehouse_name, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = normalize_decimal(unit_price)
@@ -589,7 +590,7 @@ def create_inbound_summary_excel_and_download():
         query_compare_date = format_date((input_date_time + next_day_delta))
         inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= query_compare_date)
     inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
-    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount))
+    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount), func.max(InboundRecordDetail.inbound_record_id).label("inbound_record_id"))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
              .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
              .join(SPUMaterial,MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
@@ -602,7 +603,8 @@ def create_inbound_summary_excel_and_download():
                       .join(Material, time_period_subquery.c.material_id == Material.material_id)
                       .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
                       .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
-                      .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                      .join(InboundRecord, InboundRecord.inbound_record_id == time_period_subquery.c.inbound_record_id)
+                      .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
                       )
     if supplier_name_filter:
         logger.debug("supplier name filter")
@@ -620,7 +622,7 @@ def create_inbound_summary_excel_and_download():
         response_query = response_query.filter(time_period_subquery.c.order_rid.ilike(f"%{order_rid_filter}%"))
     response_entities = response_query.distinct().all()
     inbound_summary = []
-    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, material, warehouse_name, supplier in response_entities:
+    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, inbound_record_id, material, warehouse_name, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
         res['supplierName'] = supplier.supplier_name
         res['unitPrice'] = unit_price
