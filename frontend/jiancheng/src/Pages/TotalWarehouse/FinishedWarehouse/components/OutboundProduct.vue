@@ -2,19 +2,29 @@
     <el-row :gutter="20">
         <el-col :span="16" :offset="0">
             <el-input v-model="orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" class="search-input"/>
+                @clear="getTableData" class="search-input" />
             <el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" class="search-input"/>
+                @clear="getTableData" class="search-input" />
             <el-input v-model="orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" class="search-input"/>
+                @clear="getTableData" class="search-input" />
             <el-input v-model="customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="getTableData()"
-                @clear="getTableData" class="search-input"/>
+                @clear="getTableData" class="search-input" />
         </el-col>
-        <el-col :span="8" :offset="0">
-            <span>表格数据筛选：</span>
+    </el-row>
+    <el-row>
+        <el-col :span="12">
+            <span>审核状态筛选：</span>
             <el-radio-group v-model="selectedStatus" @change="getTableData">
-                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value"
-                    v-model="selectedStatus">
+                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value">
+                    {{ option.label }}
+                </el-radio-button>
+            </el-radio-group>
+        </el-col>
+        <el-col :span="12">
+            <span>仓库状态筛选：</span>
+            <el-radio-group v-model="selectedStorageStatus" @change="getTableData">
+                <el-radio-button v-for="option in storageStatusOptions" 
+                :key="option.value" :label="option.value">
                     {{ option.label }}
                 </el-radio-button>
             </el-radio-group>
@@ -23,10 +33,10 @@
     <el-row :gutter="20">
         <el-col :span="8" :offset="0">
             <el-button-group v-if="role == 20">
-                <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)">
+                <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)" :disabled="selectedStorageStatus === '已完成出库'">
                     批量出库
                 </el-button>
-                <el-button @click="toggleSelectionMode">
+                <el-button @click="toggleSelectionMode" :disabled="selectedStorageStatus === '已完成出库'">
                     {{ isMultipleSelection ? "退出" : "选择成品出库" }}
                 </el-button>
             </el-button-group>
@@ -42,7 +52,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="40vh">
+            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="50vh">
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column type="expand">
                     <template #default="{ row }">
@@ -63,12 +73,18 @@
                 <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
                 <el-table-column prop="currentStock" label="成品库存"></el-table-column>
                 <el-table-column prop="outboundedAmount" label="已出库数量"></el-table-column>
-                <el-table-column label="成品仓状态">
+                <el-table-column prop="storageStatus" label="仓库状态">
+                    <template #default="{ row }">
+                        <el-tag v-if="row.storageStatus == '未完成入库'" type="warning" disable-transitions>未完成入库</el-tag>
+                        <el-tag v-else-if="row.storageStatus == '已完成入库'" type="success" disable-transitions>已完成入库</el-tag>
+                        <el-tag v-else-if="row.storageStatus == '已完成出库'" type="success" disable-transitions>已完成出库</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="审核状态">
                     <template #default="{ row }">
                         <el-tag v-if="row.isOutboundAllowed == 0" type="warning" disable-transitions>业务部审核</el-tag>
                         <el-tag v-else-if="row.isOutboundAllowed == 1" type="warning" disable-transitions>总经理审核</el-tag>
                         <el-tag v-else-if="row.isOutboundAllowed == 2" type="success" disable-transitions>已批准</el-tag>
-                        <el-tag v-else-if="row.isOutboundAllowed == 3" type="success" disable-transitions>已完成出库</el-tag>
                     </template>
                 </el-table-column>
             </el-table>
@@ -198,9 +214,15 @@ export default {
                 { value: 0, label: "发货审核未下发" },
                 { value: 1, label: "总经理审核中" },
                 { value: 2, label: "已批准" },
-                { value: 3, label: "已完成出库" },
+            ],
+            storageStatusOptions: [
+                { value: null, label: "全部" },
+                { value: "未完成入库", label: "未完成入库" },
+                { value: "已完成入库", label: "已完成入库" },
+                { value: "已完成出库", label: "已完成出库" },
             ],
             selectedStatus: null,
+            selectedStorageStatus: '已完成入库',
             isOpenShoeSizeDialogVisible: false,
             activeStockTab: null,
         }
@@ -219,6 +241,11 @@ export default {
         this.getTableData()
     },
     methods: {
+        jumpToAllForAuditStatus() {
+            if (this.selectedStorageStatus == "已完成出库") {
+                this.selectedStatus = null
+            }
+        },
         displayOrdersbyRole() {
             if (this.role == 4 || this.role == 21) {
                 this.selectedStatus = 0
@@ -344,6 +371,7 @@ export default {
             console.log(this.outboundForm)
         },
         async getTableData() {
+            this.jumpToAllForAuditStatus();
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
@@ -351,7 +379,8 @@ export default {
                 "orderCId": this.orderCIdSearch,
                 "customerName": this.customerNameSearch,
                 "customerBrand": this.customerBrandSearch,
-                "approvalStatus": this.selectedStatus
+                "approvalStatus": this.selectedStatus,
+                "storageStatus": this.selectedStorageStatus
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getproductoverview`, { params })
             this.tableData = response.data.result
@@ -399,6 +428,4 @@ export default {
     }
 }
 </script>
-<style>
-
-</style>
+<style></style>

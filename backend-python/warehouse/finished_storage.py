@@ -69,9 +69,7 @@ def get_finished_in_out_overview():
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
         )
     if storage_status and storage_status != "":
-        query = query.filter(
-            FinishedShoeStorage.finished_status == int(storage_status)
-        )
+        query = query.filter(FinishedShoeStorage.finished_status == int(storage_status))
     if order_cid and order_cid != "":
         query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
     if customer_brand and customer_brand != "":
@@ -140,15 +138,14 @@ def get_product_overview():
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
     approval_status = request.args.get("approvalStatus")
+    storage_status = request.args.get("storageStatus")
     order_amount_subquery = (
         db.session.query(
             Order.order_id,
             func.sum(OrderShoeBatchInfo.total_amount).label("total_amount"),
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-        .join(
-            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
-        )
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(
             OrderShoeBatchInfo,
             OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
@@ -160,12 +157,16 @@ def get_product_overview():
     finished_amount_subquery = (
         db.session.query(
             Order.order_id,
+            func.sum(FinishedShoeStorage.finished_estimated_amount).label(
+                "finished_estimated_amount"
+            ),
+            func.sum(FinishedShoeStorage.finished_actual_amount).label(
+                "finished_actual_amount"
+            ),
             func.sum(FinishedShoeStorage.finished_amount).label("finished_amount"),
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-        .join(
-            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
-        )
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(
             FinishedShoeStorage,
             FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
@@ -177,17 +178,18 @@ def get_product_overview():
     outbounded_amount_subquery = (
         db.session.query(
             Order.order_id,
-            func.sum(ShoeOutboundRecordDetail.outbound_amount).label("outbounded_amount"),
+            func.coalesce(
+                func.sum(ShoeOutboundRecordDetail.outbound_amount),
+                0,
+            ).label("outbounded_amount"),
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-        .join(
-            OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id
-        )
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(
             FinishedShoeStorage,
             FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
-        .join(
+        .outerjoin(
             ShoeOutboundRecordDetail,
             ShoeOutboundRecordDetail.finished_shoe_storage_id
             == FinishedShoeStorage.finished_shoe_id,
@@ -200,6 +202,8 @@ def get_product_overview():
             Order,
             Customer,
             order_amount_subquery.c.total_amount,
+            finished_amount_subquery.c.finished_estimated_amount,
+            finished_amount_subquery.c.finished_actual_amount,
             finished_amount_subquery.c.finished_amount,
             outbounded_amount_subquery.c.outbounded_amount,
         )
@@ -214,7 +218,7 @@ def get_product_overview():
             finished_amount_subquery,
             finished_amount_subquery.c.order_id == Order.order_id,
         )
-        .outerjoin(
+        .join(
             outbounded_amount_subquery,
             outbounded_amount_subquery.c.order_id == Order.order_id,
         )
@@ -230,11 +234,45 @@ def get_product_overview():
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if approval_status and approval_status != "":
         query = query.filter(Order.is_outbound_allowed == approval_status)
+
+    if storage_status == "已完成出库":
+        query = query.filter(
+            outbounded_amount_subquery.c.outbounded_amount
+            >= finished_amount_subquery.c.finished_estimated_amount
+        )
+    elif storage_status == "已完成入库":
+        query = query.filter(
+            finished_amount_subquery.c.finished_actual_amount
+            >= finished_amount_subquery.c.finished_estimated_amount,
+            outbounded_amount_subquery.c.outbounded_amount
+            < finished_amount_subquery.c.finished_estimated_amount,
+        )
+    elif storage_status == "未完成入库":
+        query = query.filter(
+            finished_amount_subquery.c.finished_actual_amount
+            < finished_amount_subquery.c.finished_estimated_amount
+        )
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
     for row in response:
-        order, customer, order_amount, current_stock, outbounded_amount = row
+        (
+            order,
+            customer,
+            order_amount,
+            estimated_amount,
+            actual_amount,
+            current_stock,
+            outbounded_amount,
+        ) = row
+        if outbounded_amount >= estimated_amount:
+            storage_status = "已完成出库"
+        elif actual_amount >= estimated_amount:
+            storage_status = "已完成入库"
+        elif actual_amount < estimated_amount:
+            storage_status = "未完成入库"
+        else:
+            storage_status = "未知状态"
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -245,8 +283,9 @@ def get_product_overview():
             "endDate": format_date(order.end_date),
             "orderAmount": order_amount,
             "currentStock": current_stock,
-            "outboundedAmount": outbounded_amount if outbounded_amount else 0,
+            "outboundedAmount": outbounded_amount,
             "orderShoeTable": [],
+            "storageStatus": storage_status,
             "isOutboundAllowed": order.is_outbound_allowed,
         }
         result.append(obj)
@@ -547,7 +586,6 @@ def outbound_finished():
     for order_id, storages in storage_map.items():
         if all(storage.finished_status == 2 for storage in storages):
             order = order_map[order_id]
-            order.is_outbound_allowed = 3  # Mark order as completed
             # All storages for this order are finished
             try:
                 for operation in [30, 31]:
@@ -1055,17 +1093,34 @@ def delete_finished_inbound_detail():
         return jsonify({"message": "参数错误"}), 400
 
     response = (
-        db.session.query(ShoeInboundRecord, ShoeInboundRecordDetail, FinishedShoeStorage, ShoeOutboundRecordDetail)
-        .join(ShoeInboundRecordDetail, ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id)
-        .join(FinishedShoeStorage, FinishedShoeStorage.finished_shoe_id == ShoeInboundRecordDetail.finished_shoe_storage_id)
-        .outerjoin(ShoeOutboundRecordDetail, ShoeOutboundRecordDetail.finished_shoe_storage_id == FinishedShoeStorage.finished_shoe_id)
+        db.session.query(
+            ShoeInboundRecord,
+            ShoeInboundRecordDetail,
+            FinishedShoeStorage,
+            ShoeOutboundRecordDetail,
+        )
+        .join(
+            ShoeInboundRecordDetail,
+            ShoeInboundRecord.shoe_inbound_record_id
+            == ShoeInboundRecordDetail.shoe_inbound_record_id,
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.finished_shoe_id
+            == ShoeInboundRecordDetail.finished_shoe_storage_id,
+        )
+        .outerjoin(
+            ShoeOutboundRecordDetail,
+            ShoeOutboundRecordDetail.finished_shoe_storage_id
+            == FinishedShoeStorage.finished_shoe_id,
+        )
         .filter(ShoeInboundRecordDetail.record_detail_id == detail_id)
         .first()
     )
 
     if not response:
         return jsonify({"message": "入库记录不存在"}), 404
-    
+
     record, detail, storage, outbound_detail = response
 
     if outbound_detail:
@@ -1097,7 +1152,7 @@ def delete_finished_inbound_detail():
         shoe_inbound_record_id=reversal_record.shoe_inbound_record_id,
         finished_shoe_storage_id=storage.finished_shoe_id,
         inbound_amount=-amount,  # 负数表示撤回
-        is_deleted=0
+        is_deleted=0,
     )
     db.session.add(new_detail)
     db.session.commit()
