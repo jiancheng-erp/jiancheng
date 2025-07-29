@@ -357,8 +357,9 @@ def get_all_material_storage():
         db.session.query(
             MaterialType.material_type_name,
             Material.material_name,
-            MaterialStorage.material_id.label("material_id"),
-            MaterialStorage.material_specification.label("specification"),
+            Material.material_id.label("material_id"),
+            SPUMaterial.material_specification.label("specification"),
+            SPUMaterial.material_model.label("material_model"),
             MaterialWarehouse.material_warehouse_name,
             Material.material_unit,
             MaterialStorage.current_amount.label("material_storage_amount"),
@@ -368,7 +369,8 @@ def get_all_material_storage():
             Order.order_rid,
         )
         .join(Material, MaterialType.material_type_id == Material.material_type_id)
-        .join(MaterialStorage, Material.material_id == MaterialStorage.material_id)
+        .join(SPUMaterial, Material.material_id == SPUMaterial.material_id)
+        .join(MaterialStorage, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
         .join(
             MaterialWarehouse,
             MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id,
@@ -409,6 +411,7 @@ def get_all_material_storage():
                 "materialType": material_storage.material_type_name,
                 "materialName": material_storage.material_name,
                 "materialSpecification": material_storage.specification,
+                "materialModel": material_storage.material_model,
                 "warehouseName": material_storage.material_warehouse_name,
                 "unit": material_storage.material_unit,
                 "amountRemain": round(material_storage.material_storage_amount, 3),

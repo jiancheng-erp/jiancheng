@@ -432,7 +432,6 @@ export default {
         this.getAllFactoryName()
         this.getAllWarehouseName()
         this.handleTypeToOptions()
-        this.getMaterialStorageData()
         this.handleCurrentChange1(1)
         this.handleCurrentChange2(1)
     },
