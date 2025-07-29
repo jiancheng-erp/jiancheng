@@ -166,7 +166,6 @@ export default {
         }
     },
     async mounted() {
-        this.getMaterialStorageData()
         this.handleCurrentChange2(1)
     },
     methods: {
