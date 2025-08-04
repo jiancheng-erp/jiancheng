@@ -33,27 +33,45 @@ def get_all_designers():
         else_=Shoe.shoe_designer,
     )
 
+    # 👉 子查询：每个 order_shoe_type_id 对应的总业务量
+    batch_amount_subquery = (
+        db.session.query(
+            OrderShoeBatchInfo.order_shoe_type_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_business_amount")
+        )
+        .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+        .subquery()
+    )
+
+    # 👉 子查询：每个 order_shoe_type_id 对应的成品数量（一般是一条，但为安全起见）
+    finished_amount_subquery = (
+        db.session.query(
+            FinishedShoeStorage.order_shoe_type_id,
+            func.max(FinishedShoeStorage.finished_actual_amount).label("finished_amount")
+        )
+        .group_by(FinishedShoeStorage.order_shoe_type_id)
+        .subquery()
+    )
+
     query = (
         db.session.query(
             designer_group.label("designer"),
             Shoe.shoe_department_id.label("department"),
             func.count(distinct(Order.order_id)).label("totalOrderCount"),
-            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("totalShoeCountBussiness"),
-            func.coalesce(func.sum(FinishedShoeStorage.finished_actual_amount), 0).label("totalShoeCountProduct"),
+            func.coalesce(func.sum(batch_amount_subquery.c.total_business_amount), 0).label("totalShoeCountBussiness"),
+            func.coalesce(func.sum(finished_amount_subquery.c.finished_amount), 0).label("totalShoeCountProduct"),
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Order, OrderShoe.order_id == Order.order_id)
-        .outerjoin(OrderShoeBatchInfo, OrderShoeType.order_shoe_type_id == OrderShoeBatchInfo.order_shoe_type_id)
-        .outerjoin(FinishedShoeStorage, OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id)
+        .outerjoin(batch_amount_subquery, OrderShoeType.order_shoe_type_id == batch_amount_subquery.c.order_shoe_type_id)
+        .outerjoin(finished_amount_subquery, OrderShoeType.order_shoe_type_id == finished_amount_subquery.c.order_shoe_type_id)
         .filter(Shoe.shoe_department_id == user_department)
     )
 
-    # 🧠 精准处理筛选条件
     if designer_keyword:
         query = query.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
-
     if start_date:
         query = query.filter(Order.start_date >= start_date)
     if end_date:
@@ -77,9 +95,6 @@ def get_all_designers():
             } for row in results
         ]
     }), 200
-
-
-
 
 
 @dev_performance_bp.route("/devproductionorder/getallshoeswithadesigner", methods=["GET"])
@@ -108,6 +123,15 @@ def get_all_shoes_with_designer():
         end_date = f"{year}-12-31"
     elif month:
         start_date, end_date = get_month_date_range(month)
+        
+    batch_amount_subquery = (
+        db.session.query(
+            OrderShoeBatchInfo.order_shoe_type_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_business_amount")
+        )
+        .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+        .subquery()
+    )
 
     query = (
         db.session.query(
@@ -126,16 +150,16 @@ def get_all_shoes_with_designer():
             Order.customer_id,
             Order.salesman_id,
             Order.supervisor_id,
-            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("business_amount"),
-            func.coalesce(func.sum(FinishedShoeStorage.finished_actual_amount), 0).label("product_amount"),
+            func.coalesce(func.max(batch_amount_subquery.c.total_business_amount), 0).label("business_amount"),
+            func.coalesce(func.max(FinishedShoeStorage.finished_actual_amount), 0).label("product_amount"),
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(Color, ShoeType.color_id == Color.color_id)
         .join(OrderShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
         .join(Order, Order.order_id == OrderShoe.order_id)
-        .outerjoin(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .outerjoin(FinishedShoeStorage, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .outerjoin(batch_amount_subquery, batch_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .filter(designer_filter, Shoe.shoe_department_id == user_department)
     )
 
