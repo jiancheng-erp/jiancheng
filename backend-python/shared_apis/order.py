@@ -1505,7 +1505,7 @@ def get_active_order_shoes():
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-        .filter(OrderStatus.order_current_status == IN_PRODUCTION_ORDER_NUMBER)
+        .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
         .order_by(Order.order_rid.asc())
         .all()
     )
