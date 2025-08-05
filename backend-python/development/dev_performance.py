@@ -28,12 +28,7 @@ def get_all_designers():
     year = request.args.get("year", "").strip()
     month = request.args.get("month", "").strip()
 
-    designer_group = case(
-        (func.ifnull(Shoe.shoe_designer, "") == "", "设计师信息空缺"),
-        else_=Shoe.shoe_designer,
-    )
-
-    # 👉 子查询：每个 order_shoe_type_id 对应的总业务量
+    # 子查询：每个 order_shoe_type_id 对应的总业务量
     batch_amount_subquery = (
         db.session.query(
             OrderShoeBatchInfo.order_shoe_type_id,
@@ -43,58 +38,86 @@ def get_all_designers():
         .subquery()
     )
 
-    # 👉 子查询：每个 order_shoe_type_id 对应的成品数量（一般是一条，但为安全起见）
-    finished_amount_subquery = (
+    # 子查询：每个 order_shoe_type_id 对应的生产量，仅 team=2
+    production_amount_subquery = (
         db.session.query(
-            FinishedShoeStorage.order_shoe_type_id,
-            func.max(FinishedShoeStorage.finished_actual_amount).label("finished_amount")
+            OrderShoeProductionAmount.order_shoe_type_id,
+            func.sum(OrderShoeProductionAmount.total_production_amount).label("total_production_amount")
         )
-        .group_by(FinishedShoeStorage.order_shoe_type_id)
+        .filter(OrderShoeProductionAmount.production_team == 2)
+        .group_by(OrderShoeProductionAmount.order_shoe_type_id)
         .subquery()
     )
 
-    query = (
+    # 第一层：基础子查询，按 order_shoe_type 展开
+    base_subquery = (
         db.session.query(
-            designer_group.label("designer"),
+            case(
+                (func.ifnull(Shoe.shoe_designer, "") == "", "设计师信息空缺"),
+                else_=Shoe.shoe_designer
+            ).label("designer"),
             Shoe.shoe_department_id.label("department"),
-            func.count(distinct(Order.order_id)).label("totalOrderCount"),
-            func.coalesce(func.sum(batch_amount_subquery.c.total_business_amount), 0).label("totalShoeCountBussiness"),
-            func.coalesce(func.sum(finished_amount_subquery.c.finished_amount), 0).label("totalShoeCountProduct"),
+            Order.order_id.label("order_id"),
+            func.coalesce(batch_amount_subquery.c.total_business_amount, 0).label("business_amount"),
+            production_amount_subquery.c.total_production_amount.label("production_amount")
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
-        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
-        .join(Order, OrderShoe.order_id == Order.order_id)
-        .outerjoin(batch_amount_subquery, OrderShoeType.order_shoe_type_id == batch_amount_subquery.c.order_shoe_type_id)
-        .outerjoin(finished_amount_subquery, OrderShoeType.order_shoe_type_id == finished_amount_subquery.c.order_shoe_type_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
+        .outerjoin(batch_amount_subquery, batch_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .outerjoin(production_amount_subquery, production_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .filter(Shoe.shoe_department_id == user_department)
     )
 
+    # 时间与设计师筛选
     if designer_keyword:
-        query = query.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
-    if start_date:
-        query = query.filter(Order.start_date >= start_date)
-    if end_date:
-        query = query.filter(Order.start_date <= end_date)
+        base_subquery = base_subquery.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
     if year:
-        query = query.filter(func.year(Order.start_date) == int(year))
-    if month:
-        query = query.filter(func.date_format(Order.start_date, "%Y-%m") == month)
+        base_subquery = base_subquery.filter(func.year(Order.start_date) == int(year))
+    elif month:
+        base_subquery = base_subquery.filter(func.date_format(Order.start_date, "%Y-%m") == month)
+    else:
+        if start_date:
+            base_subquery = base_subquery.filter(Order.start_date >= start_date)
+        if end_date:
+            base_subquery = base_subquery.filter(Order.start_date <= end_date)
 
-    results = query.group_by(designer_group, Shoe.shoe_department_id).all()
+    base_subquery = base_subquery.subquery()
 
-    return jsonify({
-        "status": "success",
-        "data": [
-            {
-                "designer": row.designer,
-                "department": row.department,
-                "totalOrderCount": row.totalOrderCount,
-                "totalShoeCountBussiness": row.totalShoeCountBussiness,
-                "totalShoeCountProduct": row.totalShoeCountProduct
-            } for row in results
-        ]
-    }), 200
+    # 第二层：按设计师聚合
+    final_query = (
+        db.session.query(
+            base_subquery.c.designer,
+            base_subquery.c.department,
+            func.count(distinct(base_subquery.c.order_id)).label("totalOrderCount"),
+            func.sum(base_subquery.c.business_amount).label("totalShoeCountBussiness"),
+            func.sum(
+                case(
+                    (base_subquery.c.production_amount != None, base_subquery.c.production_amount),
+                    else_=base_subquery.c.business_amount
+                )
+            ).label("totalShoeCountProduct")
+        )
+        .group_by(base_subquery.c.designer, base_subquery.c.department)
+    )
+
+    results = final_query.all()
+
+    response = [
+        {
+            "designer": row.designer,
+            "department": row.department,
+            "totalOrderCount": row.totalOrderCount,
+            "totalShoeCountBussiness": row.totalShoeCountBussiness,
+            "totalShoeCountProduct": row.totalShoeCountProduct
+        }
+        for row in results
+    ]
+
+    return jsonify({"status": "success", "data": response}), 200
+
+
 
 
 @dev_performance_bp.route("/devproductionorder/getallshoeswithadesigner", methods=["GET"])
@@ -123,7 +146,8 @@ def get_all_shoes_with_designer():
         end_date = f"{year}-12-31"
     elif month:
         start_date, end_date = get_month_date_range(month)
-        
+
+    # 子查询：业务量按 order_shoe_type_id 聚合
     batch_amount_subquery = (
         db.session.query(
             OrderShoeBatchInfo.order_shoe_type_id,
@@ -133,6 +157,18 @@ def get_all_shoes_with_designer():
         .subquery()
     )
 
+    # 子查询：生产量，仅限 production_team = 2
+    production_amount_subquery = (
+        db.session.query(
+            OrderShoeProductionAmount.order_shoe_type_id,
+            func.sum(OrderShoeProductionAmount.total_production_amount).label("total_production_amount")
+        )
+        .filter(OrderShoeProductionAmount.production_team == 2)
+        .group_by(OrderShoeProductionAmount.order_shoe_type_id)
+        .subquery()
+    )
+
+    # 主查询
     query = (
         db.session.query(
             Shoe.shoe_id,
@@ -151,15 +187,16 @@ def get_all_shoes_with_designer():
             Order.salesman_id,
             Order.supervisor_id,
             func.coalesce(func.max(batch_amount_subquery.c.total_business_amount), 0).label("business_amount"),
-            func.coalesce(func.max(FinishedShoeStorage.finished_actual_amount), 0).label("product_amount"),
+            func.coalesce(func.max(production_amount_subquery.c.total_production_amount), 0).label("product_amount"),
+
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(Color, ShoeType.color_id == Color.color_id)
         .join(OrderShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
         .join(Order, Order.order_id == OrderShoe.order_id)
-        .outerjoin(FinishedShoeStorage, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .outerjoin(batch_amount_subquery, batch_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .outerjoin(production_amount_subquery, production_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .filter(designer_filter, Shoe.shoe_department_id == user_department)
     )
 
@@ -190,6 +227,7 @@ def get_all_shoes_with_designer():
 
     results = query.all()
 
+    # 数据结构组装
     shoe_map = {}
     counted_pairs = set()
 
@@ -219,6 +257,7 @@ def get_all_shoes_with_designer():
                 "orders": []
             }
         shoe_map[shoe_key]["totalOrderCountColor"] += 1
+        product_amount = row.product_amount if (row.product_amount is not None and row.product_amount != 0) else row.business_amount
 
         shoe_map[shoe_key]["colors"][color_key]["orders"].append({
             "orderId": row.order_id,
@@ -230,14 +269,14 @@ def get_all_shoes_with_designer():
             "salesmanId": row.salesman_id,
             "supervisorId": row.supervisor_id,
             "businessAmount": row.business_amount,
-            "productAmount": row.product_amount
+            "productAmount": product_amount
         })
 
         if order_pair_key not in counted_pairs:
             counted_pairs.add(order_pair_key)
             shoe_map[shoe_key]["totalOrderCount"] += 1
         shoe_map[shoe_key]["totalShoeCountBussiness"] += row.business_amount
-        shoe_map[shoe_key]["totalShoeCountProduct"] += row.product_amount
+        shoe_map[shoe_key]["totalShoeCountProduct"] += product_amount
 
     final_data = []
     for shoe in shoe_map.values():
@@ -245,6 +284,7 @@ def get_all_shoes_with_designer():
         final_data.append(shoe)
 
     return jsonify({"status": "success", "data": final_data}), 200
+
 
 
 import calendar
