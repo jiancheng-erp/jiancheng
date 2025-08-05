@@ -23,6 +23,18 @@
                                 <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                                 <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
+                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{
+                                    orderData.currentOrderShoeStatus
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{
+                                    orderData.previousOrderShoeStatus
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="前序下发时间" align="center">{{
+                                    orderData.previousOrderShoeStatusTime
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="迟滞时间" align="center">{{
+                                    orderData.delayTime
+                                    }}</el-descriptions-item>
                             </el-descriptions>
                         </el-col>
                     </el-row>
@@ -2070,7 +2082,7 @@ export default {
             this.materialNameOptions = response.data
         },
         async getOrderInfo() {
-            const response = await axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`)
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}&status=0`)
             this.orderData = response.data
             console.log(this.orderData)
             this.updateArrowKey += 1

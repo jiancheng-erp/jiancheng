@@ -1,3 +1,4 @@
+from numpy import character
 import constants
 import time
 from app_config import db
@@ -363,6 +364,7 @@ def get_on_mount():
 @order_bp.route("/order/getorderInfo", methods=["GET"])
 def get_order_info():
     order_id = request.args.get("orderid")
+    current_status = request.args.get("status", None)
     entities = (
         db.session.query(Order, Customer, OrderStatus)
         .filter(Order.order_id == order_id)
@@ -372,6 +374,36 @@ def get_order_info():
     )
     formatted_start_date = entities.Order.start_date.strftime("%Y-%m-%d")
     formatted_end_date = entities.Order.end_date.strftime("%Y-%m-%d")
+    status_mapping = {
+        "0":  {"operation_id": 17, "previous_status": "订单总经理确认", "current_status": "投产指令单填写"},
+        "6":  {"operation_id": 47, "previous_status": "一次用量填写", "current_status": "一次采购订单填写"},
+        "4":  {"operation_id": 39, "previous_status": "投产指令单填写", "current_status": "一次用量填写"},
+        "7":  {"operation_id": 47, "previous_status": "一次用量填写", "current_status": "二次采购订单填写"},
+        "9":  {"operation_id": 39, "previous_status": "投产指令单填写", "current_status": "工艺单填写"},
+        "11": {"operation_id": 57, "previous_status": "工艺单填写", "current_status": "二次用量填写"},
+        "13": {"operation_id": 61, "previous_status": "二次用量填写", "current_status": "二次用量(BOM)审批"},
+    }
+
+    if current_status is not None and current_status in status_mapping:
+        mapping = status_mapping[current_status]
+        event = db.session.query(Event).filter(
+            Event.event_order_id == entities.Order.order_id,
+            Event.operation_id == mapping["operation_id"]
+        ).first()
+
+        previous_status_time = (
+            event.handle_time.strftime("%Y-%m-%d %H:%M:%S")
+            if event else "N/A"
+        )
+        previous_status = mapping["previous_status"]
+        current_shoe_status = mapping["current_status"]
+        #计算迟滞时间 = 当前时间-处理时间，转换为合适表达方式(小时/天)
+        delay_time = datetime.now() - event.handle_time if event else None
+        if delay_time:
+            if delay_time.days > 0:
+                delay_time_str = f"{delay_time.days}天"
+            else:
+                delay_time_str = f"{delay_time.seconds // 3600}小时"
     result = {
         "orderId": entities.Order.order_rid,
         "orderDBId": entities.Order.order_id,
@@ -392,6 +424,10 @@ def get_order_info():
         "packagingStatus": (
             entities.Order.packaging_status if entities.Order.packaging_status else "N/A"
         ),
+        "previousOrderShoeStatus": previous_status if current_status is not None else "N/A",
+        "previousOrderShoeStatusTime": previous_status_time if current_status is not None else "N/A",
+        "currentOrderShoeStatus": current_shoe_status if current_status is not None else "N/A",
+        "delayTime": delay_time_str if current_status is not None and delay_time else "N/A",
     }
     return jsonify(result)
 

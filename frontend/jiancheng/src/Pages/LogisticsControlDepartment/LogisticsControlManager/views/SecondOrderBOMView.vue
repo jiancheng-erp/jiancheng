@@ -52,6 +52,18 @@
                         <el-descriptions-item label="尺码数量对照表" align="center">
                             <el-button type="primary" size="default" @click="openSizeComparisonDialog">查看</el-button>
                         </el-descriptions-item>
+                        <el-descriptions-item label="订单鞋型当前状态" align="center">{{
+                            orderData.currentOrderShoeStatus
+                            }}</el-descriptions-item>
+                        <el-descriptions-item label="前序订单鞋型状态" align="center">{{
+                            orderData.previousOrderShoeStatus
+                            }}</el-descriptions-item>
+                        <el-descriptions-item label="前序下发时间" align="center">{{
+                            orderData.previousOrderShoeStatusTime
+                            }}</el-descriptions-item>
+                        <el-descriptions-item label="迟滞时间" align="center">{{
+                            orderData.delayTime
+                            }}</el-descriptions-item>
                         <el-descriptions-item label="退回订单" align="center">
                             <el-button type="danger" size="default" @click="openReturnOrderDialog">退回流程</el-button>
                         </el-descriptions-item>
@@ -926,7 +938,7 @@ export default {
         },
         async getOrderInfo() {
             const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}`
+                `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}&status=7`
             )
             this.orderData = response.data
         },
