@@ -22,6 +22,18 @@
                                 <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
                                 <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
+                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{
+                                    orderData.currentOrderShoeStatus
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{
+                                    orderData.previousOrderShoeStatus
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="前序下发时间" align="center">{{
+                                    orderData.previousOrderShoeStatusTime
+                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="迟滞时间" align="center">{{
+                                    orderData.delayTime
+                                    }}</el-descriptions-item>
                                 <el-descriptions-item label="退回订单" align="center">
                                     <el-button type="danger" size="default" @click="openReturnOrderDialog">退回流程</el-button>
                                 </el-descriptions-item>
@@ -467,7 +479,7 @@ export default {
             this.assetFilterTable = this.assetTable
         },
         async getOrderInfo() {
-            const response = await this.$axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.$props.orderId}`)
+            const response = await this.$axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.$props.orderId}&status=4`)
             this.orderData = response.data
             console.log(this.orderData)
             this.updateArrowKey += 1
