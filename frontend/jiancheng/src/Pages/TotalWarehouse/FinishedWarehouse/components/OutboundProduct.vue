@@ -33,18 +33,18 @@
     <el-row :gutter="20">
         <el-col :span="8" :offset="0">
             <el-button-group v-if="role == 20">
-                <el-button v-if="isMultipleSelection" @click="openOperationDialog(1)" :disabled="selectedStorageStatus === '已完成出库'">
+                <el-button type="warning" v-if="isMultipleSelection" @click="openOperationDialog(1)" :disabled="selectedStorageStatus === '已完成出库'">
                     批量出库
                 </el-button>
-                <el-button @click="toggleSelectionMode" :disabled="selectedStorageStatus === '已完成出库'">
+                <el-button type="primary" @click="toggleSelectionMode" :disabled="selectedStorageStatus === '已完成出库'">
                     {{ isMultipleSelection ? "退出" : "选择成品出库" }}
                 </el-button>
             </el-button-group>
             <el-button-group v-else>
-                <el-button v-if="isMultipleSelection" @click="approveOutbound">
+                <el-button type="warning" v-if="isMultipleSelection" @click="approveOutbound">
                     批准出库
                 </el-button>
-                <el-button @click="toggleSelectionMode">
+                <el-button type="primary" @click="toggleSelectionMode">
                     {{ isMultipleSelection ? "退出" : "选择订单" }}
                 </el-button>
             </el-button-group>

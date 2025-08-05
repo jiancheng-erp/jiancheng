@@ -64,7 +64,6 @@
                     isBack: true,
                     isEsc: true,
                     editMode: 'insert',
-                    enterMethod: customeEnterMethod,
                 }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow height="500">
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
@@ -161,8 +160,8 @@
         </el-col>
     </el-row>
 
-    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis" :searchParams="searchParams"
-        @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
+    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis"
+        :searchParams="searchParams" @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
     <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis" :searched-size-materials="searchedSizeMaterials"
         @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
@@ -504,6 +503,11 @@ export default {
             this.rejectedPage = true
         },
         handleKeydown($event) {
+            // Ctrl + Shift + X to add a new row
+            if (event.ctrlKey && event.shiftKey && event.key === 'X') {
+                this.addRow()
+            }
+            // F4 to view order material
             let activeCell = this.$refs.tableRef.getEditRecord()
             if ($event.key === 'F4' && activeCell && activeCell.row) {
                 if (!activeCell.row.orderRId) {
@@ -512,23 +516,6 @@ export default {
                 }
                 this.currentRow = activeCell.row
                 this.isMaterialLogisticVis = true
-            }
-        },
-        customeEnterMethod(params) {
-            const rowIndex = params.rowIndex;
-            const column = params.column;
-            if (rowIndex == this.materialTableData.length - 1) {
-                this.addRow()
-                // Assume you have a ref to the table
-                const $table = this.$refs.tableRef;
-
-                // Get current active cell
-                this.$nextTick(() => {
-                    const nextRow = $table.getData()[rowIndex + 1];
-                    $table.setEditCell(nextRow, column);
-                    $table.clearEdit();
-                });
-                return false
             }
         },
         async getMaterialTypeOptions() {
