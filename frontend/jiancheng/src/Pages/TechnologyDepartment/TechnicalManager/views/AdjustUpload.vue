@@ -25,18 +25,10 @@
                                 <el-descriptions-item label="前序处理部门">{{ testOrderData.prevDepart }}</el-descriptions-item>
                                 <el-descriptions-item label="前序处理人">{{ testOrderData.prevUser }}</el-descriptions-item> -->
                                 <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
-                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{
-                                    orderData.currentOrderShoeStatus
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{
-                                    orderData.previousOrderShoeStatus
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="前序下发时间" align="center">{{
-                                    orderData.previousOrderShoeStatusTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="迟滞时间" align="center">{{
-                                    orderData.delayTime
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{ orderData.currentOrderShoeStatus }}</el-descriptions-item>
+                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{ orderData.previousOrderShoeStatus }}</el-descriptions-item>
+                                <el-descriptions-item label="前序下发时间" align="center">{{ orderData.previousOrderShoeStatusTime }}</el-descriptions-item>
+                                <el-descriptions-item label="迟滞时间" align="center">{{ orderData.delayTime }}</el-descriptions-item>
                                 <el-descriptions-item label="退回订单" align="center">
                                     <el-button type="danger" size="default" @click="openReturnOrderDialog">退回流程</el-button>
                                 </el-descriptions-item>
@@ -276,6 +268,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -379,6 +374,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -480,6 +478,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -580,6 +581,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -680,6 +684,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -791,6 +798,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)" :disabled="row.materialType === '烫底'"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
