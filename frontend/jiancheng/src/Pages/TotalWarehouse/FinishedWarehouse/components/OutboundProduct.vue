@@ -14,17 +14,16 @@
     <el-row>
         <el-col :span="12">
             <span>审核状态筛选：</span>
-            <el-radio-group v-model="selectedStatus" @change="getTableData">
-                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value">
+            <el-radio-group v-model="auditStatusNum" @change="getTableData">
+                <el-radio-button v-for="option in auditStatusOptions" :label="option.value">
                     {{ option.label }}
                 </el-radio-button>
             </el-radio-group>
         </el-col>
         <el-col :span="12">
             <span>仓库状态筛选：</span>
-            <el-radio-group v-model="selectedStorageStatus" @change="getTableData">
-                <el-radio-button v-for="option in storageStatusOptions" 
-                :key="option.value" :label="option.value">
+            <el-radio-group v-model="storageStatusNum" @change="getTableData">
+                <el-radio-button v-for="option in storageStatusOptions" :label="option.value">
                     {{ option.label }}
                 </el-radio-button>
             </el-radio-group>
@@ -33,10 +32,12 @@
     <el-row :gutter="20">
         <el-col :span="8" :offset="0">
             <el-button-group v-if="role == 20">
-                <el-button type="warning" v-if="isMultipleSelection" @click="openOperationDialog(1)" :disabled="selectedStorageStatus === '已完成出库'">
+                <el-button type="warning" v-if="isMultipleSelection" @click="openOperationDialog(1)"
+                    :disabled="storageStatusNum === FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED">
                     批量出库
                 </el-button>
-                <el-button type="primary" @click="toggleSelectionMode" :disabled="selectedStorageStatus === '已完成出库'">
+                <el-button type="primary" @click="toggleSelectionMode"
+                    :disabled="storageStatusNum === FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED">
                     {{ isMultipleSelection ? "退出" : "选择成品出库" }}
                 </el-button>
             </el-button-group>
@@ -73,18 +74,27 @@
                 <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
                 <el-table-column prop="currentStock" label="成品库存"></el-table-column>
                 <el-table-column prop="outboundedAmount" label="已出库数量"></el-table-column>
-                <el-table-column prop="storageStatus" label="仓库状态">
+                <el-table-column label="仓库状态">
                     <template #default="{ row }">
-                        <el-tag v-if="row.storageStatus == '未完成入库'" type="warning" disable-transitions>未完成入库</el-tag>
-                        <el-tag v-else-if="row.storageStatus == '已完成入库'" type="success" disable-transitions>已完成入库</el-tag>
-                        <el-tag v-else-if="row.storageStatus == '已完成出库'" type="success" disable-transitions>已完成出库</el-tag>
+                        <el-tag v-if="row.storageStatusNum == FINISHED_STORAGE_STATUS_ENUM.PRODUCT_INBOUND_NOT_FINISHED"
+                            type="warning" disable-transitions>{{ row.storageStatusLabel }}</el-tag>
+                        <el-tag v-else-if="row.storageStatusNum == FINISHED_STORAGE_STATUS_ENUM.PRODUCT_INBOUND_FINISHED"
+                            type="success" disable-transitions>{{ row.storageStatusLabel }}</el-tag>
+                        <el-tag v-else-if="row.storageStatusNum == FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED"
+                            type="success" disable-transitions>{{ row.storageStatusLabel }}</el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="审核状态">
                     <template #default="{ row }">
-                        <el-tag v-if="row.isOutboundAllowed == 0" type="warning" disable-transitions>业务部审核</el-tag>
-                        <el-tag v-else-if="row.isOutboundAllowed == 1" type="warning" disable-transitions>总经理审核</el-tag>
-                        <el-tag v-else-if="row.isOutboundAllowed == 2" type="success" disable-transitions>已批准</el-tag>
+                        <el-tag
+                            v-if="row.auditStatusNum == PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_NOT_INIT"
+                            type="warning" disable-transitions>{{ row.auditStatusLabel }}</el-tag>
+                        <el-tag
+                            v-else-if="row.auditStatusNum == PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_ONGOING"
+                            type="warning" disable-transitions>{{ row.auditStatusLabel }}</el-tag>
+                        <el-tag
+                            v-else-if="row.auditStatusNum == PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_APPROVED"
+                            type="success" disable-transitions>{{ row.auditStatusLabel }}</el-tag>
                     </template>
                 </el-table-column>
             </el-table>
@@ -209,22 +219,14 @@ export default {
             },
             clientTab: null,
             role: localStorage.getItem('role'),
-            statusOptions: [
-                { value: null, label: "全部" },
-                { value: 0, label: "发货审核未下发" },
-                { value: 1, label: "总经理审核中" },
-                { value: 2, label: "已批准" },
-            ],
-            storageStatusOptions: [
-                { value: null, label: "全部" },
-                { value: "未完成入库", label: "未完成入库" },
-                { value: "已完成入库", label: "已完成入库" },
-                { value: "已完成出库", label: "已完成出库" },
-            ],
-            selectedStatus: null,
-            selectedStorageStatus: '已完成入库',
+            auditStatusOptions: [],
+            storageStatusOptions: [],
+            auditStatusNum: null,
+            storageStatusNum: null,
             isOpenShoeSizeDialogVisible: false,
             activeStockTab: null,
+            FINISHED_STORAGE_STATUS_ENUM: {},
+            PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM: {}
         }
     },
     computed: {
@@ -236,25 +238,39 @@ export default {
             });
         },
     },
-    mounted() {
+    async mounted() {
+        await this.getStorageStatusOptions()
+        await this.getOutboundAuditStatusOptions()
         this.displayOrdersbyRole()
         this.getTableData()
     },
     methods: {
         jumpToAllForAuditStatus() {
-            if (this.selectedStorageStatus == "已完成出库") {
-                this.selectedStatus = null
+            if (this.storageStatusNum == this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED) {
+                this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.ALL
             }
         },
+        async getStorageStatusOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/product/getstoragestatusoptions`)
+            this.storageStatusOptions = response.data.storageStatusOptions
+            this.FINISHED_STORAGE_STATUS_ENUM = response.data.storageStatusEnum
+        },
+        async getOutboundAuditStatusOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/product/getoutboundauditstatusoptions`)
+            this.auditStatusOptions = response.data.productOutboundAuditStatusOptions
+            this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM = response.data.productOutboundAuditStatusEnum
+        },
         displayOrdersbyRole() {
+            this.storageStatusNum = this.FINISHED_STORAGE_STATUS_ENUM.ALL
+            this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.ALL
             if (this.role == 4 || this.role == 21) {
-                this.selectedStatus = 0
+                this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_NOT_INIT
             }
             else if (this.role == 2) {
-                this.selectedStatus = 1
+                this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_ONGOING
             }
             else if (this.role == 20) {
-                this.selectedStatus = 2
+                this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_APPROVED
             }
         },
         async checkOutboundPrequisite() {
@@ -379,8 +395,8 @@ export default {
                 "orderCId": this.orderCIdSearch,
                 "customerName": this.customerNameSearch,
                 "customerBrand": this.customerBrandSearch,
-                "approvalStatus": this.selectedStatus,
-                "storageStatus": this.selectedStorageStatus
+                "auditStatusNum": this.auditStatusNum,
+                "storageStatusNum": this.storageStatusNum
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getproductoverview`, { params })
             this.tableData = response.data.result

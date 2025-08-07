@@ -4,12 +4,7 @@ from decimal import Decimal
 from api_utility import format_date
 from app_config import db
 from shared_apis.batch_info_type import get_order_batch_type_helper
-from constants import (
-    END_OF_PRODUCTION_NUMBER,
-    IN_PRODUCTION_ORDER_NUMBER,
-    PRODUCTION_LINE_REFERENCE,
-    SHOESIZERANGE,
-)
+from constants import *
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request
 from models import *
@@ -37,7 +32,7 @@ def get_finished_in_out_overview():
     customer_product_name = request.args.get("customerProductName")
     order_cid = request.args.get("orderCId")
     customer_brand = request.args.get("customerBrand")
-    storage_status = request.args.get("storageStatus")
+    storage_status_num = request.args.get("storageStatusNum", type=int)
     show_all = request.args.get("showAll", default=0, type=int)
     query = (
         db.session.query(
@@ -68,8 +63,8 @@ def get_finished_in_out_overview():
         query = query.filter(
             OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
         )
-    if storage_status and storage_status != "":
-        query = query.filter(FinishedShoeStorage.finished_status == int(storage_status))
+    if storage_status_num is not None and storage_status_num > -1:
+        query = query.filter(FinishedShoeStorage.finished_status == storage_status_num)
     if order_cid and order_cid != "":
         query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
     if customer_brand and customer_brand != "":
@@ -81,12 +76,6 @@ def get_finished_in_out_overview():
     result = []
     for row in response:
         (order, customer, order_shoe, shoe, storage_obj, color, batch_info) = row
-        if storage_obj.finished_status == 0:
-            status_name = "未完成入库"
-        elif storage_obj.finished_status == 1:
-            status_name = "已完成入库"
-        else:
-            status_name = "已完成出库"
         remaining_amount = (
             storage_obj.finished_estimated_amount - storage_obj.finished_actual_amount
             if storage_obj.finished_actual_amount > 0
@@ -106,7 +95,8 @@ def get_finished_in_out_overview():
             "actualInboundAmount": storage_obj.finished_actual_amount,
             "currentAmount": storage_obj.finished_amount,
             "remainingAmount": remaining_amount,
-            "storageStatus": status_name,
+            "storageStatusNum": storage_obj.finished_status,
+            "storageStatusLabel": FINISHED_STORAGE_STATUS[storage_obj.finished_status],
             "endDate": format_date(order.end_date),
             "colorName": color.color_name,
             "shoeSizeColumns": [],
@@ -137,8 +127,8 @@ def get_product_overview():
     order_cid = request.args.get("orderCId")
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
-    approval_status = request.args.get("approvalStatus")
-    storage_status = request.args.get("storageStatus")
+    audit_status_num = request.args.get("auditStatusNum", type=int)
+    storage_status_num = request.args.get("storageStatusNum", type=int)
     order_amount_subquery = (
         db.session.query(
             Order.order_id,
@@ -232,22 +222,22 @@ def get_product_overview():
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
     if customer_brand and customer_brand != "":
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
-    if approval_status and approval_status != "":
-        query = query.filter(Order.is_outbound_allowed == approval_status)
+    if audit_status_num is not None and audit_status_num > -1:
+        query = query.filter(Order.is_outbound_allowed == audit_status_num)
 
-    if storage_status == "已完成出库":
+    if storage_status_num == FINISHED_STORAGE_STATUS_ENUM["PRODUCT_OUTBOUND_FINISHED"]:
         query = query.filter(
             outbounded_amount_subquery.c.outbounded_amount
             >= finished_amount_subquery.c.finished_estimated_amount
         )
-    elif storage_status == "已完成入库":
+    elif storage_status_num == FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_FINISHED"]:
         query = query.filter(
             finished_amount_subquery.c.finished_actual_amount
             >= finished_amount_subquery.c.finished_estimated_amount,
             outbounded_amount_subquery.c.outbounded_amount
             < finished_amount_subquery.c.finished_estimated_amount,
         )
-    elif storage_status == "未完成入库":
+    elif storage_status_num == FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_NOT_FINISHED"]:
         query = query.filter(
             finished_amount_subquery.c.finished_actual_amount
             < finished_amount_subquery.c.finished_estimated_amount
@@ -266,11 +256,11 @@ def get_product_overview():
             outbounded_amount,
         ) = row
         if outbounded_amount >= estimated_amount:
-            storage_status = "已完成出库"
+            storage_status = FINISHED_STORAGE_STATUS_ENUM["PRODUCT_OUTBOUND_FINISHED"]
         elif actual_amount >= estimated_amount:
-            storage_status = "已完成入库"
+            storage_status = FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_FINISHED"]
         elif actual_amount < estimated_amount:
-            storage_status = "未完成入库"
+            storage_status = FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_NOT_FINISHED"]
         else:
             storage_status = "未知状态"
         obj = {
@@ -285,8 +275,10 @@ def get_product_overview():
             "currentStock": current_stock,
             "outboundedAmount": outbounded_amount,
             "orderShoeTable": [],
-            "storageStatus": storage_status,
-            "isOutboundAllowed": order.is_outbound_allowed,
+            "storageStatusNum": storage_status,
+            "storageStatusLabel": FINISHED_STORAGE_STATUS[storage_status],
+            "auditStatusNum": order.is_outbound_allowed,
+            "auditStatusLabel": PRODUCT_OUTBOUND_AUDIT_STATUS[order.is_outbound_allowed],
         }
         result.append(obj)
 
@@ -1157,3 +1149,31 @@ def delete_finished_inbound_detail():
     db.session.add(new_detail)
     db.session.commit()
     return jsonify({"message": "删除成功"})
+
+
+@finished_storage_bp.route("/product/getstoragestatusoptions", methods=["GET"])
+def get_storage_status_options():
+    result = {"storageStatusOptions": [], "storageStatusEnum": {}}
+    for key, value in FINISHED_STORAGE_STATUS.items():
+        obj = {
+            "value": key,
+            "label": value,
+        }
+        result["storageStatusOptions"].append(obj)
+
+    for key, value in FINISHED_STORAGE_STATUS_ENUM.items():
+        result["storageStatusEnum"][key] = value
+    return result
+
+@finished_storage_bp.route("/product/getoutboundauditstatusoptions", methods=["GET"])
+def get_outbound_audit_status_options():
+    result = {"productOutboundAuditStatusOptions": [], "productOutboundAuditStatusEnum": {}}
+    for key, value in PRODUCT_OUTBOUND_AUDIT_STATUS.items():
+        obj = {
+            "value": key,
+            "label": value,
+        }
+        result["productOutboundAuditStatusOptions"].append(obj)
+    for key, value in PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.items():
+        result["productOutboundAuditStatusEnum"][key] = value
+    return result

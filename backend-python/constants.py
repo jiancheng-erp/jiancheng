@@ -121,3 +121,28 @@ SCHEDULING_STATUS_TO_INT = {
     "成型未排期": 3,
     "已排期": 4,
 }
+
+FINISHED_STORAGE_STATUS_ENUM = {
+    "ALL": -1,
+    "PRODUCT_INBOUND_NOT_FINISHED": 0,
+    "PRODUCT_INBOUND_FINISHED": 1,
+    "PRODUCT_OUTBOUND_FINISHED": 2,
+}
+FINISHED_STORAGE_STATUS = {
+    -1: "全部",
+    0: "未完成入库",
+    1: "已完成入库",
+    2: "已完成出库"
+}
+PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM = {
+    "ALL": -1,
+    "PRODUCT_OUTBOUND_AUDIT_NOT_INIT": 0,
+    "PRODUCT_OUTBOUND_AUDIT_ONGOING": 1,
+    "PRODUCT_OUTBOUND_AUDIT_APPROVED": 2,
+}
+PRODUCT_OUTBOUND_AUDIT_STATUS = {
+    -1: "全部",
+    0: "未下发审核",
+    1: "总经理审核中",
+    2: "已批准",
+}
