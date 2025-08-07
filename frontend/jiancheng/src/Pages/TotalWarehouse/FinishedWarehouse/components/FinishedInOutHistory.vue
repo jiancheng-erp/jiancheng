@@ -2,9 +2,9 @@
     <el-row :gutter="20">
         <el-col>
             <FinishedSearchBar :searchFilters="searchFilters" @confirm="confirmTableData" />
-            <el-radio-group v-model="selectedStatus" @change="getTableData">
-                <el-radio-button v-for="option in statusOptions" :key="option.value" :label="option.value"
-                    v-model="selectedStatus">
+            <el-radio-group v-model="storageStatusNum" @change="getTableData">
+                <el-radio-button v-for="option in storageStatusOptions" :key="option.value" :label="option.value"
+                    v-model="storageStatusNum">
                     {{ option.label }}
                 </el-radio-button>
             </el-radio-group>
@@ -26,7 +26,7 @@
         <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
-        <el-table-column prop="storageStatus" label="状态"></el-table-column>
+        <el-table-column prop="storageStatusLabel" label="状态"></el-table-column>
 
     </el-table>
     <el-row :gutter="20">
@@ -110,13 +110,9 @@ export default {
             shoeStockTable: [],
             currentRow: {},
             totalStock: 0,
-            statusOptions: [
-                { value: null, label: "全部" },
-                { value: 0, label: "未完成入库" },
-                { value: 1, label: "已完成入库" },
-                { value: 2, label: "已完成出库" },
-            ],
-            selectedStatus: null,
+            storageStatusOptions: [],
+            storageStatusNum: null,
+            FINISHED_STORAGE_STATUS_ENUM: {},
         }
     },
     computed: {
@@ -128,10 +124,17 @@ export default {
             });
         },
     },
-    mounted() {
+    async mounted() {
+        await this.getStorageStatusOptions()
+        this.storageStatusNum = this.FINISHED_STORAGE_STATUS_ENUM.ALL
         this.getTableData()
     },
     methods: {
+        async getStorageStatusOptions() {
+            const response = await axios.get(`${this.$apiBaseUrl}/product/getstoragestatusoptions`)
+            this.storageStatusOptions = response.data.storageStatusOptions
+            this.FINISHED_STORAGE_STATUS_ENUM = response.data.storageStatusEnum
+        },
         confirmTableData(filters) {
             this.searchFilters = { ...filters }
             this.getTableData()
@@ -161,7 +164,7 @@ export default {
                 "customerProductName": this.searchFilters.customerProductNameSearch,
                 "orderCId": this.searchFilters.orderCIdSearch,
                 "customerBrand": this.searchFilters.customerBrandSearch,
-                "storageStatus": this.selectedStatus,
+                "storageStatusNum": this.storageStatusNum,
                 "showAll": 1
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedstorages`, { params })
