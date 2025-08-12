@@ -1,4 +1,5 @@
 import shutil
+from importlib_metadata import metadata
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.drawing.image import Image
@@ -10,6 +11,96 @@ from openpyxl.drawing.image import Image
 from openpyxl.utils import units
 from openpyxl.styles import Font
 from logger import logger
+
+merge_ranges = []
+
+def get_currency_format(currency_type):
+    mapping = {
+        "USD": '"$"#,##0.00',
+        "USA": '"$"#,##0.00',
+        "RMB": '"￥"#,##0.00',
+        "CNY": '"￥"#,##0.00',
+        "EUR": '"€"#,##0.00'
+    }
+    return mapping.get(currency_type.upper(), '#,##0.00')  # 默认2位小数无符号
+def find_remark_column(ws, header_row=5, remark_header="备注"):
+    for col_idx in range(1, ws.max_column + 1):
+        if str(ws[f"{get_column_letter(col_idx)}{header_row}"].value).strip() == remark_header:
+            return col_idx
+    return None
+
+def adjust_title_merge(ws, title_row=1, start_col_letter="A"):
+    """
+    调整第一行标题合并单元格范围，使其覆盖下方有内容的最右列
+    """
+    # 找到下方数据区域的最右列索引
+    max_col_idx = 1
+    for row in ws.iter_rows(min_row=title_row + 1):
+        for cell in reversed(row):  # 从右向左找
+            if cell.value not in (None, ""):
+                if cell.column > max_col_idx:
+                    max_col_idx = cell.column
+                break
+
+    # 列字母
+    end_col_letter = get_column_letter(max_col_idx)
+
+    # 删除原有第一行的合并区域
+    for merged_range in list(ws.merged_cells.ranges):
+        if str(merged_range).startswith(f"{start_col_letter}{title_row}:"):
+            ws.merged_cells.ranges.remove(merged_range)
+
+    # 重新合并 A1 到最右列
+    merge_range = f"{start_col_letter}{title_row}:{end_col_letter}{title_row}"
+    ws.merge_cells(merge_range)
+def set_global_font(ws, font_size=14):
+    """
+    为整个工作表设置统一字体和字号，但保留原有的粗体、颜色等属性，
+    并跳过第一行。
+    """
+    for row_idx, row in enumerate(ws.iter_rows(), start=1):
+        if row_idx == 1:  # 跳过第一行
+            continue
+        for cell in row:
+            if cell.value is not None:
+                old_font = cell.font or Font()
+                cell.font = Font(
+                    size=font_size,
+                    bold=old_font.bold,
+                    italic=old_font.italic,
+                    vertAlign=old_font.vertAlign,
+                    underline=old_font.underline,
+                    strike=old_font.strike,
+                    color=old_font.color
+                )
+def auto_adjust_column_width(ws, max_width=50):
+    """
+    根据内容自动调整列宽，但不超过 max_width。
+    如果当前列宽已足够显示最大内容，则不调整。
+    """
+    for col_cells in ws.columns:
+        first_cell = next((c for c in col_cells if c is not None), None)
+        if first_cell is None:
+            continue
+
+        col_letter = get_column_letter(first_cell.column)
+        max_length = 0
+        
+        for cell in col_cells:
+            if cell.value is not None:
+                length = len(str(cell.value))
+                if length > max_length:
+                    max_length = length
+
+        # 计算需要的列宽（字符数 + 1 边距）
+        needed_width = min(max_length + 1, max_width)
+
+        # 读取当前列宽（None 时用默认 8.43）
+        current_width = ws.column_dimensions[col_letter].width or 8.43
+
+        # 仅在内容超出当前列宽时才调整
+        if needed_width > current_width:
+            ws.column_dimensions[col_letter].width = needed_width
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -115,7 +206,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
         customer_rid = series_data[order_shoe_id].get("orderCId")
         ws["D3"] = start_date
         ws["I3"] = end_date
-        ws["Q3"] = customer_rid
+        ws["N3"] = customer_rid
         metadata = series_data[order_shoe_id]
         shoe_rid = metadata.get("shoeRId")
         customer_product_name = metadata.get("customerProductName")
@@ -182,11 +273,21 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
+                        remark_col_idx = col_idx
                         ws[f"{get_column_letter(col_idx)}{row}"] = entry.get("remark")
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
+                        currency_format = get_currency_format(metadata.get("currencyType", ""))
+
+                        # S 列：价格
+                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_price.value = unit_price
+                        cell_price.number_format = currency_format
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
+
+                        # T 列：金额
+                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_amount.value = unit_price * total_quantity * count
+                        cell_amount.number_format = currency_format
 
                         row += 1
 
@@ -231,7 +332,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
         # Merge column B (shoe_rid)
         if row - shoe_start > 1:
             ws.merge_cells(f"B{shoe_start}:B{row - 1}")
-            ws.merge_cells(f"W{shoe_start}:W{row - 1}")
+            ws.merge_cells(f"{get_column_letter(remark_col_idx)}{shoe_start}:{get_column_letter(remark_col_idx)}{row - 1}")
+            merge_ranges.append((shoe_start, row - 1))
         ws[f"B{shoe_start}"] = shoe_rid
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
@@ -251,7 +353,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
         customer_rid = series_data[order_shoe_id].get("orderCId")
         ws["D3"] = start_date
         ws["I3"] = end_date
-        ws["Q3"] = customer_rid
+        ws["N3"] = customer_rid
         metadata = series_data[order_shoe_id]
         shoe_rid = metadata.get("shoeRId")
         customer_product_name = metadata.get("customerProductName")
@@ -318,11 +420,21 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
+                        remark_col_idx = col_idx
                         ws[f"{get_column_letter(col_idx)}{row}"] = entry.get("remark")
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
+                        currency_format = get_currency_format(metadata.get("currencyType", ""))
+
+                        # S 列：价格
+                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_price.value = unit_price
+                        cell_price.number_format = currency_format
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
+
+                        # T 列：金额
+                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_amount.value = unit_price * total_quantity * count
+                        cell_amount.number_format = currency_format
 
                         row += 1
 
@@ -365,9 +477,12 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                 ws.merge_cells(f"C{cust_start}:C{row - 1}")
 
         # Merge column B (shoe_rid)
+        
         if row - shoe_start > 1:
             ws.merge_cells(f"B{shoe_start}:B{row - 1}")
-            ws.merge_cells(f"W{shoe_start}:W{row - 1}")
+            ws.merge_cells(f"{get_column_letter(remark_col_idx)}{shoe_start}:{get_column_letter(remark_col_idx)}{row - 1}")
+            merge_ranges.append((shoe_start, row - 1))
+
         ws[f"B{shoe_start}"] = shoe_rid
 
 
@@ -392,15 +507,25 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)
+    q3_value = ws["Q3"].value
     delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
     fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    remark_col_idx = find_remark_column(ws, header_row=4)
+    if remark_col_idx:
+        col_letter = get_column_letter(remark_col_idx)
+        for start_row, end_row in merge_ranges:
+            ws.merge_cells(f"{col_letter}{start_row}:{col_letter}{end_row}")
     order_shoe_id = next(iter(order_data))  # Get the first key from order_data
     start_date = order_data[order_shoe_id].get("orderStartDate")
     end_date = order_data[order_shoe_id].get("orderEndDate")
     customer_rid = order_data[order_shoe_id].get("orderCId")
     ws["D3"] = start_date
     ws["I3"] = end_date
-    ws["Q3"] = customer_rid
+    ws["N3"] = customer_rid
+    ws["Q3"] = q3_value
+    set_global_font(ws, font_size=14)  # 这里设置全局字体
+    auto_adjust_column_width(ws, max_width=30)
+    adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
@@ -419,15 +544,25 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     for i in range(len(SHOESIZERANGE)):
         ws[f"{column}{row}"] = metadata["sizeNames"][i]
         column = get_next_column_name(column)
+    q3_value = ws["Q3"].value
     delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
     fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    remark_col_idx = find_remark_column(ws, header_row=4)
+    if remark_col_idx:
+        col_letter = get_column_letter(remark_col_idx)
+        for start_row, end_row in merge_ranges:
+            ws.merge_cells(f"{col_letter}{start_row}:{col_letter}{end_row}")
     order_shoe_id = next(iter(order_data))  # Get the first key from order_data
     start_date = order_data[order_shoe_id].get("orderStartDate")
     end_date = order_data[order_shoe_id].get("orderEndDate")
     customer_rid = order_data[order_shoe_id].get("orderCId")
     ws["D3"] = start_date
     ws["I3"] = end_date
-    ws["Q3"] = customer_rid
+    ws["N3"] = customer_rid
+    ws["Q3"] = q3_value
+    set_global_font(ws, font_size=14)  # 这里设置全局字体
+    auto_adjust_column_width(ws, max_width=30)
+    adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
