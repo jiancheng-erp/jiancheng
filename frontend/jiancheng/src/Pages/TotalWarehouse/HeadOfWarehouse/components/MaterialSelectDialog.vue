@@ -1,19 +1,19 @@
 <template>
     <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose" destroy-on-close>
         <div v-if="selectionPage == 0">
-            <el-input v-model="orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="materialNameSearch" placeholder="搜索名称" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="materialModelSearch" placeholder="搜索型号" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.materialModelSearch" placeholder="搜索材料型号" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="materialSpecificationSearch" placeholder="搜索规格" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.materialSpecificationSearch" placeholder="搜索材料规格" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="materialColorSearch" placeholder="搜索颜色" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.materialColorSearch" placeholder="搜索材料颜色" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="supplierNameSearch" placeholder="搜索供应商" style="width: 300px; margin-bottom: 10px;" clearable
+            <el-input v-model="localSearchParams.supplierNameSearch" placeholder="搜索供应商" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-switch v-model="showUnfinishedOrders"
+            <el-switch v-model="localSearchParams.showUnfinishedOrders"
                 active-text="仅显示未入库订单" inactive-text="显示所有订单" style="margin-bottom: 10px;"
                 @change="fetchMaterialData"></el-switch>
 
@@ -152,17 +152,19 @@ export default {
             selectedInboundQuantity: 0,
             unitPrice: 0,
             originTableData: [],
-            orderRIdSearch: null,
-            materialNameSearch: null,
-            materialModelSearch: null,
-            materialSpecificationSearch: null,
-            materialColorSearch: null,
-            supplierNameSearch: null,
             searchedMaterials: [],
-            currentPage: 1,
-            pageSize: 20,
+            localSearchParams: {
+                orderRIdSearch: null,
+                materialNameSearch: null,
+                materialModelSearch: null,
+                materialSpecificationSearch: null,
+                materialColorSearch: null,
+                supplierNameSearch: null,
+                showUnfinishedOrders: true,
+                currentPage: 1,
+                pageSize: 20,
+            },
             totalRows: 0,
-            showUnfinishedOrders: true,
         }
     },
     watch: {
@@ -174,12 +176,7 @@ export default {
         },
     },
     async mounted() {
-        this.materialNameSearch = this.searchParams.materialName || null;
-        this.materialModelSearch = this.searchParams.materialModel || null;
-        this.materialSpecificationSearch = this.searchParams.materialSpec || null;
-        this.materialColorSearch = this.searchParams.materialColor || null;
-        this.orderRIdSearch = this.searchParams.orderRId || null;
-        this.supplierNameSearch = this.searchParams.supplierName || null;
+        this.localSearchParams = {...this.localSearchParams, ...this.searchParams}
         await this.fetchMaterialData();
     },
     methods: {
@@ -197,15 +194,15 @@ export default {
         },
         async fetchMaterialData() {
             const params = {
-                "orderRId": this.orderRIdSearch,
-                "materialName": this.materialNameSearch,
-                "materialSpec": this.materialSpecificationSearch,
-                "materialModel": this.materialModelSearch,
-                "materialColor": this.materialColorSearch,
-                "supplier": this.supplierNameSearch,
-                "page": this.currentPage,
-                "pageSize": this.pageSize,
-                "showUnfinishedOrders": this.showUnfinishedOrders,
+                "orderRId": this.localSearchParams.orderRIdSearch,
+                "materialName": this.localSearchParams.materialNameSearch,
+                "materialSpec": this.localSearchParams.materialSpecificationSearch,
+                "materialModel": this.localSearchParams.materialModelSearch,
+                "materialColor": this.localSearchParams.materialColorSearch,
+                "supplier": this.localSearchParams.supplierNameSearch,
+                "page": this.localSearchParams.currentPage,
+                "pageSize": this.localSearchParams.pageSize,
+                "showUnfinishedOrders": this.localSearchParams.showUnfinishedOrders,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterials`, { params })
             this.searchedMaterials = response.data.result

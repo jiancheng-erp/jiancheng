@@ -163,8 +163,8 @@
     <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis"
         :searchParams="searchParams" @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <SizeMaterialSelectDialog :visible="isSizeMaterialSelectDialogVis" :searched-size-materials="searchedSizeMaterials"
-        @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
+    <SizeMaterialSelectDialog v-if="showSizeMaterialSelectDialog" :visible="isSizeMaterialSelectDialogVis"
+        :searchParams="searchParams" @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
         @closed="closePreviewDialog">
@@ -409,6 +409,7 @@ export default {
                 supplier: null
             },
             showMaterialSelectDialog: false,
+            showSizeMaterialSelectDialog: false,
         }
     },
     // beforeUnmount() {
@@ -612,6 +613,7 @@ export default {
             this.isMaterialSelectDialogVis = value
         },
         updateSizeMaterialDialogVisible(value) {
+            this.showSizeMaterialSelectDialog = value
             this.isSizeMaterialSelectDialogVis = value
         },
         handleInboundType(value) {
@@ -727,55 +729,32 @@ export default {
             row.itemTotalPrice = updateTotalPriceHelper(row)
         },
         async handleSearchMaterial(scope) {
-            if (this.inboundForm.inboundType != 1 && this.inboundForm.supplierName == null) {
-                ElMessage.warning('请填写厂家名称')
-                return
-            }
-            if (this.inboundForm.materialTypeId == null) {
-                ElMessage.warning('请填写材料类型')
-                return
-            }
             this.currentKeyDownRow = scope.row; // Store the current row
             this.currentIndex = scope.rowIndex; // Store the current row index
             if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
-                await this.fetchSizeMaterialData()
+                this.formMaterialSearch()
+                this.showSizeMaterialSelectDialog = true
                 this.isSizeMaterialSelectDialogVis = true
             }
             else {
-                this.fetchMaterialData()
+                this.formMaterialSearch()
                 this.showMaterialSelectDialog = true
                 this.isMaterialSelectDialogVis = true
             }
         },
-        async fetchMaterialData() {
+        async formMaterialSearch() {
             const params = {
-                "orderRId": this.currentKeyDownRow.orderRId,
-                "materialName": this.currentKeyDownRow.materialName,
-                "materialSpec": this.currentKeyDownRow.inboundSpecification,
-                "materialModel": this.currentKeyDownRow.inboundModel,
-                "materialColor": this.currentKeyDownRow.materialColor,
-                "supplierName": this.inboundForm.supplierName,
-                "materialTypeId": this.inboundForm.materialTypeId,
+                "orderRIdSearch": this.currentKeyDownRow.orderRId,
+                "materialNameSearch": this.currentKeyDownRow.materialName,
+                "materialSpecificationSearch": this.currentKeyDownRow.inboundSpecification,
+                "materialModelSearch": this.currentKeyDownRow.inboundModel,
+                "materialColorSearch": this.currentKeyDownRow.materialColor,
+                "supplierNameSearch": this.inboundForm.supplierName,
+                "showUnfinishedOrders": true,
+                "page": 1,
+                "pageSize": 20,
             }
             this.searchParams = params; // Update search parameters
-        },
-        async fetchSizeMaterialData() {
-            const params = {
-                "orderRId": this.currentKeyDownRow.orderRId,
-                "materialName": this.currentKeyDownRow.materialName,
-                "materialSpec": this.currentKeyDownRow.inboundSpecification,
-                "materialModel": this.currentKeyDownRow.inboundModel,
-                "materialColor": this.currentKeyDownRow.materialColor,
-                "supplierName": this.inboundForm.supplierName,
-                "materialTypeId": this.inboundForm.materialTypeId,
-                "showUnfinishedOrders": true,
-            }
-            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getsizematerials`, { params })
-            this.searchedSizeMaterials = response.data
-            // add unique id to each row
-            this.searchedSizeMaterials.forEach(item => {
-                item.id = XEUtils.uniqueId()
-            })
         },
         async handleMaterialNameSelect(row, value) {
             if (value == null || value == '') {

@@ -1,8 +1,21 @@
 <template>
     <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose" destroy-on-close>
         <div v-if="selectionPage == 0">
-            <el-input v-model="searchOrderRId" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="searchRecordByOrderRId" @clear="searchRecordByOrderRId"></el-input>
+            <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称" style="width: 300px; margin-bottom: 10px;"
+                clearable @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialModelSearch" placeholder="搜索材料型号" style="width: 300px; margin-bottom: 10px;"
+                clearable @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialSpecificationSearch" placeholder="搜索材料规格"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchSizeMaterialData"
+                @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialColorSearch" placeholder="搜索材料颜色" style="width: 300px; margin-bottom: 10px;"
+                clearable @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.supplierNameSearch" placeholder="搜索供应商" style="width: 300px; margin-bottom: 10px;"
+                clearable @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-switch v-model="localSearchParams.showUnfinishedOrders" active-text="仅显示未入库订单" inactive-text="显示所有订单"
+                style="margin-bottom: 10px;" @change="fetchSizeMaterialData"></el-switch>
 
             <div style="display:flex; flex-wrap: wrap; gap: 10px;">
                 <div style="font-size: medium">已选择订单：{{orderSelection.map(item => item.orderRId)}}</div>
@@ -13,12 +26,21 @@
                 <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
+                <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
-                <el-table-column prop="materialColor" label="颜色"></el-table-column>
+                <el-table-column prop="materialColor" label="材料颜色"></el-table-column>
                 <el-table-column prop="remainingAmount" label="待入库数量"></el-table-column>
             </el-table>
+            <el-pagination
+                :current-page="localSearchParams.currentPage"
+                :page-size="localSearchParams.pageSize"
+                :total="totalRows"
+                layout="total, sizes, prev, pager, next, jumper"
+                @current-change="pageChange"
+                @size-change="PageSizeChange">
+            </el-pagination>
         </div>
         <div v-else>
             <el-row :gutter="20" style="margin-bottom: 20px;">
@@ -28,7 +50,8 @@
                             <span>{{ shoeSize.label }}码到货数量：</span>
                             <el-input-number v-model="shoeSizeColumns[index].inboundQuantity"
                                 style="width: 150px; margin-right: 10px;" :min="0" :precision="5" :step="0.0001"
-                                size="small" @change="updateTotalShoes" :disabled="isAmountInputBlock"></el-input-number>
+                                size="small" @change="updateTotalShoes"
+                                :disabled="isAmountInputBlock"></el-input-number>
                         </div>
                         <el-button size="small" type="primary" @click="autoSelectOrders">自动选择</el-button>
                         <el-button size="small" type="primary" @click="revertInboundQuantityData">重置到货数量数据</el-button>
@@ -46,7 +69,7 @@
             <div class="transfer-tables">
                 <!-- Top Table -->
                 <h2>自动分配表格</h2>
-                <el-table :data="topTableData" style="width: 100%; margin-bottom: 20px;" 
+                <el-table :data="topTableData" style="width: 100%; margin-bottom: 20px;"
                     @selection-change="handleTopTableSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
@@ -77,7 +100,7 @@
 
                 <!-- Bottom Table -->
                 <h2>已选择订单表格</h2>
-                <el-table :data="bottomTableData" style="width: 100%;" 
+                <el-table :data="bottomTableData" style="width: 100%;"
                     @selection-change="handleBottomTableSelectionChange" border stripe height="300">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
@@ -111,8 +134,8 @@ export default {
             type: Boolean,
             required: true,
         },
-        searchedSizeMaterials: {
-            type: Array,
+        searchParams: {
+            type: Object,
             required: true,
         },
     },
@@ -133,9 +156,22 @@ export default {
             remainQuantityList: [],
             searchOrderRId: null,
             shoeSizeColumns: [],
-            originTableData: this.searchedSizeMaterials,
+            originTableData: [],
             topSelected: [],
             downSelected: [],
+            localSearchParams: {
+                orderRIdSearch: null,
+                materialNameSearch: null,
+                materialModelSearch: null,
+                materialSpecificationSearch: null,
+                materialColorSearch: null,
+                supplierNameSearch: null,
+                showUnfinishedOrders: true,
+                currentPage: 1,
+                pageSize: 20,
+            },
+            totalRows: 0,
+            searchedSizeMaterials: [],
         }
     },
     watch: {
@@ -145,11 +181,42 @@ export default {
         localVisible(newVal) {
             this.$emit("update-visible", newVal);
         },
-        searchedSizeMaterials(newVal) {
-            this.originTableData = newVal;
-        },
+    },
+    async mounted() {
+        this.localSearchParams = {...this.localSearchParams, ...this.searchParams}
+        await this.fetchSizeMaterialData();
     },
     methods: {
+        pageChange(page) {
+            this.localSearchParams.currentPage = page
+            this.fetchSizeMaterialData()
+        },
+        PageSizeChange(size) {
+            this.localSearchParams.pageSize = size
+            this.fetchSizeMaterialData()
+        },
+        async fetchSizeMaterialData() {
+            const params = {
+                "orderRId": this.localSearchParams.orderRIdSearch,
+                "materialName": this.localSearchParams.materialNameSearch,
+                "materialSpec": this.localSearchParams.materialSpecificationSearch,
+                "materialModel": this.localSearchParams.materialModelSearch,
+                "materialColor": this.localSearchParams.materialColorSearch,
+                "supplier": this.localSearchParams.supplierNameSearch,
+                "page": this.localSearchParams.currentPage,
+                "pageSize": this.localSearchParams.pageSize,
+                "showUnfinishedOrders": this.localSearchParams.showUnfinishedOrders,
+            }
+            const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterials`, { params })
+            this.searchedSizeMaterials = response.data.result
+            this.totalRows = response.data.total
+            // add unique id to each row
+            this.searchedSizeMaterials.forEach(item => {
+                item.id = XEUtils.uniqueId()
+            })
+            this.originTableData = this.searchedSizeMaterials
+            console.log(this.originTableData)
+        },
         handleOriginSelectionChange(selection) {
             // concat and remove duplicates
             this.orderSelection = [...new Set([...this.orderSelection, ...selection])];
@@ -236,11 +303,6 @@ export default {
             this.bottomTableDataCopy = JSON.parse(JSON.stringify(selectedOrders));
             this.bottomTableData = JSON.parse(JSON.stringify(selectedOrders));
             this.selectionPage = 1;
-        },
-        searchRecordByOrderRId() {
-            this.originTableData = this.searchedSizeMaterials.filter(item => {
-                return item.orderRId.includes(this.searchOrderRId);
-            });
         },
         updateTotalShoes() {
             this.totalInboundQuantity = this.shoeSizeColumns.reduce((acc, item) => {
