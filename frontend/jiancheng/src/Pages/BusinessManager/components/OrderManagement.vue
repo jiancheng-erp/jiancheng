@@ -73,7 +73,7 @@
         </el-col> -->
     </el-row>
     <el-row :gutter="20">
-        <el-table :data="paginatedDisplayData" border stripe height="500">
+        <el-table :data="paginatedDisplayData" border stripe height="500" @row-dblclick="orderRowDbClick">
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderSalesman" label="创建业务员" />
             <el-table-column prop="orderSupervisor" label="审核" />
@@ -2048,6 +2048,9 @@ export default {
                         message: '已取消删除'
                     })
                 })
+        },
+        orderRowDbClick(row) {
+            this.openOrderDetail(row.orderDbId)
         },
     },
     watch: {
