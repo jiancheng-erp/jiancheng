@@ -14,6 +14,57 @@ from logger import logger
 
 merge_ranges = []
 
+def add_totals_section(ws, data_start_row: int, data_end_row: int, currency_type: str, size_start_col_letter: str = "G", size_names=None):
+    """
+    在数据区下方插入合计行：件数、双数、金额
+    - 件数：count 列（每行的包装件数）
+    - 双数：pairs 列（总双数 = total_quantity * count）
+    - 金额：amount 列（单价 * 总双数）
+    """
+    if size_names is None:
+        size_names = []
+
+    # 计算尺码实际列数
+    size_start_idx = column_index_from_string(size_start_col_letter)
+    actual_size_cols = sum(1 for n in size_names if n not in (None, ""))
+
+    # 基于尺码列后的固定相对位置定位列
+    qty_col_idx    = size_start_idx + actual_size_cols          # 总双数(单套)列（非合计）
+    count_col_idx  = qty_col_idx + 1                            # 件数列
+    pairs_col_idx  = qty_col_idx + 2                            # 双数列（=总双数*件数）
+    remark_col_idx = qty_col_idx + 3
+    price_col_idx  = qty_col_idx + 4
+    amount_col_idx = qty_col_idx + 5                            # 金额列
+
+    count_col_letter  = get_column_letter(count_col_idx)
+    pairs_col_letter  = get_column_letter(pairs_col_idx)
+    amount_col_letter = get_column_letter(amount_col_idx)
+
+    # 插入合计行（数据区后空一行）
+    totals_row = data_end_row + 2
+
+    # 合计标题放在 “C:E” 合并
+    ws.merge_cells(f"C{totals_row}:E{totals_row}")
+    ws[f"C{totals_row}"] = "合计"
+    ws[f"C{totals_row}"].font = Font(bold=True)
+
+    # 件数合计
+    ws[f"{count_col_letter}{totals_row}"] = f"=SUM({count_col_letter}{data_start_row}:{count_col_letter}{data_end_row})"
+    ws[f"{count_col_letter}{totals_row}"].font = Font(bold=True)
+
+    # 双数合计
+    ws[f"{pairs_col_letter}{totals_row}"] = f"=SUM({pairs_col_letter}{data_start_row}:{pairs_col_letter}{data_end_row})"
+    ws[f"{pairs_col_letter}{totals_row}"].font = Font(bold=True)
+
+    # 金额合计
+    ws[f"{amount_col_letter}{totals_row}"] = f"=SUM({amount_col_letter}{data_start_row}:{amount_col_letter}{data_end_row})"
+    ws[f"{amount_col_letter}{totals_row}"].number_format = get_currency_format(currency_type or "")
+    ws[f"{amount_col_letter}{totals_row}"].font = Font(bold=True)
+
+    # 让合计行更显眼：行高、（可选）边框你也可以按需加
+    ws.row_dimensions[totals_row].height = 22
+
+
 def get_currency_format(currency_type):
     mapping = {
         "USD": '"$"#,##0.00',
@@ -73,34 +124,38 @@ def set_global_font(ws, font_size=14):
                     strike=old_font.strike,
                     color=old_font.color
                 )
-def auto_adjust_column_width(ws, max_width=50):
+def auto_adjust_column_width(ws, max_width=50, size_start_col_letter="G", size_max_width=6):
     """
     根据内容自动调整列宽，但不超过 max_width。
-    如果当前列宽已足够显示最大内容，则不调整。
+    尺码列从 size_start_col_letter 开始，单独限制为 size_max_width。
     """
+    size_start_idx = column_index_from_string(size_start_col_letter)
+
     for col_cells in ws.columns:
         first_cell = next((c for c in col_cells if c is not None), None)
         if first_cell is None:
             continue
 
-        col_letter = get_column_letter(first_cell.column)
+        col_idx = first_cell.column
+        col_letter = get_column_letter(col_idx)
+
+        # 判断是否是尺码列
+        if col_idx >= size_start_idx:
+            ws.column_dimensions[col_letter].width = size_max_width
+            continue
+
         max_length = 0
-        
         for cell in col_cells:
             if cell.value is not None:
                 length = len(str(cell.value))
                 if length > max_length:
                     max_length = length
 
-        # 计算需要的列宽（字符数 + 1 边距）
         needed_width = min(max_length + 1, max_width)
-
-        # 读取当前列宽（None 时用默认 8.43）
         current_width = ws.column_dimensions[col_letter].width or 8.43
-
-        # 仅在内容超出当前列宽时才调整
         if needed_width > current_width:
             ws.column_dimensions[col_letter].width = needed_width
+
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
@@ -335,6 +390,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             ws.merge_cells(f"{get_column_letter(remark_col_idx)}{shoe_start}:{get_column_letter(remark_col_idx)}{row - 1}")
             merge_ranges.append((shoe_start, row - 1))
         ws[f"B{shoe_start}"] = shoe_rid
+        return row - 1
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
     ws = wb.active
@@ -484,6 +540,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             merge_ranges.append((shoe_start, row - 1))
 
         ws[f"B{shoe_start}"] = shoe_rid
+        return row - 1
 
 
 # Function to save the workbook after modification
@@ -498,7 +555,8 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data(wb, order_data, "A", 6)
+    data_end_row = insert_series_data(wb, order_data, "A", 6)
+    data_start_row = 6
 
 
     # insert shoe size name
@@ -510,11 +568,20 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     q3_value = ws["Q3"].value
     delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
     fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    add_totals_section(
+        ws=ws,
+        data_start_row=data_start_row,
+        data_end_row=data_end_row,
+        currency_type=order_data[next(iter(order_data))].get("currencyType", ""),  # 若你的 currencyType 在 metadata，也可以用 metadata.get("currencyType")
+        size_start_col_letter="G",
+        size_names=metadata["sizeNames"]
+    )
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
         col_letter = get_column_letter(remark_col_idx)
         for start_row, end_row in merge_ranges:
             ws.merge_cells(f"{col_letter}{start_row}:{col_letter}{end_row}")
+    merge_ranges.clear()  # 清除已处理的合并范围
     order_shoe_id = next(iter(order_data))  # Get the first key from order_data
     start_date = order_data[order_shoe_id].get("orderStartDate")
     end_date = order_data[order_shoe_id].get("orderEndDate")
@@ -536,7 +603,8 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data_amount(wb, order_data, "A", 6)
+    data_end_row = insert_series_data_amount(wb, order_data, "A", 6)
+    data_start_row = 6
 
     # insert shoe size name
     column = "G"
@@ -547,11 +615,20 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     q3_value = ws["Q3"].value
     delete_extra_size_columns(ws, metadata["sizeNames"], start_col_letter="G", total_size_count=len(SHOESIZERANGE))
     fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=metadata["sizeNames"])
+    add_totals_section(
+        ws=ws,
+        data_start_row=data_start_row,
+        data_end_row=data_end_row,
+        currency_type=order_data[next(iter(order_data))].get("currencyType", ""),
+        size_start_col_letter="G",
+        size_names=metadata["sizeNames"]
+    )
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
         col_letter = get_column_letter(remark_col_idx)
         for start_row, end_row in merge_ranges:
             ws.merge_cells(f"{col_letter}{start_row}:{col_letter}{end_row}")
+    merge_ranges.clear()  # Clear merge ranges for the next use
     order_shoe_id = next(iter(order_data))  # Get the first key from order_data
     start_date = order_data[order_shoe_id].get("orderStartDate")
     end_date = order_data[order_shoe_id].get("orderEndDate")
