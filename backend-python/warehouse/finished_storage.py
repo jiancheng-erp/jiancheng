@@ -533,6 +533,8 @@ def outbound_finished():
             continue  # Skip if storage not found
 
         storage.finished_amount -= outbound_quantity
+        if storage.finished_amount < 0:
+            return jsonify({"message": f"仓库编号{storage_id}出库数量超过库存"}), 400
         record_detail = ShoeOutboundRecordDetail(
             shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
             outbound_amount=outbound_quantity,

@@ -58,6 +58,7 @@
                 <el-table-column type="expand">
                     <template #default="{ row }">
                         <el-table :data="row.orderShoeTable" border stripe>
+                            <el-table-column prop="storageId" label="仓库编号" />
                             <el-table-column prop="shoeRId" label="工厂型号" />
                             <el-table-column prop="customerProductName" label="客户鞋号" />
                             <el-table-column prop="colorName" label="颜色" />
@@ -270,6 +271,7 @@ export default {
                 this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_ONGOING
             }
             else if (this.role == 20) {
+                this.storageStatusNum = this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_INBOUND_FINISHED
                 this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_APPROVED
             }
         },
@@ -355,7 +357,7 @@ export default {
                 return
             }
             for (let row of this.selectedRows) {
-                if (row.isOutboundAllowed != 2) {
+                if (row.auditStatusNum != this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_APPROVED) {
                     ElMessage.error("存在不可出货订单")
                     return
                 }
@@ -387,7 +389,6 @@ export default {
             console.log(this.outboundForm)
         },
         async getTableData() {
-            this.jumpToAllForAuditStatus();
             const params = {
                 "page": this.currentPage,
                 "pageSize": this.pageSize,
@@ -403,16 +404,16 @@ export default {
             this.totalRows = response.data.total
         },
         async submitOperationForm() {
-            console.log(this.outboundForm)
             try {
                 await axios.patch(`${this.$apiBaseUrl}/warehouse/warehousemanager/outboundfinished`, this.outboundForm)
                 ElMessage.success("出库成功")
             }
             catch (error) {
                 console.log(error)
-                ElMessage.error("操作异常")
+                const errorMessage = error.response ? error.response.data.message : "操作异常"
+                ElMessage.error(errorMessage)
             }
-            // this.isOutboundDialogVisible = false
+            this.isOutboundDialogVisible = false
             this.getTableData()
         },
         handleSizeChange(val) {
