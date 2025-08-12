@@ -1641,6 +1641,7 @@ def export_order():
                 "shoeRId": shoe.shoe_rid,
                 "shoes": [shoe_meta_data],
                 "remark": (order_shoe.business_technical_remark or "") + (order_shoe.business_material_remark or ""),
+                "currencyType": order_shoe_type.currency_type,
             }
         else:
             order_shoe_mapping[order_shoe.order_shoe_id]["shoes"].append(shoe_meta_data)
@@ -1724,7 +1725,8 @@ def export_production_order():
                 "orderStartDate": order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A",
                 "orderEndDate": order.end_date.strftime("%Y-%m-%d") if order.end_date else "N/A",
                 "orderCId": order.order_cid,
-                "title": f"健诚集团{customer.customer_name}号客人{customer.customer_brand}生产订单"
+                "title": f"健诚集团{customer.customer_name}号客人{customer.customer_brand}生产订单",
+                "currencyType": order_shoe_type.currency_type
             }
             shoe_meta_data = {
                 "color": color.color_name,

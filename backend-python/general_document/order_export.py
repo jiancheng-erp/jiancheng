@@ -10,6 +10,22 @@ from openpyxl.utils import units
 from logger import logger
 from openpyxl.styles import Font
 
+def get_currency_format(currency_type: str, decimals: int = 3) -> str:
+    """
+    返回 openpyxl 的 number_format，例如 '"$"#,##0.000'
+    未匹配到币种时不加符号，仅保留小数位。
+    """
+    symbol_map = {
+        "USD": "$",
+        "USA": "$",
+        "CNY": "￥",
+        "RMB": "￥",
+        "EUR": "€",
+    }
+    symbol = symbol_map.get((currency_type or "").upper(), "")
+    dec = "0" * decimals
+    return f'"{symbol}"#,##0.{dec}' if symbol else f'#,##0.{dec}'
+
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
     # Copy the template to a new file
@@ -116,7 +132,8 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                 "img_url": color_shoe.get("imgUrl"),
                 "unit_price": color_shoe.get("unitPrice"),
                 "packaging_info": color_shoe.get("packagingInfo"),
-                "remark": metadata.get("remark")
+                "remark": metadata.get("remark"),
+                "currency_type": metadata.get("currencyType"),
             })
 
     first_customer_shoe_written = False  # 标记是否写过第一个鞋型
@@ -212,9 +229,16 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
+                        currency_fmt = get_currency_format(entry.get("currency_type"), decimals=2)
+
+                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_price.value = unit_price
+                        cell_price.number_format = currency_fmt
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
+
+                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_amount.value = unit_price * total_quantity * count
+                        cell_amount.number_format = currency_fmt
 
                         row += 1
 
@@ -277,7 +301,8 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                 "img_url": color_shoe.get("imgUrl"),
                 "unit_price": color_shoe.get("unitPrice"),
                 "packaging_info": color_shoe.get("packagingInfo"),
-                "remark": metadata.get("remark")
+                "remark": metadata.get("remark"),
+                "currency_type": metadata.get("currencyType"),
             })
 
     first_customer_shoe_written = False  # 标记是否写过第一个鞋型
@@ -373,9 +398,16 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity * count
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price
+                        currency_fmt = get_currency_format(entry.get("currency_type"), decimals=2)
+
+                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_price.value = unit_price
+                        cell_price.number_format = currency_fmt
                         col_idx += 1
-                        ws[f"{get_column_letter(col_idx)}{row}"] = unit_price * total_quantity * count
+
+                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                        cell_amount.value = unit_price * total_quantity * count
+                        cell_amount.number_format = currency_fmt
 
                         row += 1
 
