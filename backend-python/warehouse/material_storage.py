@@ -246,6 +246,7 @@ def get_materials():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("pageSize", type=int, default=10)
     show_unfinished_orders = request.args.get("showUnfinishedOrders")
+    material_type_id = request.args.get("materialTypeId")
     filters = {
         "material_name": request.args.get("materialName", ""),
         "material_spec": request.args.get("materialSpec", ""),
@@ -266,6 +267,7 @@ def get_materials():
         db.session.query(
             PurchaseOrderItem,
             Material,
+            MaterialType,
             Supplier,
             Order,
             Shoe,
@@ -274,6 +276,10 @@ def get_materials():
         .join(
             Material,
             PurchaseOrderItem.inbound_material_id == Material.material_id,
+        )
+        .join(
+            MaterialType,
+            Material.material_type_id == MaterialType.material_type_id,
         )
         .join(
             PurchaseDivideOrder,
@@ -298,6 +304,8 @@ def get_materials():
     for key, value in filters.items():
         if value and value != "":
             query = query.filter(material_filter_map[key].ilike(f"%{value}%"))
+    if material_type_id and material_type_id != "":
+        query = query.filter(Material.material_type_id == material_type_id)
     if show_unfinished_orders == "true":
         query = query.filter(
             PurchaseOrderItem.purchase_amount
@@ -308,7 +316,7 @@ def get_materials():
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     result = []
     for row in response:
-        (purchase_order_item, material, supplier, order, shoe, storage) = row
+        (purchase_order_item, material, material_type, supplier, order, shoe, storage) = row
         actual_inbound_amount = storage.inbound_amount if storage else 0
         size_table = json.loads(order.order_size_table)
         if material.material_name == "大底":
@@ -320,13 +328,14 @@ def get_materials():
         obj = {
             "orderRId": order.order_rid,
             "shoeRId": shoe.shoe_rid,
+            "materialTypeName": material_type.material_type_name,
             "materialName": material.material_name,
-            "materialModel": purchase_order_item.material_model,
-            "materialSpecification": purchase_order_item.material_specification,
-            "materialColor": purchase_order_item.color,
+            "materialModel": purchase_order_item.material_model if purchase_order_item.material_model else "",
+            "materialSpecification": purchase_order_item.material_specification if purchase_order_item.material_specification else "",
+            "materialColor": purchase_order_item.color if purchase_order_item.color else "",
             "actualInboundUnit": purchase_order_item.inbound_unit,
-            "inboundModel": purchase_order_item.material_model,
-            "inboundSpecification": purchase_order_item.material_specification,
+            "inboundModel": purchase_order_item.material_model if purchase_order_item.material_model else "",
+            "inboundSpecification": purchase_order_item.material_specification if purchase_order_item.material_specification else "",
             "materialCategory": material.material_category,
             "supplierName": supplier.supplier_name,
             "estimatedInboundAmount": purchase_order_item.purchase_amount,
