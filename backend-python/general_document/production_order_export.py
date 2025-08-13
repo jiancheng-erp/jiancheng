@@ -40,8 +40,11 @@ def add_totals_section(ws, data_start_row: int, data_end_row: int, currency_type
     pairs_col_letter  = get_column_letter(pairs_col_idx)
     amount_col_letter = get_column_letter(amount_col_idx)
 
-    # 插入合计行（数据区后空一行）
-    totals_row = data_end_row + 2
+    next_row = data_end_row + 1
+    if next_row <= ws.max_row and is_empty_row(ws, next_row):
+        totals_row = data_end_row + 2   # 下一行确实存在而且是空的，留一行空白
+    else:
+        totals_row = data_end_row + 1   # 否则紧跟着放（包括“下一行不存在”的情况）
 
     # 合计标题放在 “C:E” 合并
     ws.merge_cells(f"C{totals_row}:E{totals_row}")
@@ -63,6 +66,154 @@ def add_totals_section(ws, data_start_row: int, data_end_row: int, currency_type
 
     # 让合计行更显眼：行高、（可选）边框你也可以按需加
     ws.row_dimensions[totals_row].height = 22
+    
+def is_empty_row(ws, row_idx: int) -> bool:
+    """判断整行是否为空（无任何值）"""
+    if row_idx > ws.max_row:
+        return True
+    for cell in ws[row_idx]:
+        if cell.value not in (None, ""):
+            return False
+    return True
+
+def trim_trailing_blank_after_data(ws, last_data_row: int):
+    """
+    删除数据块末尾紧跟的所有空行（通常是插入逻辑遗留的那一行）。
+    注意：在插入“合计”之前调用。
+    """
+    next_row = last_data_row + 1
+    # 连续空行都删掉，保证数据块正好以最后一行数据结束
+    while next_row <= ws.max_row and is_empty_row(ws, next_row):
+        ws.delete_rows(next_row, 1)
+
+def reset_print_area(ws):
+    """
+    将打印区域设置为“真实内容”占用的最小矩形：
+    - 普通单元格：仅当 cell.value 非空才纳入
+    - 合并单元格：仅当左上角单元格有值才纳入（空标题等不会撑大）
+    - 图片：把图片锚点所在单元格也纳入
+    同时设置为按 1 页宽度缩放。
+    """
+    from openpyxl.utils import get_column_letter, coordinate_to_tuple
+
+    def update_bounds(c, r):
+        nonlocal min_col, min_row, max_col, max_row
+        if min_col is None or c < min_col:
+            min_col = c
+        if max_col is None or c > max_col:
+            max_col = c
+        if min_row is None or r < min_row:
+            min_row = r
+        if max_row is None or r > max_row:
+            max_row = r
+
+    min_col = min_row = max_col = max_row = None
+
+    # 1) 非空单元格
+    for row in ws.iter_rows(values_only=False):
+        for cell in row:
+            if cell.value not in (None, ""):
+                update_bounds(cell.column, cell.row)
+
+    # 2) 有值的合并区域（只看左上角是否有值）
+    for rng in ws.merged_cells.ranges:
+        mc_min_col, mc_min_row, mc_max_col, mc_max_row = rng.bounds
+        tl = ws.cell(row=mc_min_row, column=mc_min_col)
+        if tl.value not in (None, ""):
+            update_bounds(mc_min_col, mc_min_row)
+            update_bounds(mc_max_col, mc_max_row)
+
+    # 3) 图片锚点
+    for img in getattr(ws, "_images", []):
+        try:
+            anc = img.anchor
+            col = row = None
+            # 可能是 "A1" 字符串
+            if isinstance(anc, str):
+                col, row = coordinate_to_tuple(anc)
+            else:
+                # 也可能是 OneCellAnchor / TwoCellAnchor
+                from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor, TwoCellAnchor
+                if isinstance(anc, OneCellAnchor):
+                    col = anc._from.col + 1
+                    row = anc._from.row + 1
+                elif isinstance(anc, TwoCellAnchor):
+                    col = anc._to.col + 1
+                    row = anc._to.row + 1
+            if col and row:
+                update_bounds(col, row)
+        except Exception:
+            pass
+
+    # 没有内容就不设打印区
+    if min_col is None:
+        ws.print_area = None
+        return
+
+    ws.print_area = f"{get_column_letter(min_col)}{min_row}:{get_column_letter(max_col)}{max_row}"
+
+    # 按一页宽度缩放，行数不限
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+
+def get_dynamic_columns(size_names, size_start_col_letter="G"):
+    """
+    基于尺码列的实际数量，计算 qty/count/pairs/remark/price/amount 的列索引与字母。
+    和 add_totals_section 的定位逻辑保持一致。
+    """
+    size_start_idx = column_index_from_string(size_start_col_letter)
+    actual_size_cols = sum(1 for n in size_names if n not in (None, ""))
+
+    qty_idx    = size_start_idx + actual_size_cols
+    count_idx  = qty_idx + 1
+    pairs_idx  = qty_idx + 2
+    remark_idx = qty_idx + 3
+    price_idx  = qty_idx + 4
+    amount_idx = qty_idx + 5
+
+    return {
+        "qty_idx": qty_idx, "qty_letter": get_column_letter(qty_idx),
+        "count_idx": count_idx, "count_letter": get_column_letter(count_idx),
+        "pairs_idx": pairs_idx, "pairs_letter": get_column_letter(pairs_idx),
+        "remark_idx": remark_idx, "remark_letter": get_column_letter(remark_idx),
+        "price_idx": price_idx, "price_letter": get_column_letter(price_idx),
+        "amount_idx": amount_idx, "amount_letter": get_column_letter(amount_idx),
+    }
+
+
+from openpyxl.styles import Alignment
+def apply_remark_wrap_and_row_height(ws, remark_col_letter: str, start_row: int, end_row: int,
+                                     long_len: int = 20, min_height_if_long: float = 40.0):
+    """
+    让备注列自动换行；对较长备注的行，若当前行高偏小则适当增高。
+    注意：我们只“增高”，不回退已有的更高行高（例如含图片的行）。
+    """
+    for r in range(start_row, end_row + 1):
+        cell = ws[f"{remark_col_letter}{r}"]
+        # 开启自动换行，顶部对齐
+        old = cell.alignment or Alignment()
+        cell.alignment = Alignment(
+            horizontal=old.horizontal, vertical="top",
+            wrap_text=True, shrink_to_fit=False,
+            text_rotation=old.text_rotation, indent=old.indent
+        )
+        # 简单按文本长度启发式增高
+        v = cell.value
+        if isinstance(v, str) and len(v.strip()) >= long_len:
+            current = ws.row_dimensions[r].height
+            if current is None or current < min_height_if_long:
+                ws.row_dimensions[r].height = min_height_if_long
+
+
+def ensure_min_width(ws, col_letters, min_width: float):
+    """把指定列的宽度下限提升到 min_width，不会减小已有更大宽度。"""
+    for letter in col_letters:
+        cur = ws.column_dimensions[letter].width
+        # 某些模板列宽可能是 None，这里统一保障下限
+        if cur is None or cur < min_width:
+            ws.column_dimensions[letter].width = float(min_width)
 
 
 def get_currency_format(currency_type):
@@ -216,6 +367,63 @@ def delete_extra_size_columns(ws, size_name_list, start_col_letter="G", total_si
         cell = ws[f"{start_col_letter}4"]
         cell.value = "尺码"
         cell.font = Font(bold=True)
+        
+def delete_zero_size_columns(ws, size_name_list, start_col_letter: str, data_start_row: int, data_end_row: int):
+    """
+    在尺码区间内，删除“数据区（data_start_row..data_end_row）里全为 0/空”的尺码列。
+    同步返回更新后的 size_name_list（只保留未被删除的尺码名，顺序不变）。
+    - 判定“为 0”：None、空串、'0'、数值 0 都算 0；能转成数字且==0 也算 0。
+    - 只检查数据区，不看表头行。
+    """
+    start_idx = column_index_from_string(start_col_letter)
+
+    # 只考虑有效尺码名（非空）
+    names = [n for n in size_name_list if n not in (None, "")]
+    delete_offsets = []
+
+    for i, _name in enumerate(names):
+        col_idx = start_idx + i
+        all_zero = True
+        for r in range(data_start_row, data_end_row + 1):
+            v = ws.cell(row=r, column=col_idx).value
+            if v is None:
+                continue
+            if isinstance(v, str):
+                s = v.strip()
+                if s == "" or s == "0":
+                    continue
+                # 可转数的字符串
+                try:
+                    if float(s) == 0:
+                        continue
+                    else:
+                        all_zero = False
+                        break
+                except:
+                    # 有非数值文本，认为“非零/有效”
+                    all_zero = False
+                    break
+            else:
+                # 数值或其他可转型对象
+                try:
+                    if float(v) == 0:
+                        continue
+                    else:
+                        all_zero = False
+                        break
+                except:
+                    all_zero = False
+                    break
+        if all_zero:
+            delete_offsets.append(i)
+
+    # 先右到左删除列，避免索引位移
+    for i in reversed(delete_offsets):
+        ws.delete_cols(start_idx + i, 1)
+        del names[i]
+
+    return names  # 返回剩余的尺码名列表（作为后续新的 sizeNames 使用）
+
         
 def fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_name_list=None, total_size_count=13):
     """
@@ -557,7 +765,7 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     # Insert the series data
     data_end_row = insert_series_data(wb, order_data, "A", 6)
     data_start_row = 6
-
+    trim_trailing_blank_after_data(ws, data_end_row)
 
     # insert shoe size name
     column = "G"
@@ -576,6 +784,8 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
         size_start_col_letter="G",
         size_names=metadata["sizeNames"]
     )
+    cols = get_dynamic_columns(metadata["sizeNames"], "G")
+    apply_remark_wrap_and_row_height(ws, cols["remark_letter"], data_start_row, data_end_row)
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
         col_letter = get_column_letter(remark_col_idx)
@@ -592,7 +802,11 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     ws["Q3"] = q3_value
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
+    ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)  # 建议至少 14
+    ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
+    adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
+    reset_print_area(ws)
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
@@ -605,7 +819,7 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     # Insert the series data
     data_end_row = insert_series_data_amount(wb, order_data, "A", 6)
     data_start_row = 6
-
+    trim_trailing_blank_after_data(ws, data_end_row)
     # insert shoe size name
     column = "G"
     row = 5
@@ -623,6 +837,8 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
         size_start_col_letter="G",
         size_names=metadata["sizeNames"]
     )
+    cols = get_dynamic_columns(metadata["sizeNames"], "G")
+    apply_remark_wrap_and_row_height(ws, cols["remark_letter"], data_start_row, data_end_row)
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
         col_letter = get_column_letter(remark_col_idx)
@@ -639,7 +855,11 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     ws["Q3"] = q3_value
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
+    ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)  # 建议至少 14
+    ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
+    adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
+    reset_print_area(ws)
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
