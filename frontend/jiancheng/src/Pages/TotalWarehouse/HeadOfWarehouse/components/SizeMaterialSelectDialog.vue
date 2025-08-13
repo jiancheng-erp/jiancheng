@@ -39,7 +39,7 @@
                 :total="totalRows"
                 layout="total, sizes, prev, pager, next, jumper"
                 @current-change="pageChange"
-                @size-change="PageSizeChange">
+                @size-change="pageSizeChange">
             </el-pagination>
         </div>
         <div v-else>
@@ -191,7 +191,7 @@ export default {
             this.localSearchParams.currentPage = page
             this.fetchSizeMaterialData()
         },
-        PageSizeChange(size) {
+        pageSizeChange(size) {
             this.localSearchParams.pageSize = size
             this.fetchSizeMaterialData()
         },
