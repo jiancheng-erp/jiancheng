@@ -203,6 +203,7 @@ export default {
                 "materialModel": this.localSearchParams.materialModelSearch,
                 "materialColor": this.localSearchParams.materialColorSearch,
                 "supplier": this.localSearchParams.supplierNameSearch,
+                "materialTypeId": this.localSearchParams.materialTypeId,
                 "page": this.localSearchParams.currentPage,
                 "pageSize": this.localSearchParams.pageSize,
                 "showUnfinishedOrders": this.localSearchParams.showUnfinishedOrders,

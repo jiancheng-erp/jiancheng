@@ -25,6 +25,7 @@
                 <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+                <el-table-column prop="materialTypeName" label="材料类型"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
@@ -33,12 +34,8 @@
                 <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
                 <el-table-column prop="remainingAmount" label="剩余入库数量"></el-table-column>
             </el-table>
-            <el-pagination
-                :current-page="currentPage"
-                :page-size="pageSize"
-                :total="totalRows"
-                layout="total, sizes, prev, pager, next, jumper"
-                @current-change="pageChange"
+            <el-pagination :current-page="localSearchParams.currentPage" :page-size="localSearchParams.pageSize"
+                :total="totalRows" layout="total, sizes, prev, pager, next, jumper" @current-change="pageChange"
                 @size-change="pageSizeChange">
             </el-pagination>
         </div>
@@ -200,6 +197,7 @@ export default {
                 "materialModel": this.localSearchParams.materialModelSearch,
                 "materialColor": this.localSearchParams.materialColorSearch,
                 "supplier": this.localSearchParams.supplierNameSearch,
+                "materialTypeId": this.localSearchParams.materialTypeId,
                 "page": this.localSearchParams.currentPage,
                 "pageSize": this.localSearchParams.pageSize,
                 "showUnfinishedOrders": this.localSearchParams.showUnfinishedOrders,

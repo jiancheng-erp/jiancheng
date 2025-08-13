@@ -729,6 +729,10 @@ export default {
             row.itemTotalPrice = updateTotalPriceHelper(row)
         },
         async handleSearchMaterial(scope) {
+            if (this.inboundForm.materialTypeId == null || this.inboundForm.materialTypeId == '') {
+                ElMessage.warning('请先选择材料类型')
+                return
+            }
             this.currentKeyDownRow = scope.row; // Store the current row
             this.currentIndex = scope.rowIndex; // Store the current row index
             if (this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16) {
@@ -750,6 +754,7 @@ export default {
                 "materialModelSearch": this.currentKeyDownRow.inboundModel,
                 "materialColorSearch": this.currentKeyDownRow.materialColor,
                 "supplierNameSearch": this.inboundForm.supplierName,
+                "materialTypeId": this.inboundForm.materialTypeId,
                 "showUnfinishedOrders": true,
                 "page": 1,
                 "pageSize": 20,
