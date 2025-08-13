@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "echarts": "^5.5.1",
-    "perfect-scrollbar": "^1.5.6"
-  }
-}
