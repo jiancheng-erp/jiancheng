@@ -26,6 +26,7 @@
     "js-cookie": "^3.0.5",
     "jspdf": "^2.5.2",
     "mermaid": "^10.9.1",
+    "perfect-scrollbar": "^1.5.6",
     "pinia": "^2.1.7",
     "pinyin": "^4.0.0-alpha.2",
     "segmentit": "^2.0.3",
