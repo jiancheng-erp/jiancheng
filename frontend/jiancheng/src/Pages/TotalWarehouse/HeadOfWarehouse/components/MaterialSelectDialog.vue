@@ -1,21 +1,26 @@
 <template>
     <el-dialog title="选择材料" v-model="localVisible" fullscreen @close="handleClose" destroy-on-close>
         <div v-if="selectionPage == 0">
-            <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="localSearchParams.materialModelSearch" placeholder="搜索材料型号" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="localSearchParams.materialSpecificationSearch" placeholder="搜索材料规格" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="localSearchParams.materialColorSearch" placeholder="搜索材料颜色" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-input v-model="localSearchParams.supplierNameSearch" placeholder="搜索供应商" style="width: 300px; margin-bottom: 10px;" clearable
-                @change="fetchMaterialData" @clear="fetchMaterialData"></el-input>
-            <el-switch v-model="localSearchParams.showUnfinishedOrders"
-                active-text="仅显示未入库订单" inactive-text="显示所有订单" style="margin-bottom: 10px;"
-                @change="fetchMaterialData"></el-switch>
+            <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialModelSearch" placeholder="搜索材料型号"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialSpecificationSearch" placeholder="搜索材料规格"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.materialColorSearch" placeholder="搜索材料颜色"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.supplierNameSearch" placeholder="搜索供应商"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
+            <el-switch v-model="localSearchParams.showUnfinishedOrders" active-text="仅显示未入库订单" inactive-text="显示所有订单"
+                style="margin-bottom: 10px;" @change="fetchMaterialData"></el-switch>
 
             <div style="display:flex; flex-wrap: wrap; gap: 10px;">
                 <div style="font-size: medium">已选择订单：{{orderSelection.map(item => item.orderRId)}}</div>
@@ -32,7 +37,28 @@
                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                 <el-table-column prop="materialColor" label="颜色"></el-table-column>
                 <el-table-column prop="actualInboundUnit" label="计量单位"></el-table-column>
-                <el-table-column prop="remainingAmount" label="剩余入库数量"></el-table-column>
+                <el-table-column prop="remainingAmount">
+                    <template #header>
+                        <span>剩余入库数量</span>
+                        <el-tooltip content="采购数量 - 已入库数量" placement="top" :show-after="150">
+                            <el-icon class="help-icon">
+                                <QuestionFilled />
+                            </el-icon>
+                        </el-tooltip>
+                    </template>
+                    <template #default="{ row }">{{ row.remainingAmount }}</template>
+                </el-table-column>
+                <el-table-column prop="remainingAmountRealTime">
+                    <template #header>
+                        <span>实时剩余数量</span>
+                        <el-tooltip content="采购数量 - 已入库数量 - 当前表单已填数量（同一明细）" placement="top" :show-after="150">
+                            <el-icon class="help-icon">
+                                <QuestionFilled />
+                            </el-icon>
+                        </el-tooltip>
+                    </template>
+                    <template #default="{ row }">{{ row.remainingAmountRealTime }}</template>
+                </el-table-column>
             </el-table>
             <el-pagination :current-page="localSearchParams.currentPage" :page-size="localSearchParams.pageSize"
                 :total="totalRows" layout="total, sizes, prev, pager, next, jumper" @current-change="pageChange"
@@ -49,8 +75,8 @@
                 </el-col>
                 <el-col :span="6">
                     <span>材料单价：</span>
-                    <el-input-number v-model="unitPrice" style="width: 200px;" :min="0"
-                        :precision="4" :step="0.0001" size="small"></el-input-number>
+                    <el-input-number v-model="unitPrice" style="width: 200px;" :min="0" :precision="4" :step="0.0001"
+                        size="small"></el-input-number>
                 </el-col>
                 <!-- <el-col :span="12">
                     <span style="margin-right: 50px;">订单入库数量：{{ selectedInboundQuantity }}</span>
@@ -69,8 +95,7 @@
                     <el-table-column prop="materialModel" label="型号"></el-table-column>
                     <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
-                    <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                    <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
+                    <el-table-column prop="remainingAmountRealTime" label="实时剩余数量"></el-table-column>
                     <el-table-column prop="currentAmount" label="库存"></el-table-column>
                     <el-table-column label="入库数量">
                         <template #default="scope">
@@ -105,8 +130,7 @@
                     <el-table-column prop="materialModel" label="型号"></el-table-column>
                     <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
-                    <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                    <el-table-column prop="actualInboundAmount" label="已入库数量"></el-table-column>
+                    <el-table-column prop="remainingAmountRealTime" label="实时剩余数量"></el-table-column>
                     <el-table-column prop="currentAmount" label="库存"></el-table-column>
                 </el-table>
             </div>
@@ -132,6 +156,10 @@ export default {
         searchParams: {
             type: Object,
             required: true,
+        },
+        tableData: {
+            type: Array,
+            default: [],
         },
     },
     emits: ['confirm', 'update-visible'],
@@ -162,6 +190,7 @@ export default {
                 pageSize: 20,
             },
             totalRows: 0,
+            inboundTableMap: {},
         }
     },
     watch: {
@@ -173,10 +202,21 @@ export default {
         },
     },
     async mounted() {
-        this.localSearchParams = {...this.localSearchParams, ...this.searchParams}
+        this.localSearchParams = { ...this.localSearchParams, ...this.searchParams }
+        this.constructInboundTableMap();
         await this.fetchMaterialData();
     },
     methods: {
+        constructInboundTableMap() {
+            for (let i = 0; i < this.$props.tableData.length; i++) {
+                const item = this.$props.tableData[i];
+                let string = `${item.orderRId}-${item.materialName}-${item.inboundModel}-${item.inboundSpecification}-${item.materialColor}-${item.actualInboundUnit}`
+                if (!this.inboundTableMap[string]) {
+                    this.inboundTableMap[string] = (new Decimal(0));
+                }
+                this.inboundTableMap[string] = this.inboundTableMap[string].plus(new Decimal(item.inboundQuantity));
+            }
+        },
         resetSelectedOrders() {
             this.orderSelection = [];
             this.originTableData = this.searchedMaterials;
@@ -210,6 +250,15 @@ export default {
                 item.id = XEUtils.uniqueId()
             })
             this.originTableData = this.searchedMaterials
+
+            // 计算实时剩余数量
+            this.originTableData.forEach(item => {
+                let string = `${item.orderRId}-${item.materialName}-${item.materialModel}-${item.materialSpecification}-${item.materialColor}-${item.actualInboundUnit}`
+                if (!this.inboundTableMap[string]) {
+                    this.inboundTableMap[string] = new Decimal(0);
+                }
+                item.remainingAmountRealTime = (new Decimal(item.remainingAmount)).minus(this.inboundTableMap[string]);
+            });
         },
         autoSelectOrders() {
             if (this.totalInboundQuantity <= 0) {
@@ -220,7 +269,7 @@ export default {
             this.bottomTableData = JSON.parse(JSON.stringify(this.bottomTableDataCopy))
             let remainTotalQuantity = this.totalInboundQuantity
             for (let i = 0; i < this.bottomTableData.length; i++) {
-                let remain = this.bottomTableData[i].estimatedInboundAmount - this.bottomTableData[i].actualInboundAmount
+                let remain = this.bottomTableData[i].remainingAmountRealTime
                 if (remain <= 0) {
                     continue
                 }
@@ -274,7 +323,7 @@ export default {
                 return
             }
             for (let i = 0; i < this.downSelected.length; i++) {
-                let remain = this.downSelected[i].estimatedInboundAmount - this.downSelected[i].actualInboundAmount
+                let remain = this.downSelected[i].remainingAmountRealTime
                 this.downSelected[i].inboundQuantity = remain
             }
             this.topTableData = this.topTableData.concat(this.downSelected);

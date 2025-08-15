@@ -160,10 +160,10 @@
         </el-col>
     </el-row>
 
-    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis"
+    <MaterialSelectDialog v-if="showMaterialSelectDialog" :visible="isMaterialSelectDialogVis" :tableData="materialTableData"
         :searchParams="searchParams" @confirm="updateMaterialTableData" @update-visible="updateDialogVisible" />
 
-    <SizeMaterialSelectDialog v-if="showSizeMaterialSelectDialog" :visible="isSizeMaterialSelectDialogVis"
+    <SizeMaterialSelectDialog v-if="showSizeMaterialSelectDialog" :visible="isSizeMaterialSelectDialogVis" :tableData="materialTableData"
         :searchParams="searchParams" @confirm="updateSizeMaterialTableData" @update-visible="updateSizeMaterialDialogVisible" />
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
