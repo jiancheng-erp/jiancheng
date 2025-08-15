@@ -27,11 +27,33 @@
                 <el-table-column prop="orderRId" label="订单号" sortable></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
                 <el-table-column prop="supplierName" label="供货单位"></el-table-column>
+                <el-table-column prop="materialTypeName" label="材料类型"></el-table-column>
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>
                 <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                 <el-table-column prop="materialColor" label="材料颜色"></el-table-column>
-                <el-table-column prop="remainingAmount" label="待入库数量"></el-table-column>
+                <el-table-column prop="remainingAmount">
+                    <template #header>
+                        <span>剩余入库数量</span>
+                        <el-tooltip content="采购数量 - 已入库数量" placement="top" :show-after="150">
+                            <el-icon class="help-icon">
+                                <QuestionFilled />
+                            </el-icon>
+                        </el-tooltip>
+                    </template>
+                    <template #default="{ row }">{{ row.remainingAmount }}</template>
+                </el-table-column>
+                <el-table-column prop="remainingAmountRealTime">
+                    <template #header>
+                        <span>实时剩余数量</span>
+                        <el-tooltip content="采购数量 - 已入库数量 - 当前表单已填数量（同一明细）" placement="top" :show-after="150">
+                            <el-icon class="help-icon">
+                                <QuestionFilled />
+                            </el-icon>
+                        </el-tooltip>
+                    </template>
+                    <template #default="{ row }">{{ row.remainingAmountRealTime }}</template>
+                </el-table-column>
             </el-table>
             <el-pagination
                 :current-page="localSearchParams.currentPage"
@@ -109,7 +131,7 @@
                     <el-table-column prop="materialModel" label="材料型号"></el-table-column>
                     <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
-                    <el-table-column prop="remainingAmount" label="待入库数量"></el-table-column>
+                    <el-table-column prop="remainingAmountRealTime" label="待入库数量"></el-table-column>
                     <el-table-column v-for="item in bottomTableShoeSizeColumns" :label=item.label
                         :prop="item.prop"></el-table-column>
                 </el-table>
@@ -136,6 +158,10 @@ export default {
         },
         searchParams: {
             type: Object,
+            required: true,
+        },
+        tableData: {
+            type: Array,
             required: true,
         },
     },
@@ -172,6 +198,7 @@ export default {
             },
             totalRows: 0,
             searchedSizeMaterials: [],
+            inboundTableMap: {},
         }
     },
     watch: {
@@ -184,9 +211,30 @@ export default {
     },
     async mounted() {
         this.localSearchParams = {...this.localSearchParams, ...this.searchParams}
+        this.constructInboundTableMap();
         await this.fetchSizeMaterialData();
     },
     methods: {
+        constructInboundTableMap() {
+            for (let i = 0; i < this.$props.tableData.length; i++) {
+                const item = this.$props.tableData[i];
+                if (!item.shoeSizeColumns) {
+                    continue;
+                }
+                let string = `${item.orderRId}-${item.materialName}-${item.inboundModel}-${item.inboundSpecification}-${item.materialColor}-${item.actualInboundUnit}`
+                if (!(string in this.inboundTableMap)) {
+                    this.inboundTableMap[string] = {"inboundQuantity": 0};
+                    for (let j = 0; j < item.shoeSizeColumns.length; j++) {
+                        this.inboundTableMap[string][`inboundQuantity${j}`] = 0;
+                    }
+
+                }
+                this.inboundTableMap[string].inboundQuantity += item.inboundQuantity;
+                for (let j = 0; j < item.shoeSizeColumns.length; j++) {
+                    this.inboundTableMap[string][`inboundQuantity${j}`] += item[`amount${j}`] || 0;
+                }
+            }
+        },
         pageChange(page) {
             this.localSearchParams.currentPage = page
             this.fetchSizeMaterialData()
@@ -216,7 +264,23 @@ export default {
                 item.id = XEUtils.uniqueId()
             })
             this.originTableData = this.searchedSizeMaterials
-            console.log(this.originTableData)
+
+            // 计算实时剩余数量
+            this.originTableData.forEach(item => {
+                let string = `${item.orderRId}-${item.materialName}-${item.materialModel}-${item.materialSpecification}-${item.materialColor}-${item.actualInboundUnit}`
+                item.remainingAmountRealTime = item.remainingAmount;
+                if (this.inboundTableMap[string]) {
+                    item.remainingAmountRealTime = item.remainingAmount - (this.inboundTableMap[string].inboundQuantity || 0);
+                }
+
+                for (let i = 0; i < item.shoeSizeColumns.length; i++) {
+                    item[`remainingAmountRealTime${i}`] = item[`remainingAmount${i}`]
+                    if (this.inboundTableMap[string]) {
+                        item[`remainingAmountRealTime${i}`] = item[`remainingAmount${i}`] - (this.inboundTableMap[string][`inboundQuantity${i}`] || 0);
+                    }
+                    
+                }
+            });
         },
         handleOriginSelectionChange(selection) {
             // concat and remove duplicates
@@ -244,8 +308,8 @@ export default {
             for (let i = 0; i < this.downSelected.length; i++) {
                 this.downSelected[i].inboundQuantity = 0;
                 for (let j = 0; j < this.shoeSizeColumns.length; j++) {
-                    let remainingAmount = this.downSelected[i][`remainingAmount${j}`] || 0;
-                    this.downSelected[i][`amount${j}`] = remainingAmount > 0 ? remainingAmount : 0;
+                    let remainingAmountRealTime = this.downSelected[i][`remainingAmountRealTime${j}`] || 0;
+                    this.downSelected[i][`amount${j}`] = remainingAmountRealTime;
                     this.downSelected[i].inboundQuantity += this.downSelected[i][`amount${j}`];
                 }
             }
@@ -298,7 +362,7 @@ export default {
             this.bottomTableShoeSizeColumns = this.shoeSizeColumns.map((item, index) => {
                 return {
                     label: item.label,
-                    prop: `remainingAmount${index}`
+                    prop: `remainingAmountRealTime${index}`
                 }
             });
             this.bottomTableDataCopy = JSON.parse(JSON.stringify(selectedOrders));
@@ -312,13 +376,11 @@ export default {
         },
         autoSelectForSize() {
             this.remainQuantityList = JSON.parse(JSON.stringify(this.shoeSizeColumns))
-            console.log(this.remainQuantityList)
-            console.log(this.bottomTableData)
             for (let i = 0; i < this.bottomTableData.length; i++) {
                 let appended = false
                 for (let j = 0; j < this.remainQuantityList.length; j++) {
                     let subTotal = this.remainQuantityList[j].inboundQuantity
-                    let remain = this.bottomTableData[i][`remainingAmount${j}`]
+                    let remain = this.bottomTableData[i][`remainingAmountRealTime${j}`]
                     if (subTotal <= 0 || remain <= 0) {
                         continue
                     }
@@ -337,7 +399,6 @@ export default {
                     this.topTableData[i].inboundQuantity += this.topTableData[i][`amount${j}`]
                 }
             }
-            console.log(this.topTableData)
         },
         autoSelectOrders() {
             if (this.totalInboundQuantity <= 0) {

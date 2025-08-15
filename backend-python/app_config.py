@@ -8,6 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 from itsdangerous import URLSafeTimedSerializer
 from flask_jwt_extended import JWTManager, verify_jwt_in_request
 import redis
+from flask.json.provider import DefaultJSONProvider
+from decimal import Decimal
 
 WECHAT_TEST_MODE = True
 
@@ -103,4 +105,15 @@ def create_app(config_override=None):
         token_in_redis = redis_client.get(jti)
         return token_in_redis is None
 
+    def decimal_to_str(d: Decimal) -> str:
+        # 去尾0 + 避免科学计数法
+        return format(d.normalize(), 'f')
+
+    class CustomJSONProvider(DefaultJSONProvider):
+        def default(self, o):
+            if isinstance(o, Decimal):
+                return decimal_to_str(o)
+            return super().default(o)
+
+    app.json = CustomJSONProvider(app)
     return app
