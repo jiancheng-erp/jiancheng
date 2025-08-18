@@ -16,17 +16,20 @@
         </el-col>
     </el-row>
     <el-table :data="tableData" border stripe height="500">
-        <el-table-column prop="orderRId" label="订单号"></el-table-column>
-        <el-table-column prop="shoeRId" label="工厂型号"></el-table-column>
+        <el-table-column prop="orderRId" label="订单号" width="120"></el-table-column>
+        <el-table-column prop="shoeRId" label="工厂型号" width="180"></el-table-column>
         <el-table-column prop="customerName" label="客户名称"></el-table-column>
-        <el-table-column prop="orderCId" label="客户订单号"></el-table-column>
-        <el-table-column prop="customerProductName" label="客户鞋型"></el-table-column>
-        <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
-        <el-table-column prop="colorName" label="颜色"></el-table-column>
+        <el-table-column prop="orderCId" label="客户订单号" width="150"></el-table-column>
+        <el-table-column prop="customerProductName" label="客户鞋型" width="150"></el-table-column>
+        <el-table-column prop="customerBrand" label="客户商标" width="150"></el-table-column>
+        <el-table-column prop="designer" label="设计师"></el-table-column>
+        <el-table-column prop="adjuster" label="调版师"></el-table-column>
+        <el-table-column prop="colorName" label="颜色" width="120"></el-table-column>
         <el-table-column prop="estimatedInboundAmount" label="计划入库数量"></el-table-column>
         <el-table-column prop="actualInboundAmount" label="实际入库数量"></el-table-column>
         <el-table-column prop="currentAmount" label="鞋型库存"></el-table-column>
-        <el-table-column prop="storageStatusLabel" label="状态"></el-table-column>
+        <el-table-column prop="storageStatusLabel" label="状态" width="100"></el-table-column>
+        <el-table-column prop="finishedTime" label="完成时间" width="110"></el-table-column>
 
     </el-table>
     <el-row :gutter="20">
