@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-
+from typing import Dict, Optional
+from collections import defaultdict, OrderedDict
 from api_utility import format_date
 from app_config import db
 from shared_apis.batch_info_type import get_order_batch_type_helper
@@ -8,13 +9,14 @@ from constants import *
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request
 from models import *
-from sqlalchemy import func, or_, and_, desc
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import func, or_, and_, desc, literal, Numeric, case, Integer
 from api_utility import format_datetime
 from login.login import current_user_info
 from logger import logger
+from constants import SHOESIZERANGE
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
-from logger import logger
 
 
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
@@ -34,9 +36,28 @@ def get_finished_in_out_overview():
     customer_brand = request.args.get("customerBrand")
     storage_status_num = request.args.get("storageStatusNum", type=int)
     show_all = request.args.get("showAll", default=0, type=int)
+
+    # 构造“完成事件”子查询（只取 operation_id = 22 的最新时间）
+    ev_subq = (
+        db.session.query(
+            Event.event_order_id.label("order_id"),
+            func.max(Event.handle_time).label("finished_time"),
+        )
+        .filter(Event.operation_id == 22)
+        .group_by(Event.event_order_id)
+        .subquery()
+    )
+
     query = (
         db.session.query(
-            Order, Customer, OrderShoe, Shoe, FinishedShoeStorage, Color, BatchInfoType
+            Order,
+            Customer,
+            OrderShoe,
+            Shoe,
+            FinishedShoeStorage,
+            Color,
+            BatchInfoType,
+            ev_subq.c.finished_time,  # 用这个代替 Event
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
@@ -48,39 +69,51 @@ def get_finished_in_out_overview():
             FinishedShoeStorage,
             FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
-        .join(
-            BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id
-        )
+        .join(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
+        # 外连接完成事件时间（可能为 NULL）
+        .outerjoin(ev_subq, ev_subq.c.order_id == Order.order_id)
         .order_by(Order.order_rid)
     )
-    if order_rid and order_rid != "":
+
+    if order_rid:
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
-    if shoe_rid and shoe_rid != "":
+    if shoe_rid:
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
-    if customer_name and customer_name != "":
+    if customer_name:
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
-    if customer_product_name and customer_product_name != "":
-        query = query.filter(
-            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
-        )
+    if customer_product_name:
+        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
     if storage_status_num is not None and storage_status_num > -1:
         query = query.filter(FinishedShoeStorage.finished_status == storage_status_num)
-    if order_cid and order_cid != "":
+    if order_cid:
         query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
-    if customer_brand and customer_brand != "":
+    if customer_brand:
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if show_all == 0:
         query = query.filter(FinishedShoeStorage.finished_status == 0)
+
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
+
     result = []
     for row in response:
-        (order, customer, order_shoe, shoe, storage_obj, color, batch_info) = row
+        (
+            order,
+            customer,
+            order_shoe,
+            shoe,
+            storage_obj,
+            color,
+            batch_info,
+            finished_time,   # 这里拿到的是 datetime 或 None
+        ) = row
+
         remaining_amount = (
             storage_obj.finished_estimated_amount - storage_obj.finished_actual_amount
             if storage_obj.finished_actual_amount > 0
             else 0
         )
+
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -88,6 +121,10 @@ def get_finished_in_out_overview():
             "customerBrand": customer.customer_brand,
             "customerName": customer.customer_name,
             "orderShoeId": order_shoe.order_shoe_id,
+            "designer": shoe.shoe_designer,
+            "adjuster": order_shoe.adjust_staff,
+            # 只有完成（存在 operation_id=29 的记录）才会有时间；未完成则为 None
+            "finishedTime": format_date(finished_time) if finished_time else None,
             "shoeRId": shoe.shoe_rid,
             "storageId": storage_obj.finished_shoe_id,
             "customerProductName": order_shoe.customer_product_name,
@@ -101,6 +138,7 @@ def get_finished_in_out_overview():
             "colorName": color.color_name,
             "shoeSizeColumns": [],
         }
+
         for i in range(len(SHOESIZERANGE)):
             shoe_size_db_name = i + 34
             obj[f"size{shoe_size_db_name}EstimatedAmount"] = getattr(
@@ -115,8 +153,11 @@ def get_finished_in_out_overview():
             obj["shoeSizeColumns"].append(
                 getattr(batch_info, f"size_{shoe_size_db_name}_name")
             )
+
         result.append(obj)
+
     return {"result": result, "total": count_result}
+
 
 
 @finished_storage_bp.route("/warehouse/getproductoverview", methods=["GET"])
@@ -1179,3 +1220,542 @@ def get_outbound_audit_status_options():
     for key, value in PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.items():
         result["productOutboundAuditStatusEnum"][key] = value
     return result
+
+def _sum_size_cols(detail_alias):
+    # 尺码 34~46 汇总；None 当 0
+    cols = []
+    for size in SHOESIZERANGE:
+        col = getattr(detail_alias, f"size_{size}_amount")
+        cols.append(func.coalesce(col, 0))
+    total = cols[0]
+    for c in cols[1:]:
+        total = total + c
+    return total
+
+
+@finished_storage_bp.route("/warehouse/getshoeinoutbounddetail", methods=["GET"])
+def get_shoe_inoutbound_detail():
+    """
+    入/出库明细（逐条 detail 展示，总数，不展开尺码）
+    查询参数：
+      - mode: month | year
+      - month: 'YYYY-MM' (mode=month 时必填)
+      - year: 'YYYY'     (mode=year  时必填)
+      - direction: '' | 'IN' | 'OUT'
+      - keyword: 仅用于按 rid(业务单号) 模糊查询
+      - shoeRid: 工厂型号 模糊查询
+      - color:   颜色 模糊查询
+      - page, pageSize
+    返回：
+      {
+        code, message, total, list: [...],
+        stat: {
+          inQty, outQty,
+          inAmountByCurrency:  {"CNY": 123.45, "USD": 0, "EUR": 0, ...},
+          outAmountByCurrency: {"CNY":  67.89, "USD": 0, "EUR": 0, ...}
+        }
+      }
+    """
+    # ---- 参数 ----
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 20, type=int)
+    mode = (request.args.get("mode") or "month").lower()
+    month = request.args.get("month")  # 'YYYY-MM'
+    year = request.args.get("year")    # 'YYYY'
+    direction = (request.args.get("direction") or "").upper()  # '', 'IN', 'OUT'
+
+    # 关键词仅匹配 rid（不再匹配 recordId/detailId）
+    keyword = (request.args.get("keyword") or "").strip()
+
+    # 新增：工厂型号与颜色筛选
+    shoe_rid_kw = (request.args.get("shoeRid") or "").strip()
+    color_kw = (request.args.get("color") or "").strip()
+
+    # ---- 时间范围 ----
+    try:
+        if mode == "month":
+            if not month:
+                return jsonify({"code": 400, "message": "month 必填（YYYY-MM）"}), 400
+            start_dt = datetime.strptime(month + "-01", "%Y-%m-%d")
+            end_dt = start_dt + relativedelta(months=1)
+        elif mode == "year":
+            if not year:
+                return jsonify({"code": 400, "message": "year 必填（YYYY）"}), 400
+            start_dt = datetime(int(year), 1, 1)
+            end_dt = datetime(int(year) + 1, 1, 1)
+        else:
+            return jsonify({"code": 400, "message": "mode 只支持 month / year"}), 400
+    except Exception:
+        return jsonify({"code": 400, "message": "时间参数格式错误"}), 400
+
+    # ========= 工具：合计尺码列 =========
+    inbound_total_qty = func.coalesce(
+        ShoeInboundRecordDetail.inbound_amount,
+        _sum_size_cols(ShoeInboundRecordDetail)
+    )
+    outbound_total_qty = func.coalesce(
+        ShoeOutboundRecordDetail.outbound_amount,
+        _sum_size_cols(ShoeOutboundRecordDetail)
+    )
+
+    # ========= 入库明细 =========
+    inbound_detail_q = (
+        db.session.query(
+            literal("IN").label("direction"),
+            ShoeInboundRecord.shoe_inbound_record_id.label("record_id"),
+            ShoeInboundRecordDetail.record_detail_id.label("detail_id"),
+            ShoeInboundRecord.shoe_inbound_rid.label("rid"),
+            Shoe.shoe_rid.label("shoeRid"),
+            Color.color_name.label("color"),
+            Shoe.shoe_designer.label("designer"),  # 设计师
+            OrderShoe.adjust_staff.label("adjuster"),  # 调版师
+            inbound_total_qty.cast(Integer).label("detail_quantity"),
+            OrderShoeType.unit_price.label("unit_price"),           # 仅查单价
+            ShoeInboundRecord.inbound_datetime.label("occur_time"),
+            OrderShoeType.currency_type.label("currency"),          # 使用工单币种
+            ShoeInboundRecord.remark.label("remark"),
+            literal(None).label("picker"),
+        )
+        .select_from(ShoeInboundRecord)
+        .join(
+            ShoeInboundRecordDetail,
+            ShoeInboundRecordDetail.shoe_inbound_record_id == ShoeInboundRecord.shoe_inbound_record_id
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_type_id == ShoeInboundRecordDetail.finished_shoe_storage_id
+        )
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(
+            ShoeInboundRecord.inbound_datetime >= start_dt,
+            ShoeInboundRecord.inbound_datetime < end_dt
+        )
+    )
+
+    # ========= 出库明细 =========
+    outbound_detail_q = (
+        db.session.query(
+            literal("OUT").label("direction"),
+            ShoeOutboundRecord.shoe_outbound_record_id.label("record_id"),
+            ShoeOutboundRecordDetail.record_detail_id.label("detail_id"),
+            ShoeOutboundRecord.shoe_outbound_rid.label("rid"),
+            Shoe.shoe_rid.label("shoeRid"),
+            Color.color_name.label("color"),
+            Shoe.shoe_designer.label("designer"),  # 设计师
+            OrderShoe.adjust_staff.label("adjuster"),  # 调版师
+            outbound_total_qty.cast(Integer).label("detail_quantity"),
+            OrderShoeType.unit_price.label("unit_price"),           # 仅查单价
+            ShoeOutboundRecord.outbound_datetime.label("occur_time"),
+            OrderShoeType.currency_type.label("currency"),          # 使用工单币种
+            ShoeOutboundRecord.remark.label("remark"),
+            ShoeOutboundRecord.picker.label("picker"),
+        )
+        .select_from(ShoeOutboundRecord)
+        .join(
+            ShoeOutboundRecordDetail,
+            ShoeOutboundRecordDetail.shoe_outbound_record_id == ShoeOutboundRecord.shoe_outbound_record_id
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_type_id == ShoeOutboundRecordDetail.finished_shoe_storage_id
+        )
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(
+            ShoeOutboundRecord.outbound_datetime >= start_dt,
+            ShoeOutboundRecord.outbound_datetime < end_dt
+        )
+    )
+
+    # ---- 合并 ----
+    if direction == "IN":
+        union_query = inbound_detail_q
+    elif direction == "OUT":
+        union_query = outbound_detail_q
+    else:
+        union_query = inbound_detail_q.union_all(outbound_detail_q)
+
+    u = union_query.subquery("u")
+
+    # ---- 筛选（仅 rid / shoeRid / color）----
+    wheres = []
+    if keyword:
+        wheres.append(u.c.rid.ilike(f"%{keyword}%"))
+    if shoe_rid_kw:
+        wheres.append(u.c.shoeRid.ilike(f"%{shoe_rid_kw}%"))
+    if color_kw:
+        wheres.append(u.c.color.ilike(f"%{color_kw}%"))
+
+    # ---- 数量统计（SQL端）----
+    in_qty_expr = case((u.c.direction == literal("IN"), u.c.detail_quantity), else_=0)
+    out_qty_expr = case((u.c.direction == literal("OUT"), u.c.detail_quantity), else_=0)
+
+    stat_qty_row = (
+        db.session.query(
+            func.coalesce(func.sum(in_qty_expr), 0),
+            func.coalesce(func.sum(out_qty_expr), 0),
+        )
+        .select_from(u)
+        .filter(*wheres)
+        .first()
+    )
+    in_qty_total = int(stat_qty_row[0] or 0)
+    out_qty_total = int(stat_qty_row[1] or 0)
+
+    # ---- 总条数（分页用）----
+    total = (
+        db.session.query(func.count(literal(1)))
+        .select_from(u)
+        .filter(*wheres)
+        .scalar()
+    ) or 0
+
+    # ---- 列表数据（分页）----
+    rows = (
+        db.session.query(u)
+        .filter(*wheres)
+        .order_by(u.c.occur_time.desc(), u.c.record_id.desc(), u.c.detail_id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    # ---- 币种归一化 ----
+    def normalize_currency(cur: Optional[str]) -> str:
+        if not cur:
+            return "CNY"  # 默认按 CNY
+        c = str(cur).strip().upper()
+        if c in ("CNY", "RMB"):
+            return "CNY"
+        if c in ("USD", "USA", "美金"):
+            return "USD"
+        if c == "EUR":
+            return "EUR"
+        return c  # 其他币种原样（大写）
+
+    # ---- 列表序列化（并计算每行金额：单价*数量）----
+    result_list = []
+    for r in rows:
+        unit_price = Decimal(r.unit_price or 0.0)
+        qty = int(r.detail_quantity or 0)
+        detail_amount = unit_price * qty
+        currency_norm = normalize_currency(r.currency)
+        result_list.append({
+            "direction": r.direction,
+            "recordId": r.record_id,
+            "detailId": r.detail_id,
+            "rid": r.rid,
+            "designer": r.designer or "",  # 设计师
+            "adjuster": r.adjuster or "",  # 调版师
+            "shoeRid": r.shoeRid or "",
+            "color": r.color or "",
+            "quantity": qty,
+            "amount": round(detail_amount, 3),            # 单条金额
+            "unitPrice": unit_price,
+            "occurTime": r.occur_time.isoformat(sep=" "),
+            "currency": currency_norm,
+            "remark": r.remark or "",
+            "picker": r.picker or "",
+        })
+
+    # ---- 金额统计（Python端按币种分别累计）----
+    # 仅选择必要字段做一次“无分页”轻量拉取
+    amt_rows = (
+        db.session.query(u.c.direction, u.c.detail_quantity, u.c.unit_price, u.c.currency)
+        .filter(*wheres)
+        .all()
+    )
+
+    in_amount_by_ccy: Dict[str, Decimal] = {}
+    out_amount_by_ccy: Dict[str, Decimal] = {}
+
+    for ar in amt_rows:
+        qty = int(ar.detail_quantity or 0)
+        unit_price = Decimal(ar.unit_price or 0.0)
+        amt = unit_price * qty
+        ccy = normalize_currency(ar.currency)
+        if ar.direction == "IN":
+            in_amount_by_ccy[ccy] = round(in_amount_by_ccy.get(ccy, Decimal(0.0)) + amt, 3)
+        elif ar.direction == "OUT":
+            out_amount_by_ccy[ccy] = round(out_amount_by_ccy.get(ccy, Decimal(0.0)) + amt, 3)
+
+    return jsonify({
+        "code": 200,
+        "message": "ok",
+        "list": result_list,
+        "total": int(total),
+        "stat": {
+            "inQty": in_qty_total,
+            "outQty": out_qty_total,
+            # 分币种金额统计（CNY/RMB、USD/USA 已统一）
+            "inAmountByCurrency": in_amount_by_ccy,
+            "outAmountByCurrency": out_amount_by_ccy,
+        }
+    })
+    
+@finished_storage_bp.route("/warehouse/getshoeinoutboundsummarybymodel", methods=["GET"])
+def get_shoe_inoutbound_summary_by_model():
+    """
+    出入库汇总（按型号 / 型号+颜色）
+    - mode: month | year
+    - month: 'YYYY-MM' (mode=month 必填)
+    - year:  'YYYY'    (mode=year  必填)
+    - direction: '' | 'IN' | 'OUT'   （为空则统计入+出，并分别返回）
+    - keyword: rid 模糊
+    - shoeRid: 型号模糊
+    - color:  颜色模糊
+    - groupBy: 'model' | 'model_color'  默认 model
+    - 分页: page, pageSize
+    返回:
+    {
+      code, message,
+      list: [
+        {
+          shoeRid,             // 分组键（model 或 model+color）
+          color,               // groupBy=model_color 时有值
+          inQty, outQty, netQty,
+          inAmountByCurrency:  { CNY: 123.45, USD: 99.9, ... },
+          outAmountByCurrency: { CNY: 12, USD: 0, ... },
+          netAmountByCurrency: { CNY: 111.45, USD: 99.9, ... }
+        }, ...
+      ],
+      total,          // 分组条数
+      stat: {         // 整体汇总（所有组再合计）
+        inQty, outQty,
+        inAmountByCurrency:  {...},
+        outAmountByCurrency: {...},
+        netQty,
+        netAmountByCurrency: {...}
+      }
+    }
+    """
+    # ====== 参数 ======
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 20, type=int)
+    mode = (request.args.get("mode") or "month").lower()
+    month = request.args.get("month")
+    year  = request.args.get("year")
+    direction = (request.args.get("direction") or "").upper()  # '', IN, OUT
+    keyword = (request.args.get("keyword") or "").strip()      # rid 模糊
+    shoe_rid_kw = (request.args.get("shoeRid") or "").strip()
+    color_kw = (request.args.get("color") or "").strip()
+    group_by = (request.args.get("groupBy") or "model").lower()  # 'model'|'model_color'
+
+    # ====== 时间范围 ======
+
+
+    try:
+        if mode == "month":
+            if not month:
+                return jsonify({"code": 400, "message": "month 必填（YYYY-MM）"}), 400
+            start_dt = datetime.strptime(month + "-01", "%Y-%m-%d")
+            end_dt = start_dt + relativedelta(months=1)
+        elif mode == "year":
+            if not year:
+                return jsonify({"code": 400, "message": "year 必填（YYYY）"}), 400
+            start_dt = datetime(int(year), 1, 1)
+            end_dt = datetime(int(year) + 1, 1, 1)
+        else:
+            return jsonify({"code": 400, "message": "mode 只支持 month / year"}), 400
+    except Exception:
+        return jsonify({"code": 400, "message": "时间参数格式错误"}), 400
+
+    # ====== 通用工具：尺码汇总、币种归一化 ======
+    def _sum_size_cols(detail_cls):
+        return sum(
+            getattr(detail_cls, f"size_{i}_amount", 0) or 0
+            for i in SHOESIZERANGE
+        )
+
+    def normalize_currency(cur: str) -> str:
+        c = (cur or "").strip().upper()
+        if c in ("CNY", "RMB"): return "CNY"
+        if c in ("USD", "USA", "美金"): return "USD"
+        if c in ("EUR",):        return "EUR"
+        return c or "CNY"
+
+    # ====== 入库明细 ======
+    inbound_total_qty = func.coalesce(ShoeInboundRecordDetail.inbound_amount, _sum_size_cols(ShoeInboundRecordDetail))
+    inbound_q = (
+        db.session.query(
+            literal("IN").label("direction"),
+            Shoe.shoe_rid.label("shoeRid"),
+            Color.color_name.label("color"),
+            Shoe.shoe_designer.label("designer"),  # 设计师
+            OrderShoe.adjust_staff.label("adjuster"),  # 调版师
+            inbound_total_qty.cast(Integer).label("qty"),
+            OrderShoeType.unit_price.label("unit_price"),
+            OrderShoeType.currency_type.label("currency"),
+            ShoeInboundRecord.shoe_inbound_rid.label("rid"),
+            ShoeInboundRecord.inbound_datetime.label("occur_time"),
+        )
+        .select_from(ShoeInboundRecord)
+        .join(ShoeInboundRecordDetail, ShoeInboundRecordDetail.shoe_inbound_record_id == ShoeInboundRecord.shoe_inbound_record_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_type_id == ShoeInboundRecordDetail.finished_shoe_storage_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(
+            ShoeInboundRecord.inbound_datetime >= start_dt,
+            ShoeInboundRecord.inbound_datetime < end_dt
+        )
+    )
+
+    # ====== 出库明细 ======
+    outbound_total_qty = func.coalesce(ShoeOutboundRecordDetail.outbound_amount, _sum_size_cols(ShoeOutboundRecordDetail))
+    outbound_q = (
+        db.session.query(
+            literal("OUT").label("direction"),
+            Shoe.shoe_rid.label("shoeRid"),
+            Color.color_name.label("color"),
+            Shoe.shoe_designer.label("designer"),  # 设计师
+            OrderShoe.adjust_staff.label("adjuster"),  # 调版师
+            outbound_total_qty.cast(Integer).label("qty"),
+            OrderShoeType.unit_price.label("unit_price"),
+            OrderShoeType.currency_type.label("currency"),
+            ShoeOutboundRecord.shoe_outbound_rid.label("rid"),
+            ShoeOutboundRecord.outbound_datetime.label("occur_time"),
+        )
+        .select_from(ShoeOutboundRecord)
+        .join(ShoeOutboundRecordDetail, ShoeOutboundRecordDetail.shoe_outbound_record_id == ShoeOutboundRecord.shoe_outbound_record_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_type_id == ShoeOutboundRecordDetail.finished_shoe_storage_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(
+            ShoeOutboundRecord.outbound_datetime >= start_dt,
+            ShoeOutboundRecord.outbound_datetime < end_dt
+        )
+    )
+
+    # 方向过滤（尽量前置减数据量）
+    if direction == "IN":
+        base_q = inbound_q
+    elif direction == "OUT":
+        base_q = outbound_q
+    else:
+        base_q = inbound_q.union_all(outbound_q)
+
+    u = base_q.subquery("u")
+
+    # 关键字等过滤
+    wheres = []
+    if keyword:
+        wheres.append(u.c.rid.ilike(f"%{keyword}%"))
+    if shoe_rid_kw:
+        wheres.append(u.c.shoeRid.ilike(f"%{shoe_rid_kw}%"))
+    if color_kw:
+        wheres.append(u.c.color.ilike(f"%{color_kw}%"))
+
+    # 取明细（按时间倒序只是为了稳定性，这里最终还是要在 python 分组）
+    records = (
+        db.session.query(u)
+        .filter(*wheres)
+        .order_by(u.c.occur_time.desc())
+        .all()
+    )
+
+    def group_key(row):
+        if group_by == "model_color":
+            return (row.shoeRid or "-", row.color or "-")
+        return (row.shoeRid or "-", None)
+
+    # 每组结构
+    agg = {}  # key -> dict
+    total_in_qty = 0
+    total_out_qty = 0
+    total_in_amt = defaultdict(Decimal)   # 货币 -> 金额
+    total_out_amt = defaultdict(Decimal)
+
+    for record in records:
+        key = group_key(record)
+        if key not in agg:
+            agg[key] = {
+                "shoeRid": key[0],
+                "color": key[1],  # 可能为 None
+                "designer": record.designer or "",  # 设计师
+                "adjuster": record.adjuster or "",  # 调版师
+                "unitPrice": Decimal(record.unit_price or 0.0),
+                "inQty": 0,
+                "outQty": 0,
+                "inAmountByCurrency": defaultdict(Decimal),
+                "outAmountByCurrency": defaultdict(Decimal),
+            }
+        item = agg[key]
+
+        qty = int(record.qty or 0)
+        unit_price = Decimal(record.unit_price or 0.0)
+        cur = normalize_currency(record.currency)
+        amount = round(unit_price * qty, 3)
+
+        if record.direction == "IN":
+            item["inQty"] += qty
+            item["inAmountByCurrency"][cur] += amount
+            total_in_qty += qty
+            total_in_amt[cur] += amount
+        else:
+            item["outQty"] += qty
+            item["outAmountByCurrency"][cur] += amount
+            total_out_qty += qty
+            total_out_amt[cur] += amount
+
+    # 构造列表并分页
+    rows = []
+    for key, it in agg.items():
+        in_map = {c: round(v, 3) for c, v in it["inAmountByCurrency"].items()}
+        out_map = {c: round(v, 3) for c, v in it["outAmountByCurrency"].items()}
+        # 计算净额（分币种）
+        keys = set(in_map.keys()) | set(out_map.keys())
+        net_map = {c: round(in_map.get(c, 0) - out_map.get(c, 0), 3) for c in keys}
+        rows.append({
+            "shoeRid": it["shoeRid"],
+            "color": it["color"] or "",
+            "designer": it["designer"] or "",  # 设计师
+            "adjuster": it["adjuster"] or "",  # 调版师
+            "unitPrice": it["unitPrice"],
+            "inQty": it["inQty"],
+            "outQty": it["outQty"],
+            "netQty": it["inQty"] - it["outQty"],
+            "inAmountByCurrency": in_map,
+            "outAmountByCurrency": out_map,
+            "netAmountByCurrency": net_map,
+        })
+
+    # 排序：净数量降序，其次型号
+    rows.sort(key=lambda x: (-x["netQty"], x["shoeRid"], x.get("color","")))
+
+    total_groups = len(rows)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_rows = rows[start:end]
+
+    # 整体汇总 stat
+    keys = set(total_in_amt.keys()) | set(total_out_amt.keys())
+    total_net_amt = {c: round(total_in_amt.get(c, 0) - total_out_amt.get(c, 0), 3) for c in keys}
+
+    return jsonify({
+        "code": 200,
+        "message": "ok",
+        "list": page_rows,
+        "total": total_groups,
+        "stat": {
+            "inQty": int(total_in_qty),
+            "outQty": int(total_out_qty),
+            "netQty": int(total_in_qty - total_out_qty),
+            "inAmountByCurrency": {c: round(v, 3) for c, v in total_in_amt.items()},
+            "outAmountByCurrency": {c: round(v, 3) for c, v in total_out_amt.items()},
+            "netAmountByCurrency": total_net_amt,
+        }
+    })
+
+
+
+
+
