@@ -2244,7 +2244,26 @@ def issue_production_order():
                     db.session.flush()
                 if item.order_shoe_type_id == order_shoe_type.order_shoe_type_id:
                     craft_list = item.craft_name.split("@")
-                    for craft in craft_list:
+                    if craft_list != []:
+                        for craft in craft_list:
+                            bom_item = BomItem(
+                                bom_id=second_bom_id,
+                                material_id=item.material_id,
+                                material_model=item.material_model,
+                                material_specification=item.material_specification,
+                                bom_item_color=item.color,
+                                remark=item.remark,
+                                department_id=item.department_id,
+                                size_type="E",
+                                bom_item_add_type="1",
+                                unit_usage=0.0,
+                                total_usage=0,
+                                material_second_type=item.material_second_type,
+                                craft_name=craft,
+                                production_instruction_item_id = item.production_instruction_item_id
+                            )
+                            db.session.add(bom_item)
+                    else:
                         bom_item = BomItem(
                             bom_id=second_bom_id,
                             material_id=item.material_id,
@@ -2258,8 +2277,8 @@ def issue_production_order():
                             unit_usage=0.0,
                             total_usage=0,
                             material_second_type=item.material_second_type,
-                            craft_name=craft,
-                            production_instruction_item_id = item.production_instruction_item_id
+                            craft_name="",
+                            production_instruction_item_id=item.production_instruction_item_id
                         )
                         db.session.add(bom_item)
         db.session.flush()
