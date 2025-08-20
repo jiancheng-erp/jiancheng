@@ -18,33 +18,16 @@
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
                             <el-descriptions title="" :column="2" border>
-                                <el-descriptions-item label="订单编号" align="center">{{
-                                    orderData.orderId
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单创建时间" align="center">{{
-                                    orderData.createTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="客户名称" align="center">{{
-                                    orderData.customerName
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单预计截止日期" align="center">{{
-                                    orderData.deadlineTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{
-                                    orderData.currentOrderShoeStatus
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{
-                                    orderData.previousOrderShoeStatus
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="前序下发时间" align="center">{{
-                                    orderData.previousOrderShoeStatusTime
-                                    }}</el-descriptions-item>
-                                <el-descriptions-item label="迟滞时间" align="center">{{
-                                    orderData.delayTime
-                                    }}</el-descriptions-item>
+                                <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                                <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                                <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                                <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
+                                <el-descriptions-item label="订单鞋型当前状态" align="center">{{ orderData.currentOrderShoeStatus }}</el-descriptions-item>
+                                <el-descriptions-item label="前序订单鞋型状态" align="center">{{ orderData.previousOrderShoeStatus }}</el-descriptions-item>
+                                <el-descriptions-item label="前序下发时间" align="center">{{ orderData.previousOrderShoeStatusTime }}</el-descriptions-item>
+                                <el-descriptions-item label="迟滞时间" align="center">{{ orderData.delayTime }}</el-descriptions-item>
                                 <el-descriptions-item label="退回订单" align="center">
-                                    <el-button type="danger" size="default"
-                                        @click="openReturnOrderDialog">退回流程</el-button>
+                                    <el-button type="danger" size="default" @click="openReturnOrderDialog">退回流程</el-button>
                                 </el-descriptions-item>
                             </el-descriptions>
                         </el-col>
@@ -54,8 +37,7 @@
             <el-row :gutter="20" style="margin-top: 10px">
                 <el-col :span="4" :offset="0">
                     <div style="display: flex; align-items: center; white-space: nowrap">
-                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="Search"
-                            clearable @input="tableWholeFilter"></el-input>
+                        工厂型号搜索：<el-input v-model="inheritIdSearch" placeholder="" size="default" :suffix-icon="Search" clearable @input="tableWholeFilter"></el-input>
                     </div>
                 </el-col>
             </el-row>
@@ -69,8 +51,7 @@
                                     <el-table-column prop="color" label="颜色"></el-table-column>
                                     <el-table-column label="鞋图">
                                         <template #default="scope">
-                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image"
-                                                fit="contain" />
+                                            <el-image style="width: 150px; height: 100px" :src="scope.row.image" fit="contain" />
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="firstBomStatus" label="一次BOM表"></el-table-column>
@@ -80,40 +61,30 @@
                                     <el-table-column label="操作" align="center">
                                         <template #default="scope">
                                             <div v-if="role == 1">
-                                                <el-button type="primary"
-                                                    @click="openEditDialog(scope.row)">编辑</el-button>
+                                                <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
                                             </div>
                                             <div v-else>
-                                                <el-button v-if="
-                                                    parentScope.row.status.includes(
-                                                        '二次BOM填写'
-                                                    ) && scope.row.secondBomStatus === '未填写'
-                                                " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
+                                                <el-button
+                                                    v-if="parentScope.row.status.includes('二次BOM填写') && scope.row.secondBomStatus === '未填写'"
+                                                    type="primary"
+                                                    @click="handleGenerate(scope.row)"
+                                                    >填写</el-button
+                                                >
                                                 <div v-else-if="scope.row.secondBomStatus === '已下发'">
-                                                    <el-button type="primary"
-                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
-                                                    <el-button type="success"
-                                                        @click="downloadSecondBOM(scope.row)">下载二次BOM表</el-button>
+                                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
+                                                    <el-button type="success" @click="downloadSecondBOM(scope.row)">下载二次BOM表</el-button>
                                                 </div>
                                                 <div v-else-if="scope.row.secondBomStatus === '已提交'">
-                                                    <el-button type="primary"
-                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
+                                                    <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
                                                 </div>
-                                                <div v-else-if="
-                                                    parentScope.row.status.includes(
-                                                        '二次BOM填写'
-                                                    ) && scope.row.secondBomStatus === '已保存'
-                                                ">
-                                                    <el-button type="primary"
-                                                        @click="openEditDialog(scope.row)">编辑</el-button>
-                                                    <el-button type="success"
-                                                        @click="openPreviewDialog(scope.row)">预览</el-button>
-                                                    <el-button type="warning"
-                                                        @click="submitBOM(scope.row)">提交</el-button>
+                                                <div v-else-if="parentScope.row.status.includes('二次BOM填写') && scope.row.secondBomStatus === '已保存'">
+                                                    <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                                                    <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                                    <el-button type="warning" @click="submitBOM(scope.row)">提交</el-button>
                                                 </div>
                                             </div>
-
-                                        </template></el-table-column>
+                                        </template></el-table-column
+                                    >
                                 </el-table>
                             </template>
                         </el-table-column>
@@ -121,29 +92,19 @@
                         <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
                         <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                         <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
-                        <el-table-column prop="status" label="状态" align="center"></el-table-column> </el-table></el-col>
+                        <el-table-column prop="status" label="状态" align="center"></el-table-column> </el-table
+                ></el-col>
             </el-row>
             <el-row :gutter="22" style="margin-top: 10px">
-                <el-col :span="6" :offset="20"><el-button type="primary" size="default"
-                        @click="openIssueDialog">下发BOM</el-button>
-                </el-col>
+                <el-col :span="6" :offset="20"><el-button type="primary" size="default" @click="openIssueDialog">下发BOM</el-button> </el-col>
             </el-row>
 
-            <el-dialog :title="`二次BOM填写 ${newBomId}`" v-model="createVis" width="100%" fullscreen
-                @close="handleGenerateClose">
+            <el-dialog :title="`二次BOM填写 ${newBomId}`" v-model="createVis" width="100%" fullscreen @close="handleGenerateClose">
                 <el-descriptions title="订单信息" :column="2">
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                     <!-- <el-descriptions-item label="生产订单"><el-button type="primary" size="default"
                             @click="downloadProductionOrder">查看生产订单</el-button>
                     </el-descriptions-item> -->
@@ -152,52 +113,44 @@
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
                     <el-row>
                         <el-table :data="orderProduceInfo" border style="width: 100%" :span-method="arraySpanMethod">
-                            <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
-                                :label="column.label"></el-table-column>
+                            <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
                             <el-table-column prop="total" label="合计" />
                         </el-table>
                     </el-row>
                     <el-row style="margin-top: 10px">
                         <el-table :data="bomTestData" border height="500">
-                            <el-table-column prop="materialType" label="材料类型">
-                            </el-table-column>
-                            <el-table-column prop="materialName" label="材料名称">
-                            </el-table-column>
-                            <el-table-column prop="materialModel" label="材料类型">
-                            </el-table-column>
-                            <el-table-column prop="materialSpecification" label="材料规格">
-                            </el-table-column>
+                            <el-table-column prop="materialType" label="材料类型"> </el-table-column>
+                            <el-table-column prop="materialName" label="材料名称"> </el-table-column>
+                            <el-table-column prop="materialModel" label="材料类型"> </el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格"> </el-table-column>
                             <el-table-column prop="craftName" label="工艺名称"></el-table-column>
                             <el-table-column prop="color" label="颜色"> </el-table-column>
                             <el-table-column prop="unit" label="单位" width="120" />
                             <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
                             <el-table-column prop="pairs" label="双数" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.pairs"
-                                        :step="0.001" size="default" @change="approvalUsageChange(scope.row)" />
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.pairs" :step="0.001" size="default" @change="approvalUsageChange(scope.row)" />
                                 </template>
                             </el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.unitUsage" :step="0.001" size="default"
-                                        @blur="unitUsageChange(scope.row)" />
-                                    <el-button v-else-if="scope.row.materialCategory == 1" type="primary" size="default"
-                                        @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.unitUsage" :step="0.001" size="default" @blur="unitUsageChange(scope.row)" />
+                                    <div v-else-if="scope.row.materialCategory == 1">
+                                        <el-input-number v-model="scope.row.unitUsage" :step="0.001" size="default"/>
+                                        <el-button type="primary" size="default" @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
+                                    </div>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="firstBomUsage" label="采购单位用量"></el-table-column>
                             <el-table-column prop="approvalUsage" label="核定用量" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.approvalUsage" :step="0.001" size="default" />
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.approvalUsage" :step="0.001" size="default" />
                                 </template>
                             </el-table-column>
                             <el-table-column prop="useDepart" label="使用工段">
                                 <template #default="scope">
                                     <el-select v-model="scope.row.useDepart" size="default" disabled>
-                                        <el-option v-for="item in departmentOptions" :key="item.value"
-                                            :label="item.label" :value="item.value"></el-option>
+                                        <el-option v-for="item in departmentOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                                     </el-select>
                                 </template>
                             </el-table-column>
@@ -216,26 +169,16 @@
 
             <el-dialog :title="`预览BOM表 ${previewBomId}`" v-model="isPreviewDialogVisible" width="90%" :key="updateKey">
                 <el-descriptions title="订单信息" :column="2" border>
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
-                            <el-table :data="orderProduceInfo" border style="width: 100%"
-                                :span-method="arraySpanMethod">
-                                <el-table-column v-for="column in filteredColumns" :key="column.prop"
-                                    :prop="column.prop" :label="column.label"></el-table-column>
+                            <el-table :data="orderProduceInfo" border style="width: 100%" :span-method="arraySpanMethod">
+                                <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
                                 <el-table-column prop="total" label="合计" />
                             </el-table>
                         </el-col>
@@ -255,18 +198,15 @@
                                 <el-table-column prop="pairs" label="双数" />
                                 <el-table-column prop="unitUsage" label="单位用量">
                                     <template #default="scope">
-                                        <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default"
-                                            @click="openSizeDialog(scope.row, scope.$index)">尺码用量查看</el-button>
+                                        <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default" @click="openSizeDialog(scope.row, scope.$index)">尺码用量查看</el-button>
                                     </template>
                                 </el-table-column>
                                 <el-table-column prop="firstBomUsage" label="采购单位用量" />
-                                <el-table-column prop="approvalUsage" label="核定用量">
-                                </el-table-column>
+                                <el-table-column prop="approvalUsage" label="核定用量"> </el-table-column>
                                 <el-table-column prop="useDepart" label="使用工段">
                                     <template #default="scope">
                                         <el-select v-model="scope.row.useDepart" size="default" disabled>
-                                            <el-option v-for="item in departmentOptions" :key="item.value"
-                                                :label="item.label" :value="item.value"></el-option>
+                                            <el-option v-for="item in departmentOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                                         </el-select>
                                     </template>
                                 </el-table-column>
@@ -284,24 +224,15 @@
 
             <el-dialog title="正式BOM表下发页面" v-model="isFinalBOM" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
                     <el-row :gutter="20" style="margin-bottom: 20px">
                         <el-col :span="24">
-                            <el-table :data="unIssueBOMData" border style="height: 400px"
-                                @selection-change="handleShoeSelectionChange" :default-expand-all="true">
+                            <el-table :data="unIssueBOMData" border style="height: 400px" @selection-change="handleShoeSelectionChange" :default-expand-all="true">
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column type="expand">
                                     <template #default="parentScope">
@@ -309,53 +240,38 @@
                                             <el-table-column prop="color" label="颜色"></el-table-column>
                                             <el-table-column label="鞋图">
                                                 <template #default="scope">
-                                                    <el-image style="width: 150px; height: 100px" :src="scope.row.image"
-                                                        :fit="contain" />
+                                                    <el-image style="width: 150px; height: 100px" :src="scope.row.image" :fit="contain" />
                                                 </template>
                                             </el-table-column>
                                             <el-table-column prop="firstBomStatus" label="一次BOM表"></el-table-column>
-                                            <el-table-column prop="firstPurchaseOrderStatus"
-                                                label="一次采购订单"></el-table-column>
+                                            <el-table-column prop="firstPurchaseOrderStatus" label="一次采购订单"></el-table-column>
                                             <el-table-column prop="secondBomStatus" label="二次BOM表"></el-table-column>
-                                            <el-table-column prop="secondPurchaseOrderStatus"
-                                                label="二次采购订单"></el-table-column>
+                                            <el-table-column prop="secondPurchaseOrderStatus" label="二次采购订单"></el-table-column>
                                             <el-table-column label="操作" align="center">
                                                 <template #default="scope">
-                                                    <el-button v-if="
-                                                        parentScope.row.status.includes(
-                                                            '二次BOM填写'
-                                                        ) &&
-                                                        scope.row.secondBomStatus === '未填写'
-                                                    " type="primary" @click="handleGenerate(scope.row)">填写</el-button>
-                                                    <el-button v-else-if="
-                                                        (scope.row.secondBomStatus ===
-                                                            '已下发' ||
-                                                            scope.row.secondBomStatus ===
-                                                            '已提交') &&
-                                                        parentScope.row.status.includes(
-                                                            '二次BOM填写'
-                                                        )
-                                                    " type="primary"
-                                                        @click="openPreviewDialog(scope.row)">查看</el-button>
-                                                    <div v-else-if="
-                                                        parentScope.row.status.includes(
-                                                            '二次BOM填写'
-                                                        ) &&
-                                                        scope.row.secondBomStatus === '已保存'
-                                                    ">
-                                                        <el-button type="primary"
-                                                            @click="openEditDialog(scope.row)">编辑</el-button>
-                                                        <el-button type="success"
-                                                            @click="openPreviewDialog(scope.row)">预览</el-button>
-                                                        <el-button type="warning"
-                                                            @click="submitBOM(scope.row)">提交</el-button>
+                                                    <el-button
+                                                        v-if="parentScope.row.status.includes('二次BOM填写') && scope.row.secondBomStatus === '未填写'"
+                                                        type="primary"
+                                                        @click="handleGenerate(scope.row)"
+                                                        >填写</el-button
+                                                    >
+                                                    <el-button
+                                                        v-else-if="(scope.row.secondBomStatus === '已下发' || scope.row.secondBomStatus === '已提交') && parentScope.row.status.includes('二次BOM填写')"
+                                                        type="primary"
+                                                        @click="openPreviewDialog(scope.row)"
+                                                        >查看</el-button
+                                                    >
+                                                    <div v-else-if="parentScope.row.status.includes('二次BOM填写') && scope.row.secondBomStatus === '已保存'">
+                                                        <el-button type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
+                                                        <el-button type="success" @click="openPreviewDialog(scope.row)">预览</el-button>
+                                                        <el-button type="warning" @click="submitBOM(scope.row)">提交</el-button>
                                                     </div>
-                                                </template></el-table-column>
+                                                </template></el-table-column
+                                            >
                                         </el-table>
                                     </template>
                                 </el-table-column>
-                                <el-table-column prop="inheritId" label="工厂型号" align="center"
-                                    width="100"></el-table-column>
+                                <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
                                 <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
                                 <el-table-column prop="designer" label="设计员" align="center"></el-table-column>
                                 <el-table-column prop="editter" label="调版员" align="center"></el-table-column>
@@ -375,28 +291,35 @@
                 <el-row :gutter="20">
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料类型查询：<el-input v-model="materialTypeSearch" placeholder="" size="default"
-                                :suffix-icon="Search" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料类型查询：<el-input
+                                v-model="materialTypeSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="Search"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            材料名称查询：<el-input v-model="materialSearch" placeholder="" size="default"
-                                :suffix-icon="Search" clearable
-                                @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            材料名称查询：<el-input
+                                v-model="materialSearch"
+                                placeholder=""
+                                size="default"
+                                :suffix-icon="Search"
+                                clearable
+                                @change="getMaterialFilterData(currentCreateViewId)"
+                            ></el-input>
                         </div>
                     </el-col>
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
-                            工厂名查询：<el-input v-model="factorySearch" placeholder="" size="default" :suffix-icon="Search"
-                                clearable @change="getMaterialFilterData(currentCreateViewId)"></el-input>
+                            工厂名查询：<el-input v-model="factorySearch" placeholder="" size="default" :suffix-icon="Search" clearable @change="getMaterialFilterData(currentCreateViewId)"></el-input>
                         </div>
                     </el-col>
                 </el-row>
-                <el-table :data="assetFilterTable" border ref="materialSelectTable"
-                    @selection-change="handleMaterialSelectionChange" style="height: 400px"
-                    v-loading="materialAddfinished">
+                <el-table :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" style="height: 400px" v-loading="materialAddfinished">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="materialType" label="材料类型" />
                     <el-table-column prop="materialName" label="材料名称" />
@@ -408,77 +331,59 @@
                 <template #footer>
                     <span>
                         <el-button @click="newMaterialVis = false">取消</el-button>
-                        <el-button v-if="createVis == true" type="primary"
-                            @click="confirmNewMaterialAdd(0)">保存</el-button>
-                        <el-button v-else-if="editVis == true" type="primary"
-                            @click="confirmNewMaterialAdd(1)">保存</el-button>
+                        <el-button v-if="createVis == true" type="primary" @click="confirmNewMaterialAdd(0)">保存</el-button>
+                        <el-button v-else-if="editVis == true" type="primary" @click="confirmNewMaterialAdd(1)">保存</el-button>
                     </span>
                 </template>
             </el-dialog>
             <el-dialog :title="`二次BOM编辑 ${editBomId}`" v-model="editVis" width="100%">
                 <el-descriptions title="订单信息" :column="2">
-                    <el-descriptions-item label="订单编号" align="center">{{
-                        orderData.orderId
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单创建时间" align="center">{{
-                        orderData.createTime
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="客户名称" align="center">{{
-                        orderData.customerName
-                        }}</el-descriptions-item>
-                    <el-descriptions-item label="订单预计截止日期" align="center">{{
-                        orderData.deadlineTime
-                        }}</el-descriptions-item>
+                    <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
+                    <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ orderData.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
                     <el-row>
                         <el-table :data="orderProduceInfo" border style="width: 100%" :span-method="arraySpanMethod">
-                            <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop"
-                                :label="column.label"></el-table-column>
+                            <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
                             <el-table-column prop="total" label="合计" />
                         </el-table>
                     </el-row>
                     <el-row style="margin-top: 10px">
                         <el-table :data="editBomData" border height="500">
-                            <el-table-column prop="materialType" label="材料类型">
-                            </el-table-column>
-                            <el-table-column prop="materialName" label="材料名称">
-                            </el-table-column>
-                            <el-table-column prop="materialModel" label="材料类型">
-                            </el-table-column>
-                            <el-table-column prop="materialSpecification" label="材料规格">
-                            </el-table-column>
+                            <el-table-column prop="materialType" label="材料类型"> </el-table-column>
+                            <el-table-column prop="materialName" label="材料名称"> </el-table-column>
+                            <el-table-column prop="materialModel" label="材料类型"> </el-table-column>
+                            <el-table-column prop="materialSpecification" label="材料规格"> </el-table-column>
                             <el-table-column prop="craftName" label="工艺名称"></el-table-column>
                             <el-table-column prop="color" label="颜色"> </el-table-column>
                             <el-table-column prop="unit" label="单位" width="120" />
                             <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
                             <el-table-column prop="pairs" label="双数" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.pairs"
-                                        :step="0.001" size="default" @change="approvalUsageChange(scope.row)" />
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.pairs" :step="0.001" size="default" @change="approvalUsageChange(scope.row)" />
                                 </template>
                             </el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.unitUsage" :step="0.001" size="default"
-                                        @blur="unitUsageChange(scope.row)" />
-                                    <el-button v-else-if="scope.row.materialCategory == 1" type="primary" size="default"
-                                        @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.unitUsage" :step="0.001" size="default" @blur="unitUsageChange(scope.row)" />
+                                    <div v-else-if="scope.row.materialCategory == 1">
+                                        <el-input-number v-model="scope.row.unitUsage" :step="0.001" size="default"/>
+                                        <el-button type="primary" size="default" @click="openSizeDialog(scope.row, scope.$index)">尺码用量填写</el-button>
+                                    </div>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="firstBomUsage" label="采购单位用量"></el-table-column>
                             <el-table-column prop="approvalUsage" label="核定用量" width="175">
                                 <template #default="scope">
-                                    <el-input-number v-if="scope.row.materialCategory == 0"
-                                        v-model="scope.row.approvalUsage" :step="0.001" size="default" />
+                                    <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.approvalUsage" :step="0.001" size="default" />
                                 </template>
                             </el-table-column>
                             <el-table-column prop="useDepart" label="使用工段">
                                 <template #default="scope">
                                     <el-select v-model="scope.row.useDepart" size="default" disabled>
-                                        <el-option v-for="item in departmentOptions" :key="item.value"
-                                            :label="item.label" :value="item.value"></el-option>
+                                        <el-option v-for="item in departmentOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                                     </el-select>
                                 </template>
                             </el-table-column>
@@ -499,8 +404,7 @@
                     <el-table-column prop="size" label="尺码"></el-table-column>
                     <el-table-column prop="approvalAmount" label="采购数量">
                         <template #default="scope">
-                            <el-input-number v-if="createEditSymbol == 0" v-model="scope.row.approvalAmount" :min="0"
-                                size="small" />
+                            <el-input-number v-if="createEditSymbol == 0" v-model="scope.row.approvalAmount" :min="0" size="small" />
                         </template>
                     </el-table-column>
                 </el-table>
@@ -518,10 +422,8 @@
                         <el-col :span="24" :offset="0">
                             <el-form :model="revertForm" :rules="revertRules" ref="revertForm" label-width="100px">
                                 <el-form-item label="退回至状态" prop="revertToStatus">
-                                    <el-select v-model="revertForm.revertToStatus" placeholder="请选择退回至状态" clearable
-                                        @change="handleStatusSelect">
-                                        <el-option v-for="item in revertStatusReasonOptions" :key="item.status"
-                                            :label="item.statusName" :value="item.status"></el-option>
+                                    <el-select v-model="revertForm.revertToStatus" placeholder="请选择退回至状态" clearable @change="handleStatusSelect">
+                                        <el-option v-for="item in revertStatusReasonOptions" :key="item.status" :label="item.statusName" :value="item.status"></el-option>
                                     </el-select>
                                 </el-form-item>
                                 <el-form-item label="需要中间流程" prop="isNeedMiddleProcess">
@@ -531,12 +433,10 @@
                                     </el-radio-group>
                                 </el-form-item>
                                 <el-form-item label="退回原因" prop="revertReason">
-                                    <el-input v-model="revertForm.revertReason" :rows="4" placeholder="请输入退回原因"
-                                        disabled></el-input>
+                                    <el-input v-model="revertForm.revertReason" :rows="4" placeholder="请输入退回原因" disabled></el-input>
                                 </el-form-item>
                                 <el-form-item label="退回详细原因" prop="revertDetail">
-                                    <el-input v-model="revertForm.revertDetail" type="textarea" :rows="4"
-                                        placeholder="请输入退回原因"></el-input>
+                                    <el-input v-model="revertForm.revertDetail" type="textarea" :rows="4" placeholder="请输入退回原因"></el-input>
                                 </el-form-item>
                             </el-form>
                         </el-col>
@@ -545,7 +445,7 @@
                 <template #footer>
                     <span>
                         <el-button @click="isRevertDialogVisable = false">取消</el-button>
-                        <el-button type="primary" :disabled="revertForm.revertToStatus === ''"  @click="saveRevertForm">确认</el-button>
+                        <el-button type="primary" :disabled="revertForm.revertToStatus === ''" @click="saveRevertForm">确认</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -622,8 +522,7 @@ export default {
                 revertReason: '',
                 revertDetail: '',
                 isNeedMiddleProcess: '0'
-            },
-
+            }
         }
     },
     async mounted() {
@@ -636,14 +535,7 @@ export default {
     },
     computed: {
         filteredColumns() {
-            return this.shoeSizeColumns.filter((column) =>
-                this.orderProduceInfo.some(
-                    (row) =>
-                        row[column.prop] !== undefined &&
-                        row[column.prop] !== null &&
-                        row[column.prop] !== 0
-                )
-            )
+            return this.shoeSizeColumns.filter((column) => this.orderProduceInfo.some((row) => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0))
         }
     },
     methods: {
@@ -652,9 +544,7 @@ export default {
             this.batchInfoTypeList = response.data
         },
         async getAllRevertStatusReasonOptions() {
-            const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderreason`,
-                { params: { orderId: this.orderData.orderDBId, flow: 3 } }
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/revertorder/getrevertorderreason`, { params: { orderId: this.orderData.orderDBId, flow: 3 } })
             this.revertStatusReasonOptions = response.data
         },
         async initializeSizeFormat() {
@@ -685,16 +575,13 @@ export default {
         },
         async getMaterialFilterData() {
             this.materialAddfinished = true
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/getmaterialtypeandname`,
-                {
-                    params: {
-                        materialtype: this.materialTypeSearch,
-                        materialname: this.materialSearch,
-                        suppliername: this.factorySearch
-                    }
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/getmaterialtypeandname`, {
+                params: {
+                    materialtype: this.materialTypeSearch,
+                    materialname: this.materialSearch,
+                    suppliername: this.factorySearch
                 }
-            )
+            })
             this.assetFilterTable = response.data
             this.materialAddfinished = false
         },
@@ -704,9 +591,7 @@ export default {
             this.assetFilterTable = this.assetTable
         },
         async getOrderInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}&status=11`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getorderInfo?orderid=${this.orderId}&status=11`)
             this.orderData = response.data
             console.log(this.orderData)
             this.updateArrowKey += 1
@@ -723,16 +608,12 @@ export default {
             console.log(this.orderProduceInfo)
         },
         async getCurrentBomItems(row) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/secondbom/getcurrentbomitem?ordershoetypeid=${row.orderShoeTypeId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/secondbom/getcurrentbomitem?ordershoetypeid=${row.orderShoeTypeId}`)
             this.bomTestData = response.data
             console.log(this.bomTestData)
         },
         async getAllShoeBomInfo() {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/secondbom/getordershoes?orderid=${this.orderId}`
-            )
+            const response = await axios.get(`${this.$apiBaseUrl}/secondbom/getordershoes?orderid=${this.orderId}`)
             this.testTableData = response.data
             console.log(this.testTableData)
             this.tableWholeFilter()
@@ -755,19 +636,13 @@ export default {
         confirmSizeAmount() {
             if (this.sizeAddSymbol === 0) {
                 this.bomTestData[this.currentSizeIndex].sizeInfo = this.sizeData
-                const totalApprovalAmount = this.sizeData.reduce(
-                    (total, item) => total + item.approvalAmount,
-                    0
-                )
+                const totalApprovalAmount = this.sizeData.reduce((total, item) => total + item.approvalAmount, 0)
                 this.bomTestData[this.currentSizeIndex].approvalUsage = totalApprovalAmount
                 this.isSizeDialogVisible = false
             }
             if (this.sizeAddSymbol === 1) {
                 this.editBomData[this.currentSizeIndex].sizeInfo = this.sizeData
-                const totalApprovalAmount = this.sizeData.reduce(
-                    (total, item) => total + item.approvalAmount,
-                    0
-                )
+                const totalApprovalAmount = this.sizeData.reduce((total, item) => total + item.approvalAmount, 0)
                 this.editBomData[this.currentSizeIndex].approvalUsage = totalApprovalAmount
                 this.isSizeDialogVisible = false
             }
@@ -793,9 +668,7 @@ export default {
 
                         item.sizeInfo.forEach((sizeRow) => {
                             let sizeKey = sizeRow.size
-                            let trueKey = this.shoeSizeColumns.find(
-                                (column) => column.label === sizeKey
-                            ).prop
+                            let trueKey = this.shoeSizeColumns.find((column) => column.label === sizeKey).prop
                             if (this.orderProduceInfo[0][trueKey] !== undefined) {
                                 sizeRow.approvalAmount = this.orderProduceInfo[0][trueKey]
                                 totalApprovalAmount += this.orderProduceInfo[0][trueKey]
@@ -819,9 +692,7 @@ export default {
             this.newBomId = response.data.bomId
         },
         getFilteredFactoryOptions(materialName) {
-            const filteredOptions = this.factoryOptions.filter(
-                (option) => option.materialName === materialName
-            )
+            const filteredOptions = this.factoryOptions.filter((option) => option.materialName === materialName)
             return [{ factoryName: '询价' }, ...filteredOptions]
         },
         async openEditDialog(row) {
@@ -850,12 +721,20 @@ export default {
             this.isPreviewDialogVisible = true
         },
         approvalUsageChange(row) {
-            row.unitUsage = (1 / row.pairs).toFixed(5)
+            if (row.pairs === 0) {
+                row.unitUsage = 0
+            } else {
+                row.unitUsage = (1 / row.pairs).toFixed(5)
+            }
             row.approvalUsage = (row.unitUsage * this.orderProduceInfo[0].total).toFixed(3)
         },
         unitUsageChange(row) {
+            if (row.unitUsage === 0) {
+                row.pairs = 0
+            } else {
+                row.pairs = (1 / row.unitUsage).toFixed(3)
+            }
             row.approvalUsage = (row.unitUsage * this.orderProduceInfo[0].total).toFixed(3)
-            row.pairs = (1 / row.unitUsage).toFixed(3)
         },
         openIssueDialog() {
             this.isFinalBOM = true
@@ -1127,10 +1006,7 @@ export default {
             if (selection.length > 1) {
                 // Ensure only one row is selected
                 this.$refs.materialSelectTable.clearSelection()
-                this.$refs.materialSelectTable.toggleRowSelection(
-                    selection[selection.length - 1],
-                    true
-                )
+                this.$refs.materialSelectTable.toggleRowSelection(selection[selection.length - 1], true)
             } else {
                 this.materialSelectRow = selection[0]
             }
@@ -1206,19 +1082,13 @@ export default {
             }
         },
         downloadProductionOrderList() {
-            window.open(
-                `${this.$apiBaseUrl}/devproductionorder/download?ordershoerid=${this.currentBomShoeId}&orderid=${this.orderData.orderId}`
-            )
+            window.open(`${this.$apiBaseUrl}/devproductionorder/download?ordershoerid=${this.currentBomShoeId}&orderid=${this.orderData.orderId}`)
         },
         downloadProductionOrder() {
-            window.open(
-                `${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${this.orderData.orderId}&filetype=0`
-            )
+            window.open(`${this.$apiBaseUrl}/orderimport/downloadorderdoc?orderrid=${this.orderData.orderId}&filetype=0`)
         },
         downloadSecondBOM(row) {
-            window.open(
-                `${this.$apiBaseUrl}/secondbom/download?ordershoerid=${row.orderShoeRid}&orderid=${this.orderData.orderId}`
-            )
+            window.open(`${this.$apiBaseUrl}/secondbom/download?ordershoerid=${row.orderShoeRid}&orderid=${this.orderData.orderId}`)
         },
         openReturnOrderDialog() {
             this.revertForm.revertToStatus = ''
@@ -1232,14 +1102,16 @@ export default {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
-            }).then(() => {
-                this.revertOrder()
-            }).catch(() => {
-                this.$message({
-                    type: 'info',
-                    message: '已取消退回'
-                })
             })
+                .then(() => {
+                    this.revertOrder()
+                })
+                .catch(() => {
+                    this.$message({
+                        type: 'info',
+                        message: '已取消退回'
+                    })
+                })
         },
         async revertOrder() {
             this.$refs.revertForm.validate(async (valid) => {
@@ -1261,8 +1133,7 @@ export default {
                     })
                     this.isRevertDialogVisable = false
                     this.getAllShoeListInfo()
-                }
-                else {
+                } else {
                     this.$message({
                         type: 'error',
                         message: '退回失败'
@@ -1272,9 +1143,9 @@ export default {
         },
         handleStatusSelect() {
             //when select status, make the revertReason to be the reason field of the selected status
-            const selectedStatus = this.revertStatusReasonOptions.find(item => item.status === this.revertForm.revertToStatus)
+            const selectedStatus = this.revertStatusReasonOptions.find((item) => item.status === this.revertForm.revertToStatus)
             this.revertForm.revertReason = selectedStatus.reason
-        },
+        }
     }
 }
 </script>
