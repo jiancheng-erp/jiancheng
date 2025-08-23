@@ -2022,7 +2022,8 @@ def delete_inbound_record():
     )
     for row in entities:
         inbound_record_detail, storage = row
-        storage.inbound_amount -= inbound_record_detail.inbound_amount
+        if inbound_record.inbound_type == 0:
+            storage.inbound_amount -= inbound_record_detail.inbound_amount
         storage.current_amount -= inbound_record_detail.inbound_amount
 
         for i in range(len(SHOESIZERANGE)):
@@ -2036,16 +2037,19 @@ def delete_inbound_record():
             new_value = current_value - inbound_value
             setattr(storage, column_name, new_value)
 
-            column_name = f"size_{shoe_size}_inbound_amount"
-            current_value = getattr(storage, column_name)
-            record_detail_column_name = f"size_{shoe_size}_inbound_amount"
-            inbound_value = getattr(
-                inbound_record_detail, record_detail_column_name
-            )
-            if inbound_value is None:
-                continue
-            new_value = current_value - inbound_value
-            setattr(storage, column_name, new_value)
+        if inbound_record.inbound_type == 0:
+            for i in range(len(SHOESIZERANGE)):
+                shoe_size = SHOESIZERANGE[i]
+                column_name = f"size_{shoe_size}_inbound_amount"
+                current_value = getattr(storage, column_name)
+                record_detail_column_name = f"size_{shoe_size}_inbound_amount"
+                inbound_value = getattr(
+                    inbound_record_detail, record_detail_column_name
+                )
+                if inbound_value is None:
+                    continue
+                new_value = current_value - inbound_value
+                setattr(storage, column_name, new_value)
 
         db.session.delete(inbound_record_detail)
     db.session.delete(inbound_record)
