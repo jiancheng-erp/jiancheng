@@ -2006,8 +2006,10 @@ def delete_inbound_record():
     )
     if not inbound_record:
         return jsonify({"message": "inbound record not found"}), 404
+    
+    if inbound_record.approval_status == 1:
+        return jsonify({"message": "入库单已审核，无法删除"}), 400
 
-    is_sized_material = inbound_record.is_sized_material
     entities = (
         db.session.query(InboundRecordDetail, MaterialStorage)
         .join(
@@ -2020,16 +2022,13 @@ def delete_inbound_record():
     )
     for row in entities:
         inbound_record_detail, storage = row
-        if inbound_record.inbound_type in [0, 2]:
-            storage.inbound_amount -= inbound_record_detail.inbound_amount
+        storage.inbound_amount -= inbound_record_detail.inbound_amount
         storage.current_amount -= inbound_record_detail.inbound_amount
-        db.session.delete(inbound_record_detail)
 
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
             column_name = f"size_{shoe_size}_current_amount"
             current_value = getattr(storage, column_name)
-
             record_detail_column_name = f"size_{shoe_size}_inbound_amount"
             inbound_value = getattr(inbound_record_detail, record_detail_column_name)
             if inbound_value is None:
@@ -2037,24 +2036,21 @@ def delete_inbound_record():
             new_value = current_value - inbound_value
             setattr(storage, column_name, new_value)
 
-        if inbound_record.inbound_type in [0, 2]:
-            for i in range(len(SHOESIZERANGE)):
-                shoe_size = SHOESIZERANGE[i]
-                column_name = f"size_{shoe_size}_inbound_amount"
-                current_value = getattr(storage, column_name)
+            column_name = f"size_{shoe_size}_inbound_amount"
+            current_value = getattr(storage, column_name)
+            record_detail_column_name = f"size_{shoe_size}_inbound_amount"
+            inbound_value = getattr(
+                inbound_record_detail, record_detail_column_name
+            )
+            if inbound_value is None:
+                continue
+            new_value = current_value - inbound_value
+            setattr(storage, column_name, new_value)
 
-                record_detail_column_name = f"size_{shoe_size}_inbound_amount"
-                inbound_value = getattr(
-                    inbound_record_detail, record_detail_column_name
-                )
-                if inbound_value is None:
-                    continue
-                new_value = current_value - inbound_value
-                setattr(storage, column_name, new_value)
         db.session.delete(inbound_record_detail)
     db.session.delete(inbound_record)
     db.session.commit()
-    return jsonify({"message": "success"})
+    return jsonify({"message": "操作成功"})
 
 
 @material_storage_bp.route("/warehouse/getallmaterialmodels", methods=["GET"])
