@@ -1575,3 +1575,16 @@ class BatchInfoTemplate(db.Model):
     pakaging_info_id_json = db.Column(db.JSON, nullable=False)
     template_name = db.Column(db.String(50), nullable=False)
     template_description = db.Column(db.String(200), nullable=True)
+    
+class MakeInventoryRecord(db.Model):
+    __tablename__ = "make_inventory_record"
+    make_inventory_record_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    record_date = db.Column(db.Date, nullable=True)
+    make_inventory_rid = db.Column(db.String(40), nullable=False, unique=True)
+    make_inventory_reason = db.Column(db.String(200), nullable=True)
+    inbound_record_id = db.Column(db.BigInteger, nullable=True)
+    outbound_record_id = db.Column(db.BigInteger, nullable=True)
+    # 0=未回传excel  1=已回传excel  2=盘库确认完成
+    make_inventory_status = db.Column(db.SmallInteger, nullable=False, default=0)
+    # 0=未回传  1=已回传
+    excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)

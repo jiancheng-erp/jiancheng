@@ -23,6 +23,7 @@ from development.dev_producion_order import dev_producion_order_bp
 from warehouse.material_storage import material_storage_bp
 from warehouse.semifinished_storage import semifinished_storage_bp
 from warehouse.finished_storage import finished_storage_bp
+from warehouse.make_inventory import make_inventory_bp
 from shared_apis.message import message_bp
 from login.login import login_bp
 from human_resources.user_manage import user_manage_bp
@@ -114,3 +115,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(audit_material_outbound_bp)
     app.register_blueprint(dev_performance_bp)
     app.register_blueprint(accounting_recievable_bp)
+    app.register_blueprint(make_inventory_bp)

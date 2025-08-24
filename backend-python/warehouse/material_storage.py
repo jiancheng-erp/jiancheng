@@ -1702,12 +1702,14 @@ def get_inbound_records_for_material():
     result = []
     for row in response:
         record, item = row
-        if record.inbound_type == 1:
+        if record.inbound_type == 0:
+            inbound_purpose = "采购入库"
+        elif record.inbound_type == 1:
             inbound_purpose = "生产剩余"
         elif record.inbound_type == 2:
             inbound_purpose = "复合入库"
         else:
-            inbound_purpose = "采购入库"
+            inbound_purpose = "盘库入库"
         obj = {
             "inboundRId": record.inbound_rid,
             "timestamp": format_datetime(record.inbound_datetime),
@@ -1756,6 +1758,8 @@ def get_outbound_records_for_material():
         elif outbound_record.outbound_type == 3:
             outbound_purpose = "外发复合"
             outbound_destination = supplier.supplier_name if supplier else None
+        elif outbound_record.outbound_type == 4:
+            outbound_purpose = "盘库出库"
         else:
             outbound_purpose = "生产使用"
             outbound_destination = department.department_name if department else None

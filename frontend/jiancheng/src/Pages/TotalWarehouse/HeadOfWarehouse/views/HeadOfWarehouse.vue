@@ -43,9 +43,9 @@
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>文件下载</span>
                         </el-menu-item>
-                        <!-- <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>独立采购</span>
-                        </el-menu-item> -->
+                        <el-menu-item index="6" @click="handleMenuClick(6)">
+                            <span>盘库功能</span>
+                        </el-menu-item>
                         <el-menu-item index="15" @click="handleMenuClick(15)">
                             <span>供货商管理</span>
                         </el-menu-item>
@@ -94,6 +94,7 @@ import OrderSearch from '@/Pages/LogisticsControlDepartment/LogisticsControlMana
 import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
 import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SupplierManagementView.vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
+import MakeInventory from '../components/MakeInventory.vue'
 
 export default {
     components: {
@@ -114,7 +115,8 @@ export default {
         OrderSearch,
         MaterialManagementView,
         SupplierManagement,
-        FinancialWarehouseDetail
+        FinancialWarehouseDetail,
+        MakeInventory
     },
     data() {
         return {
@@ -157,7 +159,7 @@ export default {
                     this.currentComponent = 'InboundOutboundHistory'
                     break
                 case 6:
-                    this.currentComponent = 'FixedAssetsConsumablesView'
+                    this.currentComponent = 'MakeInventory'
                     break
                 case 7:
                     this.currentComponent = 'LogisticsBatchTypeManagement'
