@@ -27,7 +27,6 @@ fetch('/frontend_config.json')
             const token = localStorage.getItem('token') // Get token from localStorage
             if (token) {
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}` // Set the Authorization header globally
-                axios.defaults.timeout = 10000
 
             } else {
                 delete axios.defaults.headers.common['Authorization'] // Remove the Authorization header if no token is found
