@@ -250,6 +250,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -353,6 +356,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -454,6 +460,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -554,6 +563,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -654,6 +666,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>
@@ -765,6 +780,9 @@
                                     </vxe-column>
                                     <vxe-column field="materialCraftName" title="复合工艺">
                                         <template #default="{ row }">
+                                            <div>
+                                                <span>{{ row.materialCraftName }}</span>
+                                            </div>
                                             <vxe-button status="primary" size="small" @click="openCraftDialog(row)" :disabled="row.materialType === '烫底'"> 编辑工艺 </vxe-button>
                                         </template>
                                     </vxe-column>

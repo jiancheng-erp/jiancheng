@@ -1,3 +1,4 @@
+from math import e
 from flask import Blueprint, jsonify, request, send_file, current_app
 import os
 import datetime
@@ -203,7 +204,23 @@ def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_i
 
         # Split new craft_name list and add each as separate BomItem
         craft_name_list = material.get("materialCraftNameList", [])
-        for craft_name in craft_name_list:
+        if craft_name_list != []:
+            for craft_name in craft_name_list:
+                new_bom_item = BomItem(
+                    bom_id=bom_id,
+                    production_instruction_item_id=item_id,
+                    material_id=material_id,
+                    material_model=material.get("materialModel"),
+                    material_specification=material.get("materialSpecification"),
+                    bom_item_color=material.get("color"),
+                    unit_usage=material.get("unitUsage", 0),
+                    total_usage=material.get("totalUsage", 0),
+                    remark=material.get("comment"),
+                    bom_item_add_type=str(bom_type),
+                    craft_name=craft_name,
+                )
+                db.session.add(new_bom_item)
+        else:
             new_bom_item = BomItem(
                 bom_id=bom_id,
                 production_instruction_item_id=item_id,
@@ -218,7 +235,6 @@ def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_i
                 craft_name=craft_name,
             )
             db.session.add(new_bom_item)
-
 
 
 def _get_or_create_material(material):

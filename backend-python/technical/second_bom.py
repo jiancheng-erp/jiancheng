@@ -578,6 +578,7 @@ def issue_boms():
                         == bom_item.BomItem.material_model,
                         CraftSheetItem.material_specification
                         == bom_item.BomItem.material_specification,
+                        CraftSheetItem.color == bom_item.BomItem.bom_item_color,
                         CraftSheetItem.after_usage_symbol == 0,
                     )
                     .first()
