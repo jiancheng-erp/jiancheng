@@ -38,6 +38,8 @@
                 <el-table-column prop="materialColor" label="颜色"></el-table-column>
                 <el-table-column prop="materialUnit" label="单位"></el-table-column>
                 <el-table-column prop="purchaseAmount" label="采购数量"></el-table-column>
+                <el-table-column prop="inboundAmount" label="已入库数量"></el-table-column>
+                <el-table-column prop="currentAmount" label="当前数量"></el-table-column>
             </el-table>
     </el-row>
     <el-row :gutter="20">

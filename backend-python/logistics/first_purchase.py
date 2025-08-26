@@ -24,8 +24,10 @@ from general_document.last_purchase_divide_order import generate_last_excel_file
 from general_document.package_purchase_divide_order import generate_package_excel_file
 from models import *
 from sqlalchemy.dialects.mysql import insert
-from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.expression import or_, func
 from sqlalchemy.sql.expression import case
+
+from warehouse import material_storage
 
 first_purchase_bp = Blueprint("first_purrchase_bp", __name__)
 
@@ -1618,10 +1620,15 @@ def get_all_purchase_order_items():
     supplier_name = request.args.get("supplierName")
     status = request.args.get("status")
 
-    query = (
-        db.session.query(PurchaseOrderItem, PurchaseOrder, Order, Shoe, Material, Supplier)
+    # 1) 基础查询：不连接 MaterialStorage（避免行数爆炸）
+    base_query = (
+        db.session.query(
+            PurchaseOrderItem.purchase_order_item_id.label("poi_id"),
+            PurchaseOrderItem, PurchaseOrder, Order, Shoe, Material, Supplier
+        )
         .join(
-            PurchaseDivideOrder, PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id
+            PurchaseDivideOrder,
+            PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id
         )
         .join(PurchaseOrder, PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id)
         .join(OrderShoe, PurchaseOrder.order_shoe_id == OrderShoe.order_shoe_id)
@@ -1629,39 +1636,74 @@ def get_all_purchase_order_items():
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .join(Material, PurchaseOrderItem.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .order_by(Order.order_rid)
     )
 
+    # 2) 过滤条件（尽量都作用在基础表/小表的列上）
     if order_rid:
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+        base_query = base_query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid:
-        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+        base_query = base_query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if material_name:
-        query = query.filter(Material.material_name.ilike(f"%{material_name}%"))
+        base_query = base_query.filter(Material.material_name.ilike(f"%{material_name}%"))
     if material_model:
-        query = query.filter(
-            PurchaseOrderItem.material_model.ilike(f"%{material_model}%")
-        )
+        base_query = base_query.filter(PurchaseOrderItem.material_model.ilike(f"%{material_model}%"))
     if material_specification:
-        query = query.filter(
-            PurchaseOrderItem.material_specification.ilike(
-                f"%{material_specification}%"
-            )
-        )
+        base_query = base_query.filter(PurchaseOrderItem.material_specification.ilike(f"%{material_specification}%"))
     if material_color:
-        query = query.filter(PurchaseOrderItem.color.ilike(f"%{material_color}%"))
+        base_query = base_query.filter(PurchaseOrderItem.color.ilike(f"%{material_color}%"))
     if supplier_name:
-        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+        base_query = base_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
     if status:
-        query = query.filter(PurchaseOrder.purchase_order_status == PO_STATUS_TO_INT.get(status, 0))
+        base_query = base_query.filter(PurchaseOrder.purchase_order_status == PO_STATUS_TO_INT.get(status, 0))
 
-    # Pagination
-    count_result = query.distinct().count()
-    response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
+    # 3) 统计总数：只统计去重后的 PurchaseOrderItem
+    #    用一个子查询提取符合条件的 poi_id，再 count
+    poi_ids_subq = base_query.with_entities(PurchaseOrderItem.purchase_order_item_id).subquery()
+    total_length = db.session.query(func.count(func.distinct(poi_ids_subq.c.purchase_order_item_id))).scalar()
 
+    # 4) 排序 + 分页（注意只在基础结果上分页）
+    page_rows = (
+        base_query
+        .order_by(Order.order_rid)   # 你的原排序
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+        .all()
+    )
+
+    # 5) 当前页的 poi_id 列表
+    current_poi_ids = [r.poi_id for r in page_rows]
+    storage_map = {}
+
+    if current_poi_ids:
+        # 5a) 二次批量查询 MaterialStorage（建议按你的业务选择聚合策略）
+        # 方案A：如果一条 POI 会有多条入库记录，聚合求和（常见）
+        storage_rows = (
+            db.session.query(
+                MaterialStorage.purchase_order_item_id.label("poi_id"),
+                func.sum(MaterialStorage.inbound_amount).label("inbound_amount"),
+                func.sum(MaterialStorage.current_amount).label("current_amount"),
+            )
+            .filter(MaterialStorage.purchase_order_item_id.in_(current_poi_ids))
+            .group_by(MaterialStorage.purchase_order_item_id)
+            .all()
+        )
+        # 方案B（可选）：如果你只想拿“最新一条”库存信息，可用窗口函数或 max(id)/max(time) 再 join 回来
+
+        storage_map = {
+            row.poi_id: {
+                "inbound_amount": row.inbound_amount,
+                "current_amount": row.current_amount,
+            }
+            for row in storage_rows
+        }
+
+    # 6) 组装返回
     result = []
-    for row in response:
-        item, purchase_order, order, shoe, material, supplier = row
+    for row in page_rows:
+        # 解包
+        _poi_id, item, purchase_order, order, shoe, material, supplier = row
+        st = storage_map.get(item.purchase_order_item_id)
+
         obj = {
             "orderRId": order.order_rid,
             "shoeRId": shoe.shoe_rid,
@@ -1671,10 +1713,11 @@ def get_all_purchase_order_items():
             "materialColor": item.color,
             "supplierName": supplier.supplier_name,
             "purchaseAmount": item.purchase_amount,
+            "inboundAmount": st["inbound_amount"] if st else "无关联库存",
+            "currentAmount": st["current_amount"] if st else "无关联库存",
             "materialUnit": material.material_unit,
-            "purchaseOrderStatus": PO_STATUS.get(
-                purchase_order.purchase_order_status, "未填写"
-            ),
+            "purchaseOrderStatus": PO_STATUS.get(purchase_order.purchase_order_status, "未填写"),
         }
         result.append(obj)
-    return {"result": result, "totalLength": count_result}
+
+    return {"result": result, "totalLength": total_length}
