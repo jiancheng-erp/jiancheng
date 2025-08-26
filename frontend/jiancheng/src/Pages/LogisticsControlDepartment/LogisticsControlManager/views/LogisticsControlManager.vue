@@ -37,6 +37,9 @@
                         <el-menu-item index="12" @click="handleMenuClick(12)">
                             <span>入/出库记录</span>
                         </el-menu-item>
+                        <el-menu-item index="13" @click="handleMenuClick(13)">
+                            <span>采购订单信息</span>
+                        </el-menu-item>
                         <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>仓库管理</span>
                         </el-menu-item>
@@ -84,6 +87,7 @@ import TestPage from '../components/TestPage.vue'
 import MaterialStorage from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/MaterialStorage.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
+import PurchaseOrderInfo from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/PurchaseOrderInfo.vue'
 export default {
     components: {
         AllHeader,
@@ -101,7 +105,8 @@ export default {
         MultiPurchaseIssue,
         RevertDashboard,
         MaterialStorage,
-        FinancialWarehouseDetail
+        FinancialWarehouseDetail,
+        PurchaseOrderInfo
     },
     data() {
         return {
@@ -156,6 +161,8 @@ export default {
                 case 12:
                     this.currentComponent = 'FinancialWarehouseDetail'
                     break
+                case 13:
+                    this.currentComponent = 'PurchaseOrderInfo'
             }
         },
         async logout() {

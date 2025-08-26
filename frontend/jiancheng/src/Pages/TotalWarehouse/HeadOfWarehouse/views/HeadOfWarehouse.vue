@@ -34,6 +34,9 @@
                         <el-menu-item index="16" @click="handleMenuClick(16)">
                             <span>出入库明细</span>
                         </el-menu-item>
+                        <el-menu-item index="17" @click="handleMenuClick(17)">
+                            <span>采购订单信息</span>
+                        </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>库存</span>
                         </el-menu-item>
@@ -95,6 +98,7 @@ import MaterialManagementView from '@/Pages/LogisticsControlDepartment/Logistics
 import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SupplierManagementView.vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import MakeInventory from '../components/MakeInventory.vue'
+import PurchaseOrderInfo from '../components/PurchaseOrderInfo.vue'
 
 export default {
     components: {
@@ -116,7 +120,8 @@ export default {
         MaterialManagementView,
         SupplierManagement,
         FinancialWarehouseDetail,
-        MakeInventory
+        MakeInventory,
+        PurchaseOrderInfo
     },
     data() {
         return {
@@ -181,6 +186,9 @@ export default {
                     break
                 case 16:
                     this.currentComponent = 'FinancialWarehouseDetail'
+                    break
+                case 17:
+                    this.currentComponent = 'PurchaseOrderInfo'
                     break
             }
         }
