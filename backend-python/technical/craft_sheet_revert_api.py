@@ -232,7 +232,7 @@ def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_i
                 total_usage=material.get("totalUsage", 0),
                 remark=material.get("comment"),
                 bom_item_add_type=str(bom_type),
-                craft_name=craft_name,
+                craft_name="",
             )
             db.session.add(new_bom_item)
 
