@@ -11,7 +11,7 @@ from general_document.bom import generate_excel_file
 from collections import defaultdict
 from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
-from sqlalchemy.sql.expression import case
+from sqlalchemy.sql.expression import case,func
 from logger import logger
 second_bom_bp = Blueprint("second_bom_bp", __name__)
 
@@ -574,11 +574,9 @@ def issue_boms():
                         CraftSheetItem.craft_sheet_id == craft_sheet_id,
                         CraftSheetItem.order_shoe_type_id == order_shoe_type_id,
                         CraftSheetItem.material_id == bom_item.Material.material_id,
-                        CraftSheetItem.material_model
-                        == bom_item.BomItem.material_model,
-                        CraftSheetItem.material_specification
-                        == bom_item.BomItem.material_specification,
-                        CraftSheetItem.color == bom_item.BomItem.bom_item_color,
+                        func.coalesce(CraftSheetItem.material_model, '') == func.coalesce(bom_item.BomItem.material_model, ''),
+                        func.coalesce(CraftSheetItem.material_specification, '') == func.coalesce(bom_item.BomItem.material_specification, ''),
+                        func.coalesce(CraftSheetItem.color, '') == func.coalesce(bom_item.BomItem.bom_item_color, ''),
                         CraftSheetItem.after_usage_symbol == 0,
                     )
                     .first()
