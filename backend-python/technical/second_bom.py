@@ -11,7 +11,9 @@ from general_document.bom import generate_excel_file
 from collections import defaultdict
 from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import SHOESIZERANGE
-from sqlalchemy.sql.expression import case,func
+from sqlalchemy.sql.expression import case, func
+from sqlalchemy.orm import aliased
+from sqlalchemy import and_, case, func, text, literal
 from logger import logger
 second_bom_bp = Blueprint("second_bom_bp", __name__)
 
@@ -233,41 +235,120 @@ def get_current_bom():
     return jsonify(result)
 
 
+
 @second_bom_bp.route("/secondbom/getcurrentbomitem", methods=["GET"])
 def get_current_bom_item():
+    # 1) 参数 & 类型
     order_shoe_type_id = request.args.get("ordershoetypeid")
-    material_order = case(
-        (ProductionInstructionItem.material_type == "S", 1),
-        (ProductionInstructionItem.material_type == "I", 2),
-        (ProductionInstructionItem.material_type == "A", 3),
-        (ProductionInstructionItem.material_type == "O", 4),
-        (ProductionInstructionItem.material_type == "M", 5),
-        (ProductionInstructionItem.material_type == "H", 6),
-        else_=6,  # Default for any other values (if any)
+    try:
+        order_shoe_type_id = int(order_shoe_type_id)
+    except (TypeError, ValueError):
+        return jsonify([])
+
+    # 2) 二次 BOM（bom_type = 1）——拿到 bom_id
+    bom_id = (
+        db.session.query(Bom.bom_id)
+        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 1)
+        .scalar()
     )
-    bom = (
-        db.session.query(Bom, OrderShoeType)
-        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == "1")
-        .first()
-    )
-    bom_items = (
-        db.session.query(BomItem, Material, MaterialType, Department, Supplier, ProductionInstructionItem)
+    if not bom_id:
+        return jsonify([])
+
+    # 3) 仅用于“排序”的 Craft 子查询（不含 color；同一 (m_id, m_model, m_spec) 取任一 material_type）
+    csi_type_sub = (
+        db.session.query(
+            CraftSheetItem.material_id.label("m_id"),
+            CraftSheetItem.material_model.label("m_model"),
+            CraftSheetItem.material_specification.label("m_spec"),
+            CraftSheetItem.order_shoe_type_id.label("ostid"),
+            func.min(CraftSheetItem.material_type).label("mt"),  # 取最小保证确定性
+        )
+        .filter(CraftSheetItem.order_shoe_type_id == order_shoe_type_id)
+        .group_by(
+            CraftSheetItem.material_id,
+            CraftSheetItem.material_model,
+            CraftSheetItem.material_specification,
+            CraftSheetItem.order_shoe_type_id,
+        )
+    ).subquery("csi_type_sub")
+
+    # 4) 首 BOM（bom_type = 0）单位用量一次性取回，按 (material_id, model, spec) 聚合
+    first_bom_sub = (
+        db.session.query(
+            BomItem.material_id.label("fb_m_id"),
+            BomItem.material_model.label("fb_m_model"),
+            BomItem.material_specification.label("fb_m_spec"),
+            func.max(BomItem.unit_usage).label("first_unit_usage"),
+        )
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .filter(
+            Bom.order_shoe_type_id == order_shoe_type_id,
+            Bom.bom_type == 0,
+        )
+        .group_by(
+            BomItem.material_id,
+            BomItem.material_model,
+            BomItem.material_specification,
+        )
+    ).subquery("first_bom_sub")
+
+    # 5) 排序桶：基于 Craft 的 material_type（缺失放到最后）
+    sort_bucket = case(
+        (csi_type_sub.c.mt == "S", 1),
+        (csi_type_sub.c.mt == "I", 2),
+        (csi_type_sub.c.mt == "A", 3),
+        (csi_type_sub.c.mt == "O", 4),
+        (csi_type_sub.c.mt == "M", 5),
+        (csi_type_sub.c.mt == "H", 6),
+        else_=literal(7),
+    ).label("sort_bucket")
+
+    # 6) 主查询：连接“排序子表”和“首 BOM 用量子表”
+    #    连接表达式使用 IFNULL 与上面子表保持一致；若你把空串统一为 NULL，可改为 NULL-safe 等号 <=>（见下方注释）。
+    q = (
+        db.session.query(
+            BomItem,
+            Material,
+            MaterialType,
+            Department,
+            Supplier,
+            first_bom_sub.c.first_unit_usage.label("first_bom_usage"),
+            sort_bucket,
+        )
+        .select_from(BomItem)
         .join(Material, BomItem.material_id == Material.material_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .outerjoin(Department, BomItem.department_id == Department.department_id)
-        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .outerjoin(Supplier, Material.material_supplier == Supplier.supplier_id)
         .outerjoin(
-            ProductionInstructionItem,
-            BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+            csi_type_sub,
+            and_(
+                csi_type_sub.c.m_id == BomItem.material_id,
+                func.ifnull(csi_type_sub.c.m_model, "") == func.ifnull(BomItem.material_model, ""),
+                func.ifnull(csi_type_sub.c.m_spec,  "") == func.ifnull(BomItem.material_specification, ""),
+                csi_type_sub.c.ostid == order_shoe_type_id,
+            ),
         )
-        .filter(BomItem.bom_id == bom.Bom.bom_id)
+        .outerjoin(
+            first_bom_sub,
+            and_(
+                first_bom_sub.c.fb_m_id == BomItem.material_id,
+                func.ifnull(first_bom_sub.c.fb_m_model, "") == func.ifnull(BomItem.material_model, ""),
+                func.ifnull(first_bom_sub.c.fb_m_spec,  "") == func.ifnull(BomItem.material_specification, ""),
+            ),
+        )
+        .filter(BomItem.bom_id == bom_id)
         .order_by(
-            material_order, Supplier.supplier_name, Material.material_name
+            sort_bucket.asc(),
+            Supplier.supplier_name.asc(),
+            Material.material_name.asc(),
+            BomItem.bom_item_id.asc(),  # 稳定兜底
         )
-        .all()
     )
-    # get shoe size name
+
+    bom_rows = q.all()
+
+    # 7) order_id -> size names
     order_id = (
         db.session.query(Order.order_id)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -275,63 +356,40 @@ def get_current_bom_item():
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
         .scalar()
     )
-    shoe_size_names = get_order_batch_type_helper(order_id)
+    shoe_size_names = get_order_batch_type_helper(order_id) or []
+
+    # 8) 组装结果
     result = []
-    for row in bom_items:
-        bom_item, material, material_type, department, supplier, production_instruction = row
+    for bom_item, material, material_type, department, supplier, first_bom_usage, _sort_bucket in bom_rows:
         sizeInfo = []
-        first_bom_item_record = (
-            db.session.query(BomItem, Bom)
-            .join(Bom, BomItem.bom_id == Bom.bom_id)
-            .filter(
-                Bom.order_shoe_type_id == order_shoe_type_id,
-                Bom.bom_type == 0,
-                BomItem.material_id == material.material_id,
-                BomItem.material_model == bom_item.material_model,
-                BomItem.material_specification == bom_item.material_specification,
-            )
-            .first()
-        )
-        if first_bom_item_record:
-            first_bom_usage = first_bom_item_record.BomItem.unit_usage
-        else:
-            first_bom_usage = 0
-        for i in range(len(shoe_size_names)):
+        for i, sz in enumerate(shoe_size_names):
             index = i + 34
-            obj = {
-                "size": shoe_size_names[i]["label"],
-                "approvalAmount": (
-                    getattr(bom_item, f"size_{index}_total_usage")
-                    if getattr(bom_item, f"size_{index}_total_usage")
-                    else 0.00
-                ),
-            }
-            sizeInfo.append(obj)
-        result.append(
-            {
-                "bomItemId": bom_item.bom_item_id,
-                "materialName": material.material_name,
-                "materialType": material_type.material_type_name,
-                "materialModel": bom_item.material_model,
-                "materialSpecification": bom_item.material_specification,
-                "supplierName": supplier.supplier_name,
-                "firstBomUsage": first_bom_usage,
-                "useDepart": department.department_id if department else None,
-                "pairs": bom_item.pairs if bom_item.pairs else 0.00,
-                "craftName": bom_item.craft_name,
-                "unitUsage": (
-                    bom_item.unit_usage
-                    if bom_item.unit_usage
-                    else 0.00 if material.material_category == 0 else None
-                ),
-                "approvalUsage": bom_item.total_usage if bom_item.total_usage else 0.00,
-                "unit": material.material_unit,
-                "color": bom_item.bom_item_color,
-                "comment": bom_item.remark,
-                "materialCategory": material.material_category,
-                "sizeInfo": sizeInfo,
-            }
-        )
+            val = getattr(bom_item, f"size_{index}_total_usage")
+            sizeInfo.append({
+                "size": sz["label"],
+                "approvalAmount": val if val else 0.0,
+            })
+
+        result.append({
+            "bomItemId": bom_item.bom_item_id,
+            "materialName": material.material_name,
+            "materialType": material_type.material_type_name,
+            "materialModel": bom_item.material_model,
+            "materialSpecification": bom_item.material_specification,
+            "supplierName": supplier.supplier_name if supplier else None,
+            "firstBomUsage": first_bom_usage or 0.0,
+            "useDepart": department.department_id if department else None,
+            "pairs": bom_item.pairs or 0.0,
+            "craftName": bom_item.craft_name,
+            "unitUsage": (bom_item.unit_usage if bom_item.unit_usage else (0.0 if material.material_category == 0 else None)),
+            "approvalUsage": bom_item.total_usage or 0.0,
+            "unit": material.material_unit,
+            "color": bom_item.bom_item_color,
+            "comment": bom_item.remark,
+            "materialCategory": material.material_category,
+            "sizeInfo": sizeInfo,
+        })
+
     return jsonify(result)
 
 
