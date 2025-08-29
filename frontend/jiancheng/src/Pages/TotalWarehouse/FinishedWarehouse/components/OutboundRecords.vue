@@ -1,7 +1,13 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <FinishedSearchBar :search-filters="searchFilters" @confirm="confirmSearchFilters"/>
+            <FinishedSearchBar :search-filters="searchFilters" @confirm="confirmSearchFilters" />
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="mb-2">
+        <el-col>
+            <el-button type="primary" :loading="exportLoadingOutbound" @click="exportOutboundExcel"> 导出出库Excel </el-button>
+            <el-button type="success" :loading="exportLoadingInout" @click="exportInoutExcel"> 导出出入库合并Excel </el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -22,21 +28,25 @@
     </el-row>
     <el-row :gutter="20">
         <el-col>
-            <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="pageSizes" :page-size="pageSize"
-                layout="total, sizes, prev, pager, next, jumper" :total="total" />
+            <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handlePageChange"
+                :current-page="currentPage"
+                :page-sizes="pageSizes"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="total"
+            />
         </el-col>
     </el-row>
 
     <el-dialog title="出库单详情" v-model="dialogVisible" width="80%">
         <el-descriptions>
             <template #title>
-                <h2 style="text-align: center;">健诚鞋业出库单</h2>
+                <h2 style="text-align: center">健诚鞋业出库单</h2>
             </template>
             <template #extra>
-                <span style="font-weight: bolder;font-size: 16px;">
-                    单据编号：{{ currentRow.outboundRId }}
-                </span>
+                <span style="font-weight: bolder; font-size: 16px"> 单据编号：{{ currentRow.outboundRId }} </span>
             </template>
             <el-descriptions-item label="订单号">{{ currentRow.orderRId }}</el-descriptions-item>
             <el-descriptions-item label="工厂型号">{{ currentRow.shoeRId }}</el-descriptions-item>
@@ -52,11 +62,11 @@
 </template>
 <script>
 import axios from 'axios'
-import { ElMessage } from 'element-plus';
-import htmlToPdf from '@/Pages/utils/htmlToPdf';
+import { ElMessage } from 'element-plus'
+import htmlToPdf from '@/Pages/utils/htmlToPdf'
 import print from 'vue3-print-nb'
-import { PAGESIZE, PAGESIZES, getSummaries } from '../../warehouseUtils';
-import FinishedSearchBar from './FinishedSearchBar.vue';
+import { PAGESIZE, PAGESIZES, getSummaries } from '../../warehouseUtils'
+import FinishedSearchBar from './FinishedSearchBar.vue'
 export default {
     components: {
         FinishedSearchBar
@@ -102,6 +112,8 @@ export default {
                 customerBrandSearch: null
             },
             getSummaries: getSummaries,
+            exportLoadingOutbound: false,
+            exportLoadingInout: false
         }
     },
     mounted() {
@@ -109,9 +121,7 @@ export default {
     },
     computed: {
         filteredShoeSizeColumns() {
-			return this.recordData.shoeSizeColumns.filter(column =>
-				this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-			);
+            return this.recordData.shoeSizeColumns.filter((column) => this.recordData.items.some((row) => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0))
         }
     },
     methods: {
@@ -122,12 +132,12 @@ export default {
         calculateOutboundTotal() {
             // Calculate the total outbound quantity
             const number = this.recordData.items.reduce((total, item) => {
-                return total + (Number(item.totalAmount) || 0);
-            }, 0);
-            return Number(number);
+                return total + (Number(item.totalAmount) || 0)
+            }, 0)
+            return Number(number)
         },
         downloadPDF(title, domName) {
-            htmlToPdf.getPdf(title, domName);
+            htmlToPdf.getPdf(title, domName)
         },
         async getOutboundRecordsTable() {
             if (this.searchFilters.dateRange === null) {
@@ -150,8 +160,7 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedoutboundrecords`, { params })
                 this.tableData = response.data.result
                 this.total = response.data.total
-            }
-            catch (error) {
+            } catch (error) {
                 console.log(error)
             }
         },
@@ -167,16 +176,85 @@ export default {
             this.currentRow = row
             console.log(row)
             try {
-                let params = { "orderId": this.currentRow.orderId, "outboundBatchId": row.outboundBatchId }
+                let params = { orderId: this.currentRow.orderId, outboundBatchId: row.outboundBatchId }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedoutboundrecordbybatchid`, { params })
                 this.recordData = response.data
 
                 console.log(response.data)
                 this.dialogVisible = true
-            }
-            catch (error) {
+            } catch (error) {
                 console.log(error)
                 ElMessage.error('获取出库单详情失败')
+            }
+        },
+        _buildExportParams() {
+            const [start, end] = this.searchFilters?.dateRange || [null, null]
+            return {
+                startDate: start,
+                endDate: end,
+                outboundRId: this.searchFilters.boundRIdSearch, // 出库单号
+                orderRId: this.searchFilters.orderRIdSearch,
+                shoeRId: this.searchFilters.shoeRIdSearch,
+                customerName: this.searchFilters.customerNameSearch,
+                customerProductName: this.searchFilters.customerProductNameSearch,
+                orderCId: this.searchFilters.orderCIdSearch,
+                customerBrand: this.searchFilters.customerBrandSearch
+            }
+        },
+
+        // 通用下载器：GET -> blob -> 保存
+        async _downloadExcel(url, params, fallbackName = 'export.xlsx') {
+            const res = await axios.get(`${this.$apiBaseUrl}${url}`, {
+                params,
+                responseType: 'blob'
+            })
+            let filename = fallbackName
+            const dispo = res.headers['content-disposition'] || res.headers['Content-Disposition']
+            if (dispo) {
+                const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(dispo)
+                const asciiMatch = /filename="?([^"]+)"?/i.exec(dispo)
+                if (utf8Match) filename = decodeURIComponent(utf8Match[1])
+                else if (asciiMatch) filename = asciiMatch[1]
+            }
+            const blob = new Blob([res.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            URL.revokeObjectURL(link.href)
+            document.body.removeChild(link)
+        },
+
+        // 导出：出库记录
+        async exportOutboundExcel() {
+            this.exportLoadingOutbound = true
+            try {
+                const params = this._buildExportParams()
+                await this._downloadExcel('/warehouse/export/finished-outbound', params, '成品出库记录.xlsx')
+                ElMessage.success('出库记录导出成功')
+            } catch (e) {
+                console.error(e)
+                ElMessage.error('出库记录导出失败')
+            } finally {
+                this.exportLoadingOutbound = false
+            }
+        },
+
+        // 导出：出入库合并
+        async exportInoutExcel() {
+            this.exportLoadingInout = true
+            try {
+                const params = this._buildExportParams()
+                await this._downloadExcel('/warehouse/export/finished-inout', params, '成品出入库合并.xlsx')
+                ElMessage.success('合并记录导出成功')
+            } catch (e) {
+                console.error(e)
+                ElMessage.error('合并记录导出失败')
+            } finally {
+                this.exportLoadingInout = false
             }
         }
     }
