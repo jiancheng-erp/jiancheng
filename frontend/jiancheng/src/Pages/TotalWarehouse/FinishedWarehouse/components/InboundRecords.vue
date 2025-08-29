@@ -1,7 +1,13 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <FinishedSearchBar :search-filters="searchFilters" @confirm="confirmSearchFilters"/>
+            <FinishedSearchBar :search-filters="searchFilters" @confirm="confirmSearchFilters" />
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" class="mb-2">
+        <el-col>
+            <el-button type="primary" :loading="exportLoadingInbound" @click="exportInboundExcel"> 导出入库Excel </el-button>
+            <el-button type="success" :loading="exportLoadingInout" @click="exportInoutExcel"> 导出出入库合并Excel </el-button>
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -19,7 +25,7 @@
                 <el-table-column prop="detailAmount" label="数量"></el-table-column>
                 <el-table-column label="操作" width="100">
                     <template #default="scope">
-                        <el-button type="danger" @click="deleteRecord(scope.row)" >删除</el-button>
+                        <el-button type="danger" @click="deleteRecord(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -27,30 +33,32 @@
     </el-row>
     <el-row :gutter="20">
         <el-col>
-            <el-pagination @size-change="handleSizeChange" @current-change="handlePageChange"
-                :current-page="currentPage" :page-sizes="pageSizes" :page-size="pageSize"
-                layout="total, sizes, prev, pager, next, jumper" :total="total" />
+            <el-pagination
+                @size-change="handleSizeChange"
+                @current-change="handlePageChange"
+                :current-page="currentPage"
+                :page-sizes="pageSizes"
+                :page-size="pageSize"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="total"
+            />
         </el-col>
     </el-row>
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="80%">
-        <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
-            <h2 style="text-align: center;">健诚鞋业入库单</h2>
-            <div style="display: flex; justify-content: flex-end; padding: 5px;">
-                <span style="font-weight: bolder;font-size: 16px;">
-                    单据编号：{{ currentRow.inboundRId }}
-                </span>
+        <div id="printView" style="padding-left: 20px; padding-right: 20px; color: black; font-family: SimSun">
+            <h2 style="text-align: center">健诚鞋业入库单</h2>
+            <div style="display: flex; justify-content: flex-end; padding: 5px">
+                <span style="font-weight: bolder; font-size: 16px"> 单据编号：{{ currentRow.inboundRId }} </span>
             </div>
-            <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
-                style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+            <table class="table" border="0pm" cellspacing="0" align="left" width="100%" style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all">
                 <tr>
-                    <td style="padding:5px; width: 150px;" align="left">订单号:{{ currentRow.orderRId }}</td>
-                    <td style="padding:5px; width: 150px;" align="left">工厂型号:{{ currentRow.shoeRId }}</td>
-                    <td style="padding:5px; width: 300px;" align="left">入库时间:{{ currentRow.timestamp }}</td>
+                    <td style="padding: 5px; width: 150px" align="left">订单号:{{ currentRow.orderRId }}</td>
+                    <td style="padding: 5px; width: 150px" align="left">工厂型号:{{ currentRow.shoeRId }}</td>
+                    <td style="padding: 5px; width: 300px" align="left">入库时间:{{ currentRow.timestamp }}</td>
                 </tr>
             </table>
-            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%"
-                style="font-size: 16px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+            <table class="yk-table" border="1pm" cellspacing="0" align="center" width="100%" style="font-size: 16px; table-layout: fixed; word-wrap: break-word; word-break: break-all">
                 <tr>
                     <th width="55">序号</th>
                     <th width="80">颜色</th>
@@ -61,17 +69,15 @@
                 <tr v-for="(item, index) in recordData.items" :key="index" align="center">
                     <td>{{ index + 1 }}</td>
                     <td>{{ item.colorName }}</td>
-                    <td v-for="(column, index) in filteredShoeSizeColumns"
-                        :key="index">{{ item[column.prop] }}
-                    </td>
+                    <td v-for="(column, index) in filteredShoeSizeColumns" :key="index">{{ item[column.prop] }}</td>
                     <td>{{ calculateInboundTotal() }}</td>
                     <td>{{ item.remark }}</td>
                 </tr>
             </table>
-            <div style="margin-top: 20px; font-size: 16px; font-weight: bold;">
-                <div style="display: flex;">
-                    <span style="padding-right: 10px;">合计数量: <span style="text-decoration: underline;">{{
-                        calculateInboundTotal() }}</span>
+            <div style="margin-top: 20px; font-size: 16px; font-weight: bold">
+                <div style="display: flex">
+                    <span style="padding-right: 10px"
+                        >合计数量: <span style="text-decoration: underline">{{ calculateInboundTotal() }}</span>
                     </span>
                 </div>
             </div>
@@ -79,18 +85,17 @@
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
             <el-button type="primary" v-print="'#printView'">打印</el-button>
-            <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业入库单${currentRow.inboundRId}`, `printView`)">下载PDF</el-button>
+            <el-button type="primary" @click="downloadPDF(`健诚鞋业入库单${currentRow.inboundRId}`, `printView`)">下载PDF</el-button>
         </template>
     </el-dialog>
 </template>
 <script>
 import axios from 'axios'
-import { ElMessage } from 'element-plus';
-import htmlToPdf from '@/Pages/utils/htmlToPdf';
+import { ElMessage } from 'element-plus'
+import htmlToPdf from '@/Pages/utils/htmlToPdf'
 import print from 'vue3-print-nb'
-import { getSummaries, PAGESIZE, PAGESIZES } from '../../warehouseUtils';
-import FinishedSearchBar from './FinishedSearchBar.vue';
+import { getSummaries, PAGESIZE, PAGESIZES } from '../../warehouseUtils'
+import FinishedSearchBar from './FinishedSearchBar.vue'
 export default {
     components: {
         FinishedSearchBar
@@ -136,6 +141,8 @@ export default {
                 customerBrandSearch: null
             },
             getSummaries: getSummaries,
+            exportLoadingInbound: false,
+            exportLoadingInout: false
         }
     },
     mounted() {
@@ -143,21 +150,19 @@ export default {
     },
     computed: {
         filteredShoeSizeColumns() {
-			return this.recordData.shoeSizeColumns.filter(column =>
-				this.recordData.items.some(row => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0)
-			);
+            return this.recordData.shoeSizeColumns.filter((column) => this.recordData.items.some((row) => row[column.prop] !== undefined && row[column.prop] !== null && row[column.prop] !== 0))
         }
     },
     methods: {
         calculateInboundTotal() {
             // Calculate the total inbound quantity
             const number = this.recordData.items.reduce((total, item) => {
-                return total + (Number(item.totalAmount) || 0);
-            }, 0);
-            return Number(number);
+                return total + (Number(item.totalAmount) || 0)
+            }, 0)
+            return Number(number)
         },
         downloadPDF(title, domName) {
-            htmlToPdf.getPdf(title, domName);
+            htmlToPdf.getPdf(title, domName)
         },
         confirmSearchFilters(filters) {
             this.searchFilters = { ...filters }
@@ -185,8 +190,7 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecords`, { params })
                 this.tableData = response.data.result
                 this.total = response.data.total
-            }
-            catch (error) {
+            } catch (error) {
                 console.log(error)
             }
         },
@@ -202,28 +206,101 @@ export default {
             this.currentRow = row
             console.log(row)
             try {
-                let params = { "orderId": this.currentRow.orderId, "inboundBatchId": row.inboundBatchId }
+                let params = { orderId: this.currentRow.orderId, inboundBatchId: row.inboundBatchId }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecordbybatchid`, { params })
                 this.recordData = response.data
 
                 console.log(response.data)
                 this.dialogVisible = true
-            }
-            catch (error) {
+            } catch (error) {
                 console.log(error)
                 ElMessage.error('获取入库单详情失败')
             }
         },
         async deleteRecord(row) {
             try {
-                let params = { "inboundDetailId": row.inboundDetailId }
+                let params = { inboundDetailId: row.inboundDetailId }
                 let response = await axios.delete(`${this.$apiBaseUrl}/warehouse/deletefinishedinbounddetail`, { params })
                 ElMessage.success(response.data.message)
                 this.getInboundRecordsTable()
             } catch (error) {
                 console.error(error)
-                let errorMessage = error.response ? error.response.data.message : error.message;
-                ElMessage.error(errorMessage);
+                let errorMessage = error.response ? error.response.data.message : error.message
+                ElMessage.error(errorMessage)
+            }
+        },
+        _buildExportParams() {
+            const [start, end] = this.searchFilters?.dateRange || [null, null]
+            return {
+                // 和后端导出接口参数名保持一致
+                startDate: start,
+                endDate: end,
+                inboundRId: this.searchFilters.boundRIdSearch, // 入库单号
+                // outboundRId: 可留空（合并导出时后端会同时支持）
+                orderRId: this.searchFilters.orderRIdSearch,
+                shoeRId: this.searchFilters.shoeRIdSearch,
+                customerName: this.searchFilters.customerNameSearch,
+                customerProductName: this.searchFilters.customerProductNameSearch,
+                orderCId: this.searchFilters.orderCIdSearch,
+                customerBrand: this.searchFilters.customerBrandSearch
+            }
+        },
+
+        // 通用下载器：GET -> blob -> 触发浏览器保存
+        async _downloadExcel(url, params, fallbackName = 'export.xlsx') {
+            const res = await axios.get(`${this.$apiBaseUrl}${url}`, {
+                params,
+                responseType: 'blob'
+            })
+            // 从 Content-Disposition 提取文件名
+            let filename = fallbackName
+            const dispo = res.headers['content-disposition'] || res.headers['Content-Disposition']
+            if (dispo) {
+                const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(dispo)
+                const asciiMatch = /filename="?([^"]+)"?/i.exec(dispo)
+                if (utf8Match) filename = decodeURIComponent(utf8Match[1])
+                else if (asciiMatch) filename = asciiMatch[1]
+            }
+
+            const blob = new Blob([res.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            })
+            const link = document.createElement('a')
+            link.href = window.URL.createObjectURL(blob)
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            window.URL.revokeObjectURL(link.href)
+            document.body.removeChild(link)
+        },
+
+        // 导出：入库
+        async exportInboundExcel() {
+            this.exportLoadingInbound = true
+            try {
+                const params = this._buildExportParams()
+                await this._downloadExcel('/warehouse/export/finished-inbound', params, '成品入库记录.xlsx')
+                ElMessage.success('入库记录导出成功')
+            } catch (e) {
+                console.error(e)
+                ElMessage.error('入库记录导出失败')
+            } finally {
+                this.exportLoadingInbound = false
+            }
+        },
+
+        // 导出：出入库合并
+        async exportInoutExcel() {
+            this.exportLoadingInout = true
+            try {
+                const params = this._buildExportParams()
+                await this._downloadExcel('/warehouse/export/finished-inout', params, '成品出入库合并.xlsx')
+                ElMessage.success('合并记录导出成功')
+            } catch (e) {
+                console.error(e)
+                ElMessage.error('合并记录导出失败')
+            } finally {
+                this.exportLoadingInout = false
             }
         }
     }

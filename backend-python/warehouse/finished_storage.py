@@ -7,7 +7,7 @@ from app_config import db
 from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import *
 from event_processor import EventProcessor
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 from models import *
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import func, or_, and_, desc, literal, Numeric, case, Integer
@@ -15,6 +15,11 @@ from api_utility import format_datetime
 from login.login import current_user_info
 from logger import logger
 from constants import SHOESIZERANGE
+from general_document.finished_warehouse_excel import (
+    build_finished_inbound_excel,
+    build_finished_outbound_excel,
+    build_finished_inout_excel
+)
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 
@@ -1754,6 +1759,58 @@ def get_shoe_inoutbound_summary_by_model():
             "netAmountByCurrency": total_net_amt,
         }
     })
+    
+@finished_storage_bp.route("/warehouse/export/finished-inbound", methods=["GET"])
+def export_finished_inbound_records():
+    filters = {
+        "order_rid": request.args.get("orderRId"),
+        "shoe_rid": request.args.get("shoeRId"),
+        "start_date": request.args.get("startDate"),
+        "end_date": request.args.get("endDate"),
+        "inbound_rid": request.args.get("inboundRId"),
+        "customer_name": request.args.get("customerName"),
+        "customer_product_name": request.args.get("customerProductName"),
+        "order_cid": request.args.get("orderCId"),
+        "customer_brand": request.args.get("customerBrand"),
+    }
+    bio, filename = build_finished_inbound_excel(filters)
+    return send_file(bio, as_attachment=True, download_name=filename,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@finished_storage_bp.route("/warehouse/export/finished-outbound", methods=["GET"])
+def export_finished_outbound_records():
+    filters = {
+        "order_rid": request.args.get("orderRId"),
+        "shoe_rid": request.args.get("shoeRId"),
+        "start_date": request.args.get("startDate"),
+        "end_date": request.args.get("endDate"),
+        "outbound_rid": request.args.get("outboundRId"),
+        "customer_name": request.args.get("customerName"),
+        "customer_product_name": request.args.get("customerProductName"),
+        "order_cid": request.args.get("orderCId"),
+        "customer_brand": request.args.get("customerBrand"),
+    }
+    bio, filename = build_finished_outbound_excel(filters)
+    return send_file(bio, as_attachment=True, download_name=filename,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+@finished_storage_bp.route("/warehouse/export/finished-inout", methods=["GET"])
+def export_finished_inout_records():
+    filters = {
+        "order_rid": request.args.get("orderRId"),
+        "shoe_rid": request.args.get("shoeRId"),
+        "start_date": request.args.get("startDate"),
+        "end_date": request.args.get("endDate"),
+        "inbound_rid": request.args.get("inboundRId"),
+        "outbound_rid": request.args.get("outboundRId"),
+        "customer_name": request.args.get("customerName"),
+        "customer_product_name": request.args.get("customerProductName"),
+        "order_cid": request.args.get("orderCId"),
+        "customer_brand": request.args.get("customerBrand"),
+    }
+    bio, filename = build_finished_inout_excel(filters)
+    return send_file(bio, as_attachment=True, download_name=filename,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 
