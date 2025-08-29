@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 from event_processor import EventProcessor
 
-from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE
+from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
 from general_document.order_export import (
     generate_excel_file,
     generate_amount_excel_file,
@@ -816,107 +816,91 @@ def get_order_shoe_sizes_info():
 # 如果用户非业务经理,显示当前用户添加的订单
 @order_bp.route("/order/getbusinessdisplayorderbyuser", methods=["GET"])
 def get_display_orders_manager():
-    filter_status = request.args.get("filterStatus", None)
+    filter_status = request.args.get("filterStatus")   # "0" or other
+    history_status = request.args.get("historyStatus") # None 表示进行中，否则历史
     character, staff, _ = current_user_info()
     current_staff_id = staff.staff_id
     current_user_role = character.character_id
+
+    # --- 基础查询（公共部分） ---
+    base_q = (
+        db.session.query(
+            Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .outerjoin(
+            OrderStatusReference,
+            OrderStatus.order_current_status == OrderStatusReference.order_status_id,
+        )
+    )
+
+    # --- 角色与归属维度（经理可切换主管/业务，文员固定业务） ---
     if current_user_role == BUSINESS_MANAGER_ROLE:
-        if filter_status == "0":
-            entities = (
-                db.session.query(
-                    Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
-                )
-                .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-                .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-                .join(Customer, Order.customer_id == Customer.customer_id)
-                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-                .outerjoin(
-                    OrderStatusReference,
-                    OrderStatus.order_current_status
-                    == OrderStatusReference.order_status_id,
-                )
-                .filter(Order.supervisor_id == current_staff_id)
-                .order_by(Order.order_rid.asc())
-                .all()
-            )
-        else:
-            entities = (
-                db.session.query(
-                    Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
-                )
-                .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-                .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-                .join(Customer, Order.customer_id == Customer.customer_id)
-                .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-                .outerjoin(
-                    OrderStatusReference,
-                    OrderStatus.order_current_status
-                    == OrderStatusReference.order_status_id,
-                )
-                .filter(Order.salesman_id == current_staff_id)
-                .order_by(Order.order_rid.asc())
-                .all()
-            )
+        # filterStatus == "0" 看 “主管”，否则看 “业务”
+        owner_col = Order.supervisor_id if filter_status == "0" else Order.salesman_id
         msg_mapping = ORDER_STATUS_MANAGER_DISPLAY_MSG
     elif current_user_role == BUSINESS_CLERK_ROLE:
-        entities = (
-            db.session.query(
-                Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference
-            )
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .outerjoin(
-                OrderStatusReference,
-                OrderStatus.order_current_status
-                == OrderStatusReference.order_status_id,
-            )
-            .filter(Order.salesman_id == current_staff_id)
-            .order_by(Order.order_rid.asc())
-            .all()
-        )
+        owner_col = Order.salesman_id
         msg_mapping = ORDER_STATUS_CLERK_DISPLAY_MSG
     else:
         return jsonify({"message": "invalid user role"}), 401
+
+    q = base_q.filter(owner_col == current_staff_id)
+
+    # --- 订单状态维度（进行中 <16 / 历史 >=16） ---
+    is_history = bool(history_status)
+    if is_history:
+        q = q.filter(OrderStatus.order_current_status >= ORDER_FINISH_SYMBOL)
+    else:
+        q = q.filter(OrderStatus.order_current_status < ORDER_FINISH_SYMBOL)
+
+    entities = q.order_by(Order.order_rid.asc()).all()
+
+    # --- 部门人员映射（避免 KeyError 用 get） ---
+    department_staff = (
+        db.session.query(Staff)
+        .filter_by(department_id=BUSINESS_DEPARTMENT)
+        .all()
+    )
+    id_to_name = {s.staff_id: s.staff_name for s in department_staff}
+
+    # --- 结果组装 ---
     result = []
-    department_staff_id_mapping = {}
-    staff_entities = (db.session.query(Staff)
-                      .filter_by(department_id = 10)
-                      .all())
-    for entity in staff_entities:
-        department_staff_id_mapping[entity.staff_id] = entity.staff_name
-    
-    for entity in entities:
-        order, order_shoe, shoe, customer, order_status, order_status_reference = entity
+    for order, order_shoe, shoe, customer, order_status, order_status_reference in entities:
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
         formatted_end_date = order.end_date.strftime("%Y-%m-%d")
+
         order_status_message = "N/A"
         if order_status_reference and order_status:
             order_status_message = order_status_reference.order_status_name
             if order_status.order_current_status == ORDER_CREATION_STATUS:
-                if order_status.order_status_value != None:
+                if order_status.order_status_value is not None:
                     order_status_message += " \n" + msg_mapping[order_status.order_status_value]
+
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
-        result.append(
-            {
-                "orderDbId": order.order_id,
-                "customerProductName": order_shoe.customer_product_name,
-                "shoeRId": shoe.shoe_rid,
-                "orderRid": order.order_rid,
-                "orderCid": order.order_cid,
-                "customerName": customer.customer_name,
-                "customerBrand": customer.customer_brand,
-                "orderStartDate": formatted_start_date,
-                "orderEndDate": formatted_end_date,
-                "orderStatus": order_status_message,
-                "orderStatusVal": order_status.order_current_status,
-                "orderSalesman":department_staff_id_mapping[order.salesman_id],
-                "orderSupervisor":department_staff_id_mapping[order.supervisor_id]
-            }
-        )
+
+        result.append({
+            "orderDbId": order.order_id,
+            "customerProductName": order_shoe.customer_product_name,
+            "shoeRId": shoe.shoe_rid,
+            "orderRid": order.order_rid,
+            "orderCid": order.order_cid,
+            "customerName": customer.customer_name,
+            "customerBrand": customer.customer_brand,
+            "orderStartDate": formatted_start_date,
+            "orderEndDate": formatted_end_date,
+            "orderStatus": order_status_message,
+            "orderStatusVal": order_status.order_current_status if order_status else None,
+            "orderSalesman": id_to_name.get(order.salesman_id, ""),
+            "orderSupervisor": id_to_name.get(order.supervisor_id, ""),
+        })
+
     return jsonify(result)
+
 @order_bp.route("/order/checkorderridexists", methods=["GET"])
 def check_order_rid_exists():
     order_rid = request.args.get("pendingRid")

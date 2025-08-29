@@ -19,6 +19,9 @@
                         <el-menu-item index="10" @click="handleMenuClick(10)">
                             <span>订单出库</span>
                         </el-menu-item>
+                        <el-menu-item index="11" @click="handleMenuClick(11)">
+                            <span>历史（已完成）订单</span>
+                        </el-menu-item>
                         <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>客户/配码管理</span>
                         </el-menu-item>
@@ -58,6 +61,7 @@ import ShoeTypeManagement from '@/components/ShoeTypeManagement.vue';
 import BatchInfoTypeManagement from '../components/BatchInfoTypeManagement.vue';
 import OrderExport from '../components/OrderExport.vue';
 import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue';
+import HistoryOrder from '../components/HistoryOrder.vue';
 export default {
     components: {
         AllHeader,
@@ -67,7 +71,8 @@ export default {
         BatchInfoTypeManagement,
         PersonalInfo,
         OrderExport,
-        OutboundProduct
+        OutboundProduct,
+        HistoryOrder
     },
     data() {
         return {
@@ -114,6 +119,10 @@ export default {
                     break
                 case 10:
                     this.currentComponent = 'OutboundProduct'
+                    this.currentProps = { editable: false }
+                    break
+                case 11:
+                    this.currentComponent = 'HistoryOrder'
                     this.currentProps = { editable: false }
                     break
             }

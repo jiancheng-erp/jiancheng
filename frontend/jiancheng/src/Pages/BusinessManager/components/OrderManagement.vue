@@ -851,7 +851,7 @@ export default {
             shoeTotalItems: 0,
             currentOrderCreatePage: 1,
             orderCreatePageSize: 20,
-            orderStatusOption: ['全部订单', '需审批订单', '我发起的订单'],
+            orderStatusOption: ['全部订单', '我审批的订单', '我发起的订单'],
             selectedOrderStatus: '全部订单', // default selection
             currentShoeImageId: '',
             currentShoeColor: '',
@@ -902,7 +902,7 @@ export default {
                 this.selectedOrderStatus = '我发起的订单'
                 this.handleOrderStatusChange(this.selectedOrderStatus)
             } else {
-                this.selectedOrderStatus = '需审批订单'
+                this.selectedOrderStatus = '我审批的订单'
                 this.handleOrderStatusChange(this.selectedOrderStatus)
             }
         },
@@ -1819,7 +1819,7 @@ export default {
             let response
             if (value === '全部订单') {
                 response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-            } else if (value === '需审批订单') {
+            } else if (value === '我审批的订单') {
                 response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     params: {
                         currentStaffId: this.staffId,
