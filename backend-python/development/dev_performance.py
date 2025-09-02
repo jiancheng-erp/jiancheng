@@ -19,8 +19,9 @@ dev_performance_bp = Blueprint("dev_performance", __name__)
 
 @dev_performance_bp.route("/devproductionorder/getalldesigners", methods=["GET"])
 def get_all_designers():
+
     _, _, department = current_user_info()
-    user_department = department.department_name
+    user_dep_name = getattr(department, "department_name", "") or ""
 
     designer_keyword = request.args.get("designer", "").strip()
     start_date = request.args.get("startDate", "").strip()
@@ -28,38 +29,38 @@ def get_all_designers():
     year = request.args.get("year", "").strip()
     month = request.args.get("month", "").strip()
 
-    # 子查询：每个 order_shoe_type_id 对应的总业务量
+    # 每个 order_shoe_type_id 的业务量
     batch_amount_subquery = (
         db.session.query(
             OrderShoeBatchInfo.order_shoe_type_id,
-            func.sum(OrderShoeBatchInfo.total_amount).label("total_business_amount")
+            func.sum(OrderShoeBatchInfo.total_amount).label("total_business_amount"),
         )
         .group_by(OrderShoeBatchInfo.order_shoe_type_id)
         .subquery()
     )
 
-    # 子查询：每个 order_shoe_type_id 对应的生产量，仅 team=2
+    # 每个 order_shoe_type_id 的生产量（仅 team = 2）
     production_amount_subquery = (
         db.session.query(
             OrderShoeProductionAmount.order_shoe_type_id,
-            func.sum(OrderShoeProductionAmount.total_production_amount).label("total_production_amount")
+            func.sum(OrderShoeProductionAmount.total_production_amount).label("total_production_amount"),
         )
         .filter(OrderShoeProductionAmount.production_team == 2)
         .group_by(OrderShoeProductionAmount.order_shoe_type_id)
         .subquery()
     )
 
-    # 第一层：基础子查询，按 order_shoe_type 展开
-    base_subquery = (
+    # 基础查询：展开到 order_shoe_type 级别
+    base_q = (
         db.session.query(
             case(
                 (func.ifnull(Shoe.shoe_designer, "") == "", "设计师信息空缺"),
-                else_=Shoe.shoe_designer
+                else_=Shoe.shoe_designer,
             ).label("designer"),
             Shoe.shoe_department_id.label("department"),
             Order.order_id.label("order_id"),
             func.coalesce(batch_amount_subquery.c.total_business_amount, 0).label("business_amount"),
-            production_amount_subquery.c.total_production_amount.label("production_amount")
+            func.coalesce(production_amount_subquery.c.total_production_amount, None).label("production_amount"),
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
@@ -67,55 +68,60 @@ def get_all_designers():
         .join(Order, Order.order_id == OrderShoe.order_id)
         .outerjoin(batch_amount_subquery, batch_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .outerjoin(production_amount_subquery, production_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Shoe.shoe_department_id == user_department)
     )
 
-    # 时间与设计师筛选
+    # 部门过滤逻辑：财务部看全量；其他部门仅看本部门
+    if user_dep_name != "财务部":
+        base_q = base_q.filter(Shoe.shoe_department_id == user_dep_name)
+
+    # 设计师与时间筛选
     if designer_keyword:
-        base_subquery = base_subquery.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
+        base_q = base_q.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
+
     if year:
-        base_subquery = base_subquery.filter(func.year(Order.start_date) == int(year))
+        base_q = base_q.filter(func.year(Order.start_date) == int(year))
     elif month:
-        base_subquery = base_subquery.filter(func.date_format(Order.start_date, "%Y-%m") == month)
+        # month 形如 "2025-08"
+        base_q = base_q.filter(func.date_format(Order.start_date, "%Y-%m") == month)
     else:
         if start_date:
-            base_subquery = base_subquery.filter(Order.start_date >= start_date)
+            base_q = base_q.filter(Order.start_date >= start_date)
         if end_date:
-            base_subquery = base_subquery.filter(Order.start_date <= end_date)
+            base_q = base_q.filter(Order.start_date <= end_date)
 
-    base_subquery = base_subquery.subquery()
+    base_sq = base_q.subquery()
 
-    # 第二层：按设计师聚合
-    final_query = (
+    # 聚合到设计师
+    final_q = (
         db.session.query(
-            base_subquery.c.designer,
-            base_subquery.c.department,
-            func.count(distinct(base_subquery.c.order_id)).label("totalOrderCount"),
-            func.sum(base_subquery.c.business_amount).label("totalShoeCountBussiness"),
+            base_sq.c.designer,
+            base_sq.c.department,
+            func.count(distinct(base_sq.c.order_id)).label("totalOrderCount"),
+            func.sum(base_sq.c.business_amount).label("totalShoeCountBussiness"),
             func.sum(
                 case(
-                    (base_subquery.c.production_amount != None, base_subquery.c.production_amount),
-                    else_=base_subquery.c.business_amount
+                    (base_sq.c.production_amount != None, base_sq.c.production_amount),
+                    else_=base_sq.c.business_amount,
                 )
-            ).label("totalShoeCountProduct")
+            ).label("totalShoeCountProduct"),
         )
-        .group_by(base_subquery.c.designer, base_subquery.c.department)
+        .group_by(base_sq.c.designer, base_sq.c.department)
+        .order_by(base_sq.c.department.asc(), base_sq.c.designer.asc()) 
     )
 
-    results = final_query.all()
-
+    results = final_q.all()
     response = [
         {
-            "designer": row.designer,
-            "department": row.department,
-            "totalOrderCount": row.totalOrderCount,
-            "totalShoeCountBussiness": row.totalShoeCountBussiness,
-            "totalShoeCountProduct": row.totalShoeCountProduct
+            "designer": r.designer,
+            "department": r.department,
+            "totalOrderCount": int(r.totalOrderCount or 0),
+            "totalShoeCountBussiness": int(r.totalShoeCountBussiness or 0),
+            "totalShoeCountProduct": int(r.totalShoeCountProduct or 0),
         }
-        for row in results
+        for r in results
     ]
-
     return jsonify({"status": "success", "data": response}), 200
+
 
 
 
