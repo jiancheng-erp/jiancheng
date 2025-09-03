@@ -136,7 +136,8 @@ def get_all_shoes_with_designer():
     shoe_rid = request.args.get("shoeRid")
 
     _, _, department = current_user_info()
-    user_department = department.department_name
+    # 与第一个接口保持一致的写法
+    user_dep_name = getattr(department, "department_name", "") or ""
 
     if not designer:
         return jsonify({"status": "error", "message": "Designer is required"}), 400
@@ -144,7 +145,7 @@ def get_all_shoes_with_designer():
     if designer == "设计师信息空缺":
         designer_filter = or_(Shoe.shoe_designer == None, Shoe.shoe_designer == "")
     else:
-        designer_filter = Shoe.shoe_designer == designer
+        designer_filter = (Shoe.shoe_designer == designer)
 
     # 日期筛选优先级：年 > 月 > 指定时间段
     if year:
@@ -174,7 +175,7 @@ def get_all_shoes_with_designer():
         .subquery()
     )
 
-    # 主查询
+    # 主查询（先不加部门限制，保持与第一个接口相同的时机）
     query = (
         db.session.query(
             Shoe.shoe_id,
@@ -194,7 +195,6 @@ def get_all_shoes_with_designer():
             Order.supervisor_id,
             func.coalesce(func.max(batch_amount_subquery.c.total_business_amount), 0).label("business_amount"),
             func.coalesce(func.max(production_amount_subquery.c.total_production_amount), 0).label("product_amount"),
-
         )
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
         .join(Color, ShoeType.color_id == Color.color_id)
@@ -203,9 +203,14 @@ def get_all_shoes_with_designer():
         .join(Order, Order.order_id == OrderShoe.order_id)
         .outerjoin(batch_amount_subquery, batch_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .outerjoin(production_amount_subquery, production_amount_subquery.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(designer_filter, Shoe.shoe_department_id == user_department)
+        .filter(designer_filter)
     )
 
+    # 与第一个接口一致的部门过滤逻辑：财务部看全量；其他部门仅看本部门
+    if user_dep_name != "财务部":
+        query = query.filter(Shoe.shoe_department_id == user_dep_name)
+
+    # 其它筛选
     if start_date:
         query = query.filter(Order.start_date >= start_date)
     if end_date:
@@ -290,6 +295,7 @@ def get_all_shoes_with_designer():
         final_data.append(shoe)
 
     return jsonify({"status": "success", "data": final_data}), 200
+
 
 
 
