@@ -282,6 +282,7 @@ export default {
                 { label: '外包发货', value: 2 },
                 { label: '外发复合', value: 3 },
                 { label: '材料退回', value: 4 },
+                { label: '盘库出库', value: 5 },
             ],
             rules: {
                 outboundType: [{ required: true, message: '请选择出库类型', trigger: 'blur' }],
