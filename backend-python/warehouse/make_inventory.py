@@ -1,5 +1,6 @@
 # routes/material_inventory.py
-from flask import Blueprint, request, jsonify, send_file
+from cProfile import label
+from flask import Blueprint, current_app, request, jsonify, send_file
 from sqlalchemy import func, or_, text, update
 from decimal import Decimal
 from constants import SHOESIZERANGE
@@ -13,7 +14,11 @@ from werkzeug.utils import secure_filename
 import logger
 import time
 from sqlalchemy.orm import load_only
-
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+import math
+from datetime import date, datetime
+from script.refresh_spu_rid import generate_spu_rid
 # ====== 目录常量 ======
 EXPORT_DIR = os.path.join(FILE_STORAGE_PATH, "财务部文件", "盘库文件")
 IMPORT_DIR = os.path.join(FILE_STORAGE_PATH, "财务部文件", "盘库文件回传")
@@ -172,6 +177,7 @@ def _read_visible_sheet_to_map(xlsx_path: str) -> dict:
     COL_TOTAL_QTY  = "总库存"
     COL_TOTAL_VAL  = "总价格"
     COL_AVG_PRICE  = "平均单价"
+    COL_ORDER_RID  = "订单号"
 
     # 动态识别尺码列（尺码34..46）——即使你后面不展示，保留兼容（不影响性能）
     size_headers = []
@@ -185,6 +191,7 @@ def _read_visible_sheet_to_map(xlsx_path: str) -> dict:
     new_idx = 0  # 生成“未解析新材料”的占位 id
     for r in range(header_row_idx + 1, ws.max_row + 1):
         spu_rid_raw = cell(r, KEY_NAME, None)
+        order_rid_val = cell(r, COL_ORDER_RID, None)
         supplier    = cell(r, COL_SUPPLIER, "") or ""
         type_name   = cell(r, COL_TYPE, "") or ""
         name        = cell(r, COL_NAME, "") or ""
@@ -192,6 +199,7 @@ def _read_visible_sheet_to_map(xlsx_path: str) -> dict:
         spec        = cell(r, COL_SPEC, "") or ""
         color       = cell(r, COL_COLOR, "") or ""
         unit        = cell(r, COL_UNIT, "") or ""
+
 
         # 如果该行完全空，就跳过
         if not any([spu_rid_raw, supplier, type_name, name, model, spec, color, unit]):
@@ -210,6 +218,7 @@ def _read_visible_sheet_to_map(xlsx_path: str) -> dict:
             "totalCurrentAmount": _to_float(cell(r, COL_TOTAL_QTY, 0)),
             "totalValueAmount":   _to_float(cell(r, COL_TOTAL_VAL, 0)),
             "avgUnitPrice":       _to_float(cell(r, COL_AVG_PRICE, 0)),
+            "orderRid":           order_rid_val,
             "sizes": {},
             # 标记：该行是否通过属性成功解析为已有 SPU
             "_resolvedToSpu": False
@@ -237,9 +246,33 @@ def _read_visible_sheet_to_map(xlsx_path: str) -> dict:
 
     return res
 
+def _norm_str(s, *, allow_none: bool = False) -> str | None:
+    """
+    把任意类型的单元格值安全转成去空格后的字符串。
+    - None -> "" (或 allow_none=True 时返回 None)
+    - bytes -> utf-8 解码
+    - int/float/Decimal -> 字符串（float 的 NaN/Inf 视为空）
+    - date/datetime -> ISO 格式
+    - 其他 -> str(...)
+    """
+    if s is None:
+        return None if allow_none else ""
 
-def _norm_str(s: str) -> str:
-    return (s or "").strip()
+    if isinstance(s, bytes):
+        s = s.decode("utf-8", errors="ignore")
+    elif isinstance(s, (int, Decimal)):
+        s = str(s)
+    elif isinstance(s, float):
+        if math.isnan(s) or math.isinf(s):
+            return None if allow_none else ""
+        # 对类似 123.0 的值，去掉小数点零更友好
+        s = str(int(s)) if s.is_integer() else str(s)
+    elif isinstance(s, (date, datetime)):
+        s = s.isoformat()
+    else:
+        s = str(s)
+
+    return s.strip()
 
 def _resolve_spu_by_attrs(*, supplier_name: str, type_name: str, material_name: str,
                           model: str, specification: str, color: str) -> tuple[str | None, int | None]:
@@ -288,10 +321,11 @@ def _resolve_spu_by_attrs(*, supplier_name: str, type_name: str, material_name: 
 @make_inventory_bp.route("/warehouse/inventorysummary", methods=["GET"])
 def material_inventory_summary():
     """
-    盘库汇总（材料库）——按 SPU 汇总（仅包含出现在 MaterialStorage 的 SPU）
-      - totalValueAmount = SUM(average_price * current_amount)
-      - avgUnitPrice     = totalValueAmount / totalCurrentAmount
-      - 过滤 totalCurrentAmount = 0
+    盘库汇总（材料库）
+    - 维度：SPU + order_id（订单可为空）
+    - totalValueAmount = SUM(average_price * current_amount)
+    - avgUnitPrice     = totalValueAmount / totalCurrentAmount
+    - 过滤 totalCurrentAmount = 0
     """
 
     def to_float(v):
@@ -299,7 +333,6 @@ def material_inventory_summary():
             return 0.0
         if isinstance(v, (int, float, Decimal)):
             return float(v)
-        # 兼容 "1,234.56"、"1，234.56"、"  12 " 这类字符串
         try:
             s = str(v).strip().replace(",", "").replace("，", "").replace("\u3000", "")
             return float(s) if s else 0.0
@@ -321,6 +354,7 @@ def material_inventory_summary():
 
     base_q = (
         db.session.query(
+            # 关键：选择 SPU + order_id 两个维度（order_id 可能为空）
             SPUMaterial.spu_material_id.label("spu_material_id"),
             SPUMaterial.spu_rid.label("spu_rid"),
             MaterialType.material_type_name.label("material_type_name"),
@@ -330,14 +364,21 @@ def material_inventory_summary():
             SPUMaterial.material_specification.label("material_specification"),
             SPUMaterial.color.label("color"),
             MaterialStorage.actual_inbound_unit.label("unit"),
+
+            # 新增：把存储里的 order_id 直接选出来（用于分组 & 返回）
+            MaterialStorage.order_id.label("order_id"),
+            # 订单号（人读）：左连接可能为 None
+            Order.order_rid.label("order_rid"),
+
             qty_sum_expr.label("total_current_amount"),
             value_sum_expr.label("total_value_amount"),
             avg_price_expr.label("avg_unit_price"),
-            *size_sum_exprs
+            *size_sum_exprs,
         )
         .select_from(MaterialStorage)
         .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
         .join(Material, Material.material_id == SPUMaterial.material_id)
+        .join(Order, Order.order_id == MaterialStorage.order_id, isouter=True)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
     )
@@ -352,9 +393,12 @@ def material_inventory_summary():
                 SPUMaterial.spu_rid.ilike(like),
                 Material.material_name.ilike(like),
                 MaterialType.material_type_name.ilike(like),
+                # 允许按订单号搜索（左连接下可为 NULL，不影响）
+                Order.order_rid.ilike(like),
             )
         )
 
+    # 分组：加入 MaterialStorage.order_id 与 Order.order_rid
     base_q = base_q.group_by(
         SPUMaterial.spu_material_id,
         SPUMaterial.spu_rid,
@@ -365,6 +409,8 @@ def material_inventory_summary():
         SPUMaterial.material_model,
         SPUMaterial.material_specification,
         SPUMaterial.color,
+        MaterialStorage.order_id,  # 新增：真正用于聚合的 order_id 维度
+        Order.order_rid,           # 显示用的人类可读订单号
     ).having(qty_sum_expr > 0)
 
     sub = base_q.subquery()
@@ -380,6 +426,10 @@ def material_inventory_summary():
         "material_model": sub.c.material_model,
         "material_specification": sub.c.material_specification,
         "color": sub.c.color,
+        "unit": sub.c.unit,
+        # 新增：支持按 order_id / order_rid 排序
+        "order_id": sub.c.order_id,
+        "order_rid": sub.c.order_rid,
     }
     for sz in SHOESIZERANGE:
         SORTABLE[f"size_{sz}"] = getattr(sub.c, f"size_{sz}")
@@ -398,7 +448,7 @@ def material_inventory_summary():
 
     result_list = []
     for r in rows:
-        sizes = {str(sz): _to_float(getattr(r, f"size_{sz}", 0)) for sz in SHOESIZERANGE}
+        sizes = {str(sz): to_float(getattr(r, f"size_{sz}", 0)) for sz in SHOESIZERANGE}
         result_list.append({
             "spuMaterialId": r.spu_material_id,
             "spuRid": r.spu_rid or "",
@@ -413,6 +463,10 @@ def material_inventory_summary():
             "totalValueAmount": to_float(r.total_value_amount),
             "avgUnitPrice": to_float(r.avg_unit_price),
             "sizes": sizes,
+
+            # 返回两个字段：数值型 id（便于后端流转）+ 人类可读单号（便于展示 & 导出）
+            "orderId": r.order_id,           # 可能为 None
+            "orderRid": r.order_rid or "",   # 可能为 ""
         })
 
     return jsonify({
@@ -422,6 +476,7 @@ def material_inventory_summary():
         "total": int(total),
         "sizeColumns": SHOESIZERANGE,
     })
+
 
 # ====== 盘库记录 CRUD ======
 def _gen_rid(prefix="MI"):
@@ -487,16 +542,263 @@ def update_make_inventory():
     db.session.commit()
     return jsonify({"code": 200, "message": "ok"})
 
+
+
 @make_inventory_bp.route("/warehouse/makeinventory/confirm", methods=["POST"])
 def confirm_make_inventory():
     """
-    盘库确认（按 supplier_id + warehouse_id 拆分多张单 | 批处理 + 详细日志）：
-      - 清库出库：基于快照分组建单，明细 bulk insert，storage 批量清零
-      - 回填入库：按回传表匹配/创建 storage，聚合后分组建单，明细 bulk insert，storage 批量自增
-      - warehouse_id 来自 MaterialType.warehouse_id（非 Supplier）
+    盘库确认（按 supplier_id + warehouse_id 拆分）：
+      A. 清库出库：仅对“首入库时间 <= 盘库日期”的 storage 清零并建出库单
+      B. 回填入库：以 (SPU + 单位 + order_id) 聚合，优先复用已存在 storage（避免唯一键冲突）
+         - 按行严校验，禁止创建“空 SPU”
+         - 供应商缺失自动创建；材料类型必须存在（不自动建）
+         - 有订单号必须同时填入 order_id / order_shoe_id（查不到则都为 None）
+      C. 若材料类型未配置 warehouse_id，返回 400 并附带可定位到 Excel 的 missingRows 清单
     """
 
+    # ---------- 小工具 ----------
+    def _s(v) -> str:
+        return str(v).strip() if v is not None else ""
 
+    def _nonempty(*vals) -> bool:
+        return any(_s(v) != "" for v in vals)
+
+    def _validate_after_row(row: dict) -> tuple[bool, str]:
+        """
+        有 spuRid -> 直接有效；否则必须：
+        - type/material_name 非空
+        - model/spec/color 至少一个
+        - unit 非空
+        """
+        if _s(row.get("spuRid")):
+            return True, ""
+        type_name     = _s(row.get("type"))
+        material_name = _s(row.get("name"))
+        model         = _s(row.get("model"))
+        spec          = _s(row.get("specification"))
+        color         = _s(row.get("color"))
+        unit          = _s(row.get("unit"))
+
+        if not type_name or not material_name:
+            return False, "材料类型或材料名称为空"
+        if not _nonempty(model, spec, color):
+            return False, "型号/规格/颜色至少应有一个"
+        if not unit:
+            return False, "单位为空"
+        return True, ""
+
+    def to_dec(x):
+        try:
+            if isinstance(x, Decimal):
+                return x
+            if x is None:
+                return Decimal("0")
+            return Decimal(str(x).replace(",", "").strip())
+        except Exception:
+            return Decimal("0")
+
+    def _supplier_and_wh_by_spu(spu_id: int):
+        supplier_id, warehouse_id = None, None
+        spu = db.session.get(SPUMaterial, spu_id)
+        if not spu:
+            print(f"SPU not found: {spu_id}")
+            return None, None
+
+        material = db.session.get(Material, spu.material_id)
+        if material:
+            supplier_id = material.material_supplier
+            mt = db.session.get(MaterialType, material.material_type_id)
+            if mt:
+                # 如果你的列名不是 warehouse_id，这里改成真实的列名
+                wh_id = getattr(mt, "warehouse_id", None)
+                warehouse_id = wh_id
+
+                if wh_id is None:
+                    # 仅在缺仓库时打诊断日志
+                    try:
+                        same_named = (
+                            db.session.query(MaterialType.material_type_id, MaterialType.material_type_name,
+                                            getattr(MaterialType, "warehouse_id").label("warehouse_id"))
+                            .filter(MaterialType.material_type_name == mt.material_type_name)
+                            .all()
+                        )
+                    except Exception:
+                        same_named = []
+                    logger.logger.error(
+                        "【诊断/缺仓库】spu_id=%s material_id=%s material_type_id=%s "
+                        "type_name=%s warehouse_id(None) 同名类型候选=%s",
+                        spu_id, material.material_id, mt.material_type_id,
+                        getattr(mt, "material_type_name", None),
+                        [{"id": x.material_type_id, "name": x.material_type_name, "warehouse_id": x.warehouse_id} for x in same_named]
+                    )
+            else:
+                logger.logger.error("【诊断】spu_id=%s 指向的 material_type_id=%s 不存在", spu_id, material.material_type_id)
+        return supplier_id, warehouse_id
+
+    def _ensure_spu_only(after_row: dict) -> int:
+        """
+        仅确保 SPU 存在；严格防空 & 不制造“空 SPU”
+        - 有 spuRid：精确找；若无，按属性尝试找“已有”SPU，不存在则报错
+        - 无 spuRid：先通过 _validate_after_row；类型必须已存在；供应商可自动创建；字段充分才创建 Material/SPU
+        """
+        spu_rid = _s(after_row.get("spuRid"))
+        if spu_rid:
+            spu_obj = db.session.query(SPUMaterial).filter_by(spu_rid=spu_rid).first()
+            if spu_obj:
+                return spu_obj.spu_material_id
+
+            # 用属性找“已有”SPU（不够信息或找不到 -> 抛错，不创建）
+            type_name     = _s(after_row.get("type"))
+            material_name = _s(after_row.get("name"))
+            model         = _s(after_row.get("model"))
+            spec          = _s(after_row.get("specification"))
+            color         = _s(after_row.get("color"))
+
+            mat = (db.session.query(Material)
+                   .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+                   .filter(Material.material_name == material_name,
+                           MaterialType.material_type_name == type_name)
+                   .first()) if (material_name and type_name) else None
+            if mat:
+                spu = (db.session.query(SPUMaterial)
+                       .filter(SPUMaterial.material_id == mat.material_id,
+                               SPUMaterial.material_model == model,
+                               SPUMaterial.material_specification == spec,
+                               SPUMaterial.color == color).first())
+                if spu:
+                    return spu.spu_material_id
+            raise ValueError("按 SPU编号/属性 未找到已有 SPU，且不允许自动创建")
+
+        # 无 spuRid：严格校验
+        ok, reason = _validate_after_row(after_row)
+        if not ok:
+            raise ValueError(reason)
+
+        type_name     = _s(after_row.get("type"))
+        material_name = _s(after_row.get("name"))
+        model         = _s(after_row.get("model"))
+        spec          = _s(after_row.get("specification"))
+        color         = _s(after_row.get("color"))
+        supplier_name = _s(after_row.get("supplier"))
+        unit          = _s(after_row.get("unit"))
+
+        # 供应商：不存在则创建
+        supplier = None
+        if supplier_name:
+            supplier = db.session.query(Supplier).filter_by(supplier_name=supplier_name).first()
+            if not supplier:
+                supplier = Supplier(supplier_name=supplier_name)
+                db.session.add(supplier)
+                db.session.flush()
+
+        # 类型必须存在（不自动建，避免入错仓库）
+        mtype = db.session.query(MaterialType).filter_by(material_type_name=type_name).first()
+        if not mtype:
+            raise ValueError(f"材料类型不存在：{type_name}")
+
+        # Material：名称+类型+供应商 唯一
+        material = (db.session.query(Material)
+                    .filter(Material.material_name == material_name,
+                            Material.material_type_id == mtype.material_type_id,
+                            Material.material_supplier == (supplier.supplier_id if supplier else None))
+                    .first())
+        if not material:
+            material_category = 0
+            if type_name == "底材":
+                material_category = 1
+            material = Material(
+                material_name=material_name,
+                material_type_id=mtype.material_type_id,
+                material_supplier=(supplier.supplier_id if supplier else None),
+                material_unit=unit,
+                material_creation_date=datetime.now().date(),
+                material_category=material_category
+            )
+            db.session.add(material); db.session.flush()
+
+        # SPU：Material + 型号 + 规格 + 颜色 唯一
+        spu = (db.session.query(SPUMaterial)
+               .filter(SPUMaterial.material_id == material.material_id,
+                       SPUMaterial.material_model == model,
+                       SPUMaterial.material_specification == spec,
+                       SPUMaterial.color == color).first())
+        if not spu:
+            new_rid = generate_spu_rid(material.material_id)
+            spu = SPUMaterial(
+                material_id=material.material_id,
+                material_model=model,
+                material_specification=spec,
+                color=color,
+                spu_rid=new_rid,
+            )
+            db.session.add(spu); db.session.flush()
+
+        return spu.spu_material_id
+
+    def _chunk(iterable, n=500):
+        buf = []
+        for x in iterable:
+            buf.append(x)
+            if len(buf) >= n:
+                yield buf; buf = []
+        if buf:
+            yield buf
+
+    def _get_or_upsert_storage(spu_id: int,
+                            unit: str,
+                            order_id: int | None,
+                            order_shoe_id: int | None,
+                            unit_price: Decimal) -> MaterialStorage:
+        """
+        幂等获取/创建 MaterialStorage（MySQL）：
+        - 先查：若已存在直接复用，必要时补 order_shoe_id
+        - 否则：INSERT IGNORE 插入；若因唯一键已存在 -> 不报错，再查复用
+        绝不触发 IntegrityError，因此不会把上游 Supplier/Material/SPU 回滚掉。
+        """
+
+        # 1) 先查（多数情况下直接复用）
+        q = (db.session.query(MaterialStorage)
+            .filter(MaterialStorage.spu_material_id == spu_id,
+                    MaterialStorage.actual_inbound_unit == unit))
+        if order_id is None:
+            q = q.filter(MaterialStorage.order_id.is_(None))
+        else:
+            q = q.filter(MaterialStorage.order_id == order_id)
+
+        st = q.first()
+        if st:
+            # 仅在缺失时补齐 order_shoe_id（避免覆盖）
+            if (not st.order_shoe_id) and order_shoe_id:
+                st.order_shoe_id = order_shoe_id
+                db.session.flush()
+            return st
+
+        # 2) 不存在 -> INSERT IGNORE（命中唯一键不会报错）
+        stmt = mysql_insert(MaterialStorage).values(
+            spu_material_id=spu_id,
+            order_id=order_id if order_id else None,
+            order_shoe_id=order_shoe_id if order_shoe_id else None,
+            actual_inbound_unit=unit,
+            inbound_amount=Decimal("0"),
+            current_amount=Decimal("0"),
+            unit_price=unit_price,
+            average_price=unit_price,
+            shoe_size_columns=[],
+        ).prefix_with("IGNORE")   # 关键：让冲突静默
+        db.session.execute(stmt)
+
+        # 3) 再查一遍（插入成功或因唯一键已存在都会查到）
+        st = q.first()
+        if not st:
+            # 极端并发下理论上也应该能查到；若没查到，抛 500 让上层看日志
+            raise RuntimeError("INSERT IGNORE 后未读到 material_storage 记录")
+        # 可选：若行已存在且缺少 order_shoe_id，这里再补一次
+        if (not st.order_shoe_id) and order_shoe_id:
+            st.order_shoe_id = order_shoe_id
+            db.session.flush()
+        return st
+
+    # ---------- 主流程 ----------
     t0 = time.time()
     logger.logger.info("【盘库确认】开始")
 
@@ -517,7 +819,17 @@ def confirm_make_inventory():
     rid = rec.make_inventory_rid
     logger.logger.info(f"【盘库确认】记录匹配: rec_id={rec_id}, rid={rid}")
 
-    # === 最近一次回传文件 ===
+    # 盘库日期（出库过滤用）
+    inv_date = rec.record_date
+    if isinstance(inv_date, str):
+        inv_date = datetime.strptime(inv_date[:10], "%Y-%m-%d").date()
+    elif isinstance(inv_date, datetime):
+        inv_date = inv_date.date()
+    elif not isinstance(inv_date, date):
+        inv_date = datetime.now().date()
+    inv_dt_end = datetime.combine(inv_date, datetime.max.time())
+
+    # 最近一次回传文件
     pattern = os.path.join(IMPORT_DIR, f"回传_{rid}_*.xlsx")
     candidates = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
     logger.logger.info(f"【盘库确认】查找回传Excel: pattern={pattern}, found={len(candidates)}")
@@ -526,153 +838,34 @@ def confirm_make_inventory():
     uploaded_path = candidates[0]
     logger.logger.info(f"【盘库确认】使用回传文件: {uploaded_path}")
 
-    # === 读取回传表（忽略尺码，只看总量/总价/均价）===
+    # 读取回传表
     t1 = time.time()
     try:
-        after_map = _read_visible_sheet_to_map(uploaded_path)  # key=SPU编号或临时键，值包含 type/name/model/spec/color/supplier/unit,total*
+        after_map = _read_visible_sheet_to_map(uploaded_path)
     except Exception as e:
         logger.logger.exception(f"【盘库确认】解析Excel失败: {e}")
         return jsonify({"code": 400, "message": f"解析Excel失败: {e}"}), 400
     logger.logger.info(f"【盘库确认】解析回传完成，行数={len(after_map)}，耗时={time.time() - t1:.2f}s")
 
-    # -------- 工具 --------
-    def to_dec(x):
-        try:
-            if isinstance(x, Decimal):
-                return x
-            if x is None:
-                return Decimal("0")
-            return Decimal(str(x).replace(",", "").strip())
-        except Exception:
-            return Decimal("0")
-
-    def _supplier_and_wh_by_spu(spu_id: int):
-        """
-        SPU -> Material -> MaterialType -> (supplier_id, warehouse_id)
-        注意：warehouse_id 来自 MaterialType，而非 Supplier
-        """
-        supplier_id, warehouse_id = None, None
-        spu = db.session.get(SPUMaterial, spu_id)
-        if spu:
-            material = db.session.get(Material, spu.material_id)
-            if material:
-                supplier_id = material.material_supplier
-                mtype = db.session.get(MaterialType, material.material_type_id)
-                if mtype and hasattr(mtype, "warehouse_id"):
-                    warehouse_id = getattr(mtype, "warehouse_id")
-        return supplier_id, warehouse_id
-
-    def _ensure_spu_and_storage(after_row: dict) -> tuple[int, MaterialStorage]:
-        """
-        返回 (spu_id, storage[无订单、单位匹配])；必要时创建 Supplier/MaterialType/Material/SPU/Storage
-        """
-        spu_id = None
-        spu_rid = (after_row.get("spuRid") or "").strip()
-        if spu_rid:
-            spu_obj = db.session.query(SPUMaterial).filter_by(spu_rid=spu_rid).first()
-            if spu_obj:
-                spu_id = spu_obj.spu_material_id
-
-        if not spu_id:
-            type_name = (after_row.get("type") or "").strip()
-            material_name = (after_row.get("name") or "").strip()
-            model = (after_row.get("model") or "").strip()
-            spec  = (after_row.get("specification") or "").strip()
-            color = (after_row.get("color") or "").strip()
-            supplier_name = (after_row.get("supplier") or "").strip()
-            unit = (after_row.get("unit") or "").strip()
-
-            # 供应商
-            supplier = db.session.query(Supplier).filter_by(supplier_name=supplier_name).first()
-            if not supplier and supplier_name:
-                supplier = Supplier(supplier_name=supplier_name)
-                db.session.add(supplier); db.session.flush()
-                logger.logger.info(f"【盘库确认】创建 Supplier: {supplier_name} -> id={supplier.supplier_id}")
-
-            # 类型
-            mtype = db.session.query(MaterialType).filter_by(material_type_name=type_name).first()
-            if not mtype and type_name:
-                mtype = MaterialType(material_type_name=type_name)
-                db.session.add(mtype); db.session.flush()
-                logger.logger.info(f"【盘库确认】创建 MaterialType: {type_name} -> id={mtype.material_type_id}")
-
-            # Material
-            material = (db.session.query(Material)
-                        .filter(Material.material_name == material_name,
-                                Material.material_type_id == (mtype.material_type_id if mtype else None),
-                                Material.material_supplier == (supplier.supplier_id if supplier else None))
-                        .first())
-            if not material:
-                material = Material(
-                    material_name=material_name,
-                    material_type_id=(mtype.material_type_id if mtype else None),
-                    material_supplier=(supplier.supplier_id if supplier else None),
-                    material_unit=unit,
-                    material_creation_date=datetime.now().date(),
-                )
-                db.session.add(material); db.session.flush()
-                logger.logger.info(f"【盘库确认】创建 Material: name={material_name}, id={material.material_id}")
-
-            # SPU
-            spu = (db.session.query(SPUMaterial)
-                   .filter(SPUMaterial.material_id == material.material_id,
-                           SPUMaterial.material_model == model,
-                           SPUMaterial.material_specification == spec,
-                           SPUMaterial.color == color).first())
-            if not spu:
-                new_rid = f"SPU{material.material_id}-{int(datetime.now().timestamp())}"
-                spu = SPUMaterial(
-                    material_id=material.material_id,
-                    material_model=model,
-                    material_specification=spec,
-                    color=color,
-                    spu_rid=new_rid,
-                )
-                db.session.add(spu); db.session.flush()
-                logger.logger.info(f"【盘库确认】创建 SPU: rid={new_rid}, id={spu.spu_material_id}")
-            spu_id = spu.spu_material_id
-
-        unit = (after_row.get("unit") or "").strip()
-        storage = (db.session.query(MaterialStorage)
-                   .filter(MaterialStorage.spu_material_id == spu_id,
-                           MaterialStorage.order_id.is_(None),
-                           MaterialStorage.order_shoe_id.is_(None),
-                           MaterialStorage.actual_inbound_unit == unit)
-                   .first())
-        if not storage:
-            storage = MaterialStorage(
-                spu_material_id=spu_id,
-                order_id=None,
-                order_shoe_id=None,
-                actual_inbound_unit=unit,
-                inbound_amount=Decimal("0"),
-                current_amount=Decimal("0"),
-                unit_price=Decimal("0"),
-                average_price=Decimal("0"),
-                shoe_size_columns=[],
-            )
-            db.session.add(storage); db.session.flush()
-            logger.logger.info(f"【盘库确认】创建 Storage: id={storage.material_storage_id}, spu_id={spu_id}, unit={unit}")
-        return spu_id, storage
-
-    def _chunk(iterable, n=500):
-        buf = []
-        for x in iterable:
-            buf.append(x)
-            if len(buf) >= n:
-                yield buf; buf = []
-        if buf:
-            yield buf
-
     now = datetime.now()
     ts_tag = now.strftime("%Y%m%d%H%M%S")
 
     try:
-        # ======================================================
-        # A) 出库：快照 -> 分组生成出库单 -> 明细 bulk insert -> storage 批量清零
-        # ======================================================
+        # ==========================
+        # A) 出库（<= 盘库日期）
+        # ==========================
         ta = time.time()
-        logger.logger.info("【盘库确认】A.开始出库快照查询")
+        logger.logger.info("【盘库确认】A.开始出库快照查询(首入库时间过滤)")
+
+        first_inbound_dt_subq = (
+            db.session.query(
+                InboundRecordDetail.material_storage_id.label("sid"),
+                func.min(InboundRecord.inbound_datetime).label("first_inbound_dt")
+            )
+            .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+            .group_by(InboundRecordDetail.material_storage_id)
+        ).subquery()
+
         snap_q = (
             db.session.query(
                 MaterialStorage.material_storage_id.label("sid"),
@@ -685,11 +878,13 @@ def confirm_make_inventory():
             .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
             .join(Material, Material.material_id == SPUMaterial.material_id)
             .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+            .outerjoin(first_inbound_dt_subq, first_inbound_dt_subq.c.sid == MaterialStorage.material_storage_id)
             .filter(MaterialStorage.current_amount > 0)
+            .filter(func.coalesce(first_inbound_dt_subq.c.first_inbound_dt, datetime(1970, 1, 1)) <= inv_dt_end)
         )
 
         snapshots = []
-        for row in snap_q.all():  # 如量大，可改 .yield_per(1000)
+        for row in snap_q.all():
             qty = to_dec(row.qty)
             if qty <= 0:
                 continue
@@ -703,14 +898,11 @@ def confirm_make_inventory():
             })
         logger.logger.info(f"【盘库确认】A.快照完成 count={len(snapshots)}，耗时={time.time() - ta:.2f}s")
 
-        # 分组
+        # 分组建出库单
         out_groups = {}
         for s in snapshots:
-            key = (s["supplier_id"], s["warehouse_id"])
-            out_groups.setdefault(key, []).append(s)
+            out_groups.setdefault((s["supplier_id"], s["warehouse_id"]), []).append(s)
         logger.logger.info(f"【盘库确认】A.出库分组数={len(out_groups)}")
-        for (sup_id, wh_id), g in out_groups.items():
-            logger.logger.info(f"【盘库确认】A.出库分组 supplier={sup_id}, warehouse={wh_id}, 项数={len(g)}")
 
         created_out_records = []
         with db.session.no_autoflush:
@@ -718,7 +910,7 @@ def confirm_make_inventory():
                 orid = f"OR{ts_tag}INV-{idx:02d}"
                 outbound = OutboundRecord(
                     outbound_datetime=now,
-                    outbound_type=9,
+                    outbound_type=4,
                     outbound_rid=orid,
                     supplier_id=sup_id,
                     picker=None,
@@ -733,8 +925,8 @@ def confirm_make_inventory():
                 if hasattr(outbound, "warehouse_id"):
                     setattr(outbound, "warehouse_id", wh_id)
 
-                details_payload = []
                 total_out_price = Decimal("0")
+                details_payload = []
                 for it in items:
                     item_total = it["uprice"] * it["qty"]
                     total_out_price += item_total
@@ -754,85 +946,215 @@ def confirm_make_inventory():
                 outbound.total_price = total_out_price
                 db.session.flush()
                 created_out_records.append(outbound)
-                logger.logger.info(f"【盘库确认】A.创建出库单 {orid} 明细={len(details_payload)} 总额={str(total_out_price)}")
 
-            # storage 批量清零
+            # 批量清零库存与尺码列
             if snapshots:
                 id_list = [s["sid"] for s in snapshots]
-                batches = 0
                 for ids in _chunk(id_list, 1000):
-                    batches += 1
                     db.session.execute(
                         update(MaterialStorage)
                         .where(MaterialStorage.material_storage_id.in_(ids))
                         .values(current_amount=Decimal("0"))
                     )
-                logger.logger.info(f"【盘库确认】A.清零 current_amount 完成 批次={batches}")
-
-                # 清零尺码列（如果需要）
                 if SHOESIZERANGE:
-                    set_fragments = ", ".join([f"size_{sz}_current_amount=0" for sz in SHOESIZERANGE])
-                    batches = 0
+                    set_frag = ", ".join([f"size_{sz}_current_amount=0" for sz in SHOESIZERANGE])
                     for ids in _chunk(id_list, 1000):
-                        batches += 1
                         db.session.execute(
-                            text(
-                                f"UPDATE material_storage SET {set_fragments} "
-                                f"WHERE material_storage_id IN :ids"
-                            ),
+                            text(f"UPDATE material_storage SET {set_frag} WHERE material_storage_id IN :ids"),
                             {"ids": tuple(ids)}
                         )
-                    logger.logger.info(f"【盘库确认】A.清零尺码列完成 批次={batches}")
 
-        # ======================================================
-        # B) 入库：解析 after_map -> 匹配/创建 storage -> 按 storage 聚合 -> 分组建单
-        # ======================================================
+        # ==========================
+        # B) 回填入库（聚合+复用）
+        # ==========================
         tb = time.time()
-        logger.logger.info("【盘库确认】B.开始入库聚合")
-        per_storage = {}  # storage_id -> {storage, qty, unit_price, total_price}
-        rows_cnt = 0
+        logger.logger.info("【盘库确认】B.开始入库聚合（SPU+单位+订单[ID]）")
+
+        agg = {}             # key=(spu_id, unit, order_id) -> {qty, value, order_shoe_id, __row}
+        invalid_rows = []    # 字段不足/不允许创建
+        missing_rows = []    # 类型无仓库，记录可定位信息
+
+        # 逐行聚合
         for _, row in after_map.items():
-            rows_cnt += 1
             qty   = to_dec(row.get("totalCurrentAmount"))
-            value = to_dec(row.get("totalValueAmount"))
-            avg   = to_dec(row.get("avgUnitPrice"))
             if qty <= 0:
                 continue
-            _, storage = _ensure_spu_and_storage(row)
-            sid = storage.material_storage_id
-            acc = per_storage.get(sid)
-            if not acc:
-                per_storage[sid] = {
-                    "storage": storage,
-                    "qty": qty,
-                    "unit_price": avg,
-                    "total_price": (value if value > 0 else (avg * qty)),
-                }
-            else:
-                acc["qty"] += qty
-                acc["total_price"] += (value if value > 0 else (avg * qty))
-                acc["unit_price"] = avg
-        logger.logger.info(f"【盘库确认】B.入库聚合完成 原行数={rows_cnt} 聚合后storage数={len(per_storage)} 耗时={time.time() - tb:.2f}s")
+            try:
+                value = to_dec(row.get("totalValueAmount"))
+                avg   = to_dec(row.get("avgUnitPrice"))
+                spu_id = _ensure_spu_only(row)  # 可能抛 ValueError
+                unit   = _s(row.get("unit"))
 
-        # 分组
+                # 先判仓库是否缺失（用于精确回报 Excel 行）
+                sup_id, wh_id = _supplier_and_wh_by_spu(spu_id)
+                if wh_id is None:
+                    missing_rows.append({
+                        "rowNo": row.get("_rowNo"),
+                        "spuRid": _s(row.get("spuRid")),
+                        "type": _s(row.get("type")),
+                        "name": _s(row.get("name")),
+                        "model": _s(row.get("model")),
+                        "specification": _s(row.get("specification")),
+                        "color": _s(row.get("color")),
+                        "unit": unit,
+                        "orderRid": _s(row.get("orderRid"))
+                    })
+                    # 不参与聚合，直接让后面统一返回 400
+                    continue
+
+                # 订单
+                order_rid = _s(row.get("orderRid"))
+                order_id = None
+                order_shoe_id = None
+                if order_rid:
+                    o = db.session.query(Order).filter_by(order_rid=order_rid).first()
+                    order_id = o.order_id if o else None
+                    if order_id:
+                        ost = db.session.query(OrderShoe).filter_by(order_id=order_id).first()
+                        order_shoe_id = ost.order_shoe_id if ost else None
+
+                key = (spu_id, unit, order_id)
+                amt = value if value > 0 else (avg * qty)
+                acc = agg.get(key)
+                if not acc:
+                    agg[key] = {
+                        "qty": qty,
+                        "value": amt,
+                        "order_shoe_id": order_shoe_id,
+                        "__row": row  # 用于必要时的追溯
+                    }
+                else:
+                    acc["qty"]   += qty
+                    acc["value"] += amt
+                    if not acc.get("order_shoe_id") and order_shoe_id:
+                        acc["order_shoe_id"] = order_shoe_id
+
+            except ValueError as ve:
+                invalid_rows.append({
+                    "rowNo": row.get("_rowNo"),
+                    "spuRid": _s(row.get("spuRid")),
+                    "type": _s(row.get("type")),
+                    "name": _s(row.get("name")),
+                    "model": _s(row.get("model")),
+                    "specification": _s(row.get("specification")),
+                    "color": _s(row.get("color")),
+                    "unit": _s(row.get("unit")),
+                    "orderRid": _s(row.get("orderRid")),
+                    "reason": str(ve),
+                })
+
+        if invalid_rows:
+            logger.logger.error(f"【盘库确认】存在 {len(invalid_rows)} 条无效行，拒绝继续（防止创建空 SPU）")
+            invalid_rows.sort(key=lambda x: (x["rowNo"] is None, x["rowNo"] or 0))
+            return jsonify({
+                "code": 400,
+                "message": "回传表中存在字段不足或非法的行，已拒绝创建空SPU，请修正后重试",
+                "invalidRows": invalid_rows[:500],
+                "invalidCount": len(invalid_rows)
+            }), 400
+
+        if missing_rows:
+            logger.logger.error(f"【盘库确认】存在 {len(missing_rows)} 行数据的材料类型未配置 warehouse_id，拒绝入库")
+            missing_rows.sort(key=lambda x: (x["rowNo"] is None, x["rowNo"] or 0))
+            return jsonify({
+                "code": 400,
+                "message": "有材料类型未配置仓库（warehouse_id），请先维护后重试",
+                "missingRows": missing_rows[:500],
+                "missingCount": len(missing_rows)
+            }), 400
+
+        logger.logger.info(f"【盘库确认】B.入库聚合完成 key数={len(agg)} 耗时={time.time() - tb:.2f}s")
+
+        # 创建/复用 storage，并按 (supplier, warehouse) 分组
         in_groups = {}
-        for acc in per_storage.values():
-            st = acc["storage"]
-            sup_id, wh_id = _supplier_and_wh_by_spu(st.spu_material_id)
-            key = (sup_id, wh_id)
-            in_groups.setdefault(key, []).append(acc)
+        created_new_storages, reused_storages = [], []
 
-        logger.logger.info(f"【盘库确认】B.入库分组数={len(in_groups)}")
-        for (sup_id, wh_id), g in in_groups.items():
-            logger.logger.info(f"【盘库确认】B.入库分组 supplier={sup_id}, warehouse={wh_id}, 项数={len(g)}")
+        for (spu_id, unit, order_id), acc in agg.items():
+            qty = acc["qty"]
+            total_value = acc["value"]
+            unit_price = (total_value / qty) if qty and qty != Decimal("0") else Decimal("0")
+            order_shoe_id = acc.get("order_shoe_id")
 
+            st = None
+            if order_id is not None:
+                st = (db.session.query(MaterialStorage)
+                        .filter(MaterialStorage.spu_material_id == spu_id,
+                                MaterialStorage.actual_inbound_unit == unit,
+                                MaterialStorage.order_id == order_id)
+                        .first())
+                if st:
+                    if (not st.order_shoe_id) and order_shoe_id:
+                        st.order_shoe_id = order_shoe_id
+                    reused_storages.append(st.material_storage_id)
+
+            st = _get_or_upsert_storage(
+                spu_id=spu_id,
+                unit=unit,
+                order_id=order_id,
+                order_shoe_id=order_shoe_id,
+                unit_price=unit_price
+            )
+            # 后续照旧：把 st 丢进 in_groups / 构造明细 / 批量加量
+            sup_id, wh_id = _supplier_and_wh_by_spu(spu_id)
+            in_groups.setdefault((sup_id, wh_id), []).append({
+                "storage": st,
+                "qty": qty,
+                "unit_price": unit_price,
+                "total_price": total_value,
+                "row": acc.get("__row"),
+            })
+
+            sup_id, wh_id = _supplier_and_wh_by_spu(spu_id)
+            in_groups.setdefault((sup_id, wh_id), []).append({
+                "storage": st,
+                "qty": qty,
+                "unit_price": unit_price,
+                "total_price": total_value,
+                "row": acc.get("__row"),   # 追溯 Excel 原始行
+            })
+
+        logger.logger.info(f"【盘库确认】B.storage 创建={len(created_new_storages)} 复用={len(reused_storages)}")
+
+        # 入库单生成
         created_in_records = []
         with db.session.no_autoflush:
+            bad_rows = []
+            for (sup_id, wh_id), items in in_groups.items():
+                logger.logger.info(f"【盘库确认】B.入库分组 supplier_id={sup_id} warehouse_id={wh_id} 行数={len(items)}")
+                if wh_id is None:
+                    logger.logger.warning(f"【盘库确认】B.入库分组 supplier_id={sup_id} warehouse_id={wh_id} 行数={len(items)}有误")
+                    for it in items:
+                        r = (it.get("row") or {})  # 原始 Excel 行
+                        bad_rows.append({
+                            "rowNo": r.get("_rowNo"),
+                            "spuRid": _s(r.get("spuRid")),
+                            "type": _s(r.get("type")),
+                            "name": _s(r.get("name")),
+                            "model": _s(r.get("model")),
+                            "specification": _s(r.get("specification")),
+                            "color": _s(r.get("color")),
+                            "unit": _s(r.get("unit")),
+                            "orderRid": _s(r.get("orderRid")),
+                        })
+
+            if bad_rows:
+                bad_rows.sort(key=lambda x: (x["rowNo"] is None, x["rowNo"] or 0))
+                logger.logger.error(f"【盘库确认】存在 {len(bad_rows)} 行所属类型未配置 warehouse_id，拒绝入库")
+                return jsonify({
+                    "code": 400,
+                    "message": "有材料类型未配置仓库（warehouse_id），请到【材料类型】维护仓库后重试",
+                    "missingRows": bad_rows[:500],   # 限流避免响应过大
+                    "missingCount": len(bad_rows)
+                }), 400
             for idx, ((sup_id, wh_id), items) in enumerate(in_groups.items(), start=1):
+                if wh_id is None:
+                    # 理论上不会触发（前面已拦截），但双重保险
+                    return jsonify({"code": 400, "message": "检测到未配置仓库的类型，已终止"}), 400
+
                 irid = f"IR{ts_tag}INV-{idx:02d}"
                 inbound = InboundRecord(
                     inbound_datetime=now,
-                    inbound_type=4,   # 业务自定义：盘库入库
+                    inbound_type=4,
                     inbound_rid=irid,
                     inbound_batch_id=0,
                     supplier_id=sup_id,
@@ -840,13 +1162,14 @@ def confirm_make_inventory():
                     remark=f"盘库[{rid}]回填入库",
                     pay_method=None,
                     total_price=Decimal("0"),
+                    approval_status=1,
                     is_sized_material=0,
+                    # 如模型需要：approval_status=0, staff_id=None 等按你的表结构补
                 )
                 db.session.add(inbound); db.session.flush()
 
-                details_payload = []
                 total_in_price = Decimal("0")
-                inc_updates = []  # (storage_id, qty, unit_price)
+                details_payload, inc_updates = [], []
                 for it in items:
                     st = it["storage"]
                     qty = it["qty"]
@@ -857,7 +1180,8 @@ def confirm_make_inventory():
                         "inbound_record_id": inbound.inbound_record_id,
                         "inbound_amount": qty,
                         "remark": "盘库入库",
-                        "order_id": None,
+                        "order_id": st.order_id,
+                        "order_shoe_id": st.order_shoe_id,
                         "spu_material_id": st.spu_material_id,
                         "material_storage_id": st.material_storage_id,
                         "unit_price": unit_price,
@@ -868,38 +1192,34 @@ def confirm_make_inventory():
                 if details_payload:
                     db.session.bulk_insert_mappings(InboundRecordDetail, details_payload)
 
-                # 批量更新库存
-                batch_count = 0
+                # 批量加量/更新价格
                 for batch in _chunk(inc_updates, 500):
-                    batch_count += 1
                     ids = [x[0] for x in batch]
-                    case_qty = " ".join([f"WHEN {sid} THEN {str(qty)}" for sid, qty, _ in batch])
-                    case_price = " ".join([f"WHEN {sid} THEN {str(up)}" for sid, _, up in batch])
-
+                    case_qty   = " ".join([f"WHEN {sid} THEN {str(qty)}" for sid, qty, _ in batch])
+                    case_price = " ".join([f"WHEN {sid} THEN {str(up)}"  for sid, _, up in batch])
                     db.session.execute(
                         text(
                             f"""
                             UPDATE material_storage
-                            SET
-                              inbound_amount = inbound_amount + CASE material_storage_id {case_qty} END,
-                              current_amount = current_amount + CASE material_storage_id {case_qty} END,
-                              unit_price     = CASE material_storage_id {case_price} END,
-                              average_price  = CASE material_storage_id {case_price} END
+                            SET inbound_amount = inbound_amount + CASE material_storage_id {case_qty} END,
+                                current_amount = current_amount + CASE material_storage_id {case_qty} END,
+                                unit_price     = CASE material_storage_id {case_price} END,
+                                average_price  = CASE material_storage_id {case_price} END
                             WHERE material_storage_id IN :ids
                             """
                         ),
                         {"ids": tuple(ids)}
                     )
+
                 inbound.total_price = total_in_price
                 db.session.flush()
                 created_in_records.append(inbound)
-                logger.logger.info(f"【盘库确认】B.创建入库单 {irid} 明细={len(details_payload)} 批量更新批次={batch_count} 总额={str(total_in_price)}")
 
-        # ======================================================
-        # C) 保存盘库记录 & 提交
-        # ======================================================
+        # ==========================
+        # C) 落盘 & 提交
+        # ==========================
         rec.outbound_record_id = created_out_records[0].outbound_record_id if created_out_records else None
-        rec.inbound_record_id  = created_in_records[0].inbound_record_id if created_in_records else None
+        rec.inbound_record_id  = created_in_records[0].inbound_record_id  if created_in_records else None
         rec.make_inventory_status = 2  # 等待确认
         db.session.commit()
 
@@ -936,6 +1256,9 @@ def confirm_make_inventory():
         logger.logger.exception(f"【盘库确认】发生异常，将回滚。错误：{e}")
         db.session.rollback()
         return jsonify({"code": 500, "message": f"确认盘库失败: {e}"}), 500
+
+
+
 
 @make_inventory_bp.route("/warehouse/makeinventory/create", methods=["POST"])
 def create_make_inventory():
@@ -1029,6 +1352,7 @@ def query_inventory_summary(*, keyword:str="", sort_by:str="total_current_amount
             SPUMaterial.material_specification.label("material_specification"),
             SPUMaterial.color.label("color"),
             MaterialStorage.actual_inbound_unit.label("unit"),
+            Order.order_rid.label("order_rid"),
             qty_sum_expr.label("total_current_amount"),
             value_sum_expr.label("total_value_amount"),
             avg_price_expr.label("avg_unit_price"),
@@ -1039,6 +1363,7 @@ def query_inventory_summary(*, keyword:str="", sort_by:str="total_current_amount
         .join(Material, Material.material_id == SPUMaterial.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .join(Order, Order.order_id == MaterialStorage.order_id, isouter=True)
     )
 
     if keyword:
@@ -1065,6 +1390,7 @@ def query_inventory_summary(*, keyword:str="", sort_by:str="total_current_amount
         SPUMaterial.material_model,
         SPUMaterial.material_specification,
         SPUMaterial.color,
+        Order.order_rid
     ).having(qty_sum_expr > 0)
 
     sub = base_q.subquery()
@@ -1079,6 +1405,7 @@ def query_inventory_summary(*, keyword:str="", sort_by:str="total_current_amount
         "material_model":       sub.c.material_model,
         "material_specification": sub.c.material_specification,
         "color":                sub.c.color,
+        "order_rid":            sub.c.order_rid,
     }
     for sz in SHOESIZERANGE:
         SORTABLE[f"size_{sz}"] = getattr(sub.c, f"size_{sz}")
@@ -1123,38 +1450,94 @@ def import_inventory_summary():
 
     # 3) 解析两份文件
     try:
-        before_map = _read_visible_sheet_to_map(baseline_path) if baseline_path and os.path.exists(baseline_path) else {}
-        after_map  = _read_visible_sheet_to_map(upload_path)
+        before_map = {}
+        if baseline_path and os.path.exists(baseline_path):
+            before_map = _read_visible_sheet_to_map(baseline_path)
     except Exception as e:
-        return jsonify({"code": 400, "message": f"解析Excel失败: {e}"}), 400
+        current_app.logger.exception("解析基线文件失败: %s", baseline_path)
+        return jsonify({"code": 400, "message": f"解析基线Excel失败: {e}"}), 400
 
-    # 4) 生成 diff
+    try:
+        after_map = _read_visible_sheet_to_map(upload_path)
+    except Exception as e:
+        current_app.logger.exception("解析上传文件失败: %s", upload_path)
+        return jsonify({"code": 400, "message": f"解析上传Excel失败: {e}"}), 400
+
+    # ==== 兼容新格式（含“订单号”）并按【SPU + 订单号】进行对比 ====
+    # 说明：
+    # - 旧版基线可能没有“订单号”，则按空字符串对待（即视为“无订单”维度）
+    # - 新版上传包含“orderRid”（由导出函数写入第二列表头“订单号”）
+    # - 我们在这里不强依赖 _read_visible_sheet_to_map 的键，只要 value 里带有 spuRid/orderRid/…即可
+    def _to_float(v):
+        if v is None:
+            return 0.0
+        if isinstance(v, (int, float, Decimal)):
+            return float(v)
+        try:
+            s = str(v).strip().replace(",", "").replace("，", "").replace("\u3000", "")
+            return float(s) if s else 0.0
+        except Exception:
+            return 0.0
+
+    def _norm_order_rid(x):
+        # 导入里“订单号”可能叫 orderRid / order_rid；都做兼容
+        return (x.get("orderRid") or x.get("order_rid") or "").strip()
+
+    def _norm_spu_id_key(k, v):
+        # _read_visible_sheet_to_map 的 key 旧实现是 spuMaterialId；
+        # 如果不是，从值里兜底取一次
+        sid = k or v.get("spuMaterialId") or v.get("spu_material_id")
+        try:
+            return int(sid)
+        except Exception:
+            return str(sid or "").strip()
+
+    def _remap_by_composite(src: dict):
+        # 把 {sid: row} 变成 { (sid, orderRid): row }；orderRid 为空用 ""
+        out = {}
+        for k, v in (src or {}).items():
+            sid = _norm_spu_id_key(k, v)
+            ord_rid = _norm_order_rid(v)  # 旧基线没有订单号时为 ""
+            out[(sid, ord_rid)] = v
+        return out
+
+    before_map2 = _remap_by_composite(before_map)
+    after_map2  = _remap_by_composite(after_map)
+
+    # 4) 生成 diff（按 (SPU, 订单号) 维度）
     items = []
     changed_count = added_count = removed_count = 0
     sum_delta_qty = 0.0
     sum_delta_value = 0.0
 
-    spu_ids = set(before_map.keys()) | set(after_map.keys())
-    for sid in sorted(spu_ids):
-        b = before_map.get(sid)
-        a = after_map.get(sid)
+    keys = set(before_map2.keys()) | set(after_map2.keys())
 
-        # 尺码 delta
-        def sizes_delta(bsizes: dict, asizes: dict):
-            all_keys = set((bsizes or {}).keys()) | set((asizes or {}).keys())
-            return {k: _to_float(asizes.get(k, 0)) - _to_float(bsizes.get(k, 0)) for k in all_keys}
+    def sizes_delta(bsizes: dict, asizes: dict):
+        all_keys = set((bsizes or {}).keys()) | set((asizes or {}).keys())
+        return {k: _to_float((asizes or {}).get(k, 0)) - _to_float((bsizes or {}).get(k, 0)) for k in all_keys}
+
+    for (sid, ord_rid) in sorted(keys, key=lambda x: (str(x[0]), str(x[1]))):
+        b = before_map2.get((sid, ord_rid))
+        a = after_map2.get((sid, ord_rid))
+
+        # 统一把 orderRid 填回 before/after，便于前端展示
+        if b is not None:
+            b = {**b, "orderRid": ord_rid}
+        if a is not None:
+            a = {**a, "orderRid": ord_rid}
 
         if b and not a:
-            # 移除（导入时缺失该行）
+            # 移除（上传缺失该 (SPU, 订单号) 组合）
             removed_count += 1
-            delta_qty   = -_to_float(b["totalCurrentAmount"])
-            delta_value = -_to_float(b["totalValueAmount"])
+            delta_qty   = -_to_float(b.get("totalCurrentAmount"))
+            delta_value = -_to_float(b.get("totalValueAmount"))
             sum_delta_qty   += delta_qty
             sum_delta_value += delta_value
 
             items.append({
                 "type": "removed",
                 "spuMaterialId": sid,
+                "orderRid": ord_rid,          # 新增：订单号
                 "spuRid": b.get("spuRid"),
                 "unit":  b.get("unit"),
                 "before": b,
@@ -1168,16 +1551,17 @@ def import_inventory_summary():
             continue
 
         if a and not b:
-            # 新增（导入时新增一行）
+            # 新增（上传新增该 (SPU, 订单号) 组合）
             added_count += 1
-            delta_qty   = _to_float(a["totalCurrentAmount"])
-            delta_value = _to_float(a["totalValueAmount"])
+            delta_qty   = _to_float(a.get("totalCurrentAmount"))
+            delta_value = _to_float(a.get("totalValueAmount"))
             sum_delta_qty   += delta_qty
             sum_delta_value += delta_value
 
             items.append({
                 "type": "added",
-                "spuMaterialId": sid,   # 这里 sid 可能是 "__NEW__#x"；前端不展示这个就好
+                "spuMaterialId": sid,
+                "orderRid": ord_rid,          # 新增：订单号
                 "spuRid": a.get("spuRid"),
                 "unit":  a.get("unit"),
                 "before": None,
@@ -1186,17 +1570,20 @@ def import_inventory_summary():
                     "totalCurrentAmount": delta_qty,
                     "totalValueAmount":   delta_value
                 },
-                # 标记：是否真的是“未能解析到已有 SPU”的新材料
                 "isNewMaterial": not a.get("_resolvedToSpu", False)
             })
             continue
 
         # 常规变更
-        delta_total = _to_float(a["totalCurrentAmount"]) - _to_float(b["totalCurrentAmount"])
-        delta_value = _to_float(a["totalValueAmount"])   - _to_float(b["totalValueAmount"])
+        delta_total = _to_float(a.get("totalCurrentAmount")) - _to_float(b.get("totalCurrentAmount"))
+        delta_value = _to_float(a.get("totalValueAmount"))   - _to_float(b.get("totalValueAmount"))
         delta_sizes = sizes_delta(b.get("sizes", {}), a.get("sizes", {}))
 
-        changed = abs(delta_total) > 1e-9 or abs(delta_value) > 1e-9 or any(abs(v) > 1e-9 for v in delta_sizes.values())
+        changed = (
+            abs(delta_total) > 1e-9
+            or abs(delta_value) > 1e-9
+            or any(abs(v) > 1e-9 for v in delta_sizes.values())
+        )
         if changed:
             changed_count += 1
             sum_delta_qty   += delta_total
@@ -1205,8 +1592,9 @@ def import_inventory_summary():
         items.append({
             "type": "changed" if changed else "unchanged",
             "spuMaterialId": sid,
+            "orderRid": ord_rid,              # 新增：订单号
             "spuRid": a.get("spuRid") or b.get("spuRid"),
-            "unit":  a.get("unit")    or b.get("unit"),
+            "unit":  a.get("unit")  or b.get("unit"),
             "before": b,
             "after":  a,
             "delta": {
@@ -1243,10 +1631,155 @@ def import_inventory_summary():
     record.excel_reupload_status = 1
     db.session.commit()
 
+    preview_size = 50
+    items_preview = items[:preview_size]
+    is_truncated = len(items) > preview_size
+
+    # 6) 状态更新略...
+
     return jsonify({
         "code": 200,
         "message": "ok",
         "updated": 0, "failed": 0, "errors": [],
-        "diff": diff,
-        "diffSavedAs": diff_name
+        # 只回摘要，不回整份 items
+        "diffSummary": diff.get("summary", {}),
+        "diffSavedAs": diff_name,
+        "preview": items_preview,
+        "previewTruncated": is_truncated
     })
+    
+# ===== Diff 预览：分页 / 分组 / 搜索 / 排序 =====
+@make_inventory_bp.route("/warehouse/inventorysummary/diff/<rid>", methods=["GET"])
+def get_inventory_diff(rid):
+    """
+    分页读取导入时保存的 diff.json
+    支持：
+      - 分页：page, pageSize
+      - 分组(type)：added / removed / changed / unchanged
+      - 关键字：q（在 spuRid / orderRid / 名称/型号/规格/颜色/单位 中模糊匹配）
+      - 排序：sortBy, sortOrder（asc/desc）
+    返回：
+      { code, message, rid, baselineFile, uploadedFile, summary, counts, page, pageSize, total, items }
+    """
+    # ---- 读取参数 ----
+    page = max(int(request.args.get("page", 1)), 1)
+    page_size = max(int(request.args.get("pageSize", 100)), 1)
+    group = (request.args.get("type") or "").strip().lower()  # added/removed/changed/unchanged
+    q = (request.args.get("q") or request.args.get("keyword") or "").strip()
+    sort_by = (request.args.get("sortBy") or "spuRid").strip()
+    sort_order = (request.args.get("sortOrder") or "asc").strip().lower()
+    sort_order = "desc" if sort_order not in ("asc", "desc") else sort_order
+
+    diff_path = os.path.join(DIFF_DIR, f"{rid}_diff.json")
+    if not os.path.exists(diff_path):
+        return jsonify({"code": 404, "message": "diff 文件不存在", "rid": rid}), 404
+
+    with open(diff_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # ---- 头部信息（兼容旧字段名）----
+    header = {
+        "rid": rid,
+        "baselineFile": data.get("baselineFile", ""),
+        "uploadedFile": data.get("uploadedFile", data.get("uploaded_file", "")),
+        "summary": data.get("summary", {}),
+        "recordId": data.get("recordId"),
+    }
+
+    items = data.get("items", []) or []
+
+    # ---- 页签计数（未过滤前计算）----
+    def _count_by_type(arr):
+        c = {"added": 0, "removed": 0, "changed": 0, "unchanged": 0}
+        for it in arr:
+            tp = (it.get("type") or "").lower()
+            if tp in c:
+                c[tp] += 1
+        return c
+    counts = _count_by_type(items)
+
+    # ---- 过滤：分组(type) ----
+    if group in ("added", "removed", "changed", "unchanged"):
+        items = [it for it in items if (it.get("type") or "").lower() == group]
+
+    # ---- 关键字检索（宽松字段）----
+    def _s(v):
+        # 安全转字符串
+        if v is None:
+            return ""
+        try:
+            return str(v)
+        except Exception:
+            return ""
+    def _field(it, name):
+        # 兼容放在根 / before / after 上的字段
+        return it.get(name) or (it.get("after") or {}).get(name) or (it.get("before") or {}).get(name) or ""
+
+    if q:
+        ql = q.lower()
+        filtered = []
+        for it in items:
+            hay = " ".join([
+                _s(it.get("spuRid") or _field(it, "spuRid")),
+                _s(it.get("orderRid") or _field(it, "orderRid")),
+                _s(_field(it, "name")),
+                _s(_field(it, "model")),
+                _s(_field(it, "specification")),
+                _s(_field(it, "color")),
+                _s(_field(it, "unit")),
+            ]).lower()
+            if ql in hay:
+                filtered.append(it)
+        items = filtered
+
+    # ---- 排序 ----
+    def _num(x):
+        try:
+            return float(x)
+        except Exception:
+            return 0.0
+
+    def _key(it):
+        # 可扩展的排序键
+        if sort_by == "orderRid":
+            return _s(it.get("orderRid") or _field(it, "orderRid"))
+        if sort_by == "type":
+            return _s(it.get("type"))
+        if sort_by in ("deltaQty", "deltaTotal", "totalCurrentAmountDelta"):
+            return _num((it.get("delta") or {}).get("totalCurrentAmount"))
+        if sort_by in ("deltaValue", "totalValueAmountDelta"):
+            return _num((it.get("delta") or {}).get("totalValueAmount"))
+        if sort_by == "name":
+            return _s(_field(it, "name"))
+        if sort_by == "model":
+            return _s(_field(it, "model"))
+        if sort_by == "specification":
+            return _s(_field(it, "specification"))
+        if sort_by == "color":
+            return _s(_field(it, "color"))
+        # 默认按 spuRid
+        return _s(it.get("spuRid") or _field(it, "spuRid"))
+
+    items.sort(key=_key, reverse=(sort_order == "desc"))
+
+    # ---- 分页 ----
+    total = len(items)
+    start = (page - 1) * page_size
+    end = min(start + page_size, total)
+    page_items = items[start:end]
+
+    # ---- 返回 ----
+    return jsonify({
+        "code": 200,
+        "message": "ok",
+        "rid": header["rid"],
+        "baselineFile": header["baselineFile"],
+        "uploadedFile": header["uploadedFile"],
+        "summary": header["summary"],
+        "counts": counts,           # 页签计数（全量，方便前端 tab 上显示）
+        "page": page,
+        "pageSize": page_size,
+        "total": total,
+        "items": page_items,
+    })
+

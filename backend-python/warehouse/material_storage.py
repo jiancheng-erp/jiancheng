@@ -114,6 +114,7 @@ def get_all_material_info():
             MaterialStorage.purchase_order_item_id
             == PurchaseOrderItem.purchase_order_item_id,
         )
+        .filter(MaterialStorage.current_amount > 0)
     )
 
     for key, value in filters.items():
@@ -1757,8 +1758,10 @@ def get_outbound_records_for_material():
         # outbound_address = row.outbound_address
         elif outbound_record.outbound_type == 3:
             outbound_purpose = "外发复合"
-            outbound_destination = supplier.supplier_name if supplier else None
         elif outbound_record.outbound_type == 4:
+            outbound_purpose = "材料退回"
+            outbound_destination = supplier.supplier_name if supplier else None
+        elif outbound_record.outbound_type == 5:
             outbound_purpose = "盘库出库"
         else:
             outbound_purpose = "生产使用"

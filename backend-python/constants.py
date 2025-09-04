@@ -69,6 +69,7 @@ OUTBOUND_TYPE_MAPPING = {
     2: "外包出库",
     3: "复合出库",
     4: "材料退回",
+    5: "盘库出库"
 }
 
 BOM_STATUS = {

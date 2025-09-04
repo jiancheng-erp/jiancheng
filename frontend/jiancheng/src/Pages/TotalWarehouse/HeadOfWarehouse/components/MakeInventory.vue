@@ -113,6 +113,7 @@
                 <el-table-column prop="specification" label="材料规格" width="160" show-overflow-tooltip />
                 <el-table-column prop="color" label="颜色" width="120" show-overflow-tooltip />
                 <el-table-column prop="unit" label="单位" width="90" />
+                <el-table-column prop="orderRid" label="订单号" width="160" show-overflow-tooltip />
                 <el-table-column prop="totalCurrentAmount" label="总库存" width="120">
                     <template #default="{ row }">{{ fmtQty(row.totalCurrentAmount) }}</template>
                 </el-table-column>
@@ -167,7 +168,7 @@
         </el-dialog>
     </div>
     <el-dialog title="盘库表差异" v-model="diffDialog.visible" width="90%" destroy-on-close>
-        <template v-if="diffDialog.view && diffDialog.diffHeader">
+        <template v-if="diffDialog.diffHeader">
             <el-alert
                 type="info"
                 :closable="false"
@@ -183,10 +184,18 @@
                 :title="`变更：${diffDialog.diffHeader.summary.changed} | 新增：${diffDialog.diffHeader.summary.added} | 减少：${diffDialog.diffHeader.summary.removed} | 数量净变：${fmtSigned(diffDialog.diffHeader.summary.totalDeltaQty)} | 金额净变：${fmtSigned(diffDialog.diffHeader.summary.totalDeltaValue)}`"
             />
 
-            <el-tabs v-model="diffDialog.activeTab" lazy>
-                <el-tab-pane v-for="t in diffDialog.tabs" :key="t.key" :label="`${t.label} (${getGroupCount(t.key)})`" :name="t.key">
+            <el-tabs
+                v-model="diffDialog.activeTab"
+                lazy
+                @tab-change="
+                    async () => {
+                        await loadDiffCurrentTab()
+                    }
+                "
+            >
+                <el-tab-pane v-for="t in diffDialog.tabs" :key="t.key" :label="`${t.label} (${diffDialog.counts[t.key] || 0})`" :name="t.key">
                     <el-table
-                        :data="getPagedGroup(t.key)"
+                        :data="diffDialog.serverPaging ? diffDialog.pager[t.key].items : getPagedGroup(t.key)"
                         border
                         stripe
                         height="520"
@@ -195,6 +204,9 @@
                     >
                         <el-table-column prop="spuRid" label="SPU编号" width="160" show-overflow-tooltip>
                             <template #default="{ row }">{{ row.spuRid || row.after?.spuRid || row.before?.spuRid }}</template>
+                        </el-table-column>
+                        <el-table-column prop="orderRid" label="订单号" width="160" show-overflow-tooltip>
+                            <template #default="{ row }">{{ row.orderRid || row.after?.orderRid || row.before?.orderRid }}</template>
                         </el-table-column>
                         <el-table-column label="名称/型号/规格/颜色" min-width="240" show-overflow-tooltip>
                             <template #default="{ row }">
@@ -252,15 +264,21 @@
                         <el-pagination
                             background
                             layout="total, sizes, prev, pager, next, jumper"
-                            :total="getGroupCount(t.key)"
+                            :total="diffDialog.pager[t.key].total"
                             :current-page="diffDialog.pager[t.key].page"
                             :page-size="diffDialog.pager[t.key].pageSize"
                             :page-sizes="[20, 50, 100, 200]"
-                            @current-change="(p) => (diffDialog.pager[t.key].page = p)"
+                            @current-change="
+                                async (p) => {
+                                    diffDialog.pager[t.key].page = p
+                                    await loadDiffCurrentTab()
+                                }
+                            "
                             @size-change="
-                                (s) => {
+                                async (s) => {
                                     diffDialog.pager[t.key].pageSize = s
                                     diffDialog.pager[t.key].page = 1
+                                    await loadDiffCurrentTab()
                                 }
                             "
                         />
@@ -348,8 +366,8 @@ export default {
             diffDialog: {
                 visible: false,
                 loading: false,
-                diffHeader: null, // 仅保存 header/summary（轻）
-                view: null, // 仅保存分组和尺码列（轻）
+                diffHeader: null, // { rid, baselineFile, uploadedFile, summary }
+                view: null, // 旧模式：{ groups, sizeKeys }；新模式可不使用
                 tabs: [
                     { key: 'changed', label: '变更' },
                     { key: 'added', label: '新增' },
@@ -357,13 +375,23 @@ export default {
                     { key: 'unchanged', label: '未变化' }
                 ],
                 activeTab: 'changed',
-                // 针对每个分组做分页，避免一次性渲染全部
+
+                // 统一的服务端分页/过滤/排序状态
+                rid: '', // 当前查看的 rid
+                counts: { changed: 0, added: 0, removed: 0, unchanged: 0 }, // 页签数量（来自后端）
+                query: '', // 搜索关键字
+                sortBy: 'spuRid', // spuRid/orderRid/type/deltaQty/deltaValue/name/model/specification/color
+                sortOrder: 'asc', // asc/desc
                 pager: {
-                    changed: { page: 1, pageSize: 50 },
-                    added: { page: 1, pageSize: 50 },
-                    removed: { page: 1, pageSize: 50 },
-                    unchanged: { page: 1, pageSize: 50 }
-                }
+                    // 每个分组一套分页
+                    changed: { page: 1, pageSize: 50, total: 0, items: [] },
+                    added: { page: 1, pageSize: 50, total: 0, items: [] },
+                    removed: { page: 1, pageSize: 50, total: 0, items: [] },
+                    unchanged: { page: 1, pageSize: 50, total: 0, items: [] }
+                },
+
+                // 标记当前是否使用“服务端分页”模式（true 时不使用前端切片）
+                serverPaging: true
             },
             taskProgress: {
                 visible: false,
@@ -766,8 +794,16 @@ export default {
 
                 // 差异弹窗
                 if (data.diff) {
-                    this.logTask('解析完成，生成差异视图')
+                    this.logTask('解析完成，生成差异视图（整份）')
+                    this.diffDialog.serverPaging = false
                     this.openDiffDialog(data.diff)
+                } else if (data.diffSavedAs) {
+                    // diffSavedAs: 形如 MI20250904-0001_diff.json → rid = MI20250904-0001
+                    const rid = String(data.diffSavedAs).replace(/_diff\.json$/i, '')
+                    this.logTask('解析完成，生成差异视图（服务端分页）')
+                    await this.openDiffDialogByRid(rid)
+                } else {
+                    this.logTask('未检测到差异数据')
                 }
 
                 // 刷新列表
@@ -849,6 +885,114 @@ export default {
                 this.taskProgress.timer = null
             }
             this.taskProgress.visible = false
+        },
+        // 通过 rid 打开差异弹窗（服务端分页模式）
+        async openDiffDialogByRid(rid) {
+            this.diffDialog.visible = true
+            this.diffDialog.loading = true
+            this.diffDialog.serverPaging = true
+            this.diffDialog.rid = rid
+            // 初始化分页与筛选
+            Object.keys(this.diffDialog.pager).forEach((k) => {
+                this.diffDialog.pager[k].page = 1
+                this.diffDialog.pager[k].pageSize = 50
+                this.diffDialog.pager[k].total = 0
+                this.diffDialog.pager[k].items = []
+            })
+
+            try {
+                // 先拉一页，用于拿 summary / counts / total 等头部信息
+                const head = await this._fetchDiffPage({
+                    rid,
+                    type: this.diffDialog.activeTab,
+                    page: 1,
+                    pageSize: this.diffDialog.pager[this.diffDialog.activeTab].pageSize,
+                    q: this.diffDialog.query,
+                    sortBy: this.diffDialog.sortBy,
+                    sortOrder: this.diffDialog.sortOrder
+                })
+
+                // 头部
+                this.diffDialog.diffHeader = {
+                    rid,
+                    baselineFile: head.baselineFile || '',
+                    uploadedFile: head.uploadedFile || '',
+                    summary: head.summary || {}
+                }
+                // counts
+                this.diffDialog.counts = head.counts || { changed: 0, added: 0, removed: 0, unchanged: 0 }
+
+                // 设置当前分组第一页
+                const g = this.diffDialog.activeTab
+                this.diffDialog.pager[g].total = Number(head.total || 0)
+                this.diffDialog.pager[g].items = Array.isArray(head.items) ? head.items : []
+
+                // 自动切到第一个有数据的分组
+                const firstNonEmpty = ['changed', 'added', 'removed', 'unchanged'].find((k) => (this.diffDialog.counts?.[k] || 0) > 0)
+                this.diffDialog.activeTab = firstNonEmpty || 'changed'
+
+                // 如果切换了分组且它不是刚才加载的分组，补拉一页
+                if (this.diffDialog.activeTab !== g) {
+                    await this.loadDiffCurrentTab()
+                }
+            } catch (e) {
+                this.$message.error(`加载差异失败：${e?.response?.data?.message || e?.message || e}`)
+                this.diffDialog.visible = false
+            } finally {
+                this.diffDialog.loading = false
+            }
+        },
+
+        // 内部方法：调用 /warehouse/inventorysummary/diff/<rid>
+        async _fetchDiffPage({ rid, type, page, pageSize, q, sortBy, sortOrder }) {
+            const url = `${this.$apiBaseUrl}/warehouse/inventorysummary/diff/${encodeURIComponent(rid)}`
+            const { data } = await axios.get(url, {
+                params: { page, pageSize, type, q, sortBy, sortOrder }
+            })
+            if (!data || data.code !== 200) {
+                throw new Error(data?.message || '请求失败')
+            }
+            return data
+        },
+
+        // 加载当前 tab 对应页面
+        async loadDiffCurrentTab() {
+            const g = this.diffDialog.activeTab
+            const p = this.diffDialog.pager[g]
+            const data = await this._fetchDiffPage({
+                rid: this.diffDialog.rid,
+                type: g,
+                page: p.page,
+                pageSize: p.pageSize,
+                q: this.diffDialog.query,
+                sortBy: this.diffDialog.sortBy,
+                sortOrder: this.diffDialog.sortOrder
+            })
+            // 头部与 counts 常保持最新
+            this.diffDialog.diffHeader = {
+                rid: data.rid,
+                baselineFile: data.baselineFile || this.diffDialog.diffHeader?.baselineFile || '',
+                uploadedFile: data.uploadedFile || this.diffDialog.diffHeader?.uploadedFile || '',
+                summary: data.summary || this.diffDialog.diffHeader?.summary || {}
+            }
+            this.diffDialog.counts = data.counts || this.diffDialog.counts
+            this.diffDialog.pager[g].total = Number(data.total || 0)
+            this.diffDialog.pager[g].items = Array.isArray(data.items) ? data.items : []
+        },
+
+        // 搜索（回车或点按钮时调用）
+        async onDiffSearch() {
+            // 重置所有分组页码到 1，再拉当前分组
+            Object.keys(this.diffDialog.pager).forEach((k) => (this.diffDialog.pager[k].page = 1))
+            await this.loadDiffCurrentTab()
+        },
+
+        // 排序变更
+        async onDiffSortChange({ sortBy, sortOrder }) {
+            this.diffDialog.sortBy = sortBy
+            this.diffDialog.sortOrder = sortOrder
+            Object.keys(this.diffDialog.pager).forEach((k) => (this.diffDialog.pager[k].page = 1))
+            await this.loadDiffCurrentTab()
         }
     }
 }

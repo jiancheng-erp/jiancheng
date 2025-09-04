@@ -419,6 +419,8 @@ export default {
                     return '外发复合';
                 case 4:
                     return '材料退回';
+                case 5:
+                    return '盘库出库';
                 default:
                     return '工厂使用';
             }
