@@ -806,7 +806,7 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
     adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
-    reset_print_area(ws)
+    #reset_print_area(ws)
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
@@ -859,7 +859,7 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
     adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
-    reset_print_area(ws)
+    #reset_print_area(ws)
     # Save the workbook
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")

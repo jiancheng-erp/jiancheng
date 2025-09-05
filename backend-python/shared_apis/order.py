@@ -1636,18 +1636,23 @@ def export_order():
     }
 
     template_path = os.path.join(FILE_STORAGE_PATH, "订单模板.xlsx")
+    first_order = db.session.query(Order).filter(Order.order_id == order_ids[0]).first()
+    order_rid = first_order.order_rid if first_order else "未知订单"
+    send_name = f"导出订单_{order_rid}.xlsx"
     timestamp = str(time.time())
 
     if output_type == 0:
         new_file_name = f"导出配码订单_{timestamp}.xlsx"
+        send_name = f"导出配码订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码订单", new_file_name)
         generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
     else:
         new_file_name = f"导出数量订单_{timestamp}.xlsx"
+        send_name = f"导出数量订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量订单", new_file_name)
         generate_amount_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
 
-    return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
+    return send_file(new_file_path, as_attachment=True, download_name=send_name)
 
 
 @order_bp.route("/order/exportproductionorder", methods=["GET"])
@@ -1762,19 +1767,24 @@ def export_production_order():
     for i in range(len(SHOESIZERANGE)):
         meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))
     template_path = os.path.join(FILE_STORAGE_PATH, "生产订单模板.xlsx")
+    first_order = db.session.query(Order).filter(Order.order_id == order_ids[0]).first()
+    order_rid = first_order.order_rid if first_order else "未知订单"
+    send_name = f"导出生产订单_{order_rid}.xlsx"
     if output_type == 0:
         timestamp = str(time.time())
         new_file_name = f"导出配码生产订单_{timestamp}.xlsx"
+        send_name = f"导出配码生产订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码生产订单", new_file_name)
         generate_production_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
     else:
         timestamp = str(time.time())
         new_file_name = f"导出数量生产订单_{timestamp}.xlsx"
+        send_name = f"导出数量生产订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量生产订单", new_file_name)
         generate_production_amount_excel_file(
             template_path, new_file_path, order_shoe_mapping, meta_data
         )
-    return send_file(new_file_path, as_attachment=True, download_name=new_file_name)
+    return send_file(new_file_path, as_attachment=True, download_name=send_name)
 
 
 @order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
