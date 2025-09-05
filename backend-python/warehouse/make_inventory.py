@@ -1104,15 +1104,6 @@ def confirm_make_inventory():
                 "row": acc.get("__row"),
             })
 
-            sup_id, wh_id = _supplier_and_wh_by_spu(spu_id)
-            in_groups.setdefault((sup_id, wh_id), []).append({
-                "storage": st,
-                "qty": qty,
-                "unit_price": unit_price,
-                "total_price": total_value,
-                "row": acc.get("__row"),   # 追溯 Excel 原始行
-            })
-
         logger.logger.info(f"【盘库确认】B.storage 创建={len(created_new_storages)} 复用={len(reused_storages)}")
 
         # 入库单生成
