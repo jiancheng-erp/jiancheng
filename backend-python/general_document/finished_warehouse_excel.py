@@ -171,6 +171,7 @@ def build_finished_inbound_excel(filters: dict):
             OrderShoe.customer_product_name,
             Color.color_name,
             Customer,
+            FinishedShoeStorage,
             ShoeInboundRecord,
             ShoeInboundRecordDetail,
         )
@@ -216,7 +217,7 @@ def build_finished_inbound_excel(filters: dict):
 
     header = [
         "订单号","客户订单号","客户名","客户商标","客户型号","工厂型号","颜色",
-        "入库单号","入库时间","入库数量","备注"
+        "入库单号","入库时间","入库数量","订单总数量","未入库数量", "备注"
     ]
     widths: list[int] = []
     header_row = _write_title_filters(ws, "成品入库记录", len(header), filters)
@@ -225,7 +226,7 @@ def build_finished_inbound_excel(filters: dict):
     data_start_row = header_row + 1
     center_cols = {9, 10}  # 入库时间、入库数量 居中
     r = data_start_row
-    for order, shoe_rid_v, cust_prod_name, color_name, customer, record, detail in rows:
+    for order, shoe_rid_v, cust_prod_name, color_name, customer, storage, record, detail in rows:
         _write_data_row(ws, r, [
             order.order_rid,
             order.order_cid,
@@ -237,6 +238,8 @@ def build_finished_inbound_excel(filters: dict):
             record.shoe_inbound_rid,
             _format_dt(record.inbound_datetime),
             detail.inbound_amount,
+            storage.finished_estimated_amount,
+            storage.finished_estimated_amount - detail.inbound_amount,
             detail.remark or "",
         ], widths, center_cols=center_cols)
         r += 1
@@ -260,6 +263,7 @@ def build_finished_outbound_excel(filters: dict):
             Shoe.shoe_rid,
             Color.color_name,
             Customer,
+            FinishedShoeStorage,
             OrderShoe.customer_product_name,
             ShoeOutboundRecord,
             ShoeOutboundRecordDetail,
@@ -304,7 +308,7 @@ def build_finished_outbound_excel(filters: dict):
 
     header = [
         "订单号","客户订单号","客户名","客户商标","客户型号","工厂型号","颜色",
-        "出库单号","出库时间","出库数量","备注"
+        "出库单号","出库时间","出库数量", "订单总数量", "未出库数量", "备注"
     ]
     widths: list[int] = []
     header_row = _write_title_filters(ws, "成品出库记录", len(header), filters)
@@ -313,7 +317,7 @@ def build_finished_outbound_excel(filters: dict):
     data_start_row = header_row + 1
     center_cols = {9, 10}  # 出库时间、出库数量
     r = data_start_row
-    for order, shoe_rid_v, color_name, customer, cust_prod_name, record, detail in rows:
+    for order, shoe_rid_v, color_name, customer, storage, cust_prod_name, record, detail in rows:
         qty = getattr(detail, "outbound_amount", None)
         if qty is None:
             qty = getattr(detail, "amount", None)
@@ -328,6 +332,8 @@ def build_finished_outbound_excel(filters: dict):
             record.shoe_outbound_rid,
             _format_dt(record.outbound_datetime),
             qty,
+            storage.finished_estimated_amount,
+            storage.finished_estimated_amount - detail.outbound_amount,
             getattr(detail, "remark", "") or "",
         ], widths, center_cols=center_cols)
         r += 1
@@ -442,7 +448,7 @@ def build_finished_inout_excel(filters: dict):
     header = [
         "方向",
         "订单号","客户订单号","客户名","客户商标","客户型号","工厂型号","颜色",
-        "单号","时间","数量","备注"
+        "单号","时间","数量", "备注"
     ]
     widths: list[int] = []
     header_row = _write_title_filters(ws, "成品出入库合并", len(header), filters)
