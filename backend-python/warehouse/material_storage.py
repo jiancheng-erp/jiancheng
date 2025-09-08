@@ -8,7 +8,7 @@ from constants import *
 from event_processor import EventProcessor
 from flask import Blueprint, current_app, jsonify, request, abort, Response
 from models import *
-from sqlalchemy import desc, func, text, literal, cast, JSON, or_, and_
+from sqlalchemy import desc, func, text, literal, cast, JSON, or_, and_, exists
 import json
 from script.refresh_spu_rid import generate_spu_rid
 from logger import logger
@@ -1577,14 +1577,14 @@ def get_material_outbound_records():
             department,
             supplier,
         ) = row
+        destination = None
         if outbound_record.outbound_type == 0:
-            destination = department.department_name
+            if department:
+                destination = department.department_name
         elif outbound_record.outbound_type == 2:
             destination = outsource_factory.factory_name
         elif outbound_record.outbound_type == 3 or outbound_record.outbound_type == 4:
             destination = supplier.supplier_name
-        else:
-            destination = None
         outbound_type = OUTBOUND_TYPE_MAPPING.get(
             outbound_record.outbound_type, "生产出库"
         )
@@ -2082,3 +2082,298 @@ def get_all_material_models():
         obj = {"value": model[0], "name": model[0]}
         result.append(obj)
     return jsonify(result)
+
+
+
+#按订单出库代码
+# 在 material_storage.py 里，追加：
+@material_storage_bp.route("/warehouse/orderoutbound/materials", methods=["GET"])
+def get_order_outbound_materials():
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+    order_rid = (request.args.get("orderRId") or "").strip()
+    shoe_rid = (request.args.get("shoeRId") or "").strip()
+    material_type_id = request.args.get("materialTypeId", type=int)
+    include_general = request.args.get("includeGeneral", type=int, default=0)
+
+    filters = {
+        "material_name": request.args.get("materialName", ""),
+        "material_spec": request.args.get("materialSpec", ""),
+        "material_model": request.args.get("materialModel", ""),
+        "material_color": request.args.get("materialColor", ""),
+        "supplier": request.args.get("supplier", ""),
+    }
+
+    # 解析 order / shoe
+    order_id, order_shoe_id = None, None
+    if order_rid:
+        order, order_shoe = _find_order_shoe(order_rid)  # 你现有工具函数
+        order_id, order_shoe_id = order.order_id, order_shoe.order_shoe_id
+    elif shoe_rid:
+        # 允许只用 shoe_rid 检索
+        pair = (
+            db.session.query(Order, OrderShoe, Shoe)
+            .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+            .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+            .filter(Shoe.shoe_rid == shoe_rid)
+            .first()
+        )
+        if not pair:
+            return jsonify({"message": "无法找到该鞋型"}), 404
+        order_id, order_shoe_id = pair.Order.order_id, pair.OrderShoe.order_shoe_id
+    else:
+        return jsonify({"message": "缺少 orderRId 或 shoeRId"}), 400
+
+    # 基础查询：与 get_all_material_info 类似，列出 storage + 物料维度，且 current_amount > 0
+    q = (
+        db.session.query(
+            MaterialStorage,
+            SPUMaterial,
+            Material,
+            MaterialType,
+            Supplier,
+            Order,
+            OrderShoe,
+            Shoe,
+        )
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+        .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .outerjoin(Order, OrderShoe.order_id == Order.order_id)
+        .filter(MaterialStorage.current_amount > 0)
+    )
+
+    # 限定为“该订单鞋型专属库存”
+    q = q.filter(
+        or_(
+            MaterialStorage.order_shoe_id == order_shoe_id,
+            and_(include_general == 1, MaterialStorage.order_shoe_id.is_(None)),
+        )
+    )
+
+    if material_type_id:
+        q = q.filter(Material.material_type_id == material_type_id)
+
+    # like 筛选
+    material_filter_map = {
+        "material_name": Material.material_name,
+        "material_spec": SPUMaterial.material_specification,
+        "material_model": SPUMaterial.material_model,
+        "material_color": SPUMaterial.color,
+        "supplier": Supplier.supplier_name,
+    }
+    for k, v in filters.items():
+        if v:
+            q = q.filter(material_filter_map[k].ilike(f"%{v}%"))
+
+    # ---------- 高效 total：只对主键计数 ----------
+    total = (
+        q.with_entities(func.count(func.distinct(MaterialStorage.material_storage_id)))
+        .order_by(None)     # 防止潜在的 ORDER BY 影响 count 性能/语义
+        .scalar()
+    )
+
+    # ---------- 分页数据：精确列 + 按主键去重 + 稳定排序 ----------
+    rows = q.distinct().limit(page_size).offset((page - 1) * page_size).all()
+
+    result = []
+    for (storage, spu, material, mtype, supplier, order, order_shoe, shoe) in rows:
+        obj = {
+            "materialId": spu.material_id,
+            "materialType": mtype.material_type_name,
+            "materialName": material.material_name,
+            "materialModel": spu.material_model or "",
+            "materialSpecification": spu.material_specification or "",
+            "materialColor": spu.color or "",
+            "materialCategory": material.material_category,
+            "supplierName": supplier.supplier_name,
+            "currentAmount": storage.current_amount,
+            "unitPrice": storage.unit_price,
+            "orderRId": order.order_rid if order else None,
+            "shoeRId": shoe.shoe_rid if shoe else None,
+            "orderId": order.order_id if order else None,
+            "orderShoeId": order_shoe.order_shoe_id if order_shoe else None,
+            "materialStorageId": storage.material_storage_id,
+            "actualInboundUnit": storage.actual_inbound_unit,
+            "shoeSizeColumns": storage.shoe_size_columns or [],
+        }
+        # 按尺码带出当前数量，便于前端参考
+        for i, db_name in enumerate(SHOESIZERANGE):
+            obj[f"currentAmount{i}"] = getattr(storage, f"size_{db_name}_current_amount", 0) or 0
+        result.append(obj)
+    return {"result": result, "total": total}
+@material_storage_bp.route("/warehouse/orderoutbound/create", methods=["POST"])
+def create_order_outbound():
+    data = request.get_json()
+    order_rid = (data.get("orderRId") or "").strip()
+    if not order_rid:
+        return jsonify({"message": "缺少订单号 orderRId"}), 400
+    # 校验订单存在
+    _find_order_shoe(order_rid)
+
+    # 规范化为通用出库入参，outboundType=0（生产出库）
+    data["outboundType"] = 0
+    data["currentDateTime"] = format_datetime(datetime.now())
+
+    # 给每个 item 自动补齐 orderRId，并进行“按尺码合计=总数”简单校验
+    items = data.get("items", [])
+    if not items:
+        return jsonify({"message": "至少选择一条出库明细"}), 400
+
+    for it in items:
+        it.setdefault("orderRId", order_rid)
+        # 合计校验（可选，增强友好性）
+        total = Decimal(it.get("outboundQuantity", 0))
+        sized_sum = 0
+        for i, db_name in enumerate(SHOESIZERANGE):
+            val = it.get(f"amount{i}")
+            if val is None:
+                break
+            sized_sum += int(val)
+        if sized_sum and Decimal(sized_sum) != total:
+            return jsonify({"message": f"尺码明细之和({sized_sum})与总数({total})不一致"}), 400
+
+    # 复用你现有的出库流程
+    rid, ts = _outbound_material_helper(data)  # 会调用 _create_outbound_record / _create_outbound_record_details
+    db.session.commit()
+    return jsonify({"message": "success", "outboundRId": rid, "outboundTime": ts}), 200
+@material_storage_bp.route("/warehouse/orderoutbound/records", methods=["GET"])
+def list_order_outbound_records():
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+    order_rid = (request.args.get("orderRId") or "").strip()
+    if not order_rid:
+        return jsonify({"message": "缺少 orderRId"}), 400
+    order, order_shoe = _find_order_shoe(order_rid)
+
+    q = (
+        db.session.query(OutboundRecord, OutboundRecordDetail)
+        .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
+        .filter(OutboundRecordDetail.order_id == order.order_id)
+        .order_by(desc(OutboundRecord.outbound_datetime))
+    )
+    total = q.count()
+    rows = q.limit(page_size).offset((page - 1) * page_size).all()
+    result = []
+    for rec, det in rows:
+        result.append({
+            "outboundRecordId": rec.outbound_record_id,
+            "outboundRId": rec.outbound_rid,
+            "timestamp": format_datetime(rec.outbound_datetime),
+            "picker": rec.picker,
+            "remark": rec.remark,
+            "approvalStatus": rec.approval_status,
+            "outboundType": OUTBOUND_TYPE_MAPPING.get(rec.outbound_type, "生产出库"),
+            "totalPrice": rec.total_price,
+            "detailId": det.id,
+            "outboundAmount": det.outbound_amount
+        })
+    return {"result": result, "total": total}
+def _format_period(order):
+    try:
+        s = order.order_start_date.strftime("%Y-%m-%d") if getattr(order, "order_start_date", None) else ""
+        e = order.order_end_date.strftime("%Y-%m-%d") if getattr(order, "order_end_date", None) else ""
+        return f"{s} ~ {e}" if (s or e) else ""
+    except Exception:
+        return ""
+
+# ==== 列出“有可出库材料”的订单 ====
+@material_storage_bp.route("/warehouse/orderoutbound/orders", methods=["GET"])
+def list_order_have_available_materials():
+    """
+    列出存在可用库存（current_amount > 0）的订单（去重到订单级），支持关键字模糊搜索 & 分页。
+    关键字匹配字段：订单号 / 客户名 / 商标 / 客户型号 / 鞋型RID
+    返回字段：orderRId, shoeRId(任取其一，展示用), customerName, brand, productName, period
+    """
+    keyword = (request.args.get("keyword") or "").strip()
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+
+    # ========== 关联模型（按你的项目模型名校对一下）==========
+    # Order          : order_id, order_rid, customer_name, customer_brand, customer_product_name,
+    #                  order_start_date, order_end_date
+    # OrderShoe      : order_shoe_id, order_id, shoe_id
+    # Shoe           : shoe_id, shoe_rid
+    # MaterialStorage: material_storage_id, order_shoe_id, current_amount
+    #
+    # 如果你部分字段命名不同，请在下面的筛选处替换为你的真实字段名。
+
+    # 1) 构造一个“该订单是否有可用库存” 的 EXISTS 子查询
+    ms_exists = exists().where(
+        and_(
+            MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
+            OrderShoe.order_id == Order.order_id,
+            MaterialStorage.current_amount > 0
+        )
+    )
+
+    # 2) 关键词匹配（订单自身字段 + 通过鞋型RID匹配）
+    filters = []
+    if keyword:
+        kw = f"%{keyword}%"
+        filters.append(or_(
+            Order.order_rid.ilike(kw),
+            Customer.customer_name.ilike(kw),
+            Customer.customer_brand.ilike(kw),
+            OrderShoe.customer_product_name.ilike(kw),
+            # 通过子查询匹配鞋型RID
+            exists().where(
+                and_(
+                    OrderShoe.order_id == Order.order_id,
+                    Shoe.shoe_id == OrderShoe.shoe_id,
+                    Shoe.shoe_rid.ilike(kw),
+                )
+            )
+        ))
+
+    # 3) 主查询：只查订单（去重粒度为订单）
+    q = (
+        db.session.query(Order, Customer, OrderShoe)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .filter(ms_exists)  # 有可用库存
+    )
+    if filters:
+        q = q.filter(*filters)
+
+    # 建议按开单日期或订单号倒序
+    # 注意有的库字段可能为 None，desc + nullslast 有的方言不支持，可简化为 desc(order_id)
+    q = q.order_by(desc(getattr(Order, "order_start_date", Order.order_id)))
+
+    # 4) 计算总数并分页
+    total = q.count()
+    orders = q.limit(page_size).offset((page - 1) * page_size).all()
+
+    # 5) 为展示取“一个鞋型RID”（避免 ONLY_FULL_GROUP_BY，逐条取，不会重复很多；如需极致性能可写成聚合子查询）
+    result = []
+    if orders:
+        # 一次性把所有 order_id 拿出来，批量查每个订单的一个鞋型RID以减少 N+1（可选优化）
+        order_ids = [o.Order.order_id for o in orders]
+        # 取每个订单的最小 shoe_rid 作为展示（你也可以改成最新/字典序）
+        sub = (
+            db.session.query(
+                OrderShoe.order_id.label("oid"),
+                func.min(Shoe.shoe_rid).label("any_shoe_rid")
+            )
+            .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+            .filter(OrderShoe.order_id.in_(order_ids))
+            .group_by(OrderShoe.order_id)
+            .all()
+        )
+        oid2rid = {row.oid: row.any_shoe_rid for row in sub}
+
+        for o in orders:
+            result.append({
+                "orderRId": o.Order.order_rid,
+                "shoeRId": oid2rid.get(o.Order.order_id),  # 展示一个代表鞋型RID（可为空）
+                "customerName": getattr(o.Customer, "customer_name", None),
+                "brand": getattr(o.Customer, "customer_brand", None),
+                "productName": getattr(o.OrderShoe, "customer_product_name", None),
+                "period": _format_period(o),
+            })
+
+    return jsonify({"result": result, "total": total})
+
