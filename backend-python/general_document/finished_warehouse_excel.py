@@ -238,7 +238,7 @@ def build_finished_inbound_excel(filters: dict):
         .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             FinishedShoeStorage,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_id,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .join(
             ShoeInboundRecordDetail,
@@ -392,7 +392,7 @@ def build_finished_outbound_excel(filters: dict):
         .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             FinishedShoeStorage,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_id,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id
         )
         .join(
             ShoeOutboundRecordDetail,
@@ -527,7 +527,7 @@ def build_finished_inout_excel(filters: dict):
         .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             FinishedShoeStorage,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_id,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .join(
             ShoeInboundRecordDetail,
@@ -574,7 +574,7 @@ def build_finished_inout_excel(filters: dict):
         .join(Color, Color.color_id == ShoeType.color_id)
         .join(
             FinishedShoeStorage,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_id,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .join(
             ShoeOutboundRecordDetail,
