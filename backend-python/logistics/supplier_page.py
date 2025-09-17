@@ -80,10 +80,28 @@ def delete_supplier():
         return jsonify({"message": "无效供应商id"}), 400
 
     # check whether the supplier referenced
-    material = db.session.query(Material).filter(Material.material_supplier == supplier_id).first()
+    material = (
+        db.session.query(Material)
+        .filter(Material.material_supplier == supplier_id)
+        .first()
+    )
     if material:
         return jsonify({"message": "该供应商已被物料引用，无法删除"}), 400
-    
+    inbound_record = (
+        db.session.query(InboundRecord)
+        .filter(InboundRecord.supplier_id == supplier_id)
+        .first()
+    )
+    if inbound_record:
+        return jsonify({"message": "该供应商已被入库单引用，无法删除"}), 400
+    outboundRecord = (
+        db.session.query(OutboundRecord)
+        .filter(OutboundRecord.supplier_id == supplier_id)
+        .first()
+    )
+    if outboundRecord:
+        return jsonify({"message": "该供应商已出库单引用，无法删除"}), 400
+
     stmt = delete(Supplier).where(Supplier.supplier_id == supplier_id)
     db.session.execute(stmt)
     db.session.commit()
