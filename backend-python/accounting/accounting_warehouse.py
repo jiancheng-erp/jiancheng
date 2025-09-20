@@ -201,11 +201,11 @@ def get_warehouse_outbound_record():
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
         res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res[to_camel('unit_price')] = material_storage.average_price
+        res[to_camel('unit_price')] = outbound_record_detail.unit_price
         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
         res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department] if outbound_record.outbound_department else ''
-        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
+        res[to_camel('item_total_price')] = outbound_record_detail.item_total_price
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
     
