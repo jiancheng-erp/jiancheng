@@ -13,9 +13,11 @@ import json
 from script.refresh_spu_rid import generate_spu_rid
 from logger import logger
 from login.login import current_user_info
+from domain.dto.MaterialStorageDTO import MaterialStorageDTO
+from service.warehouse.material_storage_service import MaterialStorageService
 
 material_storage_bp = Blueprint("material_storage_bp", __name__)
-
+material_storage_service = MaterialStorageService()
 
 @material_storage_bp.route(
     "/warehouse/warehousemanager/getallmaterialtypes", methods=["GET"]
@@ -58,6 +60,16 @@ def get_all_composite_suppliers():
     "/warehouse/warehousemanager/getallmaterialinfo", methods=["GET"]
 )
 def get_all_material_info():
+    params = request.args.to_dict()
+    dto = MaterialStorageDTO.model_validate(params)
+    result, count_result = material_storage_service.get_all_material_info(dto)
+    return {"result": result, "total": count_result}
+
+
+@material_storage_bp.route(
+    "/warehouse/warehousemanager/getallmaterialinfoold", methods=["GET"]
+)
+def get_all_material_info_old():
     """
     op_type:
         0: show all orders,
