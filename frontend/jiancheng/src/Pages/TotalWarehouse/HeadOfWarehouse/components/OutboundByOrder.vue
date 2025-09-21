@@ -92,13 +92,24 @@
                 <template #header>
                     <div class="flex items-center justify-between">
                         <div>可出库材料（{{ total }}）</div>
-                        <div class="text-sm opacity-80">已选 {{ selectedItems.length }} 条，合计出库：{{ totalOutbound }}</div>
+                        <div class="text-sm opacity-80">已选 {{ selectedIdSet.size }} 条，合计出库：{{ totalOutboundGlobal }}</div>
                     </div>
                 </template>
 
                 <div class="panel-grid">
                     <!-- 表格占满 -->
-                    <el-table :data="rows" border stripe height="100%" @selection-change="onSelect">
+                    <el-table
+                        ref="tableRef"
+                        :data="rows"
+                        border
+                        stripe
+                        height="100%"
+                        :row-key="(row) => row.materialStorageId"
+                        :reserve-selection="true"
+                        @select="onRowSelect"
+                        @select-all="onSelectAll"
+                        @selection-change="onSelectionChange"
+                    >
                         <el-table-column type="selection" width="44" />
                         <el-table-column prop="materialName" label="材料" width="140" />
                         <el-table-column prop="materialModel" label="型号" width="160" show-overflow-tooltip />
@@ -152,7 +163,7 @@
                             </el-select>
                             <el-input v-model.trim="form.picker" placeholder="领料人" style="width: 160px" />
                             <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 220px" />
-                            <el-button type="primary" :loading="submitting" @click="submit">提交出库</el-button>
+                            <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
                         </div>
                     </div>
                 </div>
@@ -302,12 +313,20 @@
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
             <el-button type="primary" v-print="'#printView'">打印</el-button>
+            <template v-if="isPreviewConfirm">
+                <el-button @click="dialogVisible = false">返回修改</el-button>
+                <el-button type="primary" :loading="submitting" @click="doSubmitInDialog">确认提交</el-button>
+            </template>
+            <template v-else>
+                <el-button type="primary" @click="dialogVisible = false">返回</el-button>
+                <el-button type="primary" v-print="'#printView'">打印</el-button>
+            </template>
         </template>
     </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, getCurrentInstance } from 'vue'
+import { ref, reactive, computed, onMounted, getCurrentInstance, nextTick, watch } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -325,6 +344,143 @@ const orderQuery = reactive({ keyword: '', page: 1, pageSize: 10 })
 const orderRows = ref([])
 const orderTotal = ref(0)
 const departments = ref<Array<{ value: number; label: string }>>([])
+const editCache = reactive(new Map<string, { total: number; amounts: number[]; remark: string }>())
+const tableRef = ref()
+/** 跨页全局选择的 id 集合 */
+const selectedIdSet = ref<Set<string>>(new Set())
+const getRowId = (row: any) => String(row?.materialStorageId ?? '')
+/** 计算全局合计出库 */
+const totalOutboundGlobal = computed(() => {
+    let sum = 0
+    selectedIdSet.value.forEach((id) => {
+        const cached = editCache.get(id)
+        if (cached) sum += Number(cached.total || 0)
+    })
+    return sum
+})
+type DisplayRow = {
+    materialName: string
+    materialModel: string
+    materialSpecification: string
+    materialColor: string
+    actualInboundUnit: string
+    orderRId: string
+    shoeRId?: string
+    unitPrice?: number | string
+}
+const displayCache = reactive(new Map<string, DisplayRow>())
+const confirmVisible = ref(false)
+const previewItems = ref<any[]>([])
+const previewTotalQty = computed(() => previewItems.value.reduce((s, it) => s + (Number(it.outboundQuantity) || 0), 0))
+
+// ===== 新增：预览/确认模式标记 =====
+const isPreviewConfirm = ref(false)
+
+// ===== 新增：构建预览明细（使用全局选择 + 缓存）=====
+function buildPreviewItems() {
+    const list: any[] = []
+    selectedIdSet.value.forEach((id) => {
+        const r = rows.value.find((x) => String(x.materialStorageId) === id) // 还在当前页的话也可用
+        const d = displayCache.get(id) // 关键：跨页展示靠它
+        const c = editCache.get(id)
+        const outboundQuantity = Number((c?.total ?? r?._outboundQuantity) || 0)
+        const remark = (c?.remark ?? r?._remark ?? '').toString()
+        const unitPriceNum = Number(d?.unitPrice ?? r?.unitPrice ?? 0)
+        const itemTotal = unitPriceNum * outboundQuantity
+        list.push({
+            materialName: d?.materialName ?? r?.materialName ?? '—',
+            materialModel: d?.materialModel ?? r?.materialModel ?? '—',
+            materialSpecification: d?.materialSpecification ?? r?.materialSpecification ?? '—',
+            materialColor: d?.materialColor ?? r?.materialColor ?? '—',
+            actualInboundUnit: d?.actualInboundUnit ?? r?.actualInboundUnit ?? '—',
+            orderRId: d?.orderRId ?? query.orderRId,
+            shoeRId: d?.shoeRId ?? r?.shoeRId ?? '—',
+            outboundQuantity,
+            unitPrice: Number.isFinite(unitPriceNum) ? unitPriceNum.toFixed(2) : '',
+            itemTotalPrice: Number.isFinite(itemTotal) ? itemTotal.toFixed(2) : '0.00',
+            remark
+        })
+    })
+    return list
+}
+
+// ===== 新增：打开预览确认（复用现有 dialogVisible）=====
+function openConfirm() {
+    if (!query.orderRId) return ElMessage.warning('缺少订单号')
+    if (selectedIdSet.value.size === 0) return ElMessage.warning('请选择要出库的材料')
+    if (form.departmentId == null) return ElMessage.warning('请选择出库至部门')
+
+    // 用于对话框抬头信息（预览阶段还没有出库单号/时间）
+    currentRow.value = {
+        outboundRId: '（提交后生成）',
+        destination: selectedDepartmentName.value || '—',
+        timestamp: '（提交后生成）',
+        outboundType: '订单出库',
+        picker: form.picker || '—',
+        remark: form.remark || '—',
+        totalPrice: '' // 如果需要也可先留空
+    }
+    recordData.value = buildPreviewItems()
+    isPreviewConfirm.value = true
+    dialogVisible.value = true
+}
+
+// ===== 新增：提交载荷（沿用你现有 submit 构造逻辑）=====
+function buildSubmitPayloadItems() {
+    const items: any[] = []
+    selectedIdSet.value.forEach((id) => {
+        const r = rows.value.find((x) => String(x.materialStorageId) === id)
+        const cache = editCache.get(id)
+        const total = cache?.total ?? r?._outboundQuantity ?? 0
+        const amounts = cache?.amounts ?? r?._amounts ?? []
+        const remark = (cache?.remark ?? r?._remark ?? '').toString()
+        const payload: any = { materialStorageId: id, outboundQuantity: Number(total || 0), remark }
+        amounts.forEach((val: number, i: number) => (payload[`amount${i}`] = Number(val || 0)))
+        items.push(payload)
+    })
+    return items
+}
+
+// ===== 新增：在对话框中点“确认提交” =====
+async function doSubmitInDialog() {
+    const items = buildSubmitPayloadItems()
+    if (items.length === 0) return ElMessage.warning('请选择要出库的材料')
+    for (const it of items) {
+        if (!it.outboundQuantity || it.outboundQuantity <= 0) {
+            return ElMessage.error('出库总数必须大于 0')
+        }
+    }
+    try {
+        submitting.value = true
+        const { data } = await axios.post(`${apiBaseUrl}/warehouse/orderoutbound/create`, {
+            orderRId: query.orderRId,
+            picker: form.picker,
+            remark: form.remark,
+            items,
+            departmentId: form.departmentId,
+            destinationDepartmentName: selectedDepartmentName.value
+        })
+        // 提交成功后，切换为“已生成出库单”的展示（保留同一个对话框用于打印）
+        isPreviewConfirm.value = false
+        // 更新抬头为真实单据信息
+        currentRow.value = {
+            ...currentRow.value,
+            outboundRId: data.outboundRId,
+            timestamp: data.outboundTime
+        }
+        // 如果你能拿到详情接口（含单价/金额），这里也可再调一次刷新 recordData：
+        // await viewOutboundRecord(data.outboundRecordId)
+
+        ElMessage.success('出库成功，已生成出库单！可直接打印')
+        // 清空全局选择，重新加载列表
+        selectedIdSet.value.clear()
+        displayCache.clear()
+        selectedItems.value = []
+        await reload(false)
+    } finally {
+        submitting.value = false
+    }
+}
 
 async function loadDepartments() {
     try {
@@ -365,28 +521,28 @@ function selectOrder(orderRId: string) {
     reload(false)
 }
 interface MaterialType {
-  id: number;
-  name: string;
+    id: number
+    name: string
 }
 
 /** 材料区 */
 const loading = ref(false)
 const submitting = ref(false)
 const includeGeneral = ref(0)
-const materialTypes = ref<MaterialType[]>([]);
+const materialTypes = ref<MaterialType[]>([])
 
 const loadMaterialTypes = async () => {
-  try {
-    const res = await axios.get(`${apiBaseUrl}/logistics/getallmaterialtypes`);
-    // 后端返回的每一项包含 materialTypeId 和 materialTypeName
-    materialTypes.value = res.data.map((item: any) => ({
-      id: item.materialTypeId,
-      name: item.materialTypeName,
-    }));
-  } catch (err) {
-    console.error("获取物料类型失败", err);
-  }
-};
+    try {
+        const res = await axios.get(`${apiBaseUrl}/logistics/getallmaterialtypes`)
+        // 后端返回的每一项包含 materialTypeId 和 materialTypeName
+        materialTypes.value = res.data.map((item: any) => ({
+            id: item.materialTypeId,
+            name: item.materialTypeName
+        }))
+    } catch (err) {
+        console.error('获取物料类型失败', err)
+    }
+}
 const query = reactive({ orderRId: '', materialTypeId: undefined as number | undefined, page: 1, pageSize: 10 })
 const rows = ref<any[]>([])
 const originalRows = ref<any[]>([])
@@ -417,26 +573,6 @@ function deepClone<T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj))
 }
 
-async function reload(preserveOriginal = true) {
-    if (!query.orderRId) {
-        ElMessage.warning('请先选择订单')
-        return
-    }
-    loading.value = true
-    try {
-        const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/materials`, {
-            params: { orderRId: query.orderRId, materialTypeId: query.materialTypeId, includeGeneral: includeGeneral.value, page: query.page, pageSize: query.pageSize }
-        })
-        const processed = (data?.result || []).map(normalizeRow)
-        rows.value = processed
-        total.value = data?.total || 0
-        if (!preserveOriginal) originalRows.value = deepClone(processed)
-        await loadRecords()
-    } finally {
-        loading.value = false
-    }
-}
-
 function resetFiltersOnly() {
     query.materialTypeId = undefined
     includeGeneral.value = 0
@@ -446,6 +582,8 @@ function resetFiltersOnly() {
 function resetMaterialsTable() {
     rows.value = (originalRows.value || []).map((r: any) => normalizeRow(deepClone(r)))
     selectedItems.value = []
+    selectedIdSet.value.clear()
+    displayCache.clear()
 }
 function backToOrderSelection() {
     form.departmentId = undefined
@@ -459,6 +597,8 @@ function backToOrderSelection() {
     form.remark = ''
     mode.value = 'order'
     loadOrders()
+    selectedIdSet.value.clear()
+    displayCache.clear()
 }
 
 function onSelect(list: any[]) {
@@ -466,6 +606,7 @@ function onSelect(list: any[]) {
 }
 function syncRowTotal(row: any) {
     row._outboundQuantity = (row._amounts || []).reduce((s: number, v: number) => s + (Number(v) || 0), 0)
+    persistRowEdit(row) // ← 新增
 }
 function syncRowByTotal(row: any) {
     let remaining = Number(row._outboundQuantity || 0)
@@ -475,52 +616,16 @@ function syncRowByTotal(row: any) {
         row._amounts[i] = take
         remaining -= take
     }
+    persistRowEdit(row) // ← 新增
 }
-
-async function submit() {
-    if (!query.orderRId) {
-        ElMessage.warning('缺少订单号')
-        return
-    }
-    if (selectedItems.value.length === 0) {
-        ElMessage.warning('请选择要出库的材料')
-        return
-    }
-    if (form.departmentId == null) {
-        ElMessage.warning('请选择出库至部门')
-        return
-    } // ← 新增校验
-
-    const items = selectedItems.value.map((r: any) => {
-        const payload: any = { materialStorageId: r.materialStorageId, outboundQuantity: Number(r._outboundQuantity || 0), remark: r._remark || '' }
-        ;(r._amounts || []).forEach((val: number, i: number) => (payload[`amount${i}`] = Number(val || 0)))
-        return payload
-    })
-    for (const it of items) {
-        if (!it.outboundQuantity || it.outboundQuantity <= 0) {
-            ElMessage.error('出库总数必须大于 0')
-            return
-        }
-    }
-
-    try {
-        submitting.value = true
-        const { data } = await axios.post(`${apiBaseUrl}/warehouse/orderoutbound/create`, {
-            orderRId: query.orderRId,
-            picker: form.picker,
-            remark: form.remark,
-            items,
-            // ======= 新增字段，传给后端 =======
-            departmentId: form.departmentId,
-            destinationDepartmentName: selectedDepartmentName.value // 可选
-        })
-        ElMessageBox.alert(`出库成功！单号：${data.outboundRId}\n时间：${data.outboundTime}`, '提示', { type: 'success' })
-        selectedItems.value = []
-        await reload(false)
-    } finally {
-        submitting.value = false
-    }
-}
+watch(
+    () => rows.value,
+    () => {
+        // 每次行渲染后，把 remark 的双向绑定也持久化
+        rows.value.forEach((r) => persistRowEdit(r))
+    },
+    { deep: true }
+)
 
 async function loadRecords() {
     const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/records`, { params: { orderRId: query.orderRId, page: 1, pageSize: 50 } })
@@ -640,10 +745,110 @@ function calculateOutboundTotal() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadOrders(), loadDepartments()])
-  loadMaterialTypes();
-  // 如果你不想并行，也可先 loadDepartments 再 loadOrders
+    await Promise.all([loadOrders(), loadDepartments()])
+    loadMaterialTypes()
+    // 如果你不想并行，也可先 loadDepartments 再 loadOrders
 })
+
+/** 勾/取消单行时，同步到 selectedIdSet */
+function onRowSelect(selection: any[], row: any) {
+    const id = getRowId(row)
+    if (!id) return
+    if (selection.some((s) => String(s.materialStorageId) === id)) {
+        selectedIdSet.value.add(id)
+    } else {
+        selectedIdSet.value.delete(id)
+    }
+}
+
+/** 全选/全不选当前页 */
+function onSelectAll(selection: any[]) {
+    const pageIds = rows.value.map((r) => getRowId(r))
+    if (selection.length === 0) {
+        pageIds.forEach((id) => selectedIdSet.value.delete(id))
+    } else {
+        pageIds.forEach((id) => selectedIdSet.value.add(id))
+    }
+}
+
+/** Element Plus 仍然会发这个事件，但它只包含“当前页”的选择。
+ * 我们用它来纠正 selectedIdSet 与当前页的勾选一致性（防抖/幂等即可）。*/
+function onSelectionChange(currentPageSelection: any[]) {
+    const pageIdSet = new Set(rows.value.map((r) => getRowId(r)))
+    const currentSelectedIds = new Set(currentPageSelection.map((r) => String(r.materialStorageId)))
+    // 去掉当前页取消的
+    rows.value.forEach((r) => {
+        if (pageIdSet.has(r.materialStorageId) && !currentSelectedIds.has(r.materialStorageId)) {
+            selectedIdSet.value.delete(r.materialStorageId)
+        }
+        const id = getRowId(r)
+        if (pageIdSet.has(id) && !currentSelectedIds.has(id)) {
+            selectedIdSet.value.delete(id)
+        }
+    })
+    // 加上当前页新增的
+    currentPageSelection.forEach((r) => selectedIdSet.value.add(String(r.materialStorageId)))
+}
+async function reload(preserveOriginal = true) {
+    if (!query.orderRId) {
+        ElMessage.warning('请先选择订单')
+        return
+    }
+    loading.value = true
+    try {
+        const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/materials`, {
+            params: { orderRId: query.orderRId, materialTypeId: query.materialTypeId, includeGeneral: includeGeneral.value, page: query.page, pageSize: query.pageSize }
+        })
+        const processed = (data?.result || []).map(normalizeRow)
+        rows.value = processed
+        rows.value.forEach((r) => {
+            const id = getRowId(r)
+            displayCache.set(id, {
+                materialName: r?.materialName ?? '—',
+                materialModel: r?.materialModel ?? '—',
+                materialSpecification: r?.materialSpecification ?? '—',
+                materialColor: r?.materialColor ?? '—',
+                actualInboundUnit: r?.actualInboundUnit ?? '—',
+                orderRId: query.orderRId,
+                shoeRId: r?.shoeRId ?? '—',
+                unitPrice: r?.unitPrice
+            })
+            const c = editCache.get(getRowId(r))
+            if (c) {
+                r._outboundQuantity = c.total
+                // 如果有尺码列，回填 amounts
+                if (Array.isArray(r._amounts) && Array.isArray(c.amounts) && r._amounts.length === c.amounts.length) {
+                    r._amounts = c.amounts.slice()
+                }
+                r._remark = c.remark || ''
+            }
+        })
+        total.value = data?.total || 0
+        if (!preserveOriginal) originalRows.value = deepClone(processed)
+        await loadRecords()
+    } finally {
+        loading.value = false
+        // —— 关键：回勾当前页已选 —— //
+        await nextTick()
+        if (tableRef.value) {
+            tableRef.value.clearSelection()
+            rows.value.forEach((r) => {
+                if (selectedIdSet.value.has(getRowId(r))) {
+                    tableRef.value.toggleRowSelection(r, true)
+                }
+            })
+        }
+    }
+}
+function persistRowEdit(row: any) {
+    const id = getRowId(row)
+    if (!id) return
+    editCache.set(id, {
+        total: Number(row._outboundQuantity || 0),
+        amounts: (row._amounts || []).map((x: number) => Number(x || 0)),
+        remark: row._remark || ''
+    })
+}
 </script>
 
 <style scoped>
