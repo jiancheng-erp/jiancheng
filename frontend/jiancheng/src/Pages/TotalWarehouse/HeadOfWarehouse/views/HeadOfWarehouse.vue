@@ -19,6 +19,9 @@
                         <el-menu-item index="13" @click="handleMenuClick(13)">
                             <span>订单查询</span>
                         </el-menu-item>
+                        <el-menu-item index="14" @click="handleMenuClick(14)">
+                            <span>按订单出库</span>
+                        </el-menu-item>
                         <!-- <el-menu-item index="11" @click="handleMenuClick(11)">
                             <span>批量采购订单生成及下发</span>
                         </el-menu-item> -->
@@ -99,6 +102,7 @@ import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsCont
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import MakeInventory from '../components/MakeInventory.vue'
 import PurchaseOrderInfo from '../components/PurchaseOrderInfo.vue'
+import OutboundByOrder from '../components/OutboundByOrder.vue'
 
 export default {
     components: {
@@ -121,7 +125,8 @@ export default {
         SupplierManagement,
         FinancialWarehouseDetail,
         MakeInventory,
-        PurchaseOrderInfo
+        PurchaseOrderInfo,
+        OutboundByOrder
     },
     data() {
         return {
@@ -180,6 +185,9 @@ export default {
                     break
                 case 13:
                     this.currentComponent = 'OrderSearch'
+                    break
+                case 14:
+                    this.currentComponent = 'OutboundByOrder'
                     break
                 case 15:
                     this.currentComponent = 'SupplierManagement'
