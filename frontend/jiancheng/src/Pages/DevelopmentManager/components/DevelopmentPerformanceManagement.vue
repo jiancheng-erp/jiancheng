@@ -88,7 +88,7 @@
             </el-col>
         </el-row>
 
-        <el-table :data="paginatedData" border stripe>
+        <el-table :data="paginatedData" border stripe height="500">
             <el-table-column type="expand">
                 <template #default="props">
                     <div v-for="color in props.row.colors" :key="color.shoeTypeId" style="margin-bottom: 10px">
@@ -114,7 +114,7 @@
         <el-pagination
             layout="prev, pager, next"
             :total="performanceData.length"
-            :page-size="10"
+            :page-size="25"
             :current-page="currentPage"
             @current-change="handlePageChange"
             background
@@ -137,6 +137,7 @@ export default {
             designerList: [],
             performanceData: [],
             selectedDesigner: '',
+            selectedDepartment: '',
             dialogVisible: false,
             searchText: '',
             currentPage: 1,
@@ -157,8 +158,8 @@ export default {
             return { totalBusiness, totalProduct }
         },
         paginatedData() {
-            const start = (this.currentPage - 1) * 10
-            const end = start + 10
+            const start = (this.currentPage - 1) * 25
+            const end = start + 25
             return this.performanceData.slice(start, end)
         },
         filteredOrderCount() {
@@ -216,6 +217,7 @@ export default {
         },
         async openPerformanceDialog(row) {
             this.selectedDesigner = row.designer
+            this.selectedDepartment = row.department
             this.dialogVisible = true
             this.searchText = ''
             this.currentPage = 1
@@ -224,6 +226,7 @@ export default {
         async fetchPerformanceData() {
             const params = {
                 designer: this.selectedDesigner,
+                department: this.selectedDepartment,
                 startDate: this.startDateFilter || '',
                 endDate: this.endDateFilter || '',
                 year: this.yearFilter || '',

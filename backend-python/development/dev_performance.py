@@ -12,7 +12,7 @@ from constants import DEFAULT_SUPPLIER
 from wechat_api.send_message_api import send_massage_to_users
 from logger import logger
 from login.login import current_user, current_user_info
-from sqlalchemy import func, case, distinct, or_
+from sqlalchemy import and_, func, case, distinct, or_
 
 dev_performance_bp = Blueprint("dev_performance", __name__)
 
@@ -129,6 +129,7 @@ def get_all_designers():
 @dev_performance_bp.route("/devproductionorder/getallshoeswithadesigner", methods=["GET"])
 def get_all_shoes_with_designer():
     designer = request.args.get("designer")
+    designer_department = request.args.get("department", "").strip()
     start_date = request.args.get("startDate", "").strip()
     end_date = request.args.get("endDate", "").strip()
     year = request.args.get("year", "").strip()
@@ -143,9 +144,9 @@ def get_all_shoes_with_designer():
         return jsonify({"status": "error", "message": "Designer is required"}), 400
 
     if designer == "设计师信息空缺":
-        designer_filter = or_(Shoe.shoe_designer == None, Shoe.shoe_designer == "")
+        designer_filter = and_(or_(Shoe.shoe_designer == None, Shoe.shoe_designer == ""), Shoe.shoe_department_id == designer_department)
     else:
-        designer_filter = (Shoe.shoe_designer == designer)
+        designer_filter = and_(Shoe.shoe_designer == designer, Shoe.shoe_department_id == designer_department)
 
     # 日期筛选优先级：年 > 月 > 指定时间段
     if year:
