@@ -336,7 +336,6 @@ export default {
             this.totalItems = response.data.total
         },
         async getFilterShoes() {
-            this.currentPage = 1
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
                 params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize, available: this.availableFilter }
             })
