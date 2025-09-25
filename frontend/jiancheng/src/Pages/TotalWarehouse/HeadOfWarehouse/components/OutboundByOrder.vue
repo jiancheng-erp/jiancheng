@@ -111,13 +111,13 @@
                         @selection-change="onSelectionChange"
                     >
                         <el-table-column type="selection" width="44" />
-                        <el-table-column prop="materialName" label="材料" width="140" />
-                        <el-table-column prop="materialModel" label="型号" width="160" show-overflow-tooltip />
-                        <el-table-column prop="materialSpecification" label="规格" width="160" show-overflow-tooltip />
-                        <el-table-column prop="materialColor" label="颜色" width="100" />
-                        <el-table-column prop="supplierName" label="供应商" width="160" show-overflow-tooltip />
-                        <el-table-column prop="actualInboundUnit" label="单位" width="80" />
-                        <el-table-column prop="currentAmount" label="库存" width="100" />
+                        <el-table-column prop="materialName" label="材料" />
+                        <el-table-column prop="materialModel" label="型号" show-overflow-tooltip />
+                        <el-table-column prop="materialSpecification" label="规格" show-overflow-tooltip />
+                        <el-table-column prop="materialColor" label="颜色" />
+                        <el-table-column prop="supplierName" label="供应商" show-overflow-tooltip />
+                        <el-table-column prop="actualInboundUnit" label="单位" />
+                        <el-table-column prop="currentAmount" label="库存" />
 
                         <el-table-column label="按尺码分配" min-width="220">
                             <template #default="{ row }">
@@ -128,13 +128,13 @@
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="出库总数" width="160">
+                        <el-table-column label="出库总数">
                             <template #default="{ row }">
                                 <el-input-number v-model="row._outboundQuantity" :min="0" :max="row.currentAmount" :step="1" @change="syncRowByTotal(row)" />
                             </template>
                         </el-table-column>
 
-                        <el-table-column label="备注" width="180">
+                        <el-table-column label="备注">
                             <template #default="{ row }">
                                 <el-input v-model="row._remark" placeholder="可选" />
                             </template>
@@ -142,7 +142,7 @@
                     </el-table>
 
                     <!-- 操作区固定在底部 -->
-                    <div class="panel-footer flex items-center justify-between">
+                    <div class="panel-footer sticky-footer">
                         <el-pagination
                             background
                             layout="total, prev, pager, next, jumper"
@@ -156,14 +156,15 @@
                                 }
                             "
                         />
-                        <div class="flex items-center gap-3">
-                            <!-- 出库至部门 -->
-                            <el-select v-model="form.departmentId" placeholder="出库至部门" style="width: 200px" filterable clearable>
-                                <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
-                            </el-select>
-                            <el-input v-model.trim="form.picker" placeholder="领料人" style="width: 160px" />
-                            <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 220px" />
-                            <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
+                        <div class="footer-actions-scroll">
+                            <div class="flex items-center gap-3 footer-actions">
+                                <el-select v-model="form.departmentId" placeholder="出库至部门" style="width: 200px" filterable clearable>
+                                    <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
+                                </el-select>
+                                <el-input v-model.trim="form.picker" placeholder="领料人" style="width: 160px" />
+                                <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 220px" />
+                                <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
+                            </div>
                         </div>
                     </div>
                 </div>
