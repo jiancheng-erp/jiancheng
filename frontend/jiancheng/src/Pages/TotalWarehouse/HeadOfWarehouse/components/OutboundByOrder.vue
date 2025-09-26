@@ -157,12 +157,30 @@
                             "
                         />
                         <div class="footer-actions-scroll">
-                            <div class="flex items-center gap-3 footer-actions">
+                            <!-- 大于 1280 宽：完整表单横排 -->
+                            <div class="flex items-center gap-3 footer-actions" v-if="!isNarrow">
                                 <el-select v-model="form.departmentId" placeholder="出库至部门" style="width: 200px" filterable clearable>
                                     <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                                 </el-select>
                                 <el-input v-model.trim="form.picker" placeholder="领料人" style="width: 160px" />
                                 <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 220px" />
+                                <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
+                            </div>
+
+                            <!-- ≤1280 宽：控件收纳到 Popover，提交按钮常驻 -->
+                            <div class="flex items-center gap-3 footer-actions" v-else>
+                                <el-popover placement="top" width="360" trigger="click">
+                                    <template #reference>
+                                        <el-button>出库设置</el-button>
+                                    </template>
+                                    <div class="flex flex-col gap-2" style="padding: 4px 2px">
+                                        <el-select v-model="form.departmentId" placeholder="出库至部门" filterable clearable>
+                                            <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
+                                        </el-select>
+                                        <el-input v-model.trim="form.picker" placeholder="领料人" />
+                                        <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" />
+                                    </div>
+                                </el-popover>
                                 <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
                             </div>
                         </div>
@@ -330,6 +348,20 @@
 import { ref, reactive, computed, onMounted, getCurrentInstance, nextTick, watch } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { onUnmounted } from 'vue'
+
+const isNarrow = ref(false)
+function updateNarrow() {
+  // 1280x720 宽度场景走紧凑模式
+  isNarrow.value = window.innerWidth <= 1280
+}
+onMounted(() => {
+  updateNarrow()
+  window.addEventListener('resize', updateNarrow)
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', updateNarrow)
+})
 
 const apiBaseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
@@ -963,5 +995,49 @@ function persistRowEdit(row: any) {
 .sb-stock {
     font-size: 12px;
     opacity: 0.7;
+}
+/* 表格横向滚动容器 */
+.x-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 表格内部最小宽度，避免被压扁（按你的列总宽度调整） */
+:deep(.el-table__header),
+:deep(.el-table__body) {
+  min-width: 1100px;
+}
+
+/* 置底、粘滞的操作条，也能横向滚动 */
+.sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color);
+  box-shadow: 0 -1px 6px rgba(0,0,0,.06);
+}
+
+/* 操作区允许横向滚动，按钮不再被截断 */
+.footer-actions-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 让横向滚动生效：内部内容使用 inline-flex */
+.footer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+}
+
+/* 文本不换行，避免把行高挤高 */
+.nowrap { white-space: nowrap; }
+
+/* 小屏下允许换行以进一步容错（可保留/删除） */
+@media (max-width: 1200px) {
+  .footer-actions { flex-wrap: wrap; }
 }
 </style>
