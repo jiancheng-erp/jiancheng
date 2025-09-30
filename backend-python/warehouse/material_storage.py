@@ -17,6 +17,13 @@ from login.login import current_user_info
 material_storage_bp = Blueprint("material_storage_bp", __name__)
 
 
+
+
+def _role_allowed_typenames(staff_id: int | None) -> list[str]:
+    if staff_id is None:
+        return []
+    return STAFF_OUTBOUND_PERMISSIONS.get(int(staff_id), [])
+
 @material_storage_bp.route(
     "/warehouse/warehousemanager/getallmaterialtypes", methods=["GET"]
 )
@@ -2095,6 +2102,8 @@ def get_order_outbound_materials():
     shoe_rid = (request.args.get("shoeRId") or "").strip()
     material_type_id = request.args.get("materialTypeId", type=int)
     include_general = request.args.get("includeGeneral", type=int, default=0)
+    staff_id = request.args.get("staffId", type=int)   # ← 新增
+    allowed_type_names = _role_allowed_typenames(staff_id)
 
     filters = {
         "material_name": request.args.get("materialName", ""),
@@ -2146,7 +2155,7 @@ def get_order_outbound_materials():
         .filter(MaterialStorage.current_amount > 0)
     )
 
-    # 限定为“该订单鞋型专属库存”
+    # 订单/通用库存限定（保留你原逻辑）
     q = q.filter(
         or_(
             MaterialStorage.order_shoe_id == order_shoe_id,
@@ -2154,6 +2163,11 @@ def get_order_outbound_materials():
         )
     )
 
+    # ===== 身份类型过滤（若有）=====
+    if allowed_type_names:
+        q = q.filter(MaterialType.material_type_name.in_(allowed_type_names))
+
+    # ===== 前端下拉选中的 material_type_id 再叠加（交集）=====
     if material_type_id:
         q = q.filter(Material.material_type_id == material_type_id)
 
@@ -2283,30 +2297,30 @@ def _format_period(order):
 # ==== 列出“有可出库材料”的订单 ====
 @material_storage_bp.route("/warehouse/orderoutbound/orders", methods=["GET"])
 def list_order_have_available_materials():
-    """
-    列出存在可用库存（current_amount > 0）的订单（去重到订单级），支持关键字模糊搜索 & 分页。
-    关键字匹配字段：订单号 / 客户名 / 商标 / 客户型号 / 鞋型RID
-    返回字段：orderRId, shoeRId(任取其一，展示用), customerName, brand, productName, period
-    """
     keyword = (request.args.get("keyword") or "").strip()
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("pageSize", type=int, default=10)
+    staff_id = request.args.get("staffId", type=int)   # ← 新增
 
-    # ========== 关联模型（按你的项目模型名校对一下）==========
-    # Order          : order_id, order_rid, customer_name, customer_brand, customer_product_name,
-    #                  order_start_date, order_end_date
-    # OrderShoe      : order_shoe_id, order_id, shoe_id
-    # Shoe           : shoe_id, shoe_rid
-    # MaterialStorage: material_storage_id, order_shoe_id, current_amount
-    #
-    # 如果你部分字段命名不同，请在下面的筛选处替换为你的真实字段名。
+    allowed_type_names = _role_allowed_typenames(staff_id)
 
-    # 1) 构造一个“该订单是否有可用库存” 的 EXISTS 子查询
+    # 如果传了 staffId 但映射不到任何类型，直接返回空
+    if staff_id is not None and not allowed_type_names:
+        return jsonify({"result": [], "total": 0})
+
+    # ===== EXISTS 子查询：有可用库存，且（如有）材料类型属于身份范围 =====
     ms_exists = exists().where(
         and_(
             MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id,
             OrderShoe.order_id == Order.order_id,
-            MaterialStorage.current_amount > 0
+            MaterialStorage.current_amount > 0,
+
+            # 连接到材料类型上做筛选
+            MaterialStorage.spu_material_id == SPUMaterial.spu_material_id,
+            SPUMaterial.material_id == Material.material_id,
+            Material.material_type_id == MaterialType.material_type_id,
+            # 如果没有身份限制，就不加 in_ 条件（用 True() 兜底）
+            (True if not allowed_type_names else MaterialType.material_type_name.in_(allowed_type_names)),
         )
     )
 

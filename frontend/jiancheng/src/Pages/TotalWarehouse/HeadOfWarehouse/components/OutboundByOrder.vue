@@ -16,7 +16,14 @@
 
             <!-- 填充剩余高度的卡片 -->
             <el-card shadow="never" class="card-fill">
-                <template #header>有材料可出库的订单（{{ orderTotal }}）</template>
+                <template #header>
+                    有材料可出库的订单（{{ orderTotal }}）
+                    <template v-if="isRoleRestricted">
+                        <el-tag class="ml-2" size="small" type="info">
+                            {{ allowedTypeNames.join(' / ') }}
+                        </el-tag>
+                    </template>
+                </template>
 
                 <div class="panel-grid">
                     <!-- 表格占满第一行 -->
@@ -97,52 +104,54 @@
                 </template>
 
                 <div class="panel-grid">
-                    <!-- 表格占满 -->
-                    <el-table
-                        ref="tableRef"
-                        :data="rows"
-                        border
-                        stripe
-                        height="100%"
-                        :row-key="(row) => row.materialStorageId"
-                        :reserve-selection="true"
-                        @select="onRowSelect"
-                        @select-all="onSelectAll"
-                        @selection-change="onSelectionChange"
-                    >
-                        <el-table-column type="selection" width="44" />
-                        <el-table-column prop="materialName" label="材料" />
-                        <el-table-column prop="materialModel" label="型号" show-overflow-tooltip />
-                        <el-table-column prop="materialSpecification" label="规格" show-overflow-tooltip />
-                        <el-table-column prop="materialColor" label="颜色" />
-                        <el-table-column prop="supplierName" label="供应商" show-overflow-tooltip />
-                        <el-table-column prop="actualInboundUnit" label="单位" />
-                        <el-table-column prop="currentAmount" label="库存" />
+                    <div class="x-scroll">
+                        <!-- 表格占满 -->
+                        <el-table
+                            ref="tableRef"
+                            :data="rows"
+                            border
+                            stripe
+                            height="100%"
+                            :row-key="(row) => row.materialStorageId"
+                            :reserve-selection="true"
+                            @select="onRowSelect"
+                            @select-all="onSelectAll"
+                            @selection-change="onSelectionChange"
+                        >
+                            <el-table-column type="selection" width="44" />
+                            <el-table-column prop="materialName" label="材料" />
+                            <el-table-column prop="materialModel" label="型号" show-overflow-tooltip />
+                            <el-table-column prop="materialSpecification" label="规格" show-overflow-tooltip />
+                            <el-table-column prop="materialColor" label="颜色" />
+                            <el-table-column prop="supplierName" label="供应商" show-overflow-tooltip />
+                            <el-table-column prop="actualInboundUnit" label="单位" />
+                            <el-table-column prop="currentAmount" label="库存" />
 
-                        <el-table-column label="按尺码分配" min-width="220">
-                            <template #default="{ row }">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-sm opacity-80"> 合计 {{ row._outboundQuantity || 0 }} / 库存 {{ row.currentAmount || 0 }} </span>
-                                    <el-button type="primary" link @click="openSizeEditor(row)">编辑尺码</el-button>
-                                </div>
-                            </template>
-                        </el-table-column>
+                            <el-table-column label="按尺码分配" min-width="160">
+                                <template #default="{ row }">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm opacity-80"> 合计 {{ row._outboundQuantity || 0 }} / 库存 {{ row.currentAmount || 0 }} </span>
+                                        <el-button type="primary" link @click="openSizeEditor(row)">编辑尺码</el-button>
+                                    </div>
+                                </template>
+                            </el-table-column>
 
-                        <el-table-column label="出库总数">
-                            <template #default="{ row }">
-                                <el-input-number v-model="row._outboundQuantity" :min="0" :max="row.currentAmount" :step="1" @change="syncRowByTotal(row)" />
-                            </template>
-                        </el-table-column>
+                            <el-table-column label="出库总数" min-width="120">
+                                <template #default="{ row }">
+                                    <el-input-number v-model="row._outboundQuantity" size="small" :min="0" :max="row.currentAmount" :step="1" @change="syncRowByTotal(row)" />
+                                </template>
+                            </el-table-column>
 
-                        <el-table-column label="备注">
-                            <template #default="{ row }">
-                                <el-input v-model="row._remark" placeholder="可选" />
-                            </template>
-                        </el-table-column>
-                    </el-table>
+                            <el-table-column label="备注">
+                                <template #default="{ row }">
+                                    <el-input v-model="row._remark" placeholder="可选" />
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
 
                     <!-- 操作区固定在底部 -->
-                    <div class="panel-footer sticky-footer">
+                    <div class="panel-footer sticky-footer" ref="footerRef">
                         <el-pagination
                             background
                             layout="total, prev, pager, next, jumper"
@@ -156,32 +165,32 @@
                                 }
                             "
                         />
-                        <div class="footer-actions-scroll">
-                            <!-- 大于 1280 宽：完整表单横排 -->
+                        <div class="footer-actions-scroll" ref="actionsScrollRef">
+                            <!-- >= 收纳阈值：完整横排（但尺寸更紧凑） -->
                             <div class="flex items-center gap-3 footer-actions" v-if="!isNarrow">
-                                <el-select v-model="form.departmentId" placeholder="出库至部门" style="width: 200px" filterable clearable>
+                                <el-select size="small" v-model="form.departmentId" placeholder="出库至部门" style="width: 180px" filterable clearable>
                                     <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                                 </el-select>
-                                <el-input v-model.trim="form.picker" placeholder="领料人" style="width: 160px" />
-                                <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 220px" />
-                                <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
+                                <el-input size="small" v-model.trim="form.picker" placeholder="领料人" style="width: 140px" />
+                                <el-input size="small" v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 200px" />
+                                <el-button size="small" type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
                             </div>
 
-                            <!-- ≤1280 宽：控件收纳到 Popover，提交按钮常驻 -->
+                            <!-- 收纳：控件进 Popover，只留“提交出库”常驻 -->
                             <div class="flex items-center gap-3 footer-actions" v-else>
                                 <el-popover placement="top" width="360" trigger="click">
                                     <template #reference>
-                                        <el-button>出库设置</el-button>
+                                        <el-button size="small">出库设置</el-button>
                                     </template>
                                     <div class="flex flex-col gap-2" style="padding: 4px 2px">
-                                        <el-select v-model="form.departmentId" placeholder="出库至部门" filterable clearable>
+                                        <el-select size="small" v-model="form.departmentId" placeholder="出库至部门" filterable clearable>
                                             <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                                         </el-select>
-                                        <el-input v-model.trim="form.picker" placeholder="领料人" />
-                                        <el-input v-model.trim="form.remark" placeholder="整单备注（可选）" />
+                                        <el-input size="small" v-model.trim="form.picker" placeholder="领料人" />
+                                        <el-input size="small" v-model.trim="form.remark" placeholder="整单备注（可选）" />
                                     </div>
                                 </el-popover>
-                                <el-button type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
+                                <el-button size="small" type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
                             </div>
                         </div>
                     </div>
@@ -352,15 +361,15 @@ import { onUnmounted } from 'vue'
 
 const isNarrow = ref(false)
 function updateNarrow() {
-  // 1280x720 宽度场景走紧凑模式
-  isNarrow.value = window.innerWidth <= 1280
+    // 1280x720 宽度场景走紧凑模式
+    isNarrow.value = window.innerWidth <= 1280
 }
 onMounted(() => {
-  updateNarrow()
-  window.addEventListener('resize', updateNarrow)
+    updateNarrow()
+    window.addEventListener('resize', updateNarrow)
 })
 onUnmounted(() => {
-  window.removeEventListener('resize', updateNarrow)
+    window.removeEventListener('resize', updateNarrow)
 })
 
 const apiBaseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
@@ -406,6 +415,29 @@ const confirmVisible = ref(false)
 const previewItems = ref<any[]>([])
 const previewTotalQty = computed(() => previewItems.value.reduce((s, it) => s + (Number(it.outboundQuantity) || 0), 0))
 
+// 身份识别
+const ROLE_TYPE_MAP: Record<number, string[]> = {
+    40: ['面料','里料','复合'], // 面料仓
+    41: ['底材'], // 底材仓
+    42: ['包材'], // 包材仓
+    11: ['辅料', '饰品'] // 辅料及饰品
+}
+
+const staffId = ref<number | null>(null)
+const allowedTypeNames = computed<string[]>(() => {
+    if (staffId.value == null) return []
+    return ROLE_TYPE_MAP[staffId.value] ?? []
+})
+const isRoleRestricted = computed(() => allowedTypeNames.value.length > 0)
+
+function loadStaffIdFromLocalStorage() {
+    try {
+        const v = localStorage.getItem('staffid')
+        staffId.value = v != null && v !== '' ? Number(v) : null
+    } catch {
+        staffId.value = null
+    }
+}
 // ===== 新增：预览/确认模式标记 =====
 const isPreviewConfirm = ref(false)
 
@@ -534,7 +566,12 @@ async function loadOrders() {
     orderLoading.value = true
     try {
         const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/orders`, {
-            params: { keyword: orderQuery.keyword, page: orderQuery.page, pageSize: orderQuery.pageSize }
+            params: {
+                keyword: orderQuery.keyword,
+                page: orderQuery.page,
+                pageSize: orderQuery.pageSize,
+                staffId: staffId.value ?? undefined // ← 新增
+            }
         })
         orderRows.value = data?.result || []
         orderTotal.value = data?.total || 0
@@ -567,15 +604,25 @@ const materialTypes = ref<MaterialType[]>([])
 const loadMaterialTypes = async () => {
     try {
         const res = await axios.get(`${apiBaseUrl}/logistics/getallmaterialtypes`)
-        // 后端返回的每一项包含 materialTypeId 和 materialTypeName
-        materialTypes.value = res.data.map((item: any) => ({
+        const all = Array.isArray(res.data) ? res.data : []
+
+        const names = allowedTypeNames.value
+        const filtered = names.length ? all.filter((x: any) => names.includes(x.materialTypeName)) : all
+
+        materialTypes.value = filtered.map((item: any) => ({
             id: item.materialTypeId,
             name: item.materialTypeName
         }))
+
+        // 如果身份只有一个类型，默认选中它，减少误操作
+        if (materialTypes.value.length === 1) {
+            query.materialTypeId = materialTypes.value[0].id
+        }
     } catch (err) {
         console.error('获取物料类型失败', err)
     }
 }
+
 const query = reactive({ orderRId: '', materialTypeId: undefined as number | undefined, page: 1, pageSize: 10 })
 const rows = ref<any[]>([])
 const originalRows = ref<any[]>([])
@@ -778,9 +825,10 @@ function calculateOutboundTotal() {
 }
 
 onMounted(async () => {
-    await Promise.all([loadOrders(), loadDepartments()])
-    loadMaterialTypes()
-    // 如果你不想并行，也可先 loadDepartments 再 loadOrders
+    loadStaffIdFromLocalStorage()
+    console.log('当前 staffId=', staffId.value, '，允许的材料类型=', allowedTypeNames.value)
+    await Promise.all([loadDepartments(), loadMaterialTypes()])
+    await loadOrders() // 注意：现在会带上 staffId 过滤
 })
 
 /** 勾/取消单行时，同步到 selectedIdSet */
@@ -830,7 +878,14 @@ async function reload(preserveOriginal = true) {
     loading.value = true
     try {
         const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/materials`, {
-            params: { orderRId: query.orderRId, materialTypeId: query.materialTypeId, includeGeneral: includeGeneral.value, page: query.page, pageSize: query.pageSize }
+            params: {
+                orderRId: query.orderRId,
+                materialTypeId: query.materialTypeId,
+                includeGeneral: includeGeneral.value,
+                page: query.page,
+                pageSize: query.pageSize,
+                staffId: staffId.value ?? undefined // ← 新增
+            }
         })
         const processed = (data?.result || []).map(normalizeRow)
         rows.value = processed
@@ -998,46 +1053,50 @@ function persistRowEdit(row: any) {
 }
 /* 表格横向滚动容器 */
 .x-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* 表格内部最小宽度，避免被压扁（按你的列总宽度调整） */
 :deep(.el-table__header),
 :deep(.el-table__body) {
-  min-width: 1100px;
+    min-width: 1100px;
 }
 
 /* 置底、粘滞的操作条，也能横向滚动 */
 .sticky-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  background: var(--el-bg-color);
-  border-top: 1px solid var(--el-border-color);
-  box-shadow: 0 -1px 6px rgba(0,0,0,.06);
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: var(--el-bg-color);
+    border-top: 1px solid var(--el-border-color);
+    box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.06);
 }
 
 /* 操作区允许横向滚动，按钮不再被截断 */
 .footer-actions-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* 让横向滚动生效：内部内容使用 inline-flex */
 .footer-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
 }
 
 /* 文本不换行，避免把行高挤高 */
-.nowrap { white-space: nowrap; }
+.nowrap {
+    white-space: nowrap;
+}
 
 /* 小屏下允许换行以进一步容错（可保留/删除） */
 @media (max-width: 1200px) {
-  .footer-actions { flex-wrap: wrap; }
+    .footer-actions {
+        flex-wrap: wrap;
+    }
 }
 </style>
