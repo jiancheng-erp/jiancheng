@@ -150,3 +150,10 @@ PRODUCT_OUTBOUND_AUDIT_STATUS = {
 
 ORDER_FINISH_SYMBOL = 16
 BUSINESS_DEPARTMENT = 10
+
+STAFF_OUTBOUND_PERMISSIONS = {
+    40: ['面料', '里料', '复合'],
+    41: ['底材'],
+    42: ['包材'],
+    11: ['辅料', '饰品'],
+}
