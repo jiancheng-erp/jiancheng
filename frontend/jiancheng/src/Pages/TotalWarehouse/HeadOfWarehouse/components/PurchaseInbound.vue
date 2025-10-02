@@ -18,8 +18,11 @@
         <el-col>
             <el-form :inline="true" :model="inboundForm" class="demo-form-inline" :rules="rules" ref="inboundForm">
                 <el-form-item prop="supplierName" label="厂家名称">
-                    <el-autocomplete v-model="inboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
-                        @select="handleSupplierSelect" />
+                    <el-select v-model="inboundForm.supplierName" clearable filterable
+                        @select="handleSupplierSelect">
+                        <el-option v-for="item in materialSupplierOptions" :key="item" :value="item" :label="item">
+                        </el-option>
+                    </el-select>
                 </el-form-item>
                 <el-form-item prop="inboundType" label="入库类型">
                     <el-select v-model="inboundForm.inboundType" filterable clearable @change="handleInboundType">
