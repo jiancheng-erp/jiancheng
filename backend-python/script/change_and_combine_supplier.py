@@ -13,8 +13,7 @@ from models import (
     BomItem, CraftSheetItem, ProductionInstructionItem,
     PurchaseOrderItem, AssetsPurchaseOrderItem,
     InboundRecord, OutboundRecord, TotalPurchaseOrder,
-    ExternalProcessingCost, PurchaseDivideOrder, AccountingPayableAccount, AccountingPayeePayer, AccountingForeignAccountEvent,
-    AccountingPayableTransaction,  # 若模型不存在也没关系，仅用于列检测/可选更新 # 有 supplier_id
+    PurchaseDivideOrder, AccountingPayableAccount, AccountingPayeePayer, AccountingForeignAccountEvent,  # 若模型不存在也没关系，仅用于列检测/可选更新 # 有 supplier_id
 )
 
 # ========== 可配置：含有 supplier_id 的业务表 ==========
@@ -22,7 +21,6 @@ SUPPLIER_FK_TABLES = [
     (InboundRecord, InboundRecord.supplier_id),
     (OutboundRecord, OutboundRecord.supplier_id),
     (TotalPurchaseOrder, TotalPurchaseOrder.supplier_id),
-    (ExternalProcessingCost, ExternalProcessingCost.supplier_id),
     # 有其它含 supplier_id 的表就继续加
 ]
 
@@ -356,60 +354,6 @@ def _merge_accounting_side(session: Session, old_name: str, new_name: str, dry_r
         if not dry_run:
             session.delete(p)
 
-def _merge_supplier_group(session: Session, new_name: str, supplier_ids: list[int], dry_run: bool, log):
-    canonical = _choose_canonical_supplier(session, new_name, supplier_ids)
-    canonical_id = canonical.supplier_id
-
-    if canonical.supplier_name != new_name:
-        log(f"[Supplier] Rename canonical supplier_id={canonical_id} '{canonical.supplier_name}' → '{new_name}'")
-        if not dry_run:
-            canonical.supplier_name = new_name
-            session.flush()
-
-    for sid in sorted(set(supplier_ids) - {canonical_id}):
-        src = session.get(Supplier, sid)
-        if not src:
-            continue
-        log(f"[Supplier] Merge supplier_id={sid} ('{src.supplier_name}') → supplier_id={canonical_id} ('{new_name}')")
-
-        # —— 新增：账务侧按名称合并（old supplier name → new_name）
-        _merge_accounting_side(session, old_name=src.supplier_name, new_name=new_name, dry_run=dry_run, log=log)
-
-        # 1) 更新 purchase_divide_order 的 RID 尾号
-        _update_pdo_rid_suffix(session, sid, canonical_id, dry_run, log)
-
-        # 2) 合并材料
-        src_materials = session.query(Material).filter(Material.material_supplier == sid).all()
-        if src_materials:
-            tgt_pairs = session.query(Material.material_name, Material.material_id).filter(
-                Material.material_supplier == canonical_id
-            ).all()
-            tgt_name_to_id = {n: mid for (n, mid) in tgt_pairs}
-
-            for m in src_materials:
-                name = m.material_name
-                if name in tgt_name_to_id:
-                    target_mid = tgt_name_to_id[name]
-                    log(f"  [Material] '{name}': rebind FK {m.material_id} → {target_mid} and delete old")
-                    _rebind_material_fk(session, m.material_id, target_mid, dry_run, log)
-                else:
-                    log(f"  [Material] '{name}': move supplier {sid} → {canonical_id} (keep id={m.material_id})")
-                    if not dry_run:
-                        m.material_supplier = canonical_id
-                        session.flush()
-
-        # 3) 重定向所有含 supplier_id 的业务表
-        for model, col in SUPPLIER_FK_TABLES:
-            q = session.query(model).filter(col == sid)
-            cnt = q.count()
-            if cnt:
-                log(f"  [SupplierFK] {model.__tablename__}.{col.key}: {cnt} rows {sid} → {canonical_id}")
-                if not dry_run:
-                    q.update({col: canonical_id}, synchronize_session=False)
-
-        # 4) 删除被并入的供应商
-        if not dry_run:
-            session.delete(src)
 
 
 def merge_suppliers_from_excel(app, db, xlsx_path: str, dry_run: bool = True):
