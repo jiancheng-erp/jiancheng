@@ -22,6 +22,12 @@
                         <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>投产指令单创建</span>
                         </el-menu-item>
+                        <el-menu-item index="7" @click="handleMenuClick(7)">
+                            <span>生产BOM用量填写</span>
+                        </el-menu-item>
+                        <el-menu-item index="10" @click="handleMenuClick(10)">
+                            <span>总仓订单缺失材料补采</span>
+                        </el-menu-item>
                         <el-menu-item index="5" @click="handleMenuClick(5)">
                             <span>退回任务列表</span>
                         </el-menu-item>
@@ -54,6 +60,8 @@ import PersonalInfo from '@/components/PersonalInfo.vue';
 import AdjustList from '../../TechnicalManager/components/AdjustList.vue';
 import RevertDashboard from '@/components/RevertDashboard.vue';
 import ProductionOrderCreate from '@/Pages/DevelopmentManager/components/ProductionOrderCreate.vue'
+import SecondBOMListView from '@/Pages/UsageCalculation/components/SecondBOMListView.vue';
+import WarehouseMissingMaterialPurchase from '../components/WarehouseMissingMaterialPurchase.vue';
 import axios from 'axios'
 export default {
     components: {
@@ -63,7 +71,9 @@ export default {
         PersonalInfo,
         AdjustList,
         RevertDashboard,
-        ProductionOrderCreate
+        ProductionOrderCreate,
+        SecondBOMListView,
+        WarehouseMissingMaterialPurchase
     },
     data() {
         return {
@@ -102,6 +112,12 @@ export default {
                     break
                 case 6:
                     this.currentComponent = 'ProductionOrderCreate'
+                    break
+                case 7:
+                    this.currentComponent = 'SecondBOMListView'
+                    break
+                case 10:
+                    this.currentComponent = 'WarehouseMissingMaterialPurchase'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

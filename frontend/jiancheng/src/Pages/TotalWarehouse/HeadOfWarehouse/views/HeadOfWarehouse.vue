@@ -52,6 +52,9 @@
                         <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>盘库功能</span>
                         </el-menu-item>
+                        <el-menu-item index="18" @click="handleMenuClick(18)">
+                            <span>缺失材料补采采购量录入</span>
+                        </el-menu-item>
                         <el-menu-item index="15" @click="handleMenuClick(15)">
                             <span>供货商管理</span>
                         </el-menu-item>
@@ -103,6 +106,7 @@ import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/Financ
 import MakeInventory from '../components/MakeInventory.vue'
 import PurchaseOrderInfo from '../components/PurchaseOrderInfo.vue'
 import OutboundByOrder from '../components/OutboundByOrder.vue'
+import MissingPurchaseAmountInput from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MissingPurchaseAmountInput.vue'
 
 export default {
     components: {
@@ -126,7 +130,8 @@ export default {
         FinancialWarehouseDetail,
         MakeInventory,
         PurchaseOrderInfo,
-        OutboundByOrder
+        OutboundByOrder,
+        MissingPurchaseAmountInput
     },
     data() {
         return {
@@ -197,6 +202,9 @@ export default {
                     break
                 case 17:
                     this.currentComponent = 'PurchaseOrderInfo'
+                    break
+                case 18:
+                    this.currentComponent = 'MissingPurchaseAmountInput'
                     break
             }
         }

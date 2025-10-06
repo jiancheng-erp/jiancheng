@@ -157,3 +157,34 @@ STAFF_OUTBOUND_PERMISSIONS = {
     42: ['包材'],
     11: ['辅料', '饰品'],
 }
+
+MISSING_FLOW_ACTIVE_STATUSES = ["0", "1", "2"]  # 0-已提交, 1-审批中, 2-执行中
+
+FIRST_PURCHASE_FINISH_STATUS = 8
+SECOND_PURCHASE_FINISH_STATUS = 15
+
+TYPE_TEXT = {
+    "S": "面料",
+    "I": "里料",
+    "A": "辅料",
+    "O": "大底",
+    "M": "中底",
+    "H": "烫底",
+    None: "",
+    "": "",
+}
+STATUS_STAGE_NUMERIC = {
+    "0": "技术部已下发",
+    "1": "核定用量已补充",
+    "2": "采购用量填写完成",
+}
+PENDING_NODE_NUMERIC = {
+    "0": "等待用量填写",
+    "1": "等待采购填写",
+    "2": "采购用量填写完成",
+}
+SIZE_BASED_TYPES = {'O': '大底', 'M': '中底', 'H': '烫底'}
+MAT_TYPE_NAME = {
+    'S':'面料','I':'里料','A':'辅料',
+    'O':'大底','M':'中底','H':'烫底'
+}
