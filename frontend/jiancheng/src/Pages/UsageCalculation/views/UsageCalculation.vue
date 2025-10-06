@@ -25,6 +25,9 @@
                         <el-menu-item index="4" @click="handleMenuClick(4)">
                             <span>生产BOM用量填写</span>
                         </el-menu-item>
+                        <el-menu-item index="5" @click="handleMenuClick(5)">
+                            <span>总仓订单缺失材料用量填写</span>
+                        </el-menu-item>
                         <el-menu-item index="3" @click="handleMenuClick(3)">
                             <span>订单查询</span>
                         </el-menu-item>
@@ -53,6 +56,7 @@ import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import SecondBOMListView from '../components/SecondBOMListView.vue';
 import RevertDashboard from '@/components/RevertDashboard.vue';
+import MissingPurchaseUsageInput from '../components/MissingPurchaseUsageInput.vue';
 import axios from 'axios'
 
 
@@ -64,7 +68,8 @@ export default {
         OrderSearch,
         PersonalInfo,
         SecondBOMListView,
-        RevertDashboard
+        RevertDashboard,
+        MissingPurchaseUsageInput
     },
     data() {
         return {
@@ -96,6 +101,9 @@ export default {
                     break
                 case 4:
                     this.currentComponent = 'SecondBOMListView'
+                    break
+                case 5:
+                    this.currentComponent = 'MissingPurchaseUsageInput'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

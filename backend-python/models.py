@@ -9,6 +9,7 @@ from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
 )
+from datetime import datetime
 
 
 class User(db.Model):
@@ -1588,3 +1589,31 @@ class MakeInventoryRecord(db.Model):
     make_inventory_status = db.Column(db.SmallInteger, nullable=False, default=0)
     # 0=未回传  1=已回传
     excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)
+    
+    # models.py (示例，仅供参考)
+class WarehouseMissingPurchaseRecord(db.Model):
+    __tablename__ = "warehouse_missing_purchase_record"
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    order_id = db.Column(db.BigInteger, nullable=False, index=True)
+    order_shoe_id = db.Column(db.BigInteger, nullable=True, index=True)
+    status = db.Column(db.String(1), nullable=False, index=True)  # 0/1/2
+    reason = db.Column(db.String(100))
+    remark = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class WarehouseMissingPurchaseRecordItem(db.Model):
+    __tablename__ = "warehouse_missing_purchase_record_item"
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    record_id = db.Column(db.BigInteger, db.ForeignKey('warehouse_missing_purchase_record.id'), nullable=False, index=True)
+    material_type = db.Column(db.String(1), nullable=True)  # 'S','I','O',...
+    material_id = db.Column(db.BigInteger, nullable=True, index=True)
+    material_model = db.Column(db.String(120))
+    material_specification = db.Column(db.String(120))
+    color = db.Column(db.String(60))
+    unit_usage = db.Column(db.Numeric(18,4))      # 单位用量
+    approval_usage = db.Column(db.Numeric(18,4))  # 核定用量
+    purchase_amount = db.Column(db.Numeric(18,4)) # 采购数量
+    order_shoe_type_id = db.Column(db.BigInteger, nullable=True, index=True)
+    size_qty_arr = db.Column(db.JSON)
+    size_purchase_amount_arr = db.Column(db.JSON)
+
