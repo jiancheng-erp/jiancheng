@@ -40,6 +40,9 @@
                         <el-menu-item index="13" @click="handleMenuClick(13)">
                             <span>采购订单信息</span>
                         </el-menu-item>
+                        <el-menu-item index="14" @click="handleMenuClick(14)">
+                            <span>缺失材料补采采购量录入</span>
+                        </el-menu-item>
                         <el-menu-item index="6" @click="handleMenuClick(6)">
                             <span>仓库管理</span>
                         </el-menu-item>
@@ -88,6 +91,7 @@ import MaterialStorage from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/M
 import { UserFilled } from '@element-plus/icons-vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import PurchaseOrderInfo from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/PurchaseOrderInfo.vue'
+import MissingPurchaseAmountInput from '../components/MissingPurchaseAmountInput.vue'
 export default {
     components: {
         AllHeader,
@@ -106,7 +110,8 @@ export default {
         RevertDashboard,
         MaterialStorage,
         FinancialWarehouseDetail,
-        PurchaseOrderInfo
+        PurchaseOrderInfo,
+        MissingPurchaseAmountInput
     },
     data() {
         return {
@@ -163,6 +168,10 @@ export default {
                     break
                 case 13:
                     this.currentComponent = 'PurchaseOrderInfo'
+                    break
+                case 14:
+                    this.currentComponent = 'MissingPurchaseAmountInput'
+                    break
             }
         },
         async logout() {
