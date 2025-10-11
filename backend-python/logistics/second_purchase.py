@@ -309,6 +309,7 @@ def get_shoe_bom_items():
             TotalBom.total_bom_rid == bom_rid,
             or_(
                 ProductionInstructionItem.material_type == "A",
+                Material.material_type_id == 3,
                 and_(
                     ProductionInstructionItem.material_type == "H",
                     Material.material_name == "烫底"
@@ -369,7 +370,7 @@ def get_shoe_bom_items():
                 ),
                 "materialTypeId": material.material_type_id,
                 "materialType": material_type.material_type_name,
-                "materialProductionInstructionType": production_instruction_item.material_type,
+                "materialProductionInstructionType": production_instruction_item.material_type if production_instruction_item else None,
                 "materialId": material.material_id,
                 "inboundMaterialId": inbound_material_id,
                 "inboundUnit": (
@@ -674,7 +675,7 @@ def get_purchase_divide_orders():
             == PurchaseOrderItem.purchase_divide_order_id,
         )
         .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(
+        .outerjoin(
             ProductionInstructionItem,
             BomItem.production_instruction_item_id
             == ProductionInstructionItem.production_instruction_item_id,

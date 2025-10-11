@@ -1,3 +1,4 @@
+from typing import List
 from flask import Blueprint, jsonify, request, send_file, current_app
 from sqlalchemy.dialects.mysql import insert
 import datetime
@@ -15,6 +16,8 @@ from sqlalchemy.sql.expression import case, func
 from sqlalchemy.orm import aliased
 from sqlalchemy import and_, case, func, text, literal
 from logger import logger
+from script.sync_second_bom_to_poi import sync_for_ost_ids
+
 second_bom_bp = Blueprint("second_bom_bp", __name__)
 
 
@@ -543,89 +546,111 @@ def submit_bom():
 
 @second_bom_bp.route("/secondbom/issueboms", methods=["POST"])
 def issue_boms():
-    order_rid = request.json.get("orderId")
-    order_shoes = request.json.get("orderShoeIds")
-    colors = request.json.get("colors")
-    order_id = (
-        db.session.query(Order).filter(Order.order_rid == order_rid).first().order_id
-    )
+    payload = request.get_json(silent=True) or {}
+    order_rid = payload.get("orderId")
+    order_shoe_rids = payload.get("orderShoeIds") or []
+    colors_matrix = payload.get("colors") or []
+
+    if not order_rid or not order_shoe_rids:
+        return jsonify({"message": "orderId or orderShoeIds missing"}), 400
+
+    order = db.session.query(Order).filter(Order.order_rid == order_rid).first()
+    if not order:
+        return jsonify({"message": f"order {order_rid} not found"}), 404
+    order_id = order.order_id
+
     material_dict = defaultdict(lambda: {"total_usage": 0})
     series_data = []
-    for order_shoe_rid in order_shoes:
-        index = order_shoes.index(order_shoe_rid)
-        color = colors[index]
+    affected_ost_ids: List[int] = []   # ★ 本次下发涉及的 ost，后面只同步这些
+
+    for idx, order_shoe_rid in enumerate(order_shoe_rids):
+        color_list = colors_matrix[idx] if idx < len(colors_matrix) else []
+
         entities = (
             db.session.query(OrderShoe, Shoe)
             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .filter(OrderShoe.order_id == order_id, Shoe.shoe_rid == order_shoe_rid)
             .first()
         )
+        if not entities:
+            logger.warning(f"[issue_boms] order_shoe_rid={order_shoe_rid} not found under order {order_rid}")
+            continue
+
         order_shoe_id = entities.OrderShoe.order_shoe_id
-        craft_sheet_id = (
+
+        craft_sheet = (
             db.session.query(CraftSheet)
-            .join(OrderShoe, CraftSheet.order_shoe_id == OrderShoe.order_shoe_id)
-            .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-            .filter(OrderShoe.order_shoe_id == order_shoe_id)
+            .filter(CraftSheet.order_shoe_id == order_shoe_id)
             .first()
-            .craft_sheet_id
         )
+        if not craft_sheet:
+            return jsonify({"message": f"craft sheet not found for {order_shoe_rid}"}), 400
+        craft_sheet_id = craft_sheet.craft_sheet_id
+
         entities.OrderShoe.process_sheet_upload_status = "3"
+
         current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
         random_string = randomIdGenerater(6)
         total_bom_rid = current_time_stamp + random_string + "TS"
         total_bom = TotalBom(total_bom_rid=total_bom_rid, order_shoe_id=order_shoe_id)
         db.session.add(total_bom)
         db.session.flush()
-        for color_item in color:
-            order_shoe_type_id = (
+
+        for color_item in color_list:
+            # 定位 ost
+            ost_row = (
                 db.session.query(Order, OrderShoe, Shoe, ShoeType, OrderShoeType, Color)
                 .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-                .join(
-                    OrderShoeType,
-                    OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id,
-                )
+                .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
                 .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
                 .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
                 .join(Color, ShoeType.color_id == Color.color_id)
                 .filter(
                     Order.order_rid == order_rid,
                     Shoe.shoe_rid == order_shoe_rid,
+                    Color.color_name == color_item,
                 )
-                .filter(Color.color_name == color_item)
                 .first()
-                .OrderShoeType.order_shoe_type_id
             )
+            if not ost_row:
+                logger.warning(f"[issue_boms] ost not found for shoe_rid={order_shoe_rid}, color={color_item}")
+                continue
+
+            order_shoe_type_id = ost_row.OrderShoeType.order_shoe_type_id
+            affected_ost_ids.append(order_shoe_type_id)  # ★ 纳入本次处理范围
+
+            # 置二次BOM为“已下发”并挂 total_bom
             bom = (
                 db.session.query(Bom)
                 .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 1)
                 .first()
             )
+            if not bom:
+                logger.warning(f"[issue_boms] second BOM missing for ost={order_shoe_type_id}")
+                continue
+
             bom.bom_status = "3"
             bom.total_bom_id = total_bom.total_bom_id
-
             db.session.flush()
+
+            # ====== 原 CraftSheetItem & 导出数据收集逻辑 ======
             bom_id = bom.bom_id
             bom_items = (
                 db.session.query(BomItem, Material, MaterialType, Supplier, Department)
                 .join(Material, Material.material_id == BomItem.material_id)
-                .join(
-                    MaterialType,
-                    MaterialType.material_type_id == Material.material_type_id,
-                )
+                .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
                 .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-                .outerjoin(
-                    Department, Department.department_id == BomItem.department_id
-                )
+                .outerjoin(Department, Department.department_id == BomItem.department_id)
                 .filter(BomItem.bom_id == bom_id)
                 .all()
             )
             for bom_item in bom_items:
-                logger.debug(
-                    bom_item.Material.material_name,
-                    bom_item.BomItem.material_model,
-                    bom_item.BomItem.material_specification,
-                    craft_sheet_id,
-                )
+                # logger.debug(
+                #     bom_item.Material.material_name,
+                #     bom_item.BomItem.material_model,
+                #     bom_item.BomItem.material_specification,
+                #     craft_sheet_id,
+                # )
                 craft_sheet_item = (
                     db.session.query(CraftSheetItem)
                     .filter(
@@ -639,36 +664,27 @@ def issue_boms():
                     )
                     .first()
                 )
-                material_id = craft_sheet_item.material_id
-                material_model = craft_sheet_item.material_model
-                material_specification = craft_sheet_item.material_specification
-                material_color = craft_sheet_item.color
-                remark = craft_sheet_item.remark
-                department_id = craft_sheet_item.department_id
-                material_type = craft_sheet_item.material_type
-                order_shoe_type_id = craft_sheet_item.order_shoe_type_id
-                material_second_type = craft_sheet_item.material_second_type
-                craft_name = bom_item.BomItem.craft_name
-                new_craft_sheet_item = CraftSheetItem(
-                    craft_sheet_id=craft_sheet_id,
-                    material_id=material_id,
-                    material_model=material_model,
-                    material_specification=material_specification,
-                    color=material_color,
-                    remark=remark,
-                    department_id=department_id,
-                    material_type=material_type,
-                    order_shoe_type_id=order_shoe_type_id,
-                    material_second_type=material_second_type,
-                    craft_name=craft_name,
-                    pairs=bom_item.BomItem.pairs,
-                    unit_usage=bom_item.BomItem.unit_usage,
-                    total_usage=bom_item.BomItem.total_usage,
-                    after_usage_symbol=1,
-                )
-                db.session.add(new_craft_sheet_item)
-                db.session.flush()
-                # Create a unique key based on the attributes
+                if craft_sheet_item:
+                    new_craft_sheet_item = CraftSheetItem(
+                        craft_sheet_id=craft_sheet_id,
+                        material_id=craft_sheet_item.material_id,
+                        material_model=craft_sheet_item.material_model,
+                        material_specification=craft_sheet_item.material_specification,
+                        color=craft_sheet_item.color,
+                        remark=craft_sheet_item.remark,
+                        department_id=craft_sheet_item.department_id,
+                        material_type=craft_sheet_item.material_type,
+                        order_shoe_type_id=order_shoe_type_id,
+                        material_second_type=craft_sheet_item.material_second_type,
+                        craft_name=bom_item.BomItem.craft_name,
+                        pairs=bom_item.BomItem.pairs,
+                        unit_usage=bom_item.BomItem.unit_usage,
+                        total_usage=bom_item.BomItem.total_usage,
+                        after_usage_symbol=1,
+                    )
+                    db.session.add(new_craft_sheet_item)
+                    db.session.flush()
+
                 key = (
                     bom_item.MaterialType.material_type_name,
                     bom_item.Material.material_name,
@@ -677,8 +693,6 @@ def issue_boms():
                     bom_item.Supplier.supplier_name,
                     bom_item.BomItem.bom_item_color,
                 )
-
-                # Update the dictionary: sum the total_usage and add other details
                 if key not in material_dict:
                     material_dict[key] = {
                         "材料类型": bom_item.MaterialType.material_type_name,
@@ -688,22 +702,14 @@ def issue_boms():
                         "颜色": bom_item.BomItem.bom_item_color,
                         "单位": bom_item.Material.material_unit,
                         "厂家名称": bom_item.Supplier.supplier_name,
-                        "单位用量": (
-                            bom_item.BomItem.unit_usage
-                            if bom_item.BomItem.unit_usage
-                            else ""
-                        ),
-                        "核定用量": 0,  # Initialize "核定用量" for summing
-                        "使用工段": (
-                            bom_item.Department.department_name
-                            if bom_item.Department
-                            else ""
-                        ),
+                        "单位用量": (bom_item.BomItem.unit_usage or ""),
+                        "核定用量": 0,
+                        "使用工段": (bom_item.Department.department_name if bom_item.Department else ""),
                         "备注": bom_item.BomItem.remark,
                     }
-
-                # Update the total usage (核定用量)
                 material_dict[key]["核定用量"] += bom_item.BomItem.total_usage
+
+        # 清理“发放前”的 craft_sheet_item
         before_usage_craft_sheet_items = (
             db.session.query(CraftSheetItem)
             .filter(
@@ -714,100 +720,74 @@ def issue_boms():
         )
         for item in before_usage_craft_sheet_items:
             db.session.delete(item)
+
+        # 导出 Excel 所需数据
         index = 1
         for material_info in material_dict.values():
             material_info["序号"] = index
             series_data.append(material_info)
             index += 1
-        if (
-            os.path.exists(
-                os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "secondbom")
-            )
-            == False
-        ):
-            os.mkdir(
-                os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "secondbom")
-            )
 
-        image_save_path = os.path.join(
-            FILE_STORAGE_PATH, order_rid, order_shoe_rid, "secondbom", "shoe_image.jpg"
-        )
+        secondbom_dir = os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "secondbom")
+        os.makedirs(secondbom_dir, exist_ok=True)
+
+        image_save_path = os.path.join(secondbom_dir, "shoe_image.jpg")
         logger.debug(image_save_path)
-        order_shoe_id = (
-            db.session.query(OrderShoe, Shoe)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .filter(OrderShoe.order_id == order_id, Shoe.shoe_rid == order_shoe_rid)
-            .first()
-            .OrderShoe.order_shoe_id
-        )
+
         shoe_directory = os.path.join(IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid)
-
-        # Get the list of folders inside the directory
-        folders = os.listdir(shoe_directory)
-
-        # Filter out any non-folder entries (just in case)
-        folders = [f for f in folders if os.path.isdir(os.path.join(shoe_directory, f))]
-
-        # Get the first folder in the directory
+        folders = [f for f in os.listdir(shoe_directory) if os.path.isdir(os.path.join(shoe_directory, f))]
         if folders:
             first_folder = folders[0]
-            image_path = os.path.join(
-                IMAGE_UPLOAD_PATH,
-                "shoe",
-                order_shoe_rid,
-                first_folder,
-                "shoe_image.jpg",
-            )
+            image_path = os.path.join(IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid, first_folder, "shoe_image.jpg")
         else:
-            image_path = os.path.join(
-                IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid, "shoe_image.jpg"
-            )
+            image_path = os.path.join(IMAGE_UPLOAD_PATH, "shoe", order_shoe_rid, "shoe_image.jpg")
+
         generate_excel_file(
             FILE_STORAGE_PATH + "/BOM-V1.0-temp.xlsx",
-            os.path.join(
-                FILE_STORAGE_PATH,
-                order_rid,
-                order_shoe_rid,
-                "secondbom",
-                "二次BOM表.xlsx",
-            ),
+            os.path.join(secondbom_dir, "二次BOM表.xlsx"),
             {
                 "order_id": order_rid,
                 "last_type": "",
                 "input_person": "",
-                "order_finish_time": db.session.query(Order)
-                .filter(Order.order_rid == order_rid)
-                .first()
-                .end_date,
+                "order_finish_time": db.session.query(Order).filter(Order.order_rid == order_rid).first().end_date,
                 "inherit_id": order_shoe_rid,
-                "customer_id": db.session.query(OrderShoe)
-                .filter(OrderShoe.order_shoe_id == order_shoe_id)
-                .first()
-                .customer_product_name,
+                "customer_id": db.session.query(OrderShoe).filter(OrderShoe.order_shoe_id == order_shoe_id).first().customer_product_name,
             },
             series_data,
             image_path,
             image_save_path,
         )
-        processor: EventProcessor = current_app.config["event_processor"]
-        event_list = []
-        try:
-            operation_ids = [60, 61, 62, 63]
-            for operation_id in operation_ids:
-                event = Event(
-                    staff_id=1,
-                    handle_time=datetime.datetime.now(),
-                    operation_id=operation_id,
-                    event_order_id=order_id,
-                    event_order_shoe_id=order_shoe_id,
-                )
-                processor.processEvent(event)
-                event_list.append(event)
-        except Exception as e:
+
+        # 触发事件
+        processor: EventProcessor = current_app.config.get("event_processor")
+        if processor:
+            event_list = []
+            try:
+                for operation_id in [60, 61, 62, 63]:
+                    event = Event(
+                        staff_id=1,
+                        handle_time=datetime.datetime.now(),
+                        operation_id=operation_id,
+                        event_order_id=order_id,
+                        event_order_shoe_id=order_shoe_id,
+                    )
+                    processor.processEvent(event)
+                    event_list.append(event)
+            except Exception as e:
+                logger.exception(f"[issue_boms] event processing failed: {e}")
                 return jsonify({"message": "failed"}), 400
-        db.session.add_all(event_list)
+            db.session.add_all(event_list)
+
+        db.session.flush()
+
+
+    affected_ost_ids = list({int(x) for x in affected_ost_ids})
+    new_bom_cnt, new_poitem_cnt = sync_for_ost_ids(db.session, affected_ost_ids, dry_run=False)
+    logger.info(f"[issue_boms] synced ost={len(affected_ost_ids)}; new primary BOM items={new_bom_cnt}, new PO items={new_poitem_cnt}")
+
     db.session.commit()
     return jsonify({"status": "success"})
+
 
 
 @second_bom_bp.route("/secondbom/download", methods=["GET"])
