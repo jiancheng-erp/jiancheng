@@ -25,6 +25,7 @@
                 <el-tab-pane label="供应商管理"><SupplierManagementView/></el-tab-pane>
                 <el-tab-pane label="物料管理"><MaterialManagementView/></el-tab-pane>
                 <el-tab-pane label="开发绩效管理"><DevelopmentPerformanceManagement/></el-tab-pane>
+                <el-tab-pane label="BOM查询"><OrderSearch/></el-tab-pane>
                 <!-- <el-tab-pane label="库存查看"><InventoryView /></el-tab-pane>
                 <el-tab-pane label="入库记录"><InboundRecords /></el-tab-pane> -->
             </el-tabs>
@@ -54,6 +55,7 @@ import GeneralOrderSearchForWarehouse from '@/components/GeneralOrderSearchForWa
 import SupplierManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SupplierManagementView.vue'
 import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
 import DevelopmentPerformanceManagement from '@/Pages/DevelopmentManager/components/DevelopmentPerformanceManagement.vue'
+import OrderSearch from '@/Pages/UsageCalculation/components/OrderSearch.vue'
 
 let userName = ref('财务部-主管')
 const { setAxiosToken } = useSetAxiosToken()

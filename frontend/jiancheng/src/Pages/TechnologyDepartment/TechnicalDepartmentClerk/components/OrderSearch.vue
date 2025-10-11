@@ -86,10 +86,11 @@
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
-            <el-table-column label="操作" width="400">
+            <el-table-column label="操作" width="600">
                 <template #default="scope">
                     <el-button type="primary" size="default" @click="handleRowClick(scope.row)" :disabled="buttonDisable(scope.row)">查看工艺单上传页面</el-button>
                     <el-button type="primary" size="default" @click="handleRowClick2(scope.row)" :disabled="buttonDisable(scope.row)">查看投产指令单页面</el-button>
+                    <el-button type="primary" size="default" @click="handleRowClick3(scope.row)" :disabled="buttonDisable(scope.row)">查看二次用量填写页面</el-button>
                 </template>
             </el-table-column>
             
@@ -175,6 +176,10 @@ export default {
         },
         handleRowClick2(row) {
             const url = `${window.location.origin}/developmentmanager/productionorder/create/orderid=${row.orderId}`;
+            window.open(url, '_blank');
+        },
+        handleRowClick3(row) {
+            const url = `${window.location.origin}/usagecalculation/secondBOM/orderid=${row.orderId}`;
             window.open(url, '_blank');
         }
     },

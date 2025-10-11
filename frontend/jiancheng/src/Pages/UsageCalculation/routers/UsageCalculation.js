@@ -10,7 +10,7 @@ export default [
         props: true,
         meta: {
             requiresAuth: true,
-            role: [18, 1, 17]
+            role: [18, 1, 17, 10]
         }
     },
     {
@@ -20,7 +20,7 @@ export default [
         props: true,
         meta: {
           requiresAuth: true,
-          role: [18, 1, 17]
+          role: [18, 1, 17, 10]
         }
     },
     {
