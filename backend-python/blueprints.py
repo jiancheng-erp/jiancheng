@@ -57,6 +57,7 @@ from accounting.audit_material_outbound import audit_material_outbound_bp
 from development.dev_performance import dev_performance_bp
 from accounting.accounting_recievable import accounting_recievable_bp
 from technical.missing_material_purchase import missing_material_purchase_bp
+from warehouse.material_storage_snapshot import material_storage_snapshot_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -118,3 +119,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(accounting_recievable_bp)
     app.register_blueprint(make_inventory_bp)
     app.register_blueprint(missing_material_purchase_bp)
+    app.register_blueprint(material_storage_snapshot_bp)

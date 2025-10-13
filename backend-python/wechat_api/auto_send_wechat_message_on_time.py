@@ -1,9 +1,7 @@
-from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import and_
 from models import *
 import datetime
 from wechat_api.send_message_api import send_massage_to_users
-import requests
 from production.scheduling import scheduling_status_converter
 
 def send_message_to_production(app):
@@ -160,51 +158,3 @@ def send_message_to_all(app):
         )
 
         send_massage_to_users(status_message, "070d09bbc28c2cec22535b7ec5d1316b|Wang|ZhongGuiKang|55232b966e1a1348da858dc23135274a|FanJianMing|XieShuWa|YangShuYao")
-
-
-# 启动调度器函数（在主程序中调用）
-def start_scheduler(app):
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        func=send_message_to_all,
-        trigger='cron',
-        hour=9, minute=0,
-        args=[app],
-        id='morning_status_message'
-    )
-    scheduler.add_job(
-        func=send_message_to_all,
-        trigger='cron',
-        hour=12, minute=0,
-        args=[app],
-        id='noon_status_message'
-    )
-    scheduler.add_job(
-        func=send_message_to_all,
-        trigger='cron',
-        hour=18, minute=0,
-        args=[app],
-        id='evening_status_message'
-    )
-    scheduler.add_job(
-        func=send_message_to_production,
-        trigger='cron',
-        hour=9, minute=0,
-        args=[app],
-        id='production_morning_status_message'
-    )
-    scheduler.add_job(
-        func=send_message_to_production,
-        trigger='cron',
-        hour=12, minute=0,
-        args=[app],
-        id='production_noon_status_message'
-    )
-    scheduler.add_job(
-        func=send_message_to_production,
-        trigger='cron',
-        hour=18, minute=0,
-        args=[app],
-        id='production_evening_status_message'
-    )
-    scheduler.start()
