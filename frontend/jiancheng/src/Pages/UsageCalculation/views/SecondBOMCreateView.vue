@@ -119,6 +119,7 @@
                     </el-row>
                     <el-row style="margin-top: 10px">
                         <el-table :data="bomTestData" border height="500">
+                            <el-table-column type="index" label="序号" width="60"></el-table-column>
                             <el-table-column prop="materialType" label="材料类型"> </el-table-column>
                             <el-table-column prop="materialName" label="材料名称"> </el-table-column>
                             <el-table-column prop="materialModel" label="材料类型"> </el-table-column>
@@ -352,6 +353,7 @@
                     </el-row>
                     <el-row style="margin-top: 10px">
                         <el-table :data="editBomData" border height="500">
+                            <el-table-column type="index" label="序号" width="60"></el-table-column>
                             <el-table-column prop="materialType" label="材料类型"> </el-table-column>
                             <el-table-column prop="materialName" label="材料名称"> </el-table-column>
                             <el-table-column prop="materialModel" label="材料类型"> </el-table-column>
