@@ -2263,6 +2263,7 @@ def issue_production_order():
                                 production_instruction_item_id = item.production_instruction_item_id
                             )
                             db.session.add(bom_item)
+                            db.session.flush()
                     else:
                         bom_item = BomItem(
                             bom_id=second_bom_id,
@@ -2281,6 +2282,7 @@ def issue_production_order():
                             production_instruction_item_id=item.production_instruction_item_id
                         )
                         db.session.add(bom_item)
+                        db.session.flush()
         db.session.flush()
         event_arr = []
         processor: EventProcessor = current_app.config["event_processor"]
