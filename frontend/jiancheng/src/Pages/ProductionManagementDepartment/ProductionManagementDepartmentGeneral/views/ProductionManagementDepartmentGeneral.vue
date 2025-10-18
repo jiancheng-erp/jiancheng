@@ -1,64 +1,58 @@
 <template>
-  <el-container>
-    <el-header>
-      <AllHeader></AllHeader>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
     </el-header>
-    <!--引用header-->
-    <el-container>
-      <!-- <el-menu default-active="1" 
-                    class="el-menu-vertical-demo"
-                    :collapse="isCollapse" 
-                    @open="handleOpen" 
-                    @close="handleClose">
-                    <SideMenu></SideMenu>
-            </el-menu> -->
-      <el-aside>
 
-        <div>
-          <el-avatar :icon="UserFilled" :size="100" />
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
         </div>
-        <div style="font-size: x-large">{{ userName }}</div>
 
-        <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-          <el-menu
-            default-active="2"
-            class="el-menu-vertical-demo"
-          >
-            <el-menu-item index="2" @click="handleMenuClick(2)">
-              <span>生产进度</span>
-            </el-menu-item>
-            <el-menu-item index="11" @click="handleMenuClick(11)">
-              <span>订单排期</span>
-            </el-menu-item>
-            <el-menu-item index="9" @click="handleMenuClick(9)">
-              <span>生产报表</span>
-            </el-menu-item>
-            <el-menu-item index="3" @click="handleMenuClick(3)">
-              <span>物料信息</span>
-            </el-menu-item>
-            <!-- <el-menu-item index="4" @click="handleMenuClick(4)">
-              <span>生产管理</span>
-            </el-menu-item> -->
-            <el-menu-item index="5" @click="handleMenuClick(5)">
-              <span>外包信息</span>
-            </el-menu-item>
-            <el-menu-item index="6" @click="handleMenuClick(6)">
-              <span>数量审批</span>
-            </el-menu-item>
-            <el-menu-item index="7" @click="handleMenuClick(7)">
-              <span>外包厂家</span>
-            </el-menu-item>
-            <el-menu-item index="10" @click="handleMenuClick(10)">
-              <span>个人信息</span>
-            </el-menu-item>
-            <el-menu-item index="8" @click="logout()">
-              <span>退出系统</span>
-            </el-menu-item>
-          </el-menu>
-        </div>
+        <!-- 菜单（内部滚动） -->
+        <el-menu
+          :default-active="activeIndex"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item index="2" @click="handleMenuClick(2)">
+            <span>生产进度</span>
+          </el-menu-item>
+          <el-menu-item index="11" @click="handleMenuClick(11)">
+            <span>订单排期</span>
+          </el-menu-item>
+          <el-menu-item index="9" @click="handleMenuClick(9)">
+            <span>生产报表</span>
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick(3)">
+            <span>物料信息</span>
+          </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>外包信息</span>
+          </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>数量审批</span>
+          </el-menu-item>
+          <el-menu-item index="7" @click="handleMenuClick(7)">
+            <span>外包厂家</span>
+          </el-menu-item>
+          <el-menu-item index="10" @click="handleMenuClick(10)">
+            <span>个人信息</span>
+          </el-menu-item>
+          <el-menu-item index="8" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
       </el-aside>
-      <el-main>
-        <component :is="currentComponent"></component>
+
+      <!-- 主内容（内部滚动） -->
+      <el-main class="app-main">
+          <component :is="currentComponent" />
       </el-main>
     </el-container>
   </el-container>
@@ -102,6 +96,7 @@ export default {
   data() {
     return {
       UserFilled,
+      activeIndex: '2',
       currentComponent: 'OrderProgress',
       userName: '',
       logout

@@ -1,20 +1,22 @@
 <template>
-  <el-container>
-    <el-header>
-      <AllHeader></AllHeader>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
     </el-header>
-    <!--引用header-->
-    <el-container>
-      <el-aside>
-        <div>
-          <el-avatar :icon="UserFilled" :size="100" />
-        </div>
-        <div style="font-size: x-large">{{ userName }}</div>
 
-        <div class="aside-menu" style="width: 100%; margin-top: 50px">
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <div class="aside-menu">
           <el-menu
-            default-active="2"
-            class="el-menu-vertical-demo"
+            default-active="1"
+            class="app-menu el-menu-vertical-demo"
           >
             <el-menu-item index="1" @click="handleMenuClick(1)">
               <span>主页看板</span>
@@ -43,8 +45,9 @@
           </el-menu>
         </div>
       </el-aside>
-      <el-main>
-        <component :is="currentComponent"></component>
+
+      <el-main class="app-main">
+          <component :is="currentComponent" />
       </el-main>
     </el-container>
   </el-container>

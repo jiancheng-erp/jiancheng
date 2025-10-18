@@ -1,53 +1,60 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside width="250px"><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-middle;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="2" class="el-menu-vertical-demo">
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>订单管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="10" @click="handleMenuClick(10)">
-                            <span>订单出库</span>
-                        </el-menu-item>
-                        <el-menu-item index="11" @click="handleMenuClick(11)">
-                            <span>历史（已完成）订单</span>
-                        </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>客户/配码管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="4" @click="handleMenuClick(4)">
-                            <span>鞋型管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>码段管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>订单导出</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="handleMenuClick(8)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="9" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent" v-bind="currentProps"></component>
-            </el-main>
-        </el-container>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
+
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <!-- 侧栏（头像区 + 内部滚动菜单） -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <el-menu
+          :default-active="defaultActive"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item index="2" @click="handleMenuClick(2)">
+            <span>订单管理</span>
+          </el-menu-item>
+          <el-menu-item index="10" @click="handleMenuClick(10)">
+            <span>订单出库</span>
+          </el-menu-item>
+          <el-menu-item index="11" @click="handleMenuClick(11)">
+            <span>历史（已完成）订单</span>
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick(3)">
+            <span>客户/配码管理</span>
+          </el-menu-item>
+          <el-menu-item index="4" @click="handleMenuClick(4)">
+            <span>鞋型管理</span>
+          </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>码段管理</span>
+          </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>订单导出</span>
+          </el-menu-item>
+          <el-menu-item index="8" @click="handleMenuClick(8)">
+            <span>个人信息</span>
+          </el-menu-item>
+          <el-menu-item index="99" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主内容（内部滚动） -->
+      <el-main class="app-main">
+        <component :is="currentComponent" v-bind="currentProps" />
+      </el-main>
     </el-container>
+  </el-container>
 </template>
 
 <script>

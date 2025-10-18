@@ -1,13 +1,11 @@
 <template>
-    <el-aside>
-        <div>
-            <el-avatar :icon="UserFilled" :size="100" />
-        </div>
-        <div style="font-size: x-large;">
-            {{ userName }}
-        </div>
-        <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-            <el-menu default-active="3" class="el-menu-vertical-demo">
+  <el-aside class="app-aside">
+    <!-- 头像与用户名 -->
+    <div class="profile">
+      <el-avatar :icon="UserFilled" :size="80" />
+      <div class="profile-name">{{ userName }}</div>
+    </div>
+            <el-menu default-active="3" class="app-menu menu-normal" >
                 <!-- <el-menu-item index="1" @click="handleMenuOption('Dashboard')">
                     <span>任务看板</span>
                 </el-menu-item> -->
@@ -33,7 +31,7 @@
                     <span>退出系统</span>
                 </el-menu-item>
             </el-menu>
-        </div>
+
     </el-aside>
 </template>
 

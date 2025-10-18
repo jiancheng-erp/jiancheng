@@ -1,79 +1,80 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header>
-        <!--引用header-->
-        <el-container>
-            <el-aside
-                ><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-large">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px">
-                    <el-menu default-active="0" class="el-menu-vertical-demo">
-                        <el-menu-item
-                            index="0"
-                            @click="handleMenuClick('MainBoardPage')"
-                        >
-                            <span>主页看板</span>
-                        </el-menu-item>
-                        <el-menu-item
-                            index="1"
-                            @click="handleMenuClick('CostCalcAndProfitAnalysis')"
-                        >
-                            <span>成本计算与盈利分析</span>
-                        </el-menu-item>
-                        <!-- <el-menu-item index="2" @click="handleMenuClick('OrderStatusMonitor')">
-                            <span>订单状态监控</span>
-                        </el-menu-item> -->
-                        <el-menu-item index="2" @click="handleMenuClick('OrderImportantStatus')">
-                            <span>订单关键节点监控</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse')">
-                            <span>退回情况记录统计</span>
-                        </el-menu-item>
-                        <el-menu-item
-                            index="3"
-                            @click="handleMenuClick('MaterialPricesAndCostTrends')"
-                        >
-                            <span>材料价格与成本趋势</span>
-                        </el-menu-item>
-                        <el-menu-item
-                            index="4"
-                            @click="handleMenuClick('FinancialStatusAndDepartmentalInput')"
-                        >
-                            <span>财务状态与部门输入</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation')">
-                            <span>生产订单确认</span>
-                        </el-menu-item>
-                        <el-menu-item index="7" @click="handleMenuClick('FinancialRecievableDetail')">
-                            <span>财务应收明细</span>
-                        </el-menu-item>
-                        <el-menu-item index="10" @click="handleMenuClick('OutboundProduct')">
-                            <span>订单出库</span>
-                        </el-menu-item>
-                        <el-menu-item index="12" @click="handleMenuClick('WagesApproval')">
-                            <span>工价审核</span>
-                        </el-menu-item>
-                        <el-menu-item index="11" @click="handleMenuClick('PersonalInfo')">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="9" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main>
-                <component :is="components[currentComponent]"></component>
-            </el-main>
-        </el-container>
+  <el-container class="app-shell">
+    <!-- 顶部栏 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
+
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <!-- 菜单（内部滚动） -->
+        <el-menu
+          :default-active="activeIndex"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item index="0" @click="handleMenuClick('MainBoardPage', '0')">
+            <span>主页看板</span>
+          </el-menu-item>
+
+          <el-menu-item index="1" @click="handleMenuClick('CostCalcAndProfitAnalysis', '1')">
+            <span>成本计算与盈利分析</span>
+          </el-menu-item>
+
+          <el-menu-item index="2" @click="handleMenuClick('OrderImportantStatus', '2')">
+            <span>订单关键节点监控</span>
+          </el-menu-item>
+
+          <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse', '6')">
+            <span>退回情况记录统计</span>
+          </el-menu-item>
+
+          <el-menu-item index="3" @click="handleMenuClick('MaterialPricesAndCostTrends', '3')">
+            <span>材料价格与成本趋势</span>
+          </el-menu-item>
+
+          <el-menu-item index="4" @click="handleMenuClick('FinancialStatusAndDepartmentalInput', '4')">
+            <span>财务状态与部门输入</span>
+          </el-menu-item>
+
+          <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation', '5')">
+            <span>生产订单确认</span>
+          </el-menu-item>
+
+          <el-menu-item index="7" @click="handleMenuClick('FinancialRecievableDetail', '7')">
+            <span>财务应收明细</span>
+          </el-menu-item>
+
+          <el-menu-item index="10" @click="handleMenuClick('OutboundProduct', '10')">
+            <span>订单出库</span>
+          </el-menu-item>
+
+          <el-menu-item index="12" @click="handleMenuClick('WagesApproval', '12')">
+            <span>工价审核</span>
+          </el-menu-item>
+
+          <el-menu-item index="11" @click="handleMenuClick('PersonalInfo', '11')">
+            <span>个人信息</span>
+          </el-menu-item>
+
+          <el-menu-item index="99" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主体 -->
+      <el-main class="app-main">
+        <component :is="components[currentComponent]" />
+      </el-main>
     </el-container>
+  </el-container>
 </template>
 
 <script setup lang="js">

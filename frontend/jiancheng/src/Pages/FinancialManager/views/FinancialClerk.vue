@@ -1,22 +1,34 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
+    <el-container class="app-shell">
+        <el-header class="app-header">
+            <AllHeader />
         </el-header>
-        <!--引用header-->
-        <el-main>
-            <div class="userInfo" style="display: flex;justify-content: end;align-items: center;right: 50px;position: relative;">
-                <em style="margin-right: 20px;color: dodgerblue;cursor: pointer;" @click="logout">退出登录</em>
-                <span>{{ userName }}</span>
+
+        <el-main class="app-main">
+            <!-- 顶部用户信息栏 -->
+            <div class="user-info">
+                <em class="logout" @click="logout">退出登录</em>
+                <span class="username">{{ userName }}</span>
                 <el-avatar :icon="UserFilled" :size="30" />
             </div>
-            <el-tabs tab-position="left" style="height: 700px" class="demo-tabs" type="border-card">
-                <el-tab-pane label="明细展示"><FinancialDetailsDisplay /></el-tab-pane>
-                <el-tab-pane label="入库待审核"><InOutboundRecords /></el-tab-pane>
-                <el-tab-pane label="入库明细"><InboundDetails /></el-tab-pane>
-                <el-tab-pane label="应收记录"><FinancialRecievableDetail /></el-tab-pane>
-                <!-- <el-tab-pane label="应付信息"><FinancialPayableDetail /></el-tab-pane> -->
 
+            <!-- 左侧标签页 -->
+            <el-tabs tab-position="left" type="border-card" class="finance-tabs tabs-elegant">
+                <el-tab-pane label="明细展示">
+                    <FinancialDetailsDisplay />
+                </el-tab-pane>
+
+                <el-tab-pane label="入库待审核">
+                    <InOutboundRecords />
+                </el-tab-pane>
+
+                <el-tab-pane label="入库明细">
+                    <InboundDetails />
+                </el-tab-pane>
+
+                <el-tab-pane label="应收记录">
+                    <FinancialRecievableDetail />
+                </el-tab-pane>
             </el-tabs>
         </el-main>
     </el-container>
@@ -65,19 +77,56 @@ async function logout() {
     router.push('/login')
 }
 </script>
+
 <style scoped>
-.demo-tabs > .el-tabs__content {
-    padding: 32px;
-    color: #6b778c;
-    font-size: 32px;
-    font-weight: 600;
+/* 使用 main.css 定义的主题变量 */
+:root {
+    --brand: #2193b0;
+    --header-grad-a: #6dd5ed;
+    --header-grad-b: #2193b0;
+    --border-color: #e5e7eb;
+    --shadow-soft: 0 6px 16px rgba(0, 0, 0, 0.08);
+    --radius-lg: 12px;
 }
 
-.el-tabs--right .el-tabs__content,
-.el-tabs--left .el-tabs__content {
-    height: 100%;
+.user-info {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 8px 20px;
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    transition: box-shadow 0.2s ease;
 }
-.demo-tabs > .el-tabs__item{
-  margin-right: 50px;
+
+.user-info:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
+
+.logout {
+    color: var(--brand);
+    cursor: pointer;
+    font-style: normal;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+.logout:hover {
+    color: color-mix(in srgb, var(--brand) 80%, black);
+}
+
+.username {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+
+/* 高度自适应主内容 */
+.app-main {
+    background-color: #f5f7fa;
+    padding: 24px;
+}
+
 </style>

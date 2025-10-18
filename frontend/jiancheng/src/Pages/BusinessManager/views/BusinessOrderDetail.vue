@@ -1,6 +1,6 @@
 <template>
     <el-container>
-        <el-header>
+        <el-header class="app-header">
             <AllHeader></AllHeader>
         </el-header>
         <el-container>

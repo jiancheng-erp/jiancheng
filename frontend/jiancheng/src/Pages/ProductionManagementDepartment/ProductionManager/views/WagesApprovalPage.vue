@@ -1,6 +1,6 @@
 <template>
     <el-container>
-        <el-header height="">
+        <el-header class="app-header">
             <AllHeader></AllHeader>
         </el-header>
         <el-main height="">
