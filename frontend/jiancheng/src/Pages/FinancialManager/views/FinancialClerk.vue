@@ -1,37 +1,45 @@
 <template>
-    <el-container class="app-shell">
-        <el-header class="app-header">
-            <AllHeader />
-        </el-header>
+  <el-container class="app-shell">
+    <!-- 顶部栏 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
 
-        <el-main class="app-main">
-            <!-- 顶部用户信息栏 -->
-            <div class="user-info">
-                <em class="logout" @click="logout">退出登录</em>
-                <span class="username">{{ userName }}</span>
-                <el-avatar :icon="UserFilled" :size="30" />
-            </div>
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
 
-            <!-- 左侧标签页 -->
-            <el-tabs tab-position="left" type="border-card" class="finance-tabs tabs-elegant">
-                <el-tab-pane label="明细展示">
-                    <FinancialDetailsDisplay />
-                </el-tab-pane>
+        <!-- 左侧菜单（替代 el-tabs） -->
+        <el-menu :default-active="activeIndex" class="app-menu" :unique-opened="true">
+          <!-- <el-menu-item index="1" @click="handleMenuClick('FinancialDetailsDisplay','1')">
+            <span>明细展示</span>
+          </el-menu-item> -->
+          <el-menu-item index="2" @click="handleMenuClick('InOutboundRecords','2')">
+            <span>入库待审核</span>
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick('InboundDetails','3')">
+            <span>入库明细</span>
+          </el-menu-item>
+          <el-menu-item index="4" @click="handleMenuClick('FinancialRecievableDetail','4')">
+            <span>应收记录</span>
+          </el-menu-item>
+          <el-menu-item index="99" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
 
-                <el-tab-pane label="入库待审核">
-                    <InOutboundRecords />
-                </el-tab-pane>
-
-                <el-tab-pane label="入库明细">
-                    <InboundDetails />
-                </el-tab-pane>
-
-                <el-tab-pane label="应收记录">
-                    <FinancialRecievableDetail />
-                </el-tab-pane>
-            </el-tabs>
-        </el-main>
+      <!-- 主体 -->
+      <el-main class="app-main">
+        <!-- 内容区：跟随菜单切换 -->
+        <component :is="components[currentComponent]" />
+      </el-main>
     </el-container>
+  </el-container>
 </template>
 
 <script setup lang="js">
@@ -39,94 +47,75 @@ import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
+import { useRouter } from 'vue-router'
+import useSetAxiosToken from '../hooks/useSetAxiosToken'
 
-// import FinancialDetailsDisplay from '../components/FinancialDetailsDisplay.vue'
+/* 4个页面组件（与原 tabs 的 pane 一一对应） */
 import InOutboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InOutboundRecords.vue'
 import InboundDetails from '../components/FinancialWarehouseDetail.vue'
-import FinancialPayableDetail from '../components/FinancialPayableDetail.vue'
 import FinancialRecievableDetail from '../components/FinancialRecievableDetail.vue'
-import useSetAxiosToken from '../hooks/useSetAxiosToken'
-import { useRouter } from 'vue-router'
 
-let userName = ref('财务部-审核')
+const components = {
+  InOutboundRecords,
+  InboundDetails,
+  FinancialRecievableDetail
+}
+
+const userName = ref('财务部-审核')
+const activeIndex = ref('1')
+const currentComponent = ref('FinancialDetailsDisplay')
+
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 const router = useRouter()
 
 onMounted(() => {
-    setAxiosToken()
-    getUserAndCharacter()
+  setAxiosToken()
+  getUserAndCharacter()
 })
 
-// 接口预留，请求后台获取当前登录用户信息
 async function getUserAndCharacter() {
-    const response = await axios.get(`${$api_baseUrl}/general/getcurrentstaffandcharacter`)
-    userName.value = response.data.staffName + '-' + response.data.characterName
+  const { data } = await axios.get(`${$api_baseUrl}/general/getcurrentstaffandcharacter`)
+  userName.value = `${data.staffName}-${data.characterName}`
 }
 
-// 菜单选项切换函数
-function handleMenuClick(value) {
-    // currentComponent.value = value
+function handleMenuClick(name, index) {
+  currentComponent.value = name
+  activeIndex.value = index
 }
 
-// 退出登录
 async function logout() {
-    await axios.post(`${$api_baseUrl}/logout`)
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    router.push('/login')
+  await axios.post(`${$api_baseUrl}/logout`)
+  localStorage.removeItem('token')
+  localStorage.removeItem('role')
+  router.push('/login')
 }
 </script>
 
 <style scoped>
-/* 使用 main.css 定义的主题变量 */
-:root {
-    --brand: #2193b0;
-    --header-grad-a: #6dd5ed;
-    --header-grad-b: #2193b0;
-    --border-color: #e5e7eb;
-    --shadow-soft: 0 6px 16px rgba(0, 0, 0, 0.08);
-    --radius-lg: 12px;
-}
-
+/* 这里沿用 main.css 的外观，仅保留你原来的用户栏微样式 */
 .user-info {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding: 8px 20px;
-    background: #ffffff;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-soft);
-    transition: box-shadow 0.2s ease;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 8px 20px;
+  background: #ffffff;
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-soft, 0 6px 16px rgba(0,0,0,.08));
+  transition: box-shadow .2s ease;
 }
-
-.user-info:hover {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-}
+.user-info:hover { box-shadow: 0 8px 20px rgba(0,0,0,.08); }
 
 .logout {
-    color: var(--brand);
-    cursor: pointer;
-    font-style: normal;
-    font-weight: 500;
-    transition: color 0.2s ease;
+  color: var(--brand, #2193b0);
+  cursor: pointer;
+  font-style: normal;
+  font-weight: 500;
+  transition: color .2s ease;
 }
-.logout:hover {
-    color: color-mix(in srgb, var(--brand) 80%, black);
-}
+.logout:hover { color: color-mix(in srgb, var(--brand) 80%, black); }
 
-.username {
-    font-weight: 600;
-    color: #1e293b;
-}
-
-
-/* 高度自适应主内容 */
-.app-main {
-    background-color: #f5f7fa;
-    padding: 24px;
-}
-
+.username { font-weight: 600; color: #1e293b; }
 </style>

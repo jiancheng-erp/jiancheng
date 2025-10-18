@@ -17,12 +17,10 @@
             <el-table-column prop="orderEndDate" label="订单截止日期"></el-table-column>
             <el-table-column label="文件">
                 <template #default="scope">
-                    <el-button-group>
-                        <el-button type="primary" link size="small" @click="downloadSecondBOM(scope.row)">生产BOM
+                        <el-button type="primary" @click="downloadSecondBOM(scope.row)">生产BOM
                         </el-button>
-                        <el-button type="primary" link size="small" @click="openCraftSheet(scope.row)">生产工艺单
+                        <el-button type="primary" @click="openCraftSheet(scope.row)">生产工艺单
                         </el-button>
-                    </el-button-group>
                 </template>
             </el-table-column>
         </el-table>

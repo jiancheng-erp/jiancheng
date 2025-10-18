@@ -37,7 +37,7 @@
   --brand-100: #dbeafe;
   --brand-200: #bfdbfe;
   --brand-400: #60a5fa;
-  --brand-600: #2563eb;
+  --brand-600: #2193b0;
   --brand-700: #1d4ed8;
 
   --brand:        var(--brand-600);
@@ -140,7 +140,7 @@
 
   --section-gap: 160px;
   --header-h: 64px;
-  --aside-w: clamp(220px, 18vw, 300px);
+  --aside-w: clamp(220px, 10vw, 300px);
 }
 
 /* =================================================================== */
@@ -428,7 +428,6 @@
 .el-button {
   border-radius: 5px;
 }
-
 .vxe-button {
   background: #2193b0 !important;
   border-color: transparent !important;
@@ -492,3 +491,10 @@
   filter: brightness(.98);
 }
 
+.el-aside {
+  --el-aside-width: var(--aside-w) !important;       /* 一些主题用这个变量 */
+  width: var(--aside-w) !important;                  /* 主宽度 */
+  min-width: var(--aside-w) !important;              /* 防止被收缩 */
+  max-width: var(--aside-w) !important;              /* 防止被撑开 */
+  box-sizing: border-box;
+}
