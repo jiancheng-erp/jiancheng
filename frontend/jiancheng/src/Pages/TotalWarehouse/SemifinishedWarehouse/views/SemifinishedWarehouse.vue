@@ -1,45 +1,52 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>半成品入库</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>入\出库记录</span>
-                        </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>库存</span>
-                        </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>生产动态明细</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="4" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
-            </el-main>
-        </el-container>
-    </el-container>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
 
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <!-- 菜单（侧栏内部滚动，由全局 main.css 控制） -->
+        <el-menu
+          :default-active="activeIndex"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item index="1" @click="handleMenuClick(1)">
+            <span>半成品入库</span>
+          </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>入\出库记录</span>
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick(3)">
+            <span>库存</span>
+          </el-menu-item>
+          <el-menu-item index="2" @click="handleMenuClick(2)">
+            <span>生产动态明细</span>
+          </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>个人信息</span>
+          </el-menu-item>
+          <el-menu-item index="4" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主内容（内部滚动） -->
+      <el-main class="app-main">
+        <component :is="currentComponent" />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script>

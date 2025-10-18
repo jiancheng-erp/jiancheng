@@ -1,16 +1,19 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header>
-        <el-container>
-            <Sidebar :onEvent="optionFn" />
-            <el-main> <!--引用main-->
-                <component :is="components[currentTab]"></component>
-            </el-main>
-        </el-container>
-    </el-container>
+  <el-container class="app-shell">
+    <!-- 头部（固定+阴影） -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
 
+    <!-- 身体：侧栏（在 Sidebar 内） + 主区 -->
+    <el-container class="app-body">
+      <Sidebar :onEvent="optionFn" />
+      <el-main class="app-main">
+          <!-- 引用 main -->
+          <component :is="components[currentTab]" />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup>

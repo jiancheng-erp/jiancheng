@@ -1,59 +1,44 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
+    <el-container class="app-shell">
+        <el-header class="app-header">
+            <AllHeader />
+        </el-header>
+
+        <el-container class="app-body">
+            <el-aside class="app-aside">
+                <div class="profile">
+                    <el-avatar :icon="UserFilled" :size="80" class="profile-avatar" />
+                    <div class="profile-name">{{ userName }}</div>
                 </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>任务看板</span>
-                        </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>调版分配与下发</span>
-                        </el-menu-item>
-                        <el-menu-item index="4" @click="handleMenuClick(4)">
-                            <span>生产BOM用量填写审核</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>退回任务列表</span>
-                        </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>订单查询</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="handleMenuClick(8)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="9" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
+
+                <!-- 这里增加 :class="menuDensityClass" -->
+                <el-menu default-active="1" class="app-menu" :unique-opened="true" :class="menuDensityClass">
+                    <el-menu-item index="1" @click="handleMenuClick(1)">任务看板</el-menu-item>
+                    <el-menu-item index="2" @click="handleMenuClick(2)">调版分配与下发</el-menu-item>
+                    <el-menu-item index="4" @click="handleMenuClick(4)">生产BOM用量填写审核</el-menu-item>
+                    <el-menu-item index="5" @click="handleMenuClick(5)">退回任务列表</el-menu-item>
+                    <el-menu-item index="3" @click="handleMenuClick(3)">订单查询</el-menu-item>
+                    <el-menu-item index="8" @click="handleMenuClick(8)">个人信息</el-menu-item>
+                    <el-menu-item index="9" @click="logout">退出系统</el-menu-item>
+                </el-menu>
             </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent" :departmentId="departmentId"></component>
+
+            <el-main class="app-main">
+                <component :is="currentComponent" :departmentId="departmentId" />
             </el-main>
         </el-container>
     </el-container>
-
 </template>
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
-import Dashboard from '../components/TechnicalManagerDashboard.vue';
-import OrderSearch from '../components/OrderSearch.vue';
-import PersonalInfo from '@/components/PersonalInfo.vue';
-import AdjustList from '../components/AdjustList.vue';
-import BOMReviewList from '../components/BOMReviewList.vue';
-import RevertDashboard from '@/components/RevertDashboard.vue';
+import Dashboard from '../components/TechnicalManagerDashboard.vue'
+import OrderSearch from '../components/OrderSearch.vue'
+import PersonalInfo from '@/components/PersonalInfo.vue'
+import AdjustList from '../components/AdjustList.vue'
+import BOMReviewList from '../components/BOMReviewList.vue'
+import RevertDashboard from '@/components/RevertDashboard.vue'
 import axios from 'axios'
 export default {
     components: {

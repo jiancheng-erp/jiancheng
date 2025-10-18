@@ -1,45 +1,45 @@
 <template>
-    <el-container>
-      <el-header>
-        <AllHeader></AllHeader>
-      </el-header>
-      <!--引用header-->
-      <el-container>
-        <el-aside>
-          <div>
-            <el-avatar :icon="UserFilled" :size="100" />
-          </div>
-          <div style="font-size: x-large">{{ userName }}</div>
-  
-          <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-            <el-menu
-              default-active="1"
-              class="el-menu-vertical-demo"
-            >
+  <el-container class="app-shell">
+    <!-- 头部固定 + 阴影 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
+
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <div class="aside-menu">
+          <el-menu default-active="1" class="app-menu">
             <el-menu-item index="1" @click="handleMenuClick(1)">
-                <span>数量填报</span>
-              </el-menu-item>
-              <el-menu-item index="2" @click="handleMenuClick(2)">
-                <span>订单生产明细</span>
-              </el-menu-item>
-              <el-menu-item index="3" @click="handleMenuClick(3)">
-                <span>组号名字管理</span>
-              </el-menu-item>
-              <el-menu-item index="4" @click="handleMenuClick(4)">
-                <span>个人信息</span>
-              </el-menu-item>
-              <el-menu-item index="8" @click="logout()">
-                <span>退出系统</span>
-              </el-menu-item>
-            </el-menu>
-          </div>
-        </el-aside>
-        <el-main>
-          <component :is="currentComponent"></component>
-        </el-main>
-      </el-container>
+              <span>数量填报</span>
+            </el-menu-item>
+            <el-menu-item index="2" @click="handleMenuClick(2)">
+              <span>订单生产明细</span>
+            </el-menu-item>
+            <el-menu-item index="3" @click="handleMenuClick(3)">
+              <span>组号名字管理</span>
+            </el-menu-item>
+            <el-menu-item index="4" @click="handleMenuClick(4)">
+              <span>个人信息</span>
+            </el-menu-item>
+            <el-menu-item index="8" @click="logout()">
+              <span>退出系统</span>
+            </el-menu-item>
+          </el-menu>
+        </div>
+      </el-aside>
+
+      <el-main class="app-main">
+        <component :is="currentComponent"></component>
+      </el-main>
     </el-container>
-  </template>
+  </el-container>
+</template>
   
   <script>
   import AllHeader from '@/components/AllHeader.vue'

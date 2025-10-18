@@ -1,16 +1,18 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
+    <el-container class="app-shell">
+        <!-- 头部：固定高度与阴影 -->
+        <el-header class="app-header">
+            <AllHeader />
         </el-header>
-        <el-container>
+
+        <!-- 身体：侧栏（在 Sidebar 内） + 主区 -->
+        <el-container class="app-body">
             <Sidebar :onEvent="optionFn" />
-            <el-main> <!--引用main-->
-                <component :is="components[currentTab]"></component>
+            <el-main class="app-main">
+                <component :is="components[currentTab]" />
             </el-main>
         </el-container>
     </el-container>
-
 </template>
 
 <script setup>
@@ -31,5 +33,4 @@ const currentTab = ref('LaborPriceReport')
 const optionFn = (option) => {
     currentTab.value = option
 }
-
 </script>
