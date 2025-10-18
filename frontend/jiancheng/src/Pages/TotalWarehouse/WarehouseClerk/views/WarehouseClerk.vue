@@ -1,54 +1,73 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside width="280px"><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu :default-active="defaultPage()" class="el-menu-vertical-demo">
-                        <el-menu-item v-if="['35', '39'].includes(this.staffId)" index="1" @click="handleMenuClick(1)">
-                            <span>材料入库</span>
-                        </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>材料出库</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>按订单出库</span>
-                        </el-menu-item>
-                        <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>出入库审核</span>
-                        </el-menu-item>
-                        <el-menu-item index="13" @click="handleMenuClick(13)">
-                            <span>出入库明细</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>库存</span>
-                        </el-menu-item>
-                        <el-menu-item index="7" @click="handleMenuClick(7)">
-                            <span>订单查询</span>
-                        </el-menu-item>
-                        <el-menu-item index="12" @click="handleMenuClick(12)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent"></component>
-            </el-main>
-        </el-container>
-    </el-container>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
 
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="100" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <!-- 菜单（内部滚动） -->
+        <el-menu
+          :default-active="defaultActive"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item
+            v-if="['35', '39'].includes(staffId)"
+            index="1"
+            @click="handleMenuClick(1)"
+          >
+            <span>材料入库</span>
+          </el-menu-item>
+
+          <el-menu-item index="2" @click="handleMenuClick(2)">
+            <span>材料出库</span>
+          </el-menu-item>
+
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>按订单出库</span>
+          </el-menu-item>
+
+          <el-menu-item index="9" @click="handleMenuClick(9)">
+            <span>出入库审核</span>
+          </el-menu-item>
+
+          <el-menu-item index="13" @click="handleMenuClick(13)">
+            <span>出入库明细</span>
+          </el-menu-item>
+
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>库存</span>
+          </el-menu-item>
+
+          <el-menu-item index="7" @click="handleMenuClick(7)">
+            <span>订单查询</span>
+          </el-menu-item>
+
+          <el-menu-item index="12" @click="handleMenuClick(12)">
+            <span>个人信息</span>
+          </el-menu-item>
+
+          <el-menu-item index="99" @click="logoutHandler">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主内容（内部滚动） -->
+      <el-main class="app-main">
+        <component :is="currentComponent" />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script>

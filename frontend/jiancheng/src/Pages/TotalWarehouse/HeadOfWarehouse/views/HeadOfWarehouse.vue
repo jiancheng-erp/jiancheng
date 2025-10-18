@@ -1,84 +1,78 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside width="280px"><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
+    <el-container class="app-shell">
+        <!-- 头部 -->
+        <el-header class="app-header">
+            <AllHeader />
+        </el-header>
+
+        <!-- 身体：侧栏 + 主区 -->
+        <el-container class="app-body">
+            <!-- 侧栏 -->
+            <el-aside class="app-aside">
+                <div class="profile">
+                    <el-avatar :icon="UserFilled" :size="80" class="profile-avatar" />
+                    <div class="profile-name">{{ userName }}</div>
                 </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="10" class="el-menu-vertical-demo">
-                        <el-menu-item index="10" @click="handleMenuClick(10)">
-                            <span>二次（总仓）采购订单创建</span>
-                        </el-menu-item>
-                        <el-menu-item index="13" @click="handleMenuClick(13)">
-                            <span>订单查询</span>
-                        </el-menu-item>
-                        <el-menu-item index="14" @click="handleMenuClick(14)">
-                            <span>按订单出库</span>
-                        </el-menu-item>
-                        <!-- <el-menu-item index="11" @click="handleMenuClick(11)">
-                            <span>批量采购订单生成及下发</span>
-                        </el-menu-item> -->
-                        <!-- <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>多码采购入库</span>
-                        </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>材料待出库</span>
-                        </el-menu-item> -->
-                        <el-menu-item index="9" @click="handleMenuClick(9)">
-                            <span>出入库审核</span>
-                        </el-menu-item>
-                        <el-menu-item index="16" @click="handleMenuClick(16)">
-                            <span>出入库明细</span>
-                        </el-menu-item>
-                        <el-menu-item index="17" @click="handleMenuClick(17)">
-                            <span>采购订单信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>库存</span>
-                        </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>生产动态明细</span>
-                        </el-menu-item>
-                        <el-menu-item index="4" @click="handleMenuClick(4)">
-                            <span>文件下载</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>盘库功能</span>
-                        </el-menu-item>
-                        <el-menu-item index="18" @click="handleMenuClick(18)">
-                            <span>缺失材料补采采购量录入</span>
-                        </el-menu-item>
-                        <el-menu-item index="15" @click="handleMenuClick(15)">
-                            <span>供货商管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="handleMenuClick(8)">
-                            <span>材料管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="7" @click="handleMenuClick(7)">
-                            <span>码段管理</span>
-                        </el-menu-item>
-                        <el-menu-item index="12" @click="handleMenuClick(12)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="14" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
+
+                <!-- 菜单：自动密度，自身滚动 -->
+                <el-menu default-active="10" class="app-menu" :unique-opened="true">
+                    <el-menu-item index="10" @click="handleMenuClick(10)">
+                        <span>二次（总仓）采购订单创建</span>
+                    </el-menu-item>
+                    <el-menu-item index="13" @click="handleMenuClick(13)">
+                        <span>订单查询</span>
+                    </el-menu-item>
+                    <el-menu-item index="14" @click="handleMenuClick(14)">
+                        <span>按订单出库</span>
+                    </el-menu-item>
+                    <el-menu-item index="9" @click="handleMenuClick(9)">
+                        <span>出入库审核</span>
+                    </el-menu-item>
+                    <el-menu-item index="16" @click="handleMenuClick(16)">
+                        <span>出入库明细</span>
+                    </el-menu-item>
+                    <el-menu-item index="17" @click="handleMenuClick(17)">
+                        <span>采购订单信息</span>
+                    </el-menu-item>
+                    <el-menu-item index="5" @click="handleMenuClick(5)">
+                        <span>库存</span>
+                    </el-menu-item>
+                    <el-menu-item index="3" @click="handleMenuClick(3)">
+                        <span>生产动态明细</span>
+                    </el-menu-item>
+                    <el-menu-item index="4" @click="handleMenuClick(4)">
+                        <span>文件下载</span>
+                    </el-menu-item>
+                    <el-menu-item index="6" @click="handleMenuClick(6)">
+                        <span>盘库功能</span>
+                    </el-menu-item>
+                    <el-menu-item index="18" @click="handleMenuClick(18)">
+                        <span>缺失材料补采采购量录入</span>
+                    </el-menu-item>
+                    <el-menu-item index="15" @click="handleMenuClick(15)">
+                        <span>供货商管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="8" @click="handleMenuClick(8)">
+                        <span>材料管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="7" @click="handleMenuClick(7)">
+                        <span>码段管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="12" @click="handleMenuClick(12)">
+                        <span>个人信息</span>
+                    </el-menu-item>
+                    <el-menu-item index="99" @click="logoutHandler">
+                        <span>退出系统</span>
+                    </el-menu-item>
+                </el-menu>
             </el-aside>
-            <el-main> <!--引用main-->
+
+            <!-- 主内容 -->
+            <el-main class="app-main">
                 <component :is="currentComponent"></component>
             </el-main>
         </el-container>
     </el-container>
-
 </template>
 
 <script>
@@ -136,7 +130,7 @@ export default {
     data() {
         return {
             UserFilled,
-            currentComponent:'SecondPurchaseListView',
+            currentComponent: 'SecondPurchaseListView',
             userName: '',
             logout
         }
@@ -150,8 +144,8 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getcurrentstaffandcharacter`)
             this.userName = response.data.staffName + '-' + response.data.characterName
         },
-        handleMenuClick(index){
-            switch(index) {
+        handleMenuClick(index) {
+            switch (index) {
                 case 10:
                     this.currentComponent = 'SecondPurchaseListView'
                     break
@@ -168,7 +162,7 @@ export default {
                     this.currentComponent = 'OrderProgress'
                     break
                 case 4:
-                    this.currentComponent = 'FileDownload' 
+                    this.currentComponent = 'FileDownload'
                     break
                 case 5:
                     this.currentComponent = 'InboundOutboundHistory'

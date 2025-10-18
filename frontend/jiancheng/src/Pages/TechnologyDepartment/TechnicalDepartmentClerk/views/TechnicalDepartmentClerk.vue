@@ -1,54 +1,61 @@
 <template>
-    <el-container>
-        <el-header>
-            <AllHeader></AllHeader>
-        </el-header> <!--引用header-->
-        <el-container>
-            <el-aside><!--引用aside-->
-                <div>
-                    <el-avatar :icon="UserFilled" :size="100" />
-                </div>
-                <div style="font-size: x-large;">
-                    {{ userName }}
-                </div>
-                <div class="aside-menu" style="width: 100%; margin-top: 50px;">
-                    <el-menu default-active="1" class="el-menu-vertical-demo">
-                        <el-menu-item index="1" @click="handleMenuClick(1)">
-                            <span>任务看板</span>
-                        </el-menu-item>
-                        <el-menu-item index="2" @click="handleMenuClick(2)">
-                            <span>调版分配与下发</span>
-                        </el-menu-item>
-                        <el-menu-item index="6" @click="handleMenuClick(6)">
-                            <span>投产指令单创建</span>
-                        </el-menu-item>
-                        <el-menu-item index="7" @click="handleMenuClick(7)">
-                            <span>生产BOM用量填写</span>
-                        </el-menu-item>
-                        <el-menu-item index="10" @click="handleMenuClick(10)">
-                            <span>总仓订单缺失材料补采</span>
-                        </el-menu-item>
-                        <el-menu-item index="5" @click="handleMenuClick(5)">
-                            <span>退回任务列表</span>
-                        </el-menu-item>
-                        <el-menu-item index="3" @click="handleMenuClick(3)">
-                            <span>订单查询</span>
-                        </el-menu-item>
-                        <el-menu-item index="8" @click="handleMenuClick(8)">
-                            <span>个人信息</span>
-                        </el-menu-item>
-                        <el-menu-item index="9" @click="logout">
-                            <span>退出系统</span>
-                        </el-menu-item>
-                    </el-menu>
-                </div>
-            </el-aside>
-            <el-main> <!--引用main-->
-                <component :is="currentComponent" :departmentId="departmentId"></component>
-            </el-main>
-        </el-container>
-    </el-container>
+  <el-container class="app-shell">
+    <!-- 头部 -->
+    <el-header class="app-header">
+      <AllHeader />
+    </el-header>
 
+    <!-- 身体：侧栏 + 主区 -->
+    <el-container class="app-body">
+      <!-- 侧栏 -->
+      <el-aside class="app-aside">
+        <div class="profile">
+          <el-avatar :icon="UserFilled" :size="80" />
+          <div class="profile-name">{{ userName }}</div>
+        </div>
+
+        <!-- 菜单（内部滚动，由 main.css 的 .app-menu 控制） -->
+        <el-menu
+          :default-active="activeIndex"
+          class="app-menu"
+          :unique-opened="true"
+        >
+          <el-menu-item index="1" @click="handleMenuClick(1)">
+            <span>任务看板</span>
+          </el-menu-item>
+          <el-menu-item index="2" @click="handleMenuClick(2)">
+            <span>调版分配与下发</span>
+          </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>投产指令单创建</span>
+          </el-menu-item>
+          <el-menu-item index="7" @click="handleMenuClick(7)">
+            <span>生产BOM用量填写</span>
+          </el-menu-item>
+          <el-menu-item index="10" @click="handleMenuClick(10)">
+            <span>总仓订单缺失材料补采</span>
+          </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>退回任务列表</span>
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick(3)">
+            <span>订单查询</span>
+          </el-menu-item>
+          <el-menu-item index="8" @click="handleMenuClick(8)">
+            <span>个人信息</span>
+          </el-menu-item>
+          <el-menu-item index="9" @click="logout">
+            <span>退出系统</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主区（内部滚动，由 .app-main 控制） -->
+      <el-main class="app-main">
+        <component :is="currentComponent" :departmentId="departmentId" />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script>
