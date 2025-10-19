@@ -601,7 +601,7 @@ def confirm_make_inventory():
         supplier_id, warehouse_id = None, None
         spu = db.session.get(SPUMaterial, spu_id)
         if not spu:
-            print(f"SPU not found: {spu_id}")
+            logger.logger.debug(f"SPU not found: {spu_id}")
             return None, None
 
         material = db.session.get(Material, spu.material_id)

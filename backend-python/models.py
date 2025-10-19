@@ -9,6 +9,8 @@ from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
 )
+from sqlalchemy import text, DECIMAL, CHAR, Date, BigInteger, Integer, TIMESTAMP, func
+from decimal import Decimal
 
 
 class User(db.Model):
@@ -29,8 +31,8 @@ class BomItem(db.Model):
     )
     material_specification = db.Column(db.String(100), nullable=True)
     material_model = db.Column(db.String(50), nullable=True)
-    unit_usage = db.Column(db.Numeric(10, 5), nullable=False)
-    total_usage = db.Column(db.Numeric(10, 5), nullable=False)
+    unit_usage = db.Column(db.DECIMAL(10, 5), nullable=False)
+    total_usage = db.Column(db.DECIMAL(10, 5), nullable=False)
     department_id = db.Column(
         db.Integer,
     )
@@ -209,17 +211,17 @@ class MaterialStorage(db.Model):
     material_storage_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
     order_id = db.Column(BIGINT, nullable=True)
     order_shoe_id = db.Column(BIGINT, nullable=True)
+    pending_inbound = db.Column(DECIMAL(13, 5), default=0)
+    pending_outbound = db.Column(DECIMAL(13, 5), default=0)
     inbound_amount = db.Column(DECIMAL(13, 5), default=0)
     current_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0)
     unit_price = db.Column(DECIMAL(13, 4), default=0)
     material_outsource_status = db.Column(TINYINT, nullable=False, default=0)
     material_outsource_date = db.Column(DATE, nullable=True)
-    material_estimated_arrival_date = db.Column(DATE, nullable=True)
     actual_inbound_unit = db.Column(CHAR(5), nullable=False)
     spu_material_id = db.Column(INTEGER, nullable=False)
     average_price = db.Column(DECIMAL(13, 4), default=0)
     purchase_order_item_id = db.Column(BIGINT, nullable=True)
-    batch_info_type_id = db.Column(INTEGER, nullable=True)
     material_storage_status = db.Column(CHAR(1), nullable=True)
     shoe_size_columns = db.Column(JSON, nullable=True)
     # Current amounts per size
@@ -270,6 +272,18 @@ class MaterialStorage(db.Model):
     def to_dict(obj):
         """Convert SQLAlchemy object to dictionary."""
         return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+
+
+class MaterialStorageSizeDetail(db.Model):
+    __tablename__ = "material_storage_size_detail"
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    material_storage_id = db.Column(db.BigInteger, nullable=False)
+    size_value = db.Column(db.String(10), nullable=False)
+    order_number = db.Column(db.Integer, nullable=False) # 排序字段
+    pending_inbound = db.Column(db.Integer, nullable=False, default=0)
+    pending_outbound = db.Column(db.Integer, nullable=False, default=0)
+    inbound_amount = db.Column(db.Integer, nullable=False, default=0)
+    current_amount = db.Column(db.Integer, nullable=False, default=0)
 
 
 class Operation(db.Model):
@@ -501,7 +515,7 @@ class OutsourceInfo(db.Model):
     rejection_reason = db.Column(db.String(50), nullable=True)
     order_shoe_id = db.Column(db.BigInteger)
     outbound_counter = db.Column(db.SmallInteger, default=0)
-    total_cost = db.Column(db.Numeric(10, 3), nullable=True)
+    total_cost = db.Column(db.DECIMAL(10, 3), nullable=True)
 
 
 class OutsourceCostDetail(db.Model):
@@ -511,8 +525,8 @@ class OutsourceCostDetail(db.Model):
         db.Integer, primary_key=True, autoincrement=True, nullable=False
     )
     item_name = db.Column(db.String(50), nullable=True)
-    item_cost = db.Column(db.Numeric(10, 3), default=0)
-    item_total_cost = db.Column(db.Numeric(10, 3), default=0)
+    item_cost = db.Column(db.DECIMAL(10, 3), default=0)
+    item_total_cost = db.Column(db.DECIMAL(10, 3), default=0)
     outsource_info_id = db.Column(db.Integer, nullable=False)
     remark = db.Column(db.String(50), nullable=True)
 
@@ -672,7 +686,7 @@ class AssetsPurchaseOrderItem(db.Model):
     material_id = db.Column(db.BigInteger)
     remark = db.Column(db.String(100), nullable=True)
     purchase_divide_order_id = db.Column(db.BigInteger)
-    purchase_amount = db.Column(db.Numeric(10, 5), nullable=True)
+    purchase_amount = db.Column(db.DECIMAL(10, 5), nullable=True)
     material_specification = db.Column(db.String(100), nullable=True)
     material_model = db.Column(db.String(50), nullable=True)
     color = db.Column(db.String(40), nullable=True)
@@ -693,7 +707,7 @@ class AssetsPurchaseOrderItem(db.Model):
     craft_name = db.Column(db.String(100), nullable=True)
     inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_unit = db.Column(db.String(5), nullable=True)
-    adjust_purchase_amount = db.Column(db.Numeric(10, 5), default=0)
+    adjust_purchase_amount = db.Column(db.DECIMAL(10, 5), default=0)
 
     def __repr__(self):
         return f"<AssetsPurchaseOrderItem(assets_purchase_order_item_id={self.assets_purchase_order_item_id})>"
@@ -811,15 +825,19 @@ class ShoeInboundRecord(db.Model):
     inbound_amount = db.Column(db.Integer, nullable=True)
     inbound_revenue = db.Column(db.DECIMAL(13, 4), nullable=True)
     subsequent_stock = db.Column(db.Integer, nullable=True)
-    subsequent_revenue = db.Column(db.Numeric(13, 4), nullable=True)
+    subsequent_revenue = db.Column(db.DECIMAL(13, 4), nullable=True)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
     inbound_type = db.Column(
         db.SmallInteger, nullable=False, default=0, comment="0: 自产\n1: 外包"
     )
     outsource_info_id = db.Column(db.Integer, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
-    transaction_type = db.Column(db.SmallInteger, nullable=False, default=1) # 1: 入库, 2: 撤回
-    related_inbound_record_id = db.Column(db.BigInteger, nullable=True, comment="撤回时关联的入库记录ID")
+    transaction_type = db.Column(
+        db.SmallInteger, nullable=False, default=1
+    )  # 1: 入库, 2: 撤回
+    related_inbound_record_id = db.Column(
+        db.BigInteger, nullable=True, comment="撤回时关联的入库记录ID"
+    )
 
     def __repr__(self):
         return f"<ShoeInboundRecord(id={self.shoe_inbound_record_id}, rid={self.shoe_inbound_rid})>"
@@ -937,7 +955,7 @@ class ExternalProcessingCost(db.Model):
     report_id = db.Column(db.Integer, primary_key=True, nullable=False)
     row_id = db.Column(db.Integer, primary_key=True, nullable=False)
     procedure_name = db.Column(db.String(50), default=0.000)
-    price = db.Column(db.Numeric(10, 3), default=0.000)
+    price = db.Column(db.DECIMAL(10, 3), default=0.000)
     supplier_id = db.Column(db.Integer, nullable=False, default=1)
     note = db.Column(db.String(100), nullable=True)
 
@@ -1567,7 +1585,8 @@ class SPUMaterial(db.Model):
     material_specification = db.Column(db.String(100), nullable=True)
     color = db.Column(db.String(40), nullable=True)
     spu_rid = db.Column(db.String(50), nullable=True)
-    
+
+
 class BatchInfoTemplate(db.Model):
     __tablename__ = "batch_info_template"
     batch_info_template_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1575,10 +1594,13 @@ class BatchInfoTemplate(db.Model):
     pakaging_info_id_json = db.Column(db.JSON, nullable=False)
     template_name = db.Column(db.String(50), nullable=False)
     template_description = db.Column(db.String(200), nullable=True)
-    
+
+
 class MakeInventoryRecord(db.Model):
     __tablename__ = "make_inventory_record"
-    make_inventory_record_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    make_inventory_record_id = db.Column(
+        db.Integer, primary_key=True, autoincrement=True
+    )
     record_date = db.Column(db.Date, nullable=True)
     make_inventory_rid = db.Column(db.String(40), nullable=False, unique=True)
     make_inventory_reason = db.Column(db.String(200), nullable=True)

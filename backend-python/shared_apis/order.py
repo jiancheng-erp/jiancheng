@@ -1342,7 +1342,6 @@ def get_order_full_info():
         order_data["shoes"] = list(
             order_data["shoes"].values()
         )  # Convert shoe dict to list
-        print(order_id)
         all_order_event_times = (
             db.session.query(Event).join(
                 Order, Event.event_order_id == Order.order_id

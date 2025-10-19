@@ -16,7 +16,6 @@ def get_all_materials():
     material_warehouse = request.args.get("warehousename", None)
     factory_name = request.args.get("factoryname", None)
     material_type = request.args.get("materialtype", None)
-    logger.debug(material_name, material_warehouse, factory_name, material_type)
 
     # Start building the query with joinedload to reduce query count
     query = (
