@@ -96,7 +96,7 @@
                     <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
                     <el-table-column prop="remainingAmountRealTime" label="实时剩余数量"></el-table-column>
-                    <el-table-column prop="currentAmount" label="库存"></el-table-column>
+                    <!-- <el-table-column prop="currentAmount" label="库存"></el-table-column> -->
                     <el-table-column label="入库数量">
                         <template #default="scope">
                             <el-input-number v-model="scope.row.inboundQuantity" :min="0" size="small" :precision="5"
@@ -131,7 +131,7 @@
                     <el-table-column prop="materialSpecification" label="规格"></el-table-column>
                     <el-table-column prop="materialColor" label="颜色"></el-table-column>
                     <el-table-column prop="remainingAmountRealTime" label="实时剩余数量"></el-table-column>
-                    <el-table-column prop="currentAmount" label="库存"></el-table-column>
+                    <!-- <el-table-column prop="currentAmount" label="库存"></el-table-column> -->
                 </el-table>
             </div>
         </div>

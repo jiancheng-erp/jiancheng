@@ -8,6 +8,9 @@ from accounting.accounting_transaction import (
     add_payable_entity,
     material_inbound_accounting_event,
 )
+from constants import SHOESIZERANGE
+from decimal import Decimal
+from collections import defaultdict
 
 audit_material_inbound_bp = Blueprint("audit_material_inbound_bp", __name__)
 
@@ -29,7 +32,7 @@ def _update_financial_record(supplier_name, total_price, inbound_record_id):
         abort(Response(error_message, 400))
 
 
-def update_average_price(storage_id_list, type=0):
+def update_average_price(storage_id_list):
     inbound_subq = (
         db.session.query(
             InboundRecordDetail.material_storage_id,
@@ -45,9 +48,7 @@ def update_average_price(storage_id_list, type=0):
         )
         .filter(
             InboundRecord.approval_status == 1,
-            InboundRecordDetail.material_storage_id.in_(
-                storage[0] for storage in storage_id_list
-            ),
+            InboundRecordDetail.material_storage_id.in_(storage_id_list),
         )
         .group_by(
             InboundRecordDetail.material_storage_id,
@@ -64,9 +65,7 @@ def update_average_price(storage_id_list, type=0):
         .join(OutboundRecord, OutboundRecordDetail.outbound_record_id == OutboundRecord.outbound_record_id)
         .filter(
             OutboundRecord.approval_status == 1,
-            OutboundRecordDetail.material_storage_id.in_(
-                storage[0] for storage in storage_id_list
-            ),
+            OutboundRecordDetail.material_storage_id.in_(storage_id_list),
         )
         .group_by(OutboundRecordDetail.material_storage_id)
         .subquery()
@@ -101,6 +100,75 @@ def update_average_price(storage_id_list, type=0):
         material_storage.average_price = avg_price
 
 
+def update_inbound_amount(inbound_detail_list: list[InboundRecordDetail]):
+    if not inbound_detail_list:
+        return
+
+    # 1) Gather unique storage ids
+    msids = {d.material_storage_id for d in inbound_detail_list}
+
+    # 2) Aggregate totals per storage (overall + each shoe size)
+    agg_total = defaultdict(lambda: Decimal("0"))
+    agg_size = defaultdict(lambda: defaultdict(lambda: 0))  # int for sizes is fine
+
+    for detail in inbound_detail_list:
+        msid = detail.material_storage_id
+
+        # Sum overall inbound amount
+        amount = getattr(detail, "inbound_amount", 0) or 0
+        agg_total[msid] += Decimal(str(amount))
+
+        # Sum each size amount
+        for size in SHOESIZERANGE:
+            col = f"size_{size}_inbound_amount"
+            val = getattr(detail, col, 0) or 0
+            agg_size[msid][size] += int(val)
+
+    # 3) Load storages and size-details in bulk
+    storages = (
+        db.session.query(MaterialStorage)
+        .filter(MaterialStorage.material_storage_id.in_(msids))
+        .all()
+    )
+
+    size_details = (
+        db.session.query(MaterialStorageSizeDetail)
+        .filter(MaterialStorageSizeDetail.material_storage_id.in_(msids))
+        .order_by(
+            MaterialStorageSizeDetail.material_storage_id,
+            MaterialStorageSizeDetail.order_number
+        )
+        .all()
+    )
+
+    # material_storage_id -> ordered list of its size-detail rows
+    size_details_map: dict[int, list[MaterialStorageSizeDetail]] = defaultdict(list)
+    for sd in size_details:
+        size_details_map[sd.material_storage_id].append(sd)
+
+    # 4) Apply aggregated updates
+    for storage in storages:
+        msid = storage.material_storage_id
+        total = agg_total.get(msid, Decimal("0"))
+        if total:  # only touch rows that actually have incoming totals
+            storage.pending_inbound -= total
+            storage.inbound_amount  += total
+            storage.current_amount  += total
+
+            # Update per-size amounts (respect the ordering by order_number)
+            sds = size_details_map.get(msid, [])
+            for i, size in enumerate(SHOESIZERANGE):
+                if i >= len(sds):
+                    break  # no more size rows for this storage
+                size_delta = agg_size[msid].get(size, 0)
+                if size_delta:
+                    sd = sds[i]
+                    sd.pending_inbound -= size_delta
+                    sd.inbound_amount  += size_delta
+                    sd.current_amount  += size_delta
+
+
+
 @audit_material_inbound_bp.route("/accounting/approveinboundrecord", methods=["PATCH"])
 def approve_inbound_record():
     data = request.get_json()
@@ -129,12 +197,18 @@ def approve_inbound_record():
 
     # update average price of material
     inbound_record_id = inbound_record.inbound_record_id
-    storage_id_list = (
-        db.session.query(InboundRecordDetail.material_storage_id)
+    inbound_detail_list = (
+        db.session.query(InboundRecordDetail)
         .filter(InboundRecordDetail.inbound_record_id == inbound_record_id)
         .all()
     )
-    update_average_price(storage_id_list, type=0)
+
+    storage_id_list = [detail.material_storage_id for detail in inbound_detail_list]
+
+    update_average_price(storage_id_list)
+
+    # 更新库存数量
+    update_inbound_amount(inbound_detail_list)
 
     db.session.commit()
     return jsonify({"message": "success"})
