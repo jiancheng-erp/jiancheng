@@ -40,7 +40,14 @@
                 <el-form-item label="颜色">
                     <el-input v-model="filters.color" placeholder="颜色" clearable style="width: 140px" @keyup.enter.native="refresh" />
                 </el-form-item>
-
+                <el-form-item label="鞋类型">
+                    <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                        <el-option label="男鞋" value="男鞋" />
+                        <el-option label="女鞋" value="女鞋" />
+                        <el-option label="童鞋" value="童鞋" />
+                        <el-option label="其它" value="其它" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item>
                     <el-button type="primary" @click="refresh">查询</el-button>
                     <el-button @click="reset">重置</el-button>
@@ -123,6 +130,7 @@
                 </template>
             </el-table-column>
             <el-table-column prop="shoeRid" label="工厂型号" width="200" show-overflow-tooltip />
+            <el-table-column prop="category" label="类型" width="200" show-overflow-tooltip />
             <el-table-column prop="color" label="颜色" width="140" show-overflow-tooltip />
             <el-table-column prop="designer" label="设计师" width="120" show-overflow-tooltip />
             <el-table-column prop="adjuster" label="调版师" width="120" show-overflow-tooltip />
@@ -176,9 +184,10 @@ export default {
                 month: `${yyyy}-${mm}`,
                 year: String(yyyy),
                 direction: '',
-                keyword: '', // 仅匹配 rid
+                keyword: '',
                 shoeRid: '',
-                color: ''
+                color: '',
+                category: '' // ← 新增：男鞋/女鞋/童鞋/其它（空=全部）
             },
             rows: [],
             total: {
@@ -271,7 +280,8 @@ export default {
                     ...(this.filters.direction ? { direction: this.filters.direction } : {}),
                     ...(this.filters.keyword?.trim() ? { keyword: this.filters.keyword.trim() } : {}),
                     ...(this.filters.shoeRid?.trim() ? { shoeRid: this.filters.shoeRid.trim() } : {}),
-                    ...(this.filters.color?.trim() ? { color: this.filters.color.trim() } : {})
+                    ...(this.filters.color?.trim() ? { color: this.filters.color.trim() } : {}),
+                    ...(this.filters.category ? { category: this.filters.category } : {}) // ← 新增
                 }
 
                 const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoeinoutbounddetail`, { params })
@@ -316,6 +326,7 @@ export default {
             this.filters.keyword = ''
             this.filters.shoeRid = ''
             this.filters.color = ''
+            this.filters.category = '' // ← 新增
             this.page.currentPage = 1
             this.page.pageSize = 20
             this.fetchData()
@@ -443,50 +454,54 @@ export default {
     opacity: 0.6;
 }
 .stats-card {
-  border: none;
-  border-radius: 12px;
+    border: none;
+    border-radius: 12px;
 }
 
 .stats-card .stats-title {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
 }
 
 .stats-line {
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .tag-list {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 /* 入库/出库卡片的柔和底色 */
 .stats-card.inbound {
-  background: #f0f9eb; /* 绿底 */
+    background: #f0f9eb; /* 绿底 */
 }
 .stats-card.outbound {
-  background: #fef0f0; /* 红底 */
+    background: #fef0f0; /* 红底 */
 }
 
 /* 净值卡片：底色随正负动态变化（默认蓝，负值橙） */
 .stats-card.net {
-  background: #ecf5ff; /* 默认蓝底（正/零） */
-  transition: background 0.2s ease;
+    background: #ecf5ff; /* 默认蓝底（正/零） */
+    transition: background 0.2s ease;
 }
 .stats-card.net-neg {
-  background: #fdf6ec; /* 负值橙底 */
+    background: #fdf6ec; /* 负值橙底 */
 }
 
 /* 数量正负色 */
-.pos { color: #67c23a; }  /* green-500 */
-.neg { color: #f56c6c; }  /* red-500 */
+.pos {
+    color: #67c23a;
+} /* green-500 */
+.neg {
+    color: #f56c6c;
+} /* red-500 */
 </style>

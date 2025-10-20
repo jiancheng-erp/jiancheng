@@ -35,7 +35,14 @@
                 <el-form-item label="颜色">
                     <el-input v-model="filters.color" placeholder="颜色" clearable style="width: 140px" @keyup.enter.native="refresh" />
                 </el-form-item>
-
+                <el-form-item label="鞋类型">
+                    <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                        <el-option label="男鞋" value="男鞋" />
+                        <el-option label="女鞋" value="女鞋" />
+                        <el-option label="童鞋" value="童鞋" />
+                        <el-option label="其它" value="其它" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item label="分组">
                     <el-select v-model="filters.groupBy" style="width: 160px" @change="refresh">
                         <el-option label="按型号" value="model" />
@@ -101,6 +108,7 @@
         <!-- 表格：每行一个型号（或 型号+颜色） -->
         <el-table :data="rows" border stripe height="560" v-loading="loading">
             <el-table-column prop="shoeRid" label="工厂型号" width="220" show-overflow-tooltip />
+            <el-table-column prop="category" label="类型" width="100" show-overflow-tooltip />
             <el-table-column v-if="filters.groupBy === 'model_color'" prop="color" label="颜色" width="160" show-overflow-tooltip />
             <el-table-column prop="designer" label="设计师" show-overflow-tooltip />
             <el-table-column prop="adjuster" label="调版师" show-overflow-tooltip />
@@ -168,7 +176,8 @@ export default {
                 keyword: '',
                 shoeRid: '',
                 color: '',
-                groupBy: 'model'
+                groupBy: 'model',
+                category: '' // ← 新增：男鞋/女鞋/童鞋/其它（空=全部）
             },
             rows: [],
             stat: { inQty: 0, outQty: 0, netQty: 0, inAmountByCurrency: {}, outAmountByCurrency: {}, netAmountByCurrency: {} },
@@ -192,6 +201,7 @@ export default {
                     ...(this.filters.keyword?.trim() ? { keyword: this.filters.keyword.trim() } : {}),
                     ...(this.filters.shoeRid?.trim() ? { shoeRid: this.filters.shoeRid.trim() } : {}),
                     ...(this.filters.color?.trim() ? { color: this.filters.color.trim() } : {}),
+                    ...(this.filters.category ? { category: this.filters.category } : {}), // ← 新增
                     groupBy: this.filters.groupBy
                 }
                 const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoeinoutboundsummarybymodel`, { params: p })
@@ -211,7 +221,17 @@ export default {
             const now = new Date()
             const yyyy = String(now.getFullYear())
             const mm = String(now.getMonth() + 1).padStart(2, '0')
-            this.filters = { mode: 'month', month: `${yyyy}-${mm}`, year: yyyy, direction: '', keyword: '', shoeRid: '', color: '', groupBy: 'model' }
+            this.filters = {
+                mode: 'month',
+                month: `${yyyy}-${mm}`,
+                year: yyyy,
+                direction: '',
+                keyword: '',
+                shoeRid: '',
+                color: '',
+                groupBy: 'model',
+                category: '' // ← 新增
+            }
             this.page.currentPage = 1
             this.page.pageSize = 20
             this.fetchData()
