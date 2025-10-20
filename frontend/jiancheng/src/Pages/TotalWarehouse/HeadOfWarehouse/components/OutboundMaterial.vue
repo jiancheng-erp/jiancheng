@@ -224,9 +224,10 @@
         <el-table :data="currentKeyDownRow.shoeSizeTableData" border striped width="100%">
             <el-table-column prop="shoeSizeName" label="鞋码"></el-table-column>
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
+            <el-table-column prop="allowedOutboundAmount" label="可出库数量"></el-table-column>
             <el-table-column label="出库数量">
                 <template #default="{ row }">
-                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)"
+                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)" :max="row.allowedOutboundAmount"
                         :min="0"></el-input-number>
                 </template>
             </el-table-column>
@@ -532,12 +533,12 @@ export default {
                 let shoeSizeTableData = []
                 for (let j = 0; j < row.shoeSizeColumns.length; j++) {
                     let shoeSizeName = row.shoeSizeColumns[j]
-                    let outboundQuantity = row[`currentAmount${j}`] || 0
-                    // if type is reject
+                    let outboundQuantity = row[`allowedOutboundAmount${j}`] || 0
+                    // if type 1, rejected by accounting
                     if (type == 1) {
                         outboundQuantity = row[`amount${j}`] || 0
                     }
-                    let obj = { "shoeSizeName": shoeSizeName, "currentAmount": row[`currentAmount${j}`], "outboundQuantity": outboundQuantity }
+                    let obj = { "shoeSizeName": shoeSizeName, "currentAmount": row[`currentAmount${j}`], "allowedOutboundAmount": outboundQuantity, "outboundQuantity": outboundQuantity }
                     shoeSizeTableData.push(obj)
                 }
                 row.shoeSizeTableData = shoeSizeTableData
@@ -547,7 +548,7 @@ export default {
             let temp = JSON.parse(JSON.stringify(this.materialTableData))
             const data = this.$refs.materialStorageRef.getSelectedData?.();
             for (let row of data) {
-                row.outboundQuantity = row.currentAmount
+                row.outboundQuantity = row.allowedOutboundAmount
             }
             let newData = data.map(item => {
                 let newItem = { ...item }

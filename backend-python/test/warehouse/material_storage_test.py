@@ -4,34 +4,47 @@ from datetime import datetime
 from unittest.mock import patch
 import pytest
 from flask.testing import FlaskClient
-from flask import Response
+from flask import Response, Flask
 import json
+from flask_jwt_extended import create_access_token
 
 
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from app_config import db
-from test_app_config import create_app
+from app_config import db, create_app
 from blueprints import register_blueprints
 from models import *
 from event_processor import EventProcessor
+from constants import WAREHOUSE_CLERK_ROLE, WAREHOUSE_CLERK_STAFF_ID, WAREHOUSE_CLERK_TEST
 
 
 # --- Flask App Fixture ---
 @pytest.fixture
 def test_app():
-    app = create_app(
-        {
-            "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "mysql+pymysql://jiancheng_mgt:123456Ab@localhost:3306/jiancheng_local_test",
-            "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-            "SECRET_KEY": "EC63AF9BA57B9F20",
-            "JWT_SECRET_KEY": "EC63AF9BA57B9F20",
-        }
-    )
+    app = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": "mysql+pymysql://jiancheng_mgt:123456Ab@localhost:3306/jiancheng_local_test",
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SECRET_KEY": "EC63AF9BA57B9F20",
+        "JWT_SECRET_KEY": "EC63AF9BA57B9F20",
+        # 👇 ensure tests use header-based JWT with the expected scheme
+        "JWT_TOKEN_LOCATION": ["headers"],
+        "JWT_HEADER_NAME": "Authorization",
+        "JWT_HEADER_TYPE": "Bearer",
+        # optionally keep tokens fresh longer during tests
+        # "JWT_ACCESS_TOKEN_EXPIRES": timedelta(hours=1)
+        "REDIS_HOST": "localhost",
+        "REDIS_PORT": 6379,
+        "REDIS_DB": 0,
+        "session_lifetime_days": 7
+    })
+    # Ensure JWTManager exists and override blocklist callback in tests
+    jwt = app.extensions["flask-jwt-extended"]
+    @jwt.token_in_blocklist_loader
+    def never_revoked(_, __):
+        return False
     app.config["event_processor"] = EventProcessor()
     register_blueprints(app)
-    db.init_app(app)
     with app.app_context():
         db.create_all()
         yield app
@@ -45,8 +58,40 @@ def client(test_app):
     return test_app.test_client()
 
 
-@pytest.fixture
-def sample_data(test_app):
+def create_environment(db):
+    character = Character(
+        character_id=WAREHOUSE_CLERK_ROLE,
+        character_name="仓库文员",
+    )
+    staff = Staff(
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
+        staff_name="仓库文员",
+        character_id=WAREHOUSE_CLERK_ROLE,
+        department_id=6,
+    )
+    user = User(
+        user_id=WAREHOUSE_CLERK_TEST,
+        user_name="zongcangceshi",
+        user_passwd="testpassword",
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
+    )
+    department = Department(
+        department_id=6,
+        department_name="仓库部",
+    )
+    db.session.add(character)
+    db.session.add(staff)
+    db.session.add(user)
+    db.session.add(department)
+    db.session.flush()
+
+
+def return_header_with_token():
+    token = create_access_token(identity="zongcangceshi")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_get_material_inbound_records(client: FlaskClient):
     # Insert dependency data into the temporary database.
     datetime_obj = datetime.strptime("2023-10-01 12:00:00", "%Y-%m-%d %H:%M:%S")
     inbound_record = InboundRecord(
@@ -58,6 +103,7 @@ def sample_data(test_app):
         inbound_datetime=datetime_obj,
         inbound_type=0,
         pay_method="应付账款",
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
     )
     supplier = Supplier(
         supplier_id=1,
@@ -70,25 +116,18 @@ def sample_data(test_app):
     db.session.add(inbound_record)
     db.session.add(supplier)
     db.session.add(warehouse)
+    create_environment(db)
     db.session.commit()
-    return inbound_record
-
-
-def test_get_material_inbound_records(client: FlaskClient, sample_data):
     # Use the test client to hit your Flask endpoint.
     query_string = {
         "page": 1,
         "pageSize": 10,
     }
     response = client.get(
-        "/warehouse/getmaterialinboundrecords", query_string=query_string
+        "/warehouse/getmaterialinboundrecords", query_string=query_string, headers=return_header_with_token()
     )
     assert response.status_code == 200
-    # Additional assertions can check that the dependency data (sample_data) is being used properly.
-    assert (
-        response.get_json()["result"][0]["inboundRecordId"]
-        == sample_data.inbound_record_id
-    )
+    assert (response.get_json()["result"][0]["inboundRecordId"] == 1)
 
 
 # 用户选择订单材料
@@ -154,6 +193,7 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
     db.session.add(order)
     db.session.add(order_shoe)
     db.session.add(purchaese_order_item)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -189,14 +229,13 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         "payMethod": "应付账款",
         "materialTypeId": 2,
     }
-    response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.purchase_order_item_id == 1
-    assert storage.inbound_amount == 20.0
-    assert storage.current_amount == 20.0
+    assert storage.pending_inbound == 20.0
     assert storage.spu_material_id == 1
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
@@ -296,6 +335,7 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     db.session.add(warehouse)
     db.session.add(order)
     db.session.add(order_shoe)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -337,29 +377,31 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
         "payMethod": "应付账款",
         "materialTypeId": 2,
     }
-    response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.purchase_order_item_id == 1
     assert storage.spu_material_id == 1
-    assert storage.inbound_amount == 600
-    assert storage.current_amount == 600
+    assert storage.pending_inbound == 600
 
-    assert storage.size_35_inbound_amount == 50.0
-    assert storage.size_36_inbound_amount == 100.0
-    assert storage.size_37_inbound_amount == 150.0
-    assert storage.size_38_inbound_amount == 150.0
-    assert storage.size_39_inbound_amount == 100.0
-    assert storage.size_40_inbound_amount == 50.0
+    size_details = (
+        db.session.query(MaterialStorageSizeDetail)
+        .filter_by(material_storage_id=1)
+        .order_by(MaterialStorageSizeDetail.order_number)
+        .all()
+    )
 
-    assert storage.size_35_current_amount == 50.0
-    assert storage.size_36_current_amount == 100.0
-    assert storage.size_37_current_amount == 150.0
-    assert storage.size_38_current_amount == 150.0
-    assert storage.size_39_current_amount == 100.0
-    assert storage.size_40_current_amount == 50.0
+    assert size_details[0].pending_inbound == 0
+    assert size_details[1].pending_inbound == 50.0
+    assert size_details[2].pending_inbound == 100.0
+    assert size_details[3].pending_inbound == 150.0
+    assert size_details[4].pending_inbound == 150.0
+    assert size_details[5].pending_inbound == 100.0
+    assert size_details[6].pending_inbound == 50.0
+    assert size_details[7].pending_inbound == 0
+
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -427,6 +469,7 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
     db.session.add(material)
     db.session.add(material_type)
     db.session.add(warehouse)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -453,7 +496,7 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -461,8 +504,7 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
     assert storage.spu_material_id == 1
     assert storage.order_id == None
     assert storage.purchase_order_item_id == None
-    assert storage.inbound_amount == 600
-    assert storage.current_amount == 600
+    assert storage.pending_inbound == 600
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -557,6 +599,7 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
     db.session.add(order)
     db.session.add(order_shoe)
     db.session.add(batch_info_type)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -596,26 +639,18 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.spu_material_id == 1
 
-    assert storage.size_35_inbound_amount == 50.0
-    assert storage.size_36_inbound_amount == 100.0
-    assert storage.size_37_inbound_amount == 150.0
-    assert storage.size_38_inbound_amount == 150.0
-    assert storage.size_39_inbound_amount == 100.0
-    assert storage.size_40_inbound_amount == 50.0
+    size_details = db.session.query(MaterialStorageSizeDetail).filter_by(material_storage_id=1).order_by(MaterialStorageSizeDetail.order_number).all()
+    amounts = [0, 50, 100, 150, 150, 100, 50, 0]
+    for i in range(len(amounts)):
+        assert size_details[i].pending_inbound == amounts[i]
 
-    assert storage.size_35_current_amount == 50.0
-    assert storage.size_36_current_amount == 100.0
-    assert storage.size_37_current_amount == 150.0
-    assert storage.size_38_current_amount == 150.0
-    assert storage.size_39_current_amount == 100.0
-    assert storage.size_40_current_amount == 50.0
 
     assert storage.shoe_size_columns == ["35", "36", "37", "38", "39", "40", "41", "42"]
 
@@ -718,6 +753,7 @@ def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
     db.session.add(order)
     db.session.add(order_shoe)
     db.session.add(batch_info_type)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -759,7 +795,7 @@ def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 400
     assert json.loads(response.data)["message"] == "无效尺码ID"
 
@@ -823,6 +859,7 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         order_shoe_id=1,
         spu_material_id=1,
         actual_inbound_unit="米",
+        pending_inbound=50,
         inbound_amount=40,
         current_amount=40,
     )
@@ -835,6 +872,7 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
     db.session.add(order_shoe)
     db.session.add(spu_material)
     db.session.add(storage)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -863,13 +901,12 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     assert storage.spu_material_id == 1
-    assert storage.inbound_amount == 90
-    assert storage.current_amount == 90
+    assert storage.pending_inbound == 100
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -940,6 +977,7 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
     db.session.add(warehouse)
     db.session.add(order)
     db.session.add(order_shoe)
+    create_environment(db)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
@@ -982,21 +1020,19 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string)
+    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.spu_material_id == 1
-    assert storage.inbound_amount == 50
-    assert storage.current_amount == 50
+    assert storage.pending_inbound == 50
 
     storage2 = (
         db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
     )
     assert storage2.spu_material_id == 2
-    assert storage2.inbound_amount == 20
-    assert storage2.current_amount == 20
+    assert storage2.pending_inbound == 20
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 

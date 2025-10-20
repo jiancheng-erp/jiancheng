@@ -62,9 +62,9 @@ def return_header_with_token():
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_audit_material_inbound(client: FlaskClient):
+def test_audit_material_outbound(client: FlaskClient):
     """
-    测试用户审批订单
+    测试用户审批材料退回订单
     """
 
     # insert supplier
@@ -105,7 +105,9 @@ def test_audit_material_inbound(client: FlaskClient):
         order_shoe_id=1,
         actual_inbound_unit="米",
         spu_material_id=1,
-        pending_inbound=40.0,
+        pending_outbound=20.0,
+        inbound_amount=100.0,
+        current_amount=100.0,
     )
 
     inbound_record = InboundRecord(
@@ -115,30 +117,53 @@ def test_audit_material_inbound(client: FlaskClient):
         supplier_id=1,
         warehouse_id=1,
         inbound_datetime=datetime.strptime("2025-04-06 16:59:45", "%Y-%m-%d %H:%M:%S"),
-        total_price=650.0,
-        approval_status=0,
+        total_price=1000,
+        approval_status=1,
         is_sized_material=0,
         pay_method="应付账款",
     )
 
     inbound_record_detail1 = InboundRecordDetail(
-        id=1,
         inbound_record_id=1,
         material_storage_id=1,
+        spu_material_id=1,
+        inbound_amount=100,
+        unit_price=10,
+        item_total_price=1000,
+    )
+
+    outbound_record = OutboundRecord(
+        outbound_record_id=1,
+        outbound_type=4,
+        outbound_rid="OR20250406165945T4",
+        supplier_id=1,
+        outbound_datetime=datetime.strptime("2025-04-06 16:59:45", "%Y-%m-%d %H:%M:%S"),
+        total_price=650.0,
+        approval_status=0,
+        is_sized_material=0,
+    )
+
+    outbound_record_detail1 = OutboundRecordDetail(
+        outbound_record_id=1,
+        material_storage_id=1,
         spu_material_id=2,
-        inbound_amount=20.0,
+        outbound_amount=20.0,
         unit_price=12.5,
         item_total_price=250.0,
     )
 
-    inbound_record_detail2 = InboundRecordDetail(
-        id=2,
-        inbound_record_id=1,
-        material_storage_id=1,
-        spu_material_id=1,
-        inbound_amount=20.0,
-        unit_price=20,
-        item_total_price=400.0,
+
+    payee_payer = AccountingPayeePayer(
+        payee_id=1,
+        payee_name="嘉泰皮革",
+        entity_type=0,
+    )
+
+    payable_account = AccountingPayableAccount(
+        account_id=1,
+        account_owner_id=1,
+        account_payable_balance=1000.0,
+        account_unit_id=1,
     )
     db.session.add(supplier)
     db.session.add(material)
@@ -147,27 +172,30 @@ def test_audit_material_inbound(client: FlaskClient):
     db.session.add(warehouse)
     db.session.add(inbound_record)
     db.session.add(inbound_record_detail1)
-    db.session.add(inbound_record_detail2)
+    db.session.add(outbound_record)
+    db.session.add(outbound_record_detail1)
     db.session.add(spu_material)
+    db.session.add(payee_payer)
+    db.session.add(payable_account)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
     query_string = {
-        "inboundRecordId": 1,
+        "outboundRecordId": 1,
     }
-    response = client.patch("/accounting/approveinboundrecord", json=query_string, headers=return_header_with_token())
+    response = client.patch("/accounting/approveoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
-    inbound_record = (
-        db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+    outbound_record = (
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=1).first()
     )
-    assert inbound_record.approval_status == 1
+    assert outbound_record.approval_status == 1
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
-    assert storage.average_price == 16.25
-    assert storage.pending_inbound == 0.0
-    assert storage.inbound_amount == 40.0
-    assert storage.current_amount == 40.0
+    assert storage.average_price == 9.375
+    assert storage.pending_outbound == 0.0
+    assert storage.inbound_amount == 80.0
+    assert storage.current_amount == 80.0
 
     accounting_payee_payer = (
         db.session.query(AccountingPayeePayer).filter_by(payee_name="嘉泰皮革").first()
@@ -178,21 +206,18 @@ def test_audit_material_inbound(client: FlaskClient):
         .filter_by(account_owner_id=accounting_payee_payer.payee_id)
         .first()
     )
-    assert new_payable_account_entity.account_payable_balance == 650.0
+    assert new_payable_account_entity.account_payable_balance == 350.0
     new_transaction_entity = (
         db.session.query(AccountingForeignAccountEvent)
-        .filter_by(inbound_record_id=1)
+        .filter_by(outbound_record_id=1)
         .first()
     )
-    assert new_transaction_entity.transaction_amount == 650.0
+    assert new_transaction_entity.transaction_amount == -650.0
 
 
-def test_audit_size_material_inbound(client: FlaskClient):
+def test_audit_size_material_outbound(client: FlaskClient):
     """
-    测试用户审批底材订单
-    例子：一个大底订单，一次入库36双，单价12.5，总价450元， 另一次入库36双，单价20元，总价720元。
-    结果：storage的平均价应为16.25元，总入库数量72双，待入库数量0，当前库存72双。
-    应付账户增加1170元。
+    测试用户审批底材退货订单
     """
 
     # insert supplier
@@ -226,7 +251,7 @@ def test_audit_size_material_inbound(client: FlaskClient):
         color="测试颜色",
     )
 
-    shoe_size_columns = ["35", "36", "37", "38", "39", "40", "41", "42"]
+    shoe_size_columns = ["35", "36", "37", "38", "39", "40", "41", "42", "43", "44"]
 
     # insert dependency data into the temporary database
     material_storage = MaterialStorage(
@@ -235,9 +260,23 @@ def test_audit_size_material_inbound(client: FlaskClient):
         order_shoe_id=1,
         actual_inbound_unit="米",
         spu_material_id=1,
-        pending_inbound=72,
+        pending_outbound=50,
+        inbound_amount=100,
+        current_amount=100,
         shoe_size_columns=shoe_size_columns
     )
+
+    for i in range(len(shoe_size_columns)):
+        size = shoe_size_columns[i]
+        size_detail = MaterialStorageSizeDetail(
+            material_storage_id=1,
+            order_number=i,
+            size_value=size,
+            pending_outbound=5,
+            inbound_amount=10,
+            current_amount=10,
+        )
+        db.session.add(size_detail)
 
     inbound_record = InboundRecord(
         inbound_record_id=1,
@@ -246,46 +285,71 @@ def test_audit_size_material_inbound(client: FlaskClient):
         supplier_id=1,
         warehouse_id=1,
         inbound_datetime=datetime.strptime("2025-04-06 16:59:45", "%Y-%m-%d %H:%M:%S"),
-        total_price=1170,
-        approval_status=0,
-        is_sized_material=1,
+        total_price=1000,
+        approval_status=1,
+        is_sized_material=0,
         pay_method="应付账款",
     )
 
     inbound_record_detail1 = InboundRecordDetail(
-        id=1,
-        inbound_record_id=1,
-        material_storage_id=1,
-        spu_material_id=2,
-        inbound_amount=36,
-        unit_price=12.5,
-        item_total_price=450,
-        size_34_inbound_amount=1,
-        size_35_inbound_amount=2,
-        size_36_inbound_amount=3,
-        size_37_inbound_amount=4,
-        size_38_inbound_amount=5,
-        size_39_inbound_amount=6,
-        size_40_inbound_amount=7,
-        size_41_inbound_amount=8,
-    )
-
-    inbound_record_detail2 = InboundRecordDetail(
-        id=2,
         inbound_record_id=1,
         material_storage_id=1,
         spu_material_id=1,
-        inbound_amount=36,
-        unit_price=20,
-        item_total_price=720,
-        size_34_inbound_amount=1,
-        size_35_inbound_amount=2,
-        size_36_inbound_amount=3,
-        size_37_inbound_amount=4,
-        size_38_inbound_amount=5,
-        size_39_inbound_amount=6,
-        size_40_inbound_amount=7,
-        size_41_inbound_amount=8,
+        inbound_amount=100,
+        unit_price=10,
+        item_total_price=1000,
+        size_34_inbound_amount=10,
+        size_35_inbound_amount=10,
+        size_36_inbound_amount=10,
+        size_37_inbound_amount=10,
+        size_38_inbound_amount=10,
+        size_39_inbound_amount=10,
+        size_40_inbound_amount=10,
+        size_41_inbound_amount=10,
+        size_42_inbound_amount=10,
+        size_43_inbound_amount=10,
+    )
+
+    outbound_record = OutboundRecord(
+        outbound_record_id=1,
+        outbound_type=4,
+        outbound_rid="OR20250406165945T4",
+        supplier_id=1,
+        outbound_datetime=datetime.strptime("2025-04-06 16:59:45", "%Y-%m-%d %H:%M:%S"),
+        total_price=500,
+        approval_status=0,
+        is_sized_material=1,
+    )
+
+    outbound_record_detail1 = OutboundRecordDetail(
+        outbound_record_id=1,
+        material_storage_id=1,
+        spu_material_id=2,
+        outbound_amount=50.0,
+        unit_price=10,
+        item_total_price=500.0,
+        size_34_outbound_amount=5,
+        size_35_outbound_amount=5,
+        size_36_outbound_amount=5,
+        size_37_outbound_amount=5,
+        size_38_outbound_amount=5,
+        size_39_outbound_amount=5,
+        size_40_outbound_amount=5,
+        size_41_outbound_amount=5,
+        size_42_outbound_amount=5,
+        size_43_outbound_amount=5,
+    )
+    payee_payer = AccountingPayeePayer(
+        payee_id=1,
+        payee_name="测试厂家",
+        entity_type=0,
+    )
+
+    payable_account = AccountingPayableAccount(
+        account_id=1,
+        account_owner_id=1,
+        account_payable_balance=1000.0,
+        account_unit_id=1,
     )
     db.session.add(supplier)
     db.session.add(material)
@@ -294,27 +358,30 @@ def test_audit_size_material_inbound(client: FlaskClient):
     db.session.add(warehouse)
     db.session.add(inbound_record)
     db.session.add(inbound_record_detail1)
-    db.session.add(inbound_record_detail2)
+    db.session.add(outbound_record)
+    db.session.add(outbound_record_detail1)
+    db.session.add(payee_payer)
+    db.session.add(payable_account)
     db.session.add(spu_material)
     db.session.commit()
 
     # Use the test client to hit your Flask endpoint.
     query_string = {
-        "inboundRecordId": 1,
+        "outboundRecordId": 1,
     }
-    response = client.patch("/accounting/approveinboundrecord", json=query_string, headers=return_header_with_token())
+    response = client.patch("/accounting/approveoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
 
-    inbound_record = (
-        db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+    outbound_record = (
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=1).first()
     )
-    assert inbound_record.approval_status == 1
+    assert outbound_record.approval_status == 1
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
-    assert storage.average_price == 16.25
-    assert storage.pending_inbound == 0.0
-    assert storage.inbound_amount == 72
-    assert storage.current_amount == 72
+    assert storage.average_price == 10
+    assert storage.pending_outbound == 0.0
+    assert storage.inbound_amount == 50
+    assert storage.current_amount == 50
 
     size_details = (
         db.session.query(MaterialStorageSizeDetail)
@@ -322,9 +389,9 @@ def test_audit_size_material_inbound(client: FlaskClient):
         .order_by(MaterialStorageSizeDetail.order_number)
         .all()
     )
-    expected_sizes = [2, 4, 6, 8, 10, 12, 14, 16]
+    expected_sizes = [5] * 10
     for sd, expected in zip(size_details, expected_sizes):
-        assert sd.pending_inbound == 0
+        assert sd.pending_outbound == 0
         assert sd.inbound_amount == expected
         assert sd.current_amount == expected
 
@@ -337,10 +404,10 @@ def test_audit_size_material_inbound(client: FlaskClient):
         .filter_by(account_owner_id=accounting_payee_payer.payee_id)
         .first()
     )
-    assert new_payable_account_entity.account_payable_balance == 1170
+    assert new_payable_account_entity.account_payable_balance == 500
     new_transaction_entity = (
         db.session.query(AccountingForeignAccountEvent)
-        .filter_by(inbound_record_id=1)
+        .filter_by(outbound_record_id=1)
         .first()
     )
-    assert new_transaction_entity.transaction_amount == 1170
+    assert new_transaction_entity.transaction_amount == -500

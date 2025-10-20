@@ -89,9 +89,9 @@ def client(test_app):
     return test_app.test_client()
 
 
-def test_update_inbound_record_model_specification_color(client: FlaskClient):
+def test_update_outbound_record_model_specification_color(client: FlaskClient):
     """
-    测试更新入库单的材料型号/规格/颜色，创建新库存
+    测试更新退货单的数量和单价
     """
 
     order = Order(
@@ -137,6 +137,27 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         order_id=1,
     )
 
+    outbound_record = OutboundRecord(
+        outbound_rid="12345",
+        outbound_batch_id=1,
+        supplier_id=1,
+        outbound_datetime=datetime_obj,
+        outbound_type=4,
+        is_sized_material=0,
+        remark="remark",
+        approval_status=0,
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
+    )
+
+    outbound_record_detail = OutboundRecordDetail(
+        outbound_record_id=1,
+        unit_price=12.5,
+        outbound_amount=10.0,
+        item_total_price=125.0,
+        material_storage_id=1,
+        order_id=1,
+    )
+
     supplier = Supplier(
         supplier_id=1,
         supplier_name="深源皮革",
@@ -174,7 +195,7 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         order_shoe_id=1,
         spu_material_id=1,
         actual_inbound_unit="米",
-        pending_inbound=20,
+        pending_outbound=10,
         inbound_amount=20,
         current_amount=20,
     )
@@ -182,6 +203,8 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
     db.session.add(order_shoe)
     db.session.add(inbound_record)
     db.session.add(inbound_record_detail)
+    db.session.add(outbound_record)
+    db.session.add(outbound_record_detail)
     db.session.add(supplier)
     db.session.add(warehouse)
     db.session.add(material)
@@ -193,21 +216,20 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
 
     # Use the test client to hit your Flask endpoint.
     query_string = {
-        "inboundRecordId": 1,
+        "outboundRecordId": 1,
         "supplierName": "深源皮革",
-        "inboundType": 0,
+        "outboundType": 4,
         "remark": "2025/3/4",
-        "payMethod": "应付账款",
         "isSizedMaterial": 0,
         "materialTypeId": 1,
-        "warehouseId": 1,
         "items": [
             {
+                "materialStorageId": 1,
                 "actualInboundUnit": "米",
                 "colorName": "Color A",
-                "inboundQuantity": 404,
-                "inboundRecordDetailId": 1,
-                "itemTotalPrice": 4848,
+                "outboundQuantity": 20,
+                "outboundRecordDetailId": 1,
+                "itemTotalPrice": 240,
                 "materialName": "PU面",
                 "materialModel": "新型号",
                 "materialSpecification": "新规格",
@@ -223,234 +245,37 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
             },
         ],
     }
-    response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
+    response = client.put("/warehouse/updateoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
     updated_record = (
-        db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
 
     updated_record_detail = (
-        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).first()
+        db.session.query(OutboundRecordDetail).filter_by(outbound_record_id=2).first()
     )
     assert updated_record.remark == "2025/3/4"
     assert updated_record_detail.unit_price == 12.0
-    assert updated_record_detail.inbound_amount == 404.0
-    assert updated_record_detail.item_total_price == 4848.0
-    assert updated_record_detail.material_storage_id == 2
+    assert updated_record_detail.outbound_amount == 20
+    assert updated_record_detail.item_total_price == 240
+    assert updated_record_detail.material_storage_id == 1
     assert updated_record_detail.remark == "010"
 
-    old_storage = (
-        db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
-    )
-
-    # 修改未审核入库数量
-    assert old_storage.pending_inbound == 10
-
     updated_storage = (
-        db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
+        db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     )
 
     assert updated_storage.order_id == 1
     assert updated_storage.order_shoe_id == 1
-    assert updated_storage.spu_material_id == 2
-    assert updated_storage.pending_inbound == 404
-    assert updated_storage.inbound_amount == 0
-    assert updated_storage.current_amount == 0
-
-    new_spu_material = (
-        db.session.query(SPUMaterial).filter_by(spu_material_id=2).first()
-    )
-    assert new_spu_material.material_id == 1
-    assert new_spu_material.material_model == "新型号"
-    assert new_spu_material.material_specification == "新规格"
-    assert new_spu_material.color == "新颜色"
+    assert updated_storage.spu_material_id == 1
+    assert updated_storage.pending_outbound == 20
+    assert updated_storage.inbound_amount == 20
+    assert updated_storage.current_amount == 20
 
 
-def test_update_inbound_record_material_type(client: FlaskClient):
+def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient):
     """
-    测试更新入库单的材料类型和供应商，涉及创建新库存和更新仓库
-    例：开发部仓转到面料仓
-    """
-    # Insert dependency data into the temporary database.
-    datetime_obj = datetime.strptime("2023-10-01 12:00:00", "%Y-%m-%d %H:%M:%S")
-    inbound_record = InboundRecord(
-        inbound_record_id=1,
-        inbound_rid="IR20231001120000T0",
-        inbound_batch_id=1,
-        supplier_id=1,
-        warehouse_id=1,
-        inbound_datetime=datetime_obj,
-        inbound_type=0,
-        pay_method="应付账款",
-        is_sized_material=0,
-        remark="remark",
-    )
-
-    inbound_record_detail = InboundRecordDetail(
-        id=1,
-        inbound_record_id=1,
-        unit_price=12.5,
-        inbound_amount=10.0,
-        item_total_price=125.0,
-        material_storage_id=1,
-    )
-
-    supplier = Supplier(
-        supplier_id=1,
-        supplier_name="深源皮革",
-    )
-
-    supplier2 = Supplier(
-        supplier_id=2,
-        supplier_name="测试供应商",
-    )
-
-    warehouse = MaterialWarehouse(
-        material_warehouse_id=1,
-        material_warehouse_name="开发部仓",
-    )
-
-    warehouse2 = MaterialWarehouse(
-        material_warehouse_id=2,
-        material_warehouse_name="面料仓",
-    )
-
-    material = Material(
-        material_id=1,
-        material_name="开发样品",
-        material_type_id=1,
-        material_supplier=1,
-    )
-
-    material_type = MaterialType(
-        material_type_id=1,
-        material_type_name="开发样品",
-        warehouse_id=1,
-    )
-
-    material2 = Material(
-        material_id=2,
-        material_name="PU面",
-        material_type_id=2,
-        material_supplier=1,
-    )
-
-    material_type2 = MaterialType(
-        material_type_id=2,
-        material_type_name="面料",
-        warehouse_id=2,
-    )
-
-    spu_material = SPUMaterial(
-        spu_material_id=1,
-        material_id=1,
-        material_model="测试型号",
-        material_specification="测试规格",
-        color="测试颜色",
-    )
-
-    material_storage = MaterialStorage(
-        material_storage_id=1,
-        spu_material_id=1,
-        pending_inbound=10,
-        inbound_amount=10,
-        current_amount=10,
-        actual_inbound_unit="米",
-    )
-    db.session.add(inbound_record)
-    db.session.add(inbound_record_detail)
-    db.session.add(supplier)
-    db.session.add(warehouse)
-    db.session.add(material)
-    db.session.add(material_type)
-    db.session.add(warehouse2)
-    db.session.add(material2)
-    db.session.add(material_type2)
-    db.session.add(material_storage)
-    db.session.add(supplier2)
-    db.session.add(spu_material)
-    create_environment(db)
-    db.session.commit()
-
-    # Use the test client to hit your Flask endpoint.
-    query_string = {
-        "inboundRecordId": 1,
-        "supplierName": "测试供应商",
-        "inboundType": 0,
-        "remark": "2025-05-14",
-        "payMethod": "应付账款",
-        "isSizedMaterial": 0,
-        "materialTypeId": 2,
-        "warehouseId": 2,
-        "items": [
-            {
-                "actualInboundUnit": "米",
-                "colorName": "Color A",
-                "inboundQuantity": 100,
-                "inboundRecordDetailId": 1,
-                "itemTotalPrice": 1200,
-                "materialName": "PU面",
-                "inboundModel": "面料型号",
-                "inboundSpecification": "面料规格",
-                "materialCategory": 0,
-                "materialColor": "面料颜色",
-                "materialStorageId": 1,
-                "materialUnit": "米",
-                "remark": "新备注",
-                "unitPrice": 12,
-            },
-        ],
-    }
-    response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
-    assert response.status_code == 200
-    updated_record = (
-        db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
-    )
-    assert updated_record.inbound_record_id == 2
-    assert updated_record.remark == "2025-05-14"
-    assert updated_record.inbound_rid == "IR20231001120000T0"
-    assert updated_record.warehouse_id == 2
-    assert updated_record.supplier_id == 2
-
-    updated_record_detail = (
-        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).all()
-    )
-
-    assert updated_record_detail[0].unit_price == 12.0
-    assert updated_record_detail[0].inbound_amount == 100.0
-    assert updated_record_detail[0].item_total_price == 1200.0
-    assert updated_record_detail[0].material_storage_id == 2
-    assert updated_record_detail[0].remark == "新备注"
-
-    old_storage = (
-        db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
-    )
-    assert old_storage.pending_inbound == 0
-
-    new_storage = (
-        db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
-    )
-
-    assert new_storage.spu_material_id == 2
-    assert new_storage.pending_inbound == 100
-
-    new_spu_material = (
-        db.session.query(SPUMaterial).filter_by(spu_material_id=2).first()
-    )
-    assert new_spu_material.material_id == 3  # 新材料ID
-    assert new_spu_material.material_model == "面料型号"
-    assert new_spu_material.material_specification == "面料规格"
-    assert new_spu_material.color == "面料颜色"
-
-    new_material = db.session.query(Material).filter_by(material_id=3).first()
-    assert new_material.material_name == "PU面"
-    assert new_material.material_type_id == 2
-    assert new_material.material_supplier == 2
-
-
-def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient):
-    """
-    测试更新入库单的金额和单价，不涉及创建新库存
+    测试更新底材退货单的金额和数量
     """
 
     order = Order(
@@ -482,18 +307,53 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         pay_method="应付账款",
         is_sized_material=1,
         remark="remark",
+        approval_status=1,
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
     )
 
     inbound_record_detail = InboundRecordDetail(
         id=1,
         inbound_record_id=1,
-        unit_price=12.5,
-        inbound_amount=10.0,
-        item_total_price=125.0,
-        size_36_inbound_amount=1,
-        size_37_inbound_amount=2,
-        size_38_inbound_amount=3,
-        size_39_inbound_amount=4,
+        unit_price=10,
+        inbound_amount=80.0,
+        item_total_price=800.0,
+        size_34_inbound_amount=10,
+        size_35_inbound_amount=10,
+        size_36_inbound_amount=10,
+        size_37_inbound_amount=10,
+        size_38_inbound_amount=10,
+        size_39_inbound_amount=10,
+        size_40_inbound_amount=10,
+        size_41_inbound_amount=10,
+        material_storage_id=1,
+    )
+
+    outbound_record = OutboundRecord(
+        outbound_record_id=1,
+        outbound_rid="12345",
+        outbound_batch_id=1,
+        supplier_id=1,
+        outbound_datetime=datetime_obj,
+        outbound_type=4,
+        is_sized_material=1,
+        remark="remark",
+        approval_status=0,
+        staff_id=WAREHOUSE_CLERK_STAFF_ID,
+    )
+
+    outbound_record_detail = OutboundRecordDetail(
+        outbound_record_id=1,
+        unit_price=10,
+        outbound_amount=40.0,
+        item_total_price=400.0,
+        size_34_outbound_amount=5,
+        size_35_outbound_amount=5,
+        size_36_outbound_amount=5,
+        size_37_outbound_amount=5,
+        size_38_outbound_amount=5,
+        size_39_outbound_amount=5,
+        size_40_outbound_amount=5,
+        size_41_outbound_amount=5,
         material_storage_id=1,
     )
 
@@ -534,9 +394,9 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         order_shoe_id=1,
         spu_material_id=1,
         actual_inbound_unit="双",
-        pending_inbound=40,
-        inbound_amount=15,
-        current_amount=15,
+        pending_outbound=40,
+        inbound_amount=80,
+        current_amount=80,
         shoe_size_columns=shoe_size_columns,
     )
     size_details = []
@@ -545,13 +405,17 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
             material_storage_id=1,
             size_value=shoe_size_columns[i],
             order_number=i,
-            pending_inbound=5
+            pending_outbound=5,
+            inbound_amount=10,
+            current_amount=10,
         )
         size_details.append(storage_size_detail)
     db.session.add(order)
     db.session.add(order_shoe)
     db.session.add(inbound_record)
     db.session.add(inbound_record_detail)
+    db.session.add(outbound_record)
+    db.session.add(outbound_record_detail)
     db.session.add(supplier)
     db.session.add(warehouse)
     db.session.add(material)
@@ -564,30 +428,29 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
 
     # Use the test client to hit your Flask endpoint.
     query_string = {
-        "inboundRecordId": 1,
+        "outboundRecordId": 1,
         "supplierName": "大富豪底材",
-        "inboundType": 0,
+        "outboundType": 4,
         "remark": "2025/3/4",
-        "payMethod": "应付账款",
         "isSizedMaterial": 1,
-        "warehouseId": 1,
         "materialTypeId": 1,
         "items": [
             {
+                "materialStorageId": 1,
                 "actualInboundUnit": "双",
-                "amount0": 0,
-                "amount1": 0,
-                "amount2": 79,
-                "amount3": 125,
-                "amount4": 150,
-                "amount5": 50,
-                "amount6": 0,
-                "amount7": 0,
+                "amount0": 8,
+                "amount1": 8,
+                "amount2": 8,
+                "amount3": 8,
+                "amount4": 8,
+                "amount5": 8,
+                "amount6": 8,
+                "amount7": 8,
                 "colorName": "",
                 "compositeUnitCost": 0,
-                "inboundQuantity": 404,
-                "inboundRecordDetailId": 1,
-                "itemTotalPrice": 4848,
+                "outboundQuantity": 64,
+                "outboundRecordDetailId": 1,
+                "itemTotalPrice": 768,
                 "materialCategory": 1,
                 "materialModel": "58216",
                 "materialName": "大底",
@@ -604,24 +467,24 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
             },
         ],
     }
-    response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
+    response = client.put("/warehouse/updateoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
     updated_record = (
-        db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
 
     updated_record_detail = (
-        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).first()
+        db.session.query(OutboundRecordDetail).filter_by(outbound_record_id=2).first()
     )
     assert updated_record.remark == "2025/3/4"
     assert updated_record_detail.unit_price == 12.0
-    assert updated_record_detail.inbound_amount == 404.0
-    assert updated_record_detail.item_total_price == 4848.0
+    assert updated_record_detail.outbound_amount == 64
+    assert updated_record_detail.item_total_price == 768
 
-    assert updated_record_detail.size_36_inbound_amount == 79
-    assert updated_record_detail.size_37_inbound_amount == 125
-    assert updated_record_detail.size_38_inbound_amount == 150
-    assert updated_record_detail.size_39_inbound_amount == 50
+    expected_amounts = [8, 8, 8, 8, 8, 8, 8, 8]
+    for i in range(len(expected_amounts)):
+        size_amount = getattr(updated_record_detail, f"size_{34 + i}_outbound_amount")
+        assert size_amount == expected_amounts[i]
 
     assert updated_record_detail.remark == "010"
 
@@ -629,23 +492,17 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     )
 
-    # 40(pending_inbound) - 10(old record detail) + 404(new record detail) = 434
-    assert updated_storage.pending_inbound == 434
+    assert updated_storage.pending_outbound == 64
 
     size_details = db.session.query(MaterialStorageSizeDetail).filter(
-        MaterialStorageSizeDetail.material_storage_id == updated_storage.material_storage_id
+        MaterialStorageSizeDetail.material_storage_id == 1
     ).order_by(MaterialStorageSizeDetail.order_number).all()
 
-    assert size_details[0].pending_inbound == 5
-    assert size_details[1].pending_inbound == 5
-    assert size_details[2].pending_inbound == 83 # 5 - 1 + 79
-    assert size_details[3].pending_inbound == 128 # 5 - 2 + 125
-    assert size_details[4].pending_inbound == 152 # 5 - 3 + 150
-    assert size_details[5].pending_inbound == 51  # 5 - 4 + 50
-    assert size_details[6].pending_inbound == 5
-    assert size_details[7].pending_inbound == 5
-
-
+    for i in range(len(shoe_size_columns)):
+        assert size_details[i].size_value == shoe_size_columns[i]
+        assert size_details[i].pending_outbound == 8
+        assert size_details[i].inbound_amount == 10
+        assert size_details[i].current_amount == 10
 
     assert updated_storage.shoe_size_columns == [
         "35",

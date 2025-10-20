@@ -125,12 +125,12 @@
                             <el-table-column prop="materialColor" label="颜色" />
                             <el-table-column prop="supplierName" label="供应商" show-overflow-tooltip />
                             <el-table-column prop="actualInboundUnit" label="单位" />
-                            <el-table-column prop="currentAmount" label="库存" />
+                            <el-table-column prop="allowedOutboundAmount" label="可出库库存" />
 
                             <el-table-column label="按尺码分配" min-width="160">
                                 <template #default="{ row }">
                                     <div class="flex items-center gap-3">
-                                        <span class="text-sm opacity-80"> 合计 {{ row._outboundQuantity || 0 }} / 库存 {{ row.currentAmount || 0 }} </span>
+                                        <span class="text-sm opacity-80"> 合计 {{ row._outboundQuantity || 0 }} / 库存 {{ row.allowedOutboundAmount || 0 }} </span>
                                         <el-button type="primary" link @click="openSizeEditor(row)">编辑尺码</el-button>
                                     </div>
                                 </template>
@@ -138,7 +138,7 @@
 
                             <el-table-column label="出库总数" min-width="120">
                                 <template #default="{ row }">
-                                    <el-input-number v-model="row._outboundQuantity" size="small" :min="0" :max="row.currentAmount" :step="1" @change="syncRowByTotal(row)" />
+                                    <el-input-number v-model="row._outboundQuantity" size="small" :min="0" :max="row.allowedOutboundAmount" :step="1" @change="syncRowByTotal(row)" />
                                 </template>
                             </el-table-column>
 
@@ -225,9 +225,9 @@
                 <div class="size-box" v-for="(name, i) in editingRow?.shoeSizeColumns || []" :key="i">
                     <div class="sb-head">
                         <div class="sb-name">{{ name }}</div>
-                        <div class="sb-stock">库存：{{ editingRow?.[`currentAmount${i}`] || 0 }}</div>
+                        <div class="sb-stock">库存：{{ editingRow?.[`allowedOutboundAmount${i}`] || 0 }}</div>
                     </div>
-                    <el-input-number v-model="editingTempAmounts[i]" :min="0" :max="editingRow?.[`currentAmount${i}`] || 0" :step="1" controls-position="right" @change="recalcEditingSum" />
+                    <el-input-number v-model="editingTempAmounts[i]" :min="0" :max="editingRow?.[`allowedOutboundAmount${i}`] || 0" :step="1" controls-position="right" @change="recalcEditingSum" />
                 </div>
             </div>
         </el-scrollbar>
@@ -639,12 +639,12 @@ function normalizeRow(r: any) {
     r._amounts = []
     let sum = 0
     for (let i = 0; i < count; i++) {
-        const stock = Number(r[`currentAmount${i}`] || 0)
+        const stock = Number(r[`allowedOutboundAmount${i}`] || 0)
         r._amounts.push(stock)
         sum += stock
     }
     // 如果没有尺码列，就用总体库存
-    const totalStock = Number(r.currentAmount || 0)
+    const totalStock = Number(r.allowedOutboundAmount || 0)
     r._outboundQuantity = count > 0 ? sum : totalStock
     r._remark = ''
     return r
@@ -691,7 +691,7 @@ function syncRowTotal(row: any) {
 function syncRowByTotal(row: any) {
     let remaining = Number(row._outboundQuantity || 0)
     for (let i = 0; i < (row._amounts || []).length; i++) {
-        const cap = Number(row[`currentAmount${i}`] || 0)
+        const cap = Number(row[`allowedOutboundAmount${i}`] || 0)
         const take = Math.min(cap, remaining)
         row._amounts[i] = take
         remaining -= take
@@ -722,7 +722,7 @@ function openSizeEditor(row: any) {
     editingRow.value = row
     // 用当前行的 _amounts 作为初始（不覆盖用户改动）
     editingTempAmounts.value = (row._amounts || []).map((v: number) => Number(v) || 0)
-    editingTotalStock.value = (row.shoeSizeColumns || []).reduce((s: number, _x: any, i: number) => s + (Number(row[`currentAmount${i}`]) || 0), 0)
+    editingTotalStock.value = (row.shoeSizeColumns || []).reduce((s: number, _x: any, i: number) => s + (Number(row[`allowedOutboundAmount${i}`]) || 0), 0)
     editingSum.value = editingTempAmounts.value.reduce((a, b) => a + Number(b || 0), 0)
     sizeEditorVisible.value = true
 }
@@ -738,7 +738,7 @@ function recalcEditingSum() {
 function fillByStock() {
     const row = editingRow.value
     if (!row) return
-    editingTempAmounts.value = (row.shoeSizeColumns || []).map((_: any, i: number) => Number(row[`currentAmount${i}`] || 0))
+    editingTempAmounts.value = (row.shoeSizeColumns || []).map((_: any, i: number) => Number(row[`allowedOutboundAmount${i}`] || 0))
     recalcEditingSum()
 }
 
@@ -754,7 +754,7 @@ function fillByRatio() {
     const row = editingRow.value
     if (!row) return
     const total = Number(row._outboundQuantity || 0)
-    const stocks = (row.shoeSizeColumns || []).map((_: any, i: number) => Number(row[`currentAmount${i}`] || 0))
+    const stocks = (row.shoeSizeColumns || []).map((_: any, i: number) => Number(row[`allowedOutboundAmount${i}`] || 0))
     const sumStock = stocks.reduce((a, b) => a + b, 0)
     if (sumStock <= 0 || total <= 0) {
         clearAllSize()
