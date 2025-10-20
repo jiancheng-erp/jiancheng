@@ -29,12 +29,16 @@ finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
 def get_finished_in_out_overview():
     """
-    op_type:
-        0: show all orders,
-        1: show active orders
+    查询成品入/出库总览（支持“仅可入库”过滤）
+    inboundableOnly:
+        0: 不限（默认）
+        1: 仅可入库（finished_actual_amount < finished_estimated_amount）
+    showAll:
+        0: 后端不额外限制
+        1: 仅显示当前仓有库存（finished_amount > 0）
     """
-    page = request.args.get("page", type=int)
-    number = request.args.get("pageSize", type=int)
+    page = request.args.get("page", type=int, default=1)
+    number = request.args.get("pageSize", type=int, default=20)
     order_rid = request.args.get("orderRId")
     shoe_rid = request.args.get("shoeRId")
     customer_name = request.args.get("customerName")
@@ -43,9 +47,10 @@ def get_finished_in_out_overview():
     customer_brand = request.args.get("customerBrand")
     storage_status_num = request.args.get("storageStatusNum", type=int)
     show_all = request.args.get("showAll", default=0, type=int)
-    category_kw = (request.args.get("category") or "").strip() 
+    inboundable_only = request.args.get("inboundableOnly", default=0, type=int)
+    category_kw = (request.args.get("category") or "").strip()
 
-    # 构造“完成事件”子查询（只取 operation_id = 22 的最新时间）
+    # 完成事件（仅取 operation_id=22 的最新时间）
     ev_subq = (
         db.session.query(
             Event.event_order_id.label("order_id"),
@@ -56,8 +61,11 @@ def get_finished_in_out_overview():
         .subquery()
     )
 
-    query = (
+    # 基础联结查询（注意：用它来构建“过滤条件一致的 ID 子查询”和“最终明细查询”）
+    base_query = (
         db.session.query(
+            Order.order_rid.label("order_rid_for_sort"),
+            FinishedShoeStorage.finished_shoe_id.label("storage_id_pk"),
             Order,
             Customer,
             OrderShoe,
@@ -65,7 +73,7 @@ def get_finished_in_out_overview():
             FinishedShoeStorage,
             Color,
             BatchInfoType,
-            ev_subq.c.finished_time,  # 用这个代替 Event
+            ev_subq.c.finished_time,
         )
         .join(OrderShoe, Order.order_id == OrderShoe.order_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
@@ -78,33 +86,33 @@ def get_finished_in_out_overview():
             FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .join(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
-        # 外连接完成事件时间（可能为 NULL）
         .outerjoin(ev_subq, ev_subq.c.order_id == Order.order_id)
-        .order_by(Order.order_rid)
     )
 
+    # —— 动态过滤条件（与前端一致）——
     if order_rid:
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+        base_query = base_query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid:
-        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+        base_query = base_query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
     if customer_name:
-        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+        base_query = base_query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
     if customer_product_name:
-        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
+        base_query = base_query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
     if storage_status_num is not None and storage_status_num > -1:
-        query = query.filter(FinishedShoeStorage.finished_status == storage_status_num)
+        base_query = base_query.filter(FinishedShoeStorage.finished_status == storage_status_num)
     if order_cid:
-        query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
+        base_query = base_query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
     if customer_brand:
-        query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+        base_query = base_query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+
     if category_kw == "男鞋":
-        query = query.filter(BatchInfoType.batch_info_type_name.like("%男%"))
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%男%"))
     elif category_kw == "女鞋":
-        query = query.filter(BatchInfoType.batch_info_type_name.like("%女%"))
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%女%"))
     elif category_kw == "童鞋":
-        query = query.filter(BatchInfoType.batch_info_type_name.like("%童%"))
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%童%"))
     elif category_kw == "其它":
-        query = query.filter(
+        base_query = base_query.filter(
             or_(
                 BatchInfoType.batch_info_type_name.is_(None),
                 and_(
@@ -114,36 +122,79 @@ def get_finished_in_out_overview():
                 ),
             )
         )
+
+    # 仅显示当前仓有库存
     if show_all == 1:
-        query = query.filter(FinishedShoeStorage.finished_amount > 0)
+        base_query = base_query.filter(FinishedShoeStorage.finished_amount > 0)
 
-    count_result = query.distinct().count()
-    response = query.distinct().limit(number).offset((page - 1) * number).all()
-
-    result = []
-    for row in response:
-        (
-            order,
-            customer,
-            order_shoe,
-            shoe,
-            storage_obj,
-            color,
-            batch_info,
-            finished_time,   # 这里拿到的是 datetime 或 None
-        ) = row
-
-        remaining_amount = (
-            storage_obj.finished_estimated_amount - storage_obj.finished_actual_amount
-            if storage_obj.finished_actual_amount > 0
-            else 0
+    # 仅显示“可入库”
+    if inboundable_only == 1:
+        base_query = base_query.filter(
+            FinishedShoeStorage.finished_actual_amount < FinishedShoeStorage.finished_estimated_amount
         )
+        # 如需用“欠数 > 0”替代，可写：
+        # base_query = base_query.filter(
+        #     (FinishedShoeStorage.finished_estimated_amount - FinishedShoeStorage.finished_actual_amount) > 0
+        # )
+
+    # —— 先做“ID 子查询 + 去重计数” ——（避免 DISTINCT + JOIN 分页混乱）
+    id_subq = (
+        base_query
+        .with_entities(
+            FinishedShoeStorage.finished_shoe_id.label("sid"),
+            Order.order_rid.label("order_rid_for_sort"),
+        )
+        .distinct()
+        .subquery()
+    )
+
+    # 计数（去重后）
+    total = db.session.query(func.count()).select_from(id_subq).scalar()
+
+    # 取当页主键（可按 order_rid 排序，也可改为创建时间等）
+    page_ids = (
+        db.session.query(id_subq.c.sid)
+        .order_by(id_subq.c.order_rid_for_sort.asc())
+        .limit(number)
+        .offset((page - 1) * number)
+        .all()
+    )
+    page_ids = [x[0] for x in page_ids]
+    if not page_ids:
+        return {"result": [], "total": total}
+
+    # —— 用当页主键回查完整明细 ——（与原 base_query 同样的列）
+    page_query = base_query.filter(FinishedShoeStorage.finished_shoe_id.in_(page_ids)).order_by(Order.order_rid.asc())
+    rows = page_query.all()
+
+    # —— 组装返回 —— 
+    result = []
+    for (
+        order_rid_for_sort,
+        storage_id_pk,
+        order,
+        customer,
+        order_shoe,
+        shoe,
+        storage_obj,
+        color,
+        batch_info,
+        finished_time,
+    ) in rows:
+
+        estimated = storage_obj.finished_estimated_amount or 0
+        actual = storage_obj.finished_actual_amount or 0
+        remaining_amount = max(estimated - actual, 0)  # ✅ 修正
+
+        # 注意：batch_info 这里是内联接；若你今后改为外联，需要加 None 判断
         if "男" in batch_info.batch_info_type_name:
             batch_type = "男鞋"
         elif "女" in batch_info.batch_info_type_name:
             batch_type = "女鞋"
         elif "童" in batch_info.batch_info_type_name:
             batch_type = "童鞋"
+        else:
+            batch_type = "其它"
 
         obj = {
             "orderId": order.order_id,
@@ -154,14 +205,13 @@ def get_finished_in_out_overview():
             "orderShoeId": order_shoe.order_shoe_id,
             "designer": shoe.shoe_designer,
             "adjuster": order_shoe.adjust_staff,
-            # 只有完成（存在 operation_id=29 的记录）才会有时间；未完成则为 None
             "finishedTime": format_date(finished_time) if finished_time else None,
             "shoeRId": shoe.shoe_rid,
             "storageId": storage_obj.finished_shoe_id,
             "customerProductName": order_shoe.customer_product_name,
-            "estimatedInboundAmount": storage_obj.finished_estimated_amount,
-            "actualInboundAmount": storage_obj.finished_actual_amount,
-            "currentAmount": storage_obj.finished_amount,
+            "estimatedInboundAmount": estimated,
+            "actualInboundAmount": actual,
+            "currentAmount": storage_obj.finished_amount or 0,
             "remainingAmount": remaining_amount,
             "storageStatusNum": storage_obj.finished_status,
             "storageStatusLabel": FINISHED_STORAGE_STATUS[storage_obj.finished_status],
@@ -188,7 +238,7 @@ def get_finished_in_out_overview():
 
         result.append(obj)
 
-    return {"result": result, "total": count_result}
+    return {"result": result, "total": total}
 
 
 
