@@ -90,7 +90,7 @@
             <el-row :gutter="22" style="margin-top: 10px">
                 <el-col :span="6" :offset="20"><el-button type="primary" size="default" @click="openIssueDialog">下发投产指令单</el-button> </el-col>
             </el-row>
-            <el-dialog v-model="isUploadImageDialogVisible" title="上传投产指令单备注图片">
+            <SmartDialog v-model="isUploadImageDialogVisible" title="上传投产指令单备注图片">
                 <el-upload
                     ref="uploadImage"
                     class="upload-image"
@@ -108,9 +108,9 @@
                 </el-upload>
                 <el-button size="small" type="primary" @click="submitUpload">点击上传</el-button>
                 <div slot="tip" class="el-upload__tip">只能上传图片文件</div>
-            </el-dialog>
+            </SmartDialog>
 
-            <el-dialog title="正式投产指令单下发页面" v-model="isFinalBOM" width="90%">
+            <SmartDialog title="正式投产指令单下发页面" v-model="isFinalBOM" width="90%">
                 <el-descriptions title="订单信息" :column="2" border>
                     <el-descriptions-item label="订单编号" align="center">{{ orderData.orderId }}</el-descriptions-item>
                     <el-descriptions-item label="订单创建时间" align="center">{{ orderData.createTime }}</el-descriptions-item>
@@ -141,8 +141,8 @@
                         <el-button type="primary" @click="issueBOMs(selectedShoe)">下发选定投产指令单</el-button>
                     </span>
                 </template>
-            </el-dialog>
-            <el-dialog
+            </SmartDialog>
+            <SmartDialog
                 :title="`投产指令单创建 ${newProductionInstructionId}`"
                 v-model="isProductionOrderCreateDialogVisible"
                 width="90%"
@@ -843,8 +843,8 @@
                         <el-button type="primary" @click="saveProductionInstruction">确认保存</el-button>
                     </span>
                 </template>
-            </el-dialog>
-            <el-dialog title="加载过往鞋型材料" v-model="isLoadMaterialDialogVisible" width="50%">
+            </SmartDialog>
+            <SmartDialog title="加载过往鞋型材料" v-model="isLoadMaterialDialogVisible" width="50%">
                 <el-table :data="pastShoeInfoTable" border>
                     <el-table-column type="expand">
                         <template #default="scope">
@@ -869,18 +869,12 @@
                 </el-table>
                 <template #footer>
                     <span>
-                        <el-button
-                            @click="
-                                isLoadMaterialDialogVisible = false,
-                                selectShoeTypeRow = {}
-                            "
-                            >取消</el-button
-                        >
+                        <el-button @click="(isLoadMaterialDialogVisible = false), (selectShoeTypeRow = {})">取消</el-button>
                         <el-button type="primary" @click="handleConfirmLoad">确认加载</el-button>
                     </span>
                 </template>
-            </el-dialog>
-            <el-dialog title="过往订单材料查看" v-model="isPastShoeMaterialDetailDialogVisible" width="80%">
+            </SmartDialog>
+            <SmartDialog title="过往订单材料查看" v-model="isPastShoeMaterialDetailDialogVisible" width="80%">
                 <el-descriptions title="鞋型基本信息" border column="2">
                     <el-descriptions-item label="鞋图" rowspan="2" align="center">
                         <el-image style="width: 150px; height: 75px" :src="pastShoeDescription.shoeImageUrl" />
@@ -904,9 +898,9 @@
                         <el-button type="primary" @click="isPastShoeMaterialDetailDialogVisible = false">确认</el-button>
                     </span>
                 </template>
-            </el-dialog>
+            </SmartDialog>
 
-            <el-dialog title="添加新材料" v-model="newMaterialVis" width="50%">
+            <SmartDialog title="添加新材料" v-model="newMaterialVis" width="50%">
                 <el-row :gutter="20">
                     <el-col :span="6" :offset="0">
                         <div style="display: flex; align-items: center; white-space: nowrap">
@@ -960,119 +954,10 @@
                         <el-button type="primary" @click="confirmNewMaterialAdd(typeSymbol)">保存</el-button>
                     </span>
                 </template>
-            </el-dialog>
-            <el-dialog :title="`投产指令单预览 ${newProductionInstructionId}`" v-model="isPreviewDialogVisible" width="90%">
-                <div style="height: 650px; overflow-y: scroll">
-                    <el-row :gutter="20">
-                        <el-col :span="24" :offset="0">
-                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
-                                <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
-                                    <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
-                                </el-descriptions-item>
-                                <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
-                                <el-descriptions-item label="客户号" align="center">{{ orderShoeData.customerProductName }}</el-descriptions-item>
-                                <el-descriptions-item label="色号" align="center">{{ orderShoeData.color }}</el-descriptions-item>
-                                <el-descriptions-item label="设计师" align="center">{{ orderShoeData.shoeDesigner }}</el-descriptions-item>
-                                <el-descriptions-item label="调版员" align="center">{{ orderShoeData.shoeAdjuster }}</el-descriptions-item>
-                                <el-descriptions-item label="商标" align="center">{{ orderShoeData.brandName }}</el-descriptions-item>
-                            </el-descriptions>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20">
-                        <el-col :span="24" :offset="0">
-                            <el-descriptions title="投产指令单公用信息" border :column="2">
-                                <el-descriptions-item label="本码">
-                                    {{ productionInstructionDetail.originSize }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="配码">
-                                    {{ productionInstructionDetail.sizeRange }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="码差">
-                                    {{ productionInstructionDetail.sizeDifference }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="楦型">
-                                    {{ productionInstructionDetail.lastType }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="设计师">
-                                    {{ productionInstructionDetail.designer }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="烫底工艺">
-                                    {{ productionInstructionDetail.burnSoleCraft }}
-                                </el-descriptions-item>
-                                <el-descriptions-item label="工艺备注">
-                                    {{ productionInstructionDetail.craftRemark }}
-                                </el-descriptions-item>
-                            </el-descriptions>
-                        </el-col>
-                    </el-row>
-                    <el-row :gutter="20">
-                        <el-col :span="24" :offset="0">
-                            <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
-                        </el-col>
-                    </el-row>
-
-                    <el-tabs v-model="activeTab">
-                        <!-- Generate tabs from backend-provided tabcolor array -->
-                        <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color" style="overflow-y: scroll">
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 面料： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('surfaceMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 里料： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('insideMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 辅料： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('accessoryMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 大底： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('outsoleMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 中底： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')" />
-                                </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="2" :offset="0"> 烫底： </el-col>
-                            </el-row>
-                            <el-row :gutter="20">
-                                <el-col :span="24" :offset="0">
-                                    <MaterialDataTable :tableData="getMaterialDataByType('hotsoleMaterialData')" />
-                                </el-col>
-                            </el-row>
-                        </el-tab-pane>
-                    </el-tabs>
-                </div>
-
-                <template #footer>
-                    <span>
-                        <el-button type="primary" @click="isPreviewDialogVisible = false">确认</el-button>
-                    </span>
-                </template>
-            </el-dialog>
-            <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
+            </SmartDialog>
+        </el-main>
+        <SmartDialog :title="`投产指令单预览 ${newProductionInstructionId}`" v-model="isPreviewDialogVisible" width="90%">
+            <div style="height: 650px; overflow-y: scroll">
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
@@ -1080,704 +965,895 @@
                                 <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                             </el-descriptions-item>
                             <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
-                            <el-descriptions-item label="客户号" align="center">{{ currentOrderShoeRow.customerProductName }}</el-descriptions-item>
-                            <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
-                        </el-descriptions>
-                    </el-col>
-                </el-row>
-                <el-row>
-                    <el-col>
-                        <el-descriptions title="投产指令单公用信息" border :column="2">
-                            <el-descriptions-item label="本码">
-                                <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
-                            </el-descriptions-item>
-                            <el-descriptions-item label="配码">
-                                <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
-                            </el-descriptions-item>
-                            <el-descriptions-item label="码差">
-                                <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
-                            </el-descriptions-item>
-                            <el-descriptions-item label="设计师">
-                                <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
-                            </el-descriptions-item>
-                            <el-descriptions-item label="楦型">
-                                <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
-                            </el-descriptions-item>
-                            <el-descriptions-item label="工艺备注">
-                                <el-input type="textarea" autosize maxlength="150" show-word-limit v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
-                            </el-descriptions-item>
+                            <el-descriptions-item label="客户号" align="center">{{ orderShoeData.customerProductName }}</el-descriptions-item>
+                            <el-descriptions-item label="色号" align="center">{{ orderShoeData.color }}</el-descriptions-item>
+                            <el-descriptions-item label="设计师" align="center">{{ orderShoeData.shoeDesigner }}</el-descriptions-item>
+                            <el-descriptions-item label="调版员" align="center">{{ orderShoeData.shoeAdjuster }}</el-descriptions-item>
+                            <el-descriptions-item label="商标" align="center">{{ orderShoeData.brandName }}</el-descriptions-item>
                         </el-descriptions>
                     </el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
-                </el-row>
-                <el-row justify="center" align="middle">
-                    <h3>码数对照表</h3>
+                    <el-col :span="24" :offset="0">
+                        <el-descriptions title="投产指令单公用信息" border :column="2">
+                            <el-descriptions-item label="本码">
+                                {{ productionInstructionDetail.originSize }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="配码">
+                                {{ productionInstructionDetail.sizeRange }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="码差">
+                                {{ productionInstructionDetail.sizeDifference }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="楦型">
+                                {{ productionInstructionDetail.lastType }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="设计师">
+                                {{ productionInstructionDetail.designer }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="烫底工艺">
+                                {{ productionInstructionDetail.burnSoleCraft }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="工艺备注">
+                                {{ productionInstructionDetail.craftRemark }}
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
                 </el-row>
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
                         <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
                     </el-col>
                 </el-row>
-                <el-row>
-                    <el-col :span="24">
-                        <el-descriptions title="业务部备注" border>
-                            <el-descriptions-item label="工艺">
-                                {{ currentOrderShoeRow.businessTechnicalRemark }}
-                            </el-descriptions-item>
-                            <el-descriptions-item label="材料">
-                                {{ currentOrderShoeRow.businessMaterialRemark }}
-                            </el-descriptions-item>
-                        </el-descriptions>
-                    </el-col>
-                </el-row>
+
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
-                    <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
-                        <el-row>
-                            <el-col :span="2" :offset="20">
-                                <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
-                            </el-col>
-                        </el-row>
+                    <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color" style="overflow-y: scroll">
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 面料： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(0)">手动添加面料</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(0)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
-
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 0)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('surfaceMaterialData')" />
                             </el-col>
                         </el-row>
-
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 里料： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(1)">手动添加里料</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(1)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
-
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 1)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('insideMaterialData')" />
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 辅料： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(2)">手动添加辅料</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(2)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
-
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('accessoryMaterialData')" />
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 大底： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 3)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('outsoleMaterialData')" />
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 中底： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(4)">手动添加中底</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(4)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型" />
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 4)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('midsoleMaterialData')" />
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="2" :offset="0"> 烫底： </el-col>
-                            <el-col :span="6" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(8)">添加烫底加工商（必填）</el-button>
-                            </el-col>
-                            <el-col :span="2" :offset="0">
-                                <el-button @click="syncMaterials(6)">{{ this.syncMaterialButtonText }}</el-button>
-                            </el-col>
                         </el-row>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
-                                    <el-table-column type="index"></el-table-column>
-                                    <el-table-column prop="materialType" label="材料类型">
-                                        <template #default="scope">
-                                            <el-select
-                                                v-model="scope.row.materialType"
-                                                :disabled="scope.row.materialType === '加工' || scope.row.materialType === '烫底'"
-                                                filterable
-                                                @blur="trimInput(scope.row, 'materialType')"
-                                            >
-                                                <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialName" label="材料名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
-                                                <div v-if="scope.row.materialType === '里料'">
-                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                                </div>
-                                                <div v-else-if="scope.row.materialType === '面料'">
-                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                                </div>
-                                                <div v-else-if="scope.row.materialType === '加工'">
-                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [10])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                                </div>
-                                                <div v-else-if="scope.row.materialType === '烫底'">
-                                                    <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
-                                                </div>
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="supplierName" label="厂家名称">
-                                        <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
-                                                <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
-                                            </el-select>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column prop="materialModel" label="材料型号">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialModel"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialModel')"
-                                                placeholder=""
-                                                :maxlength="wordLengths.MODEL_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="materialSpecification" label="材料规格">
-                                        <template #default="scope">
-                                            <el-autocomplete
-                                                v-model="scope.row.materialSpecification"
-                                                :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
-                                                @blur="trimInput(scope.row, 'materialSpecification')"
-                                                type="textarea"
-                                                autosize
-                                                placeholder=""
-                                                :maxlength="wordLengths.SPECIFICATION_LENGTH"
-                                                show-word-limit
-                                            />
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="craftName" label="复合工艺">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.craftName"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'craftName')"
-                                                :maxlength="wordLengths.CRAFT_NAME_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="color" label="颜色">
-                                        <template #default="scope">
-                                            <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="comment" label="备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.comment"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'comment')"
-                                                :maxlength="wordLengths.COMMENT_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-                                    <el-table-column prop="processingRemark" label="加工备注">
-                                        <template #default="scope">
-                                            <el-input
-                                                type="textarea"
-                                                autosize
-                                                v-model="scope.row.processingRemark"
-                                                size="default"
-                                                @blur="trimInput(scope.row, 'processingRemark')"
-                                                placeholder="例：烫钻，电绣"
-                                                :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
-                                                show-word-limit
-                                            ></el-input>
-                                        </template>
-                                    </el-table-column>
-
-                                    <el-table-column label="操作">
-                                        <template #default="scope">
-                                            <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 6)">删除</el-button>
-                                        </template>
-                                    </el-table-column>
-                                </el-table>
+                                <MaterialDataTable :tableData="getMaterialDataByType('hotsoleMaterialData')" />
                             </el-col>
                         </el-row>
                     </el-tab-pane>
                 </el-tabs>
-                <template #footer>
-                    <span>
-                        <el-button @click="isEditDialogVisible = false">取消</el-button>
-                        <el-button type="primary" @click="editProductionInstrucion">保存</el-button>
-                    </span>
-                </template>
-            </el-dialog>
-        </el-main>
+            </div>
+
+            <template #footer>
+                <span>
+                    <el-button type="primary" @click="isPreviewDialogVisible = false">确认</el-button>
+                </span>
+            </template>
+        </SmartDialog>
+        <SmartDialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
+            <el-row :gutter="20">
+                <el-col :span="24" :offset="0">
+                    <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                        <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
+                            <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
+                        </el-descriptions-item>
+                        <el-descriptions-item label="工厂型号" align="center">{{ currentShoeId }}</el-descriptions-item>
+                        <el-descriptions-item label="客户号" align="center">{{ currentOrderShoeRow.customerProductName }}</el-descriptions-item>
+                        <el-descriptions-item label="商标" align="center">{{ orderData.customerBrand }}</el-descriptions-item>
+                    </el-descriptions>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col>
+                    <el-descriptions title="投产指令单公用信息" border :column="2">
+                        <el-descriptions-item label="本码">
+                            <el-input v-model="productionInstructionDetail.originSize" size="default"></el-input>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="配码">
+                            <el-input v-model="productionInstructionDetail.sizeRange" size="default"></el-input>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="码差">
+                            <el-input v-model="productionInstructionDetail.sizeDifference" size="default"></el-input>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="设计师">
+                            <el-input v-model="productionInstructionDetail.designer" size="default"></el-input>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="楦型">
+                            <el-input v-model="productionInstructionDetail.lastType" size="default"></el-input>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="工艺备注">
+                            <el-input type="textarea" autosize maxlength="150" show-word-limit v-model="productionInstructionDetail.craftRemark" size="default"></el-input>
+                        </el-descriptions-item>
+                    </el-descriptions>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20">
+                <el-col :span="12" :offset="0"><el-button type="primary" size="default" @click="openLoadMaterialDialog">加载过往订单</el-button></el-col>
+            </el-row>
+            <el-row justify="center" align="middle">
+                <h3>码数对照表</h3>
+            </el-row>
+            <el-row :gutter="20">
+                <el-col :span="24" :offset="0">
+                    <vxe-grid v-bind="sizeGridOptions"> </vxe-grid>
+                </el-col>
+            </el-row>
+            <el-row>
+                <el-col :span="24">
+                    <el-descriptions title="业务部备注" border>
+                        <el-descriptions-item label="工艺">
+                            {{ currentOrderShoeRow.businessTechnicalRemark }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="材料">
+                            {{ currentOrderShoeRow.businessMaterialRemark }}
+                        </el-descriptions-item>
+                    </el-descriptions>
+                </el-col>
+            </el-row>
+            <el-tabs v-model="activeTab">
+                <!-- Generate tabs from backend-provided tabcolor array -->
+                <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
+                    <el-row>
+                        <el-col :span="2" :offset="20">
+                            <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 面料： </el-col>
+                        <el-col :span="4" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterial(0)">添加面料</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(0)">手动添加面料</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(0)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型" />
+
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 0)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 里料： </el-col>
+                        <el-col :span="4" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterial(1)">添加里料</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(1)">手动添加里料</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(1)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型" />
+
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 1)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 辅料： </el-col>
+                        <el-col :span="4" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterial(2)">添加辅料</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(2)">手动添加辅料</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(2)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型" />
+
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 大底： </el-col>
+                        <el-col :span="4" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 3)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 中底： </el-col>
+                        <el-col :span="4" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterial(4)">添加中底</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(4)">手动添加中底</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(4)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 4)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="2" :offset="0"> 烫底： </el-col>
+                        <el-col :span="6" :offset="0">
+                            <el-button type="primary" size="default" @click="addMaterialByManual(6)">添加成品烫底</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(7)">添加烫底原材料(外发或自加工)</el-button>
+                            <el-button type="primary" size="default" @click="addMaterialByManual(8)">添加烫底加工商（必填）</el-button>
+                        </el-col>
+                        <el-col :span="2" :offset="0">
+                            <el-button @click="syncMaterials(6)">{{ this.syncMaterialButtonText }}</el-button>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="20">
+                        <el-col :span="24" :offset="0">
+                            <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
+                                <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="materialType" label="材料类型">
+                                    <template #default="scope">
+                                        <el-select
+                                            v-model="scope.row.materialType"
+                                            :disabled="scope.row.materialType === '加工' || scope.row.materialType === '烫底'"
+                                            filterable
+                                            @blur="trimInput(scope.row, 'materialType')"
+                                        >
+                                            <el-option v-for="item in materialTypeOptions" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialName" label="材料名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
+                                            <div v-if="scope.row.materialType === '里料'">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </div>
+                                            <div v-else-if="scope.row.materialType === '面料'">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </div>
+                                            <div v-else-if="scope.row.materialType === '加工'">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [10])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </div>
+                                            <div v-else-if="scope.row.materialType === '烫底'">
+                                                <el-option v-for="item in filterByTypes(materialNameOptions, [16])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
+                                            </div>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="supplierName" label="厂家名称">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column prop="materialModel" label="材料型号">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialModel"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(0, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialModel')"
+                                            placeholder=""
+                                            :maxlength="wordLengths.MODEL_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="materialSpecification" label="材料规格">
+                                    <template #default="scope">
+                                        <el-autocomplete
+                                            v-model="scope.row.materialSpecification"
+                                            :fetch-suggestions="(queryString, cb) => querySearchModel(1, scope.row, queryString, cb)"
+                                            @blur="trimInput(scope.row, 'materialSpecification')"
+                                            type="textarea"
+                                            autosize
+                                            placeholder=""
+                                            :maxlength="wordLengths.SPECIFICATION_LENGTH"
+                                            show-word-limit
+                                        />
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="craftName" label="复合工艺">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.craftName"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'craftName')"
+                                            :maxlength="wordLengths.CRAFT_NAME_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="color" label="颜色">
+                                    <template #default="scope">
+                                        <el-input v-model="scope.row.color" size="default" @blur="validateColor(scope.row)" :maxlength="wordLengths.COLOR_LENGTH" show-word-limit></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="comment" label="备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.comment"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'comment')"
+                                            :maxlength="wordLengths.COMMENT_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="processingRemark" label="加工备注">
+                                    <template #default="scope">
+                                        <el-input
+                                            type="textarea"
+                                            autosize
+                                            v-model="scope.row.processingRemark"
+                                            size="default"
+                                            @blur="trimInput(scope.row, 'processingRemark')"
+                                            placeholder="例：烫钻，电绣"
+                                            :maxlength="wordLengths.PROCESSING_REMARK_LENGTH"
+                                            show-word-limit
+                                        ></el-input>
+                                    </template>
+                                </el-table-column>
+
+                                <el-table-column label="操作">
+                                    <template #default="scope">
+                                        <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 6)">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-col>
+                    </el-row>
+                </el-tab-pane>
+            </el-tabs>
+            <template #footer>
+                <span>
+                    <el-button @click="isEditDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="editProductionInstrucion">保存</el-button>
+                </span>
+            </template>
+        </SmartDialog>
     </el-container>
 </template>
 
 <script>
+import { defineComponent as SD_defineComponent, h as SD_h, ref as SD_ref, computed as SD_computed, resolveComponent as SD_resolveComponent } from 'vue';
+
+// ===== SmartDialog (in-file high-performance wrapper for el-dialog) =====
+const SmartDialog = SD_defineComponent({
+  name: 'SmartDialog',
+  props: {
+    modelValue: { type: Boolean, default: false },
+    title: { type: String, default: '' },
+    width: { type: [String, Number], default: '800px' },
+    destroyOnClose: { type: Boolean, default: false },
+    closeOnClickModal: { type: Boolean, default: true },
+    closeOnPressEscape: { type: Boolean, default: true },
+    lockScroll: { type: Boolean, default: true },
+    appendToBody: { type: Boolean, default: true },
+    customClass: { type: String, default: '' },
+    bodyPadding: { type: String, default: '16px 18px' },
+    maxBodyHeight: { type: String, default: '70vh' },
+  },
+  emits: ['update:modelValue','open','opened','close','closed'],
+  setup(props, { emit, slots }) {
+    const initialized = SD_ref(false);
+    const renderReady = SD_ref(false);
+    const visible = SD_computed({
+      get: () => props.modelValue,
+      set: (v) => emit('update:modelValue', v)
+    });
+
+    function onOpen(){
+      emit('open');
+      if(!initialized.value){
+        renderReady.value = false;
+        requestAnimationFrame(()=>{ setTimeout(()=>{ renderReady.value = true; initialized.value = true; }, 0); });
+      } else {
+        renderReady.value = true;
+      }
+    }
+    function onOpened(){ emit('opened'); }
+    function onClose(){ emit('close'); }
+    function onClosed(){
+      emit('closed');
+      if(props.destroyOnClose){
+        initialized.value = false;
+        renderReady.value = false;
+      }
+    }
+
+    return () => SD_h(
+      SD_resolveComponent('el-dialog'),
+      {
+        modelValue: visible.value,
+        'onUpdate:modelValue': (v)=> visible.value = v,
+        title: props.title,
+        width: props.width,
+        destroyOnClose: props.destroyOnClose,
+        closeOnClickModal: props.closeOnClickModal,
+        closeOnPressEscape: props.closeOnPressEscape,
+        lockScroll: props.lockScroll,
+        appendToBody: props.appendToBody,
+        class: ['smart-dialog', props.customClass],
+        onOpen, onOpened, onClose, onClosed,
+      },
+      {
+        header: () => SD_h('div', { class: 'dlg-header' }, [
+          SD_h('span', { class: 'dlg-title' }, props.title),
+          SD_h('div', { class: 'dlg-header-extra' }, slots['header-extra'] ? slots['header-extra']() : null),
+        ]),
+        default: () => SD_h('div', { class: 'dlg-body', style: { maxHeight: props.maxBodyHeight, padding: props.bodyPadding, overflow: 'auto' } },
+          renderReady.value
+            ? (slots.default ? slots.default() : null)
+            : SD_h('div', {class: 'dlg-skeleton'}, [
+                SD_h('div', {class: 'dlg-skel-row'}),
+                SD_h('div', {class: 'dlg-skel-row'}),
+                SD_h('div', {class: 'dlg-skel-row short'}),
+              ])
+        ),
+        footer: () => SD_h('div', { class: 'dlg-footer' }, slots.footer ? slots.footer() : null)
+      }
+    );
+  }
+});
+// ===== End SmartDialog =====
+
 import AllHeader from '@/components/AllHeader.vue'
 import Arrow from '@/components/OrderArrowView.vue'
 import { Search } from '@element-plus/icons-vue'
@@ -1791,7 +1867,7 @@ export default {
         AllHeader,
         Arrow,
         MaterialDataTable
-    },
+    , SmartDialog },
     props: ['orderId'],
     data() {
         return {
@@ -2472,6 +2548,7 @@ export default {
                 loadingInstance.close()
             } finally {
                 loadingInstance.close()
+                this.isEditDialogVisible = false
             }
         },
         async saveProductionInstruction() {
