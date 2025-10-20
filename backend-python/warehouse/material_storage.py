@@ -1103,7 +1103,7 @@ def _create_outbound_record_details(items, outbound_record):
             record_detail.item_total_price = outbound_quantity * storage.unit_price
 
         total_price += record_detail.item_total_price
-
+        outbound_quantity = round(outbound_quantity, 5)
         outbound_record.is_sized_material = 0
         record_detail.material_storage_id = storage_id
 
