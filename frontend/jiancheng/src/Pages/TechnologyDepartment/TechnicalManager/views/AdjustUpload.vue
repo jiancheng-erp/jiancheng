@@ -188,7 +188,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog title="材料工艺填写及更改页面" v-model="isMaterialCraftVisDialog" width="100%" :close-on-click-modal="false" fullscreen style="overflow-y: scroll">
+            <el-dialog title="材料工艺填写及更改页面" v-model="isMaterialCraftVisDialog" width="100%" :close-on-click-modal="false" fullscreen style="overflow-y: scroll" append-to-body>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
                     <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
