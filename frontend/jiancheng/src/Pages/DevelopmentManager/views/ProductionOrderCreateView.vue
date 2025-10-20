@@ -211,7 +211,7 @@
                 </el-row>
                 <el-tabs v-model="activeTab">
                     <!-- Generate tabs from backend-provided tabcolor array -->
-                    <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color">
+                    <el-tab-pane v-for="color in tabcolor" :label="color" :key="color" :name="color" lazy>
                         <el-row>
                             <el-col :span="2" :offset="20">
                                 <el-button @click="syncAllMaterials">同步所有材料至所有颜色</el-button>
@@ -1067,7 +1067,7 @@
                 </span>
             </template>
         </SmartDialog>
-        <SmartDialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
+        <SmartDialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" fullscreen width="100%" style="overflow-y: scroll">
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
                     <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
