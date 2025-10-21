@@ -56,6 +56,7 @@ name_mapping_inventory = {
     "pending_inbound":"未审核入库数",
     "pending_outbound":"未审核出库数",
     "inbound_amount":"已审核入库数",
+    "outbound_amount":"已审核出库数",
     "current_amount":"已审核库存",
     "unit_price":"最新采购单价",
     "actual_inbound_unit":"入库单位",
@@ -278,6 +279,7 @@ def get_warehouse_inventory():
         res[to_camel('material_type')] = material_type.material_type_name
         res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
         res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.average_price, 4)
+        res[to_camel("outbound_amount")] = res[to_camel("inbound_amount")] - res[to_camel("current_amount")]
 
         current_inventory.append(res)
     return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
