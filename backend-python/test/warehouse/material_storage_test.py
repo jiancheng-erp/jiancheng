@@ -15,34 +15,42 @@ from app_config import db, create_app
 from blueprints import register_blueprints
 from models import *
 from event_processor import EventProcessor
-from constants import WAREHOUSE_CLERK_ROLE, WAREHOUSE_CLERK_STAFF_ID, WAREHOUSE_CLERK_TEST
+from constants import (
+    WAREHOUSE_CLERK_ROLE,
+    WAREHOUSE_CLERK_STAFF_ID,
+    WAREHOUSE_CLERK_TEST,
+)
 
 
 # --- Flask App Fixture ---
 @pytest.fixture
 def test_app():
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "mysql+pymysql://jiancheng_mgt:123456Ab@localhost:3306/jiancheng_local_test",
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-        "SECRET_KEY": "EC63AF9BA57B9F20",
-        "JWT_SECRET_KEY": "EC63AF9BA57B9F20",
-        # 👇 ensure tests use header-based JWT with the expected scheme
-        "JWT_TOKEN_LOCATION": ["headers"],
-        "JWT_HEADER_NAME": "Authorization",
-        "JWT_HEADER_TYPE": "Bearer",
-        # optionally keep tokens fresh longer during tests
-        # "JWT_ACCESS_TOKEN_EXPIRES": timedelta(hours=1)
-        "REDIS_HOST": "localhost",
-        "REDIS_PORT": 6379,
-        "REDIS_DB": 0,
-        "session_lifetime_days": 7
-    })
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "mysql+pymysql://jiancheng_mgt:123456Ab@localhost:3306/jiancheng_local_test",
+            "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+            "SECRET_KEY": "EC63AF9BA57B9F20",
+            "JWT_SECRET_KEY": "EC63AF9BA57B9F20",
+            # 👇 ensure tests use header-based JWT with the expected scheme
+            "JWT_TOKEN_LOCATION": ["headers"],
+            "JWT_HEADER_NAME": "Authorization",
+            "JWT_HEADER_TYPE": "Bearer",
+            # optionally keep tokens fresh longer during tests
+            # "JWT_ACCESS_TOKEN_EXPIRES": timedelta(hours=1)
+            "REDIS_HOST": "localhost",
+            "REDIS_PORT": 6379,
+            "REDIS_DB": 0,
+            "session_lifetime_days": 7,
+        }
+    )
     # Ensure JWTManager exists and override blocklist callback in tests
     jwt = app.extensions["flask-jwt-extended"]
+
     @jwt.token_in_blocklist_loader
     def never_revoked(_, __):
         return False
+
     app.config["event_processor"] = EventProcessor()
     register_blueprints(app)
     with app.app_context():
@@ -124,10 +132,12 @@ def test_get_material_inbound_records(client: FlaskClient):
         "pageSize": 10,
     }
     response = client.get(
-        "/warehouse/getmaterialinboundrecords", query_string=query_string, headers=return_header_with_token()
+        "/warehouse/getmaterialinboundrecords",
+        query_string=query_string,
+        headers=return_header_with_token(),
     )
     assert response.status_code == 200
-    assert (response.get_json()["result"][0]["inboundRecordId"] == 1)
+    assert response.get_json()["result"][0]["inboundRecordId"] == 1
 
 
 # 用户选择订单材料
@@ -229,7 +239,11 @@ def test_inbound_material_user_select_order_material(client: FlaskClient):
         "payMethod": "应付账款",
         "materialTypeId": 2,
     }
-    response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -377,7 +391,11 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
         "payMethod": "应付账款",
         "materialTypeId": 2,
     }
-    response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -401,7 +419,6 @@ def test_inbound_material_user_select_order_size_material(client: FlaskClient):
     assert size_details[5].pending_inbound == 100.0
     assert size_details[6].pending_inbound == 50.0
     assert size_details[7].pending_inbound == 0
-
 
     record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
 
@@ -496,7 +513,11 @@ def test_inbound_material_user_enter_material(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -639,18 +660,26 @@ def test_inbound_material_user_enter_order_size_material(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
 
     assert storage.spu_material_id == 1
 
-    size_details = db.session.query(MaterialStorageSizeDetail).filter_by(material_storage_id=1).order_by(MaterialStorageSizeDetail.order_number).all()
+    size_details = (
+        db.session.query(MaterialStorageSizeDetail)
+        .filter_by(material_storage_id=1)
+        .order_by(MaterialStorageSizeDetail.order_number)
+        .all()
+    )
     amounts = [0, 50, 100, 150, 150, 100, 50, 0]
     for i in range(len(amounts)):
         assert size_details[i].pending_inbound == amounts[i]
-
 
     assert storage.shoe_size_columns == ["35", "36", "37", "38", "39", "40", "41", "42"]
 
@@ -795,9 +824,14 @@ def test_inbound_size_material_no_shoe_size_column(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 400
     assert json.loads(response.data)["message"] == "无效尺码ID"
+
 
 def test_inbound_material_user_enter_order_material_to_existed_storage(
     client: FlaskClient,
@@ -862,6 +896,7 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         pending_inbound=50,
         inbound_amount=40,
         current_amount=40,
+        shoe_size_columns=[],
     )
 
     db.session.add(supplier)
@@ -901,7 +936,11 @@ def test_inbound_material_user_enter_order_material_to_existed_storage(
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -1020,7 +1059,11 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
         "materialTypeId": 2,
     }
 
-    response: Response = client.post("/warehouse/inboundmaterial", json=query_string, headers=return_header_with_token())
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
     assert response.status_code == 200
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
@@ -1049,20 +1092,21 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
     expected_details = [
         {
             "inbound_record_id": 1,
-            "unit_price": 2.5,
+            "unit_price": Decimal(2.5),
             "inbound_amount": 50,
-            "item_total_price": 125.0,
+            "item_total_price": Decimal(125.0),
         },
         {
             "inbound_record_id": 1,
-            "unit_price": 2,
+            "unit_price": Decimal(2),
             "inbound_amount": 20,
-            "item_total_price": 40.0,
+            "item_total_price": Decimal(40.0),
         },
     ]
 
     for i, detail in enumerate(record_detail):
         assert detail.inbound_record_id == expected_details[i]["inbound_record_id"]
+        print(detail.unit_price, expected_details[i]["unit_price"])
         assert detail.unit_price == expected_details[i]["unit_price"]
         assert detail.inbound_amount == expected_details[i]["inbound_amount"]
         assert detail.item_total_price == expected_details[i]["item_total_price"]
@@ -1095,3 +1139,221 @@ def test_inbound_material_manually_multiple_times(client: FlaskClient):
             == expected_spu_materials[i]["material_specification"]
         )
         assert spu_material.color == expected_spu_materials[i]["color"]
+
+
+def test_inbound_material_with_no_shoe_size_columns(client: FlaskClient):
+    """
+    测试输订单非底材材料时没选码段
+    期望：size details为空
+    """
+
+    order1 = Order(
+        order_id=1,
+        order_rid="K25-880",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe1 = OrderShoe(
+        order_shoe_id=1,
+        shoe_id=1,
+        customer_product_name="Product A",
+        order_id=1,
+    )
+
+    order2 = Order(
+        order_id=2,
+        order_rid="K25-882",
+        start_date="2023-10-01",
+        end_date="2023-10-31",
+        salesman_id=1,
+        batch_info_type_id=1,
+    )
+
+    order_shoe2 = OrderShoe(
+        order_shoe_id=2,
+        shoe_id=2,
+        customer_product_name="Product B",
+        order_id=2,
+    )
+
+    # insert supplier
+    supplier = Supplier(
+        supplier_id=1,
+        supplier_name="保利鞋材",
+    )
+
+    material = Material(
+        material_id=1,
+        material_name="布里",
+        material_type_id=2,
+        material_supplier=1,
+    )
+
+    material_type = MaterialType(
+        material_type_id=2,
+        material_type_name="里料",
+        warehouse_id=1,
+    )
+
+    warehouse = MaterialWarehouse(
+        material_warehouse_id=1, material_warehouse_name="里料仓"
+    )
+
+    db.session.add(order1)
+    db.session.add(order_shoe1)
+    db.session.add(order2)
+    db.session.add(order_shoe2)
+    db.session.add(supplier)
+    db.session.add(material)
+    db.session.add(material_type)
+    db.session.add(warehouse)
+    create_environment(db)
+    db.session.commit()
+
+    # Use the test client to hit your Flask endpoint.
+    query_string = {
+        "inboundRecordId": 6164,
+        "inboundType": 0,
+        "supplierName": "保利鞋材",
+        "remark": "10.21",
+        "items": [
+            {
+                "actualInboundUnit": "米",
+                "amount0": 0,
+                "amount1": 0,
+                "amount10": 0,
+                "amount11": 0,
+                "amount12": 0,
+                "amount2": 0,
+                "amount3": 0,
+                "amount4": 0,
+                "amount5": 0,
+                "amount6": 0,
+                "amount7": 0,
+                "amount8": 0,
+                "amount9": 0,
+                "inboundModel": "四方格子布119#",
+                "inboundQuantity": "14",
+                "inboundRecordDetailId": 1,
+                "inboundSpecification": "",
+                "itemTotalPrice": "128.8",
+                "materialCategory": 0,
+                "materialColor": "",
+                "materialModel": "四方格子布119#",
+                "materialName": "布里",
+                "materialSpecification": "",
+                "materialStorageId": 1,
+                "materialTypeId": 2,
+                "materialUnit": "米",
+                "orderRId": "K25-880",
+                "remark": "0133",
+                "shoeRId": "D210725",
+                "shoeSizeColumns": [],
+                "supplierName": "保利鞋材",
+                "unitPrice": "9.2",
+                "id": "row_45",
+            },
+            {
+                "actualInboundUnit": "米",
+                "amount0": 0,
+                "amount1": 0,
+                "amount10": 0,
+                "amount11": 0,
+                "amount12": 0,
+                "amount2": 0,
+                "amount3": 0,
+                "amount4": 0,
+                "amount5": 0,
+                "amount6": 0,
+                "amount7": 0,
+                "amount8": 0,
+                "amount9": 0,
+                "inboundModel": "四方格子布119#",
+                "inboundQuantity": "16",
+                "inboundRecordDetailId": 2,
+                "inboundSpecification": "",
+                "itemTotalPrice": "147.2",
+                "materialCategory": 0,
+                "materialColor": "",
+                "materialModel": "四方格子布119#",
+                "materialName": "布里",
+                "materialSpecification": "",
+                "materialStorageId": 2,
+                "materialTypeId": 2,
+                "materialUnit": "米",
+                "orderRId": "K25-882",
+                "remark": "None",
+                "shoeRId": "D8H2011",
+                "shoeSizeColumns": [],
+                "supplierName": "保利鞋材",
+                "unitPrice": "9.2",
+                "id": "row_46",
+            },
+        ],
+        "payMethod": "现金",
+        "materialTypeId": 2,
+    }
+
+    response: Response = client.post(
+        "/warehouse/inboundmaterial",
+        json=query_string,
+        headers=return_header_with_token(),
+    )
+    assert response.status_code == 200
+
+    storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
+
+    assert storage.spu_material_id == 1
+    assert storage.pending_inbound == 14
+
+    storage2 = (
+        db.session.query(MaterialStorage).filter_by(material_storage_id=2).first()
+    )
+    assert storage2.spu_material_id == 1
+    assert storage2.pending_inbound == 16
+
+    record = db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+
+    assert record.total_price == 276
+    assert record.supplier_id == 1
+    assert record.warehouse_id == 1
+    assert record.inbound_type == 0
+    assert record.pay_method == "现金"
+
+    record_detail = (
+        db.session.query(InboundRecordDetail).filter_by(inbound_record_id=1).all()
+    )
+
+    expected_details = [
+        {
+            "inbound_record_id": 1,
+            "unit_price": Decimal('9.2'),
+            "inbound_amount": 14,
+            "item_total_price": Decimal('128.8'),
+        },
+        {
+            "inbound_record_id": 1,
+            "unit_price": Decimal('9.2'),
+            "inbound_amount": 16,
+            "item_total_price": Decimal('147.2'),
+        },
+    ]
+
+    for i, detail in enumerate(record_detail):
+        assert detail.inbound_record_id == expected_details[i]["inbound_record_id"]
+        assert detail.unit_price == expected_details[i]["unit_price"]
+        assert detail.inbound_amount == expected_details[i]["inbound_amount"]
+        assert detail.item_total_price == expected_details[i]["item_total_price"]
+
+
+    # 因为是里料，所以不会创建size detail记录
+    size_details = (
+        db.session.query(MaterialStorageSizeDetail)
+        .filter(MaterialStorageSizeDetail.material_storage_id.in_([1,2]))
+        .all()
+    )
+
+    assert len(size_details) == 0
