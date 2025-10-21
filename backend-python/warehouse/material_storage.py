@@ -704,15 +704,15 @@ def _find_storage_in_db(
         # 余量不需要采购单子项id
         if order_id:
             storage.purchase_order_item_id = item.get("purchaseOrderItemId", None)
-        shoe_size_columns: list = item.get("shoeSizeColumns", [])
-        if not shoe_size_columns:
+        shoe_size_columns: list = item.get("shoeSizeColumns", []) if item.get("shoeSizeColumns", []) else []
+        if len(shoe_size_columns) == 0 and (material_name == "大底" or material_name == "中底"):
             shoe_size_columns = []
             result = (
                 db.session.query(BatchInfoType)
                 .filter(BatchInfoType.batch_info_type_id == batch_info_type_id)
                 .first()
             )
-            if not result and material_name == "大底":
+            if not result:
                 error_message = json.dumps({"message": "无效尺码ID"})
                 abort(Response(error_message, 400))
             for i in range(len(SHOESIZERANGE)):
@@ -826,21 +826,24 @@ def _handle_purchase_inbound(data, next_group_id):
         storage.pending_inbound += inbound_quantity
 
         # 在鞋码库存上更新数据
-        size_detail = (
-            db.session.query(MaterialStorageSizeDetail)
-            .filter(MaterialStorageSizeDetail.material_storage_id == storage_id)
-            .order_by(MaterialStorageSizeDetail.order_number.asc())
-            .all()
-        )
-        for i, shoe_size in enumerate(SHOESIZERANGE):
-            if f"amount{i}" not in item:
-                break
-            size_inbound_amount = int(item[f"amount{i}"])
-            current_value = size_detail[i].pending_inbound
-            size_detail[i].pending_inbound = current_value + size_inbound_amount
+        if len(storage.shoe_size_columns) > 0:
+            size_detail = (
+                db.session.query(MaterialStorageSizeDetail)
+                .filter(MaterialStorageSizeDetail.material_storage_id == storage_id)
+                .order_by(MaterialStorageSizeDetail.order_number.asc())
+                .all()
+            )
+            if not size_detail:
+                return jsonify({"message": "没有找到尺码材料库存明细"}), 404
+            for i, shoe_size in enumerate(SHOESIZERANGE):
+                if f"amount{i}" not in item:
+                    break
+                size_inbound_amount = int(item[f"amount{i}"])
+                current_value = size_detail[i].pending_inbound
+                size_detail[i].pending_inbound = current_value + size_inbound_amount
 
-            inbound_detail_column = f"size_{shoe_size}_inbound_amount"
-            setattr(record_detail, inbound_detail_column, int(item[f"amount{i}"]))
+                inbound_detail_column = f"size_{shoe_size}_inbound_amount"
+                setattr(record_detail, inbound_detail_column, int(item[f"amount{i}"]))
 
         db.session.add(record_detail)
     inbound_record.total_price = total_price
@@ -887,19 +890,22 @@ def _handle_production_remain_inbound(data, next_group_id):
         storage.current_amount += inbound_quantity
 
         # 在鞋码库存上更新数据
-        size_detail = (
-            db.session.query(MaterialStorageSizeDetail)
-            .filter(MaterialStorageSizeDetail.material_storage_id == storage_id)
-            .order_by(MaterialStorageSizeDetail.order_number.asc())
-            .all()
-        )
-        for i, shoe_size in enumerate(SHOESIZERANGE):
-            if f"amount{i}" not in item:
-                break
-            size_inbound_amount = int(item[f"amount{i}"])
-            size_detail[i].current_amount += size_inbound_amount
-            column_name = f"size_{shoe_size}_inbound_amount"
-            setattr(record_detail, column_name, int(item[f"amount{i}"]))
+        if len(storage.shoe_size_columns) > 0:
+            size_detail = (
+                db.session.query(MaterialStorageSizeDetail)
+                .filter(MaterialStorageSizeDetail.material_storage_id == storage_id)
+                .order_by(MaterialStorageSizeDetail.order_number.asc())
+                .all()
+            )
+            if not size_detail:
+                return jsonify({"message": "没有找到尺码材料库存明细"}), 404
+            for i, shoe_size in enumerate(SHOESIZERANGE):
+                if f"amount{i}" not in item:
+                    break
+                size_inbound_amount = int(item[f"amount{i}"])
+                size_detail[i].current_amount += size_inbound_amount
+                column_name = f"size_{shoe_size}_inbound_amount"
+                setattr(record_detail, column_name, int(item[f"amount{i}"]))
 
         record_detail = InboundRecordDetail(
             inbound_record_id=inbound_record.inbound_record_id,
