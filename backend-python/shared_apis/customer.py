@@ -31,6 +31,28 @@ def get_customer_details():
             }
         )
     return jsonify(result)
+@customer_bp.route("/customer/getcustomerdetailsforanalysis", methods=["GET"])
+def get_customer_details_for_analysis():
+    customer_name = request.args.get("customerName", type=str)
+    customer_id = request.args.get("customerId", type=int)
+
+    query = Customer.query
+    if customer_id:
+        query = query.filter(Customer.customer_id == customer_id)
+    if customer_name:
+        # 名称模糊匹配（不区分大小写），必要时可以额外匹配 brand
+        query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+
+    customers = query.order_by(Customer.customer_name, Customer.customer_brand).all()
+    result = [
+        {
+            "customerId": c.customer_id,
+            "customerName": c.customer_name,
+            "customerBrand": c.customer_brand,
+        } for c in customers
+    ]
+    return jsonify(result)
+
 
 @customer_bp.route("/customer/getcustomerbatchinfo", methods=["GET"])
 def get_customer_batch_info():

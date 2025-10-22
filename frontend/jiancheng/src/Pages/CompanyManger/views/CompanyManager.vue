@@ -54,6 +54,9 @@
           <el-menu-item index="10" @click="handleMenuClick('OutboundProduct', '10')">
             <span>订单出库</span>
           </el-menu-item>
+          <el-menu-item index="13" @click="handleMenuClick('CustomerAnalysis', '13')">
+            <span>客户分析</span>
+          </el-menu-item>
 
           <el-menu-item index="12" @click="handleMenuClick('WagesApproval', '12')">
             <span>工价审核</span>
@@ -95,6 +98,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue'
 import WagesApproval from '@/Pages/ProductionManagementDepartment/ProductionManager/components/WagesApproval.vue'
 import MainBoardPage from '../components/MainBoardPage.vue'
 import FinancialRecievableDetail from '@/Pages/FinancialManager/components/FinancialRecievableDetail.vue'
+import CustomerAnalysis from '../components/CustomerAnalysis/CustomerAnalysis.vue'
 import { useRouter } from "vue-router";
 
 const components = {
@@ -109,7 +113,8 @@ const components = {
     RevertEventAnalyse,
     WagesApproval,
     MainBoardPage,
-    FinancialRecievableDetail
+    FinancialRecievableDetail,
+    CustomerAnalysis
 }
 let currentComponent = ref('MainBoardPage')
 let userName = ref('')
