@@ -265,27 +265,32 @@ export default {
                 ElMessage.warning('请先输入到货数量')
                 return
             }
-            this.topTableData = []
-            this.bottomTableData = JSON.parse(JSON.stringify(this.bottomTableDataCopy))
-            let remainTotalQuantity = this.totalInboundQuantity
+            this.topTableData = [];
+            this.bottomTableData = JSON.parse(JSON.stringify(this.bottomTableDataCopy));
+
+            let remainTotalQuantity = new Decimal(this.totalInboundQuantity || 0);
+
             for (let i = 0; i < this.bottomTableData.length; i++) {
-                let remain = this.bottomTableData[i].remainingAmountRealTime
-                if (remain <= 0) {
-                    continue
-                }
-                this.bottomTableData[i].inboundQuantity = remain > remainTotalQuantity ? remainTotalQuantity : remain
-                remainTotalQuantity -= this.bottomTableData[i].inboundQuantity
-                this.topTableData.push(this.bottomTableData[i])
-                if (remainTotalQuantity <= 0) {
-                    break
-                }
+                // 统一转 Decimal
+                const remain = new Decimal(this.bottomTableData[i].remainingAmountRealTime || 0);
+
+                if (remain.lte(0)) continue;
+
+                // 取较小值
+                const take = Decimal.min(remain, remainTotalQuantity);
+
+                this.bottomTableData[i].inboundQuantity = take.toNumber();
+
+                remainTotalQuantity = remainTotalQuantity.minus(take);
+                this.topTableData.push(this.bottomTableData[i]);
+
+                if (remainTotalQuantity.lte(0)) break;
             }
+
             this.bottomTableData = this.bottomTableData.filter(
                 item => !this.topTableData.includes(item)
             );
-            this.selectedInboundQuantity = this.topTableData.reduce((acc, item) => {
-                return acc + (item.inboundQuantity || 0);
-            }, 0);
+            this.updateSelectedInboundQuantity();
         },
         // Capture selection change for the top table
         handleTopSelectionChange(selection) {
@@ -297,13 +302,15 @@ export default {
         },
         updateSelectedInboundQuantity() {
             this.selectedInboundQuantity = this.topTableData.reduce((acc, item) => {
-                return acc + (item.inboundQuantity || 0);
-            }, 0);
+                const qty = new Decimal(item.inboundQuantity || 0);
+                return acc.plus(qty);
+            }, new Decimal(0)).toNumber();
         },
         updateTotalInboundQuantity() {
             this.totalInboundQuantity = this.topTableData.reduce((acc, item) => {
-                return acc + (item.inboundQuantity || 0);
-            }, 0);
+                const qty = new Decimal(item.inboundQuantity || 0);
+                return acc.plus(qty);
+            }, new Decimal(0)).toNumber();
         },
         // Move selected items from top to bottom
         moveDown() {
@@ -324,7 +331,7 @@ export default {
             }
             for (let i = 0; i < this.downSelected.length; i++) {
                 let remain = this.downSelected[i].remainingAmountRealTime
-                this.downSelected[i].inboundQuantity = remain
+                this.downSelected[i].inboundQuantity = Number(remain)
             }
             this.topTableData = this.topTableData.concat(this.downSelected);
             this.bottomTableData = this.bottomTableData.filter(

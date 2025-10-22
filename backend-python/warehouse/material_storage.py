@@ -434,10 +434,11 @@ def get_materials():
             size_details = size_details_map.get(storage.material_storage_id, []) if storage else []
             inbound_amount = size_details[i].inbound_amount if i < len(size_details) else 0
             current_amount = size_details[i].current_amount if i < len(size_details) else 0
+            pending_inbound = size_details[i].pending_inbound if i < len(size_details) else 0
             obj[f"estimatedInboundAmount{i}"] = estimated_amount
             obj[f"actualInboundAmount{i}"] = inbound_amount
             obj[f"currentAmount{i}"] = current_amount
-            obj[f"remainingAmount{i}"] = estimated_amount - inbound_amount
+            obj[f"remainingAmount{i}"] = estimated_amount - inbound_amount - pending_inbound
         result.append(obj)
     return {"result": result, "total": count_result}
 
