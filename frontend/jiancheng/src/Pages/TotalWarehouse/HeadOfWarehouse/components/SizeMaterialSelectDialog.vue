@@ -71,7 +71,7 @@
                         <div v-for="(shoeSize, index) in shoeSizeColumns">
                             <span>{{ shoeSize.label }}码到货数量：</span>
                             <el-input-number v-model="shoeSizeColumns[index].inboundQuantity"
-                                style="width: 150px; margin-right: 10px;" :min="0" :precision="5" :step="0.0001"
+                                style="width: 150px; margin-right: 10px;" :min="0"
                                 size="small" @change="updateTotalShoes"
                                 :disabled="isAmountInputBlock"></el-input-number>
                         </div>
@@ -82,7 +82,7 @@
                             :step="0.0001" size="small"></el-input-number>
                         <span>到货数量：</span>
                         <el-input-number v-model="totalInboundQuantity" style="width: 200px; margin-right: 10px;"
-                            :min="0" :precision="5" :step="0.0001" size="small" disabled></el-input-number>
+                            :min="0" size="small" disabled></el-input-number>
                         <el-button size="small" type="primary" @click="reset">重置自动分配表格数据</el-button>
                     </div>
                 </el-col>
@@ -268,15 +268,15 @@ export default {
             // 计算实时剩余数量
             this.originTableData.forEach(item => {
                 let string = `${item.orderRId}-${item.materialName}-${item.materialModel}-${item.materialSpecification}-${item.materialColor}-${item.actualInboundUnit}`
-                item.remainingAmountRealTime = item.remainingAmount;
+                item.remainingAmountRealTime = Number(item.remainingAmount);
                 if (this.inboundTableMap[string]) {
-                    item.remainingAmountRealTime = item.remainingAmount - (this.inboundTableMap[string].inboundQuantity || 0);
+                    item.remainingAmountRealTime = Number(item.remainingAmount) - (this.inboundTableMap[string].inboundQuantity || 0);
                 }
 
                 for (let i = 0; i < item.shoeSizeColumns.length; i++) {
-                    item[`remainingAmountRealTime${i}`] = item[`remainingAmount${i}`]
+                    item[`remainingAmountRealTime${i}`] = Number(item[`remainingAmount${i}`])
                     if (this.inboundTableMap[string]) {
-                        item[`remainingAmountRealTime${i}`] = item[`remainingAmount${i}`] - (this.inboundTableMap[string][`inboundQuantity${i}`] || 0);
+                        item[`remainingAmountRealTime${i}`] = Number(item[`remainingAmount${i}`]) - (this.inboundTableMap[string][`inboundQuantity${i}`] || 0);
                     }
                     
                 }
