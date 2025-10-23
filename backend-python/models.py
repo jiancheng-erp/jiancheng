@@ -9,7 +9,17 @@ from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
 )
-from sqlalchemy import text, DECIMAL, CHAR, Date, BigInteger, Integer, TIMESTAMP, func
+from sqlalchemy import (
+    text,
+    DECIMAL,
+    CHAR,
+    Date,
+    DATETIME,
+    BigInteger,
+    Integer,
+    TIMESTAMP,
+    func,
+)
 from decimal import Decimal
 
 
@@ -218,6 +228,7 @@ class MaterialStorage(db.Model):
     unit_price = db.Column(DECIMAL(13, 4), default=0)
     material_outsource_status = db.Column(TINYINT, nullable=False, default=0)
     material_outsource_date = db.Column(DATE, nullable=True)
+    material_estimated_arrival_date = db.Column(DATE, nullable=True)
     actual_inbound_unit = db.Column(CHAR(5), nullable=False)
     spu_material_id = db.Column(INTEGER, nullable=False)
     average_price = db.Column(DECIMAL(13, 4), default=0)
@@ -279,7 +290,7 @@ class MaterialStorageSizeDetail(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_storage_id = db.Column(db.BigInteger, nullable=False)
     size_value = db.Column(db.String(10), nullable=False)
-    order_number = db.Column(db.Integer, nullable=False) # 排序字段
+    order_number = db.Column(db.Integer, nullable=False)  # 排序字段
     pending_inbound = db.Column(db.Integer, nullable=False, default=0)
     pending_outbound = db.Column(db.Integer, nullable=False, default=0)
     inbound_amount = db.Column(db.Integer, nullable=False, default=0)
@@ -1610,31 +1621,38 @@ class MakeInventoryRecord(db.Model):
     make_inventory_status = db.Column(db.SmallInteger, nullable=False, default=0)
     # 0=未回传  1=已回传
     excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)
-    
-    # models.py (示例，仅供参考)
+
+
 class WarehouseMissingPurchaseRecord(db.Model):
     __tablename__ = "warehouse_missing_purchase_record"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_id = db.Column(db.BigInteger, nullable=False, index=True)
     order_shoe_id = db.Column(db.BigInteger, nullable=True, index=True)
-    status = db.Column(db.String(1), nullable=False, index=True)  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
+    status = db.Column(
+        db.String(1), nullable=False, index=True
+    )  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
     reason = db.Column(db.String(100))
     remark = db.Column(db.String(255))
     created_at = db.Column(db.DateTime)
 
+
 class WarehouseMissingPurchaseRecordItem(db.Model):
     __tablename__ = "warehouse_missing_purchase_record_item"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    record_id = db.Column(db.BigInteger, db.ForeignKey('warehouse_missing_purchase_record.id'), nullable=False, index=True)
+    record_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("warehouse_missing_purchase_record.id"),
+        nullable=False,
+        index=True,
+    )
     material_type = db.Column(db.String(1), nullable=True)  # 'S','I','O',...
     material_id = db.Column(db.BigInteger, nullable=True, index=True)
     material_model = db.Column(db.String(120))
     material_specification = db.Column(db.String(120))
     color = db.Column(db.String(60))
-    unit_usage = db.Column(db.Numeric(18,4))      # 单位用量
-    approval_usage = db.Column(db.Numeric(18,4))  # 核定用量
-    purchase_amount = db.Column(db.Numeric(18,4)) # 采购数量
+    unit_usage = db.Column(db.Numeric(18, 4))  # 单位用量
+    approval_usage = db.Column(db.Numeric(18, 4))  # 核定用量
+    purchase_amount = db.Column(db.Numeric(18, 4))  # 采购数量
     order_shoe_type_id = db.Column(db.BigInteger, nullable=True, index=True)
     size_qty_arr = db.Column(db.JSON)
     size_purchase_amount_arr = db.Column(db.JSON)
-

@@ -36,6 +36,8 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         current_amount = data.get("currentAmount", 0)
         average_price = data.get("averagePrice", 0)
         item_total_price = data.get("itemTotalPrice", 0)
+        pending_inbound = data.get("pendingInbound", 0)
+        pending_outbound = data.get("pendingOutbound", 0)
         
         # Fill the cells
         sheet[f"A{index}"] = str(warehouse_name)
@@ -48,12 +50,14 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         sheet[f"H{index}"] = order_rid
         sheet[f"I{index}"] = customer_product_name
         sheet[f"J{index}"] = shoe_rid
-        sheet[f"K{index}"] = str(inbound_amount)
-        sheet[f"L{index}"] = str(current_amount)
-        sheet[f"M{index}"] = str(unit_price)
-        sheet[f"N{index}"] = material_unit
-        sheet[f"O{index}"] = str(average_price)
-        sheet[f"P{index}"] = str(item_total_price)
+        sheet[f"K{index}"] = str(pending_inbound) 
+        sheet[f"L{index}"] = str(pending_outbound)
+        sheet[f"M{index}"] = str(inbound_amount)
+        sheet[f"N{index}"] = current_amount
+        sheet[f"O{index}"] = str(unit_price)
+        sheet[f"P{index}"] = str(material_unit)
+        sheet[f"Q{index}"] = str(average_price)
+        sheet[f"R{index}"] = str(item_total_price)
 
     # Save the modified file
     workbook.save(save_path)
