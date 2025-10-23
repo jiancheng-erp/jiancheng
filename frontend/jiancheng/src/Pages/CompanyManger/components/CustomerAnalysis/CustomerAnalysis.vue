@@ -1,5 +1,11 @@
 <!-- CustomerAnalyticsSingle.vue -->
 <template>
+    <div class="page-toolbar" v-if="props.from === 'BusinessAnalysis'">
+        <el-button link type="primary" @click="goBack">
+            <el-icon><ArrowLeft /></el-icon>
+            返回上一级
+        </el-button>
+    </div>
     <div class="page p-4 customer-analytics">
         <!-- ========== 筛选区（模式切换 + 不同下拉） ========== -->
         <el-card shadow="never" class="mb-3">
@@ -295,8 +301,16 @@ import { onMounted, onBeforeUnmount, ref, reactive, nextTick, getCurrentInstance
 import axios from 'axios'
 import dayjs from 'dayjs'
 import * as echarts from 'echarts'
+import { bus } from '../../hooks/bus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 const { $apiBaseUrl } = getCurrentInstance().appContext.config.globalProperties
+const props = defineProps<{
+    initialScope: 'name' | 'brand'
+    initialCustomerId?: number | null
+    initialCustomerName?: string | ''
+    from?: string
+}>()
 
 /** ========== 配置 ========== */
 const MOCK = false
@@ -865,89 +879,90 @@ async function fetchSummary() {
 /** ===== 表格容器 ===== */
 const activeTab = ref('orders')
 
-
 /** ===== 交互 ===== */
 async function loadAll() {
     if (filters.scope === 'name' && !filters.primaryCustomerName) return
     if (filters.scope === 'brand' && !filters.primaryCustomerId) return
     await fetchSummary()
-      table.orders.page = table.designers.page = table.shoeTypes.page = table.suppliers.page = table.compare.page = 1
-  if (activeTab.value === 'orders')    await loadOrders()
-  if (activeTab.value === 'designers') await loadDesignersTable()
-  if (activeTab.value === 'shoes')     await loadShoeTypesTable()
-  if (activeTab.value === 'suppliers') await loadSuppliersTable()
-  if (activeTab.value === 'compare')   await loadCompareTable()
+    table.orders.page = table.designers.page = table.shoeTypes.page = table.suppliers.page = table.compare.page = 1
+    if (activeTab.value === 'orders') await loadOrders()
+    if (activeTab.value === 'designers') await loadDesignersTable()
+    if (activeTab.value === 'shoes') await loadShoeTypesTable()
+    if (activeTab.value === 'suppliers') await loadSuppliersTable()
+    if (activeTab.value === 'compare') await loadCompareTable()
 }
 import { watch } from 'vue'
 
 // 1) 表格容器：加上分页字段
 const table = reactive({
-  orders:    { rows: [] as any[], page: 1, size: 20, total: 0 },
-  designers: { rows: [] as any[], page: 1, size: 20, total: 0 },
-  shoeTypes: { rows: [] as any[], page: 1, size: 20, total: 0 },
-  suppliers: { rows: [] as any[], page: 1, size: 20, total: 0 },
-  compare:   { rows: [] as any[], page: 1, size: 20, total: 0 },
+    orders: { rows: [] as any[], page: 1, size: 20, total: 0 },
+    designers: { rows: [] as any[], page: 1, size: 20, total: 0 },
+    shoeTypes: { rows: [] as any[], page: 1, size: 20, total: 0 },
+    suppliers: { rows: [] as any[], page: 1, size: 20, total: 0 },
+    compare: { rows: [] as any[], page: 1, size: 20, total: 0 }
 })
 
 function scopeParams() {
-  const params: any = { scope: filters.scope, ...baseRange() }
-  if (filters.scope === 'name') {
-    params.customerName = filters.primaryCustomerName || ''
-    if (filters.compareCustomerNames?.length) params['compareCustomerNames[]'] = filters.compareCustomerNames
-  } else {
-    params.customerId = filters.primaryCustomerId
-    if (filters.compareCustomerIds?.length) params['compareCustomerIds[]'] = filters.compareCustomerIds
-  }
-  return params
+    const params: any = { scope: filters.scope, ...baseRange() }
+    if (filters.scope === 'name') {
+        params.customerName = filters.primaryCustomerName || ''
+        if (filters.compareCustomerNames?.length) params['compareCustomerNames[]'] = filters.compareCustomerNames
+    } else {
+        params.customerId = filters.primaryCustomerId
+        if (filters.compareCustomerIds?.length) params['compareCustomerIds[]'] = filters.compareCustomerIds
+    }
+    return params
 }
 
 // 2) 各表加载函数（服务端分页）
 async function loadOrders() {
-  const params: any = { ...scopeParams(), page: table.orders.page, size: table.orders.size }
-  const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/orders`, { params })
-  table.orders.rows  = data?.rows || []
-  table.orders.total = data?.total || 0
+    const params: any = { ...scopeParams(), page: table.orders.page, size: table.orders.size }
+    const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/orders`, { params })
+    table.orders.rows = data?.rows || []
+    table.orders.total = data?.total || 0
 }
 
 async function loadDesignersTable() {
-  const params: any = { ...scopeParams(), page: table.designers.page, size: table.designers.size }
-  const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/designers-table`, { params })
-  table.designers.rows  = data?.rows || []
-  table.designers.total = data?.total || 0
+    const params: any = { ...scopeParams(), page: table.designers.page, size: table.designers.size }
+    const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/designers-table`, { params })
+    table.designers.rows = data?.rows || []
+    table.designers.total = data?.total || 0
 }
 
 async function loadShoeTypesTable() {
-  const params: any = { ...scopeParams(), page: table.shoeTypes.page, size: table.shoeTypes.size }
-  const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/shoetypes-table`, { params })
-  table.shoeTypes.rows  = data?.rows || []
-  table.shoeTypes.total = data?.total || 0
+    const params: any = { ...scopeParams(), page: table.shoeTypes.page, size: table.shoeTypes.size }
+    const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/shoetypes-table`, { params })
+    table.shoeTypes.rows = data?.rows || []
+    table.shoeTypes.total = data?.total || 0
 }
 
 async function loadSuppliersTable() {
-  // 供应商表需要材料类别（与你图表一致）
-  const params: any = { ...scopeParams(), page: table.suppliers.page, size: table.suppliers.size, material_cat: activeMaterialCat.value }
-  const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/supplierusage-table`, { params })
-  table.suppliers.rows  = data?.rows || []
-  table.suppliers.total = data?.total || 0
+    // 供应商表需要材料类别（与你图表一致）
+    const params: any = { ...scopeParams(), page: table.suppliers.page, size: table.suppliers.size, material_cat: activeMaterialCat.value }
+    const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/supplierusage-table`, { params })
+    table.suppliers.rows = data?.rows || []
+    table.suppliers.total = data?.total || 0
 }
 
 async function loadCompareTable() {
-  const params: any = { ...scopeParams(), page: table.compare.page, size: table.compare.size }
-  const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/compare-summary`, { params })
-  table.compare.rows  = data?.rows || []
-  table.compare.total = data?.total || 0
+    const params: any = { ...scopeParams(), page: table.compare.page, size: table.compare.size }
+    const { data } = await axios.get(`${$apiBaseUrl}/customeranalysis/compare-summary`, { params })
+    table.compare.rows = data?.rows || []
+    table.compare.total = data?.total || 0
 }
 
 // 3) Tab 切换懒加载
-watch(() => activeTab.value, async (name) => {
-  await nextTick()
-  if (name === 'orders')    return loadOrders()
-  if (name === 'designers') return loadDesignersTable()
-  if (name === 'shoes')     return loadShoeTypesTable()
-  if (name === 'suppliers') return loadSuppliersTable()
-  if (name === 'compare')   return loadCompareTable()
-})
-
+watch(
+    () => activeTab.value,
+    async (name) => {
+        await nextTick()
+        if (name === 'orders') return loadOrders()
+        if (name === 'designers') return loadDesignersTable()
+        if (name === 'shoes') return loadShoeTypesTable()
+        if (name === 'suppliers') return loadSuppliersTable()
+        if (name === 'compare') return loadCompareTable()
+    }
+)
 
 // 5) 当材料类别切换时，如果“供应商使用次数”页签在看，也刷新表格
 function resetFilters() {
@@ -996,8 +1011,32 @@ onBeforeUnmount(() => {
 })
 onMounted(async () => {
     await initCustomers()
+    scrollToTop()
+    if (props.initialScope === 'brand' && props.initialCustomerId) {
+        filters.scope = 'brand'
+        filters.primaryCustomerId = props.initialCustomerId
+        filters.compareCustomerIds = []
+    } else if (props.initialScope === 'name' && props.initialCustomerName) {
+        filters.scope = 'name'
+        filters.primaryCustomerName = props.initialCustomerName
+        filters.compareCustomerNames = []
+    }
     await loadAll()
+    await nextTick()
+    scrollToTop()
 })
+
+function scrollToTop() {
+    const main = document.querySelector('.app-main') as HTMLElement | null
+    if (main && typeof (main as any).scrollTo === 'function') {
+        ;(main as any).scrollTo({ top: 0, behavior: 'instant' })
+    }
+    window.scrollTo?.({ top: 0, behavior: 'instant' as ScrollBehavior })
+}
+function goBack() {
+    bus.emit('nav:goto', { to: 'BusinessAnalysis', props: {} })
+    setTimeout(scrollToTop, 0)
+}
 </script>
 
 <style scoped>
@@ -1054,5 +1093,8 @@ onMounted(async () => {
 }
 .p-4 {
     padding: 16px;
+}
+.page-toolbar {
+  padding: 8px 16px 0;
 }
 </style>
