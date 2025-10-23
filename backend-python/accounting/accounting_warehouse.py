@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timedelta
 from logger import logger
 from app_config import db
+import os
 
 
 accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
@@ -29,7 +30,7 @@ INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","
 INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
 
 # inventory attrnames
-INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["inbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
+INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["pending_inbound", "pending_outbound", "inbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
                                         "material_estimated_arrival_date", "actual_inbound_unit", "average_price", "material_storage_status"]
 
 MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name"]
@@ -52,8 +53,10 @@ name_mapping_inventory = {
     "customer_product_name":"客户鞋型号",
     "shoe_rid":"工厂鞋型号",
     "material_warehouse":"仓库",
-    "inbound_amount":"入库数量",
-    "current_amount":"库存数量",
+    "pending_inbound":"未审核入库数",
+    "pending_outbound":"未审核出库数",
+    "inbound_amount":"已审核入库数",
+    "current_amount":"已审核库存",
     "unit_price":"最新采购单价",
     "actual_inbound_unit":"入库单位",
     "average_price":"库存均价",
@@ -711,10 +714,12 @@ def create_inventory_excel_and_download():
         res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
 
         current_inventory.append(res)
-    template_path = FILE_STORAGE_PATH + "/财务库存汇总单模板.xlsx"
-    timestamp = str(time.time())
-    new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
-    save_path = FILE_STORAGE_PATH + "/财务部文件/库存总单/" + new_file_name
+        template_path = os.path.join(FILE_STORAGE_PATH, "财务库存汇总单模板.xlsx")
+        timestamp = str(time.time())
+        new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
+        target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单")
+        os.makedirs(target_folder, exist_ok=True)
+        save_path = os.path.join(target_folder, new_file_name)
     time_range_string = "全部"
     generate_accounting_warehouse_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
