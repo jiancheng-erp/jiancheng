@@ -1,83 +1,81 @@
 <template>
-  <el-container class="app-shell">
-    <!-- 顶部栏 -->
-    <el-header class="app-header">
-      <AllHeader />
-    </el-header>
+    <el-container class="app-shell">
+        <!-- 顶部栏 -->
+        <el-header class="app-header">
+            <AllHeader />
+        </el-header>
 
-    <el-container class="app-body">
-      <!-- 侧栏 -->
-      <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
-        </div>
+        <el-container class="app-body">
+            <!-- 侧栏 -->
+            <el-aside class="app-aside">
+                <div class="profile">
+                    <el-avatar :icon="UserFilled" :size="80" />
+                    <div class="profile-name">{{ userName }}</div>
+                </div>
 
-        <!-- 菜单（内部滚动） -->
-        <el-menu
-          :default-active="activeIndex"
-          class="app-menu"
-          :unique-opened="true"
-        >
-          <el-menu-item index="0" @click="handleMenuClick('MainBoardPage', '0')">
-            <span>主页看板</span>
-          </el-menu-item>
+                <!-- 菜单（内部滚动） -->
+                <el-menu :default-active="activeIndex" class="app-menu" :unique-opened="true">
+                    <el-menu-item index="0" @click="handleMenuClick('MainBoardPage', '0')">
+                        <span>主页看板</span>
+                    </el-menu-item>
 
-          <el-menu-item index="1" @click="handleMenuClick('CostCalcAndProfitAnalysis', '1')">
-            <span>成本计算与盈利分析</span>
-          </el-menu-item>
+                    <el-menu-item index="1" @click="handleMenuClick('CostCalcAndProfitAnalysis', '1')">
+                        <span>成本计算与盈利分析</span>
+                    </el-menu-item>
 
-          <el-menu-item index="2" @click="handleMenuClick('OrderImportantStatus', '2')">
-            <span>订单关键节点监控</span>
-          </el-menu-item>
+                    <el-menu-item index="2" @click="handleMenuClick('OrderImportantStatus', '2')">
+                        <span>订单关键节点监控</span>
+                    </el-menu-item>
 
-          <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse', '6')">
-            <span>退回情况记录统计</span>
-          </el-menu-item>
+                    <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse', '6')">
+                        <span>退回情况记录统计</span>
+                    </el-menu-item>
 
-          <el-menu-item index="3" @click="handleMenuClick('MaterialPricesAndCostTrends', '3')">
-            <span>材料价格与成本趋势</span>
-          </el-menu-item>
+                    <el-menu-item index="3" @click="handleMenuClick('MaterialPricesAndCostTrends', '3')">
+                        <span>材料价格与成本趋势</span>
+                    </el-menu-item>
 
-          <el-menu-item index="4" @click="handleMenuClick('FinancialStatusAndDepartmentalInput', '4')">
-            <span>财务状态与部门输入</span>
-          </el-menu-item>
+                    <el-menu-item index="4" @click="handleMenuClick('FinancialStatusAndDepartmentalInput', '4')">
+                        <span>财务状态与部门输入</span>
+                    </el-menu-item>
 
-          <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation', '5')">
-            <span>生产订单确认</span>
-          </el-menu-item>
+                    <el-menu-item index="5" @click="handleMenuClick('OrderConfirmation', '5')">
+                        <span>生产订单确认</span>
+                    </el-menu-item>
 
-          <el-menu-item index="7" @click="handleMenuClick('FinancialRecievableDetail', '7')">
-            <span>财务应收明细</span>
-          </el-menu-item>
+                    <el-menu-item index="7" @click="handleMenuClick('FinancialRecievableDetail', '7')">
+                        <span>财务应收明细</span>
+                    </el-menu-item>
 
-          <el-menu-item index="10" @click="handleMenuClick('OutboundProduct', '10')">
-            <span>订单出库</span>
-          </el-menu-item>
-          <el-menu-item index="13" @click="handleMenuClick('CustomerAnalysis', '13')">
-            <span>客户分析</span>
-          </el-menu-item>
+                    <el-menu-item index="10" @click="handleMenuClick('OutboundProduct', '10')">
+                        <span>订单出库</span>
+                    </el-menu-item>
+                    <el-menu-item index="14" @click="handleMenuClick('BusinessAnalysis', '14')">
+                        <span>业务整体分析</span>
+                    </el-menu-item>
+                    <el-menu-item index="13" @click="handleMenuClick('CustomerAnalysis', '13')">
+                        <span>客户分析</span>
+                    </el-menu-item>
+                    <el-menu-item index="12" @click="handleMenuClick('WagesApproval', '12')">
+                        <span>工价审核</span>
+                    </el-menu-item>
 
-          <el-menu-item index="12" @click="handleMenuClick('WagesApproval', '12')">
-            <span>工价审核</span>
-          </el-menu-item>
+                    <el-menu-item index="11" @click="handleMenuClick('PersonalInfo', '11')">
+                        <span>个人信息</span>
+                    </el-menu-item>
 
-          <el-menu-item index="11" @click="handleMenuClick('PersonalInfo', '11')">
-            <span>个人信息</span>
-          </el-menu-item>
+                    <el-menu-item index="99" @click="logout">
+                        <span>退出系统</span>
+                    </el-menu-item>
+                </el-menu>
+            </el-aside>
 
-          <el-menu-item index="99" @click="logout">
-            <span>退出系统</span>
-          </el-menu-item>
-        </el-menu>
-      </el-aside>
-
-      <!-- 主体 -->
-      <el-main class="app-main">
-        <component :is="components[currentComponent]" />
-      </el-main>
+            <!-- 主体 -->
+            <el-main class="app-main">
+                <component :is="components[currentComponent]" v-bind="currentProps" />
+            </el-main>
+        </el-container>
     </el-container>
-  </el-container>
 </template>
 
 <script setup lang="js">
@@ -99,7 +97,9 @@ import WagesApproval from '@/Pages/ProductionManagementDepartment/ProductionMana
 import MainBoardPage from '../components/MainBoardPage.vue'
 import FinancialRecievableDetail from '@/Pages/FinancialManager/components/FinancialRecievableDetail.vue'
 import CustomerAnalysis from '../components/CustomerAnalysis/CustomerAnalysis.vue'
-import { useRouter } from "vue-router";
+import BusinessAnalysis from '../components/BusinessAnalysis/BusinessAnalysis.vue'
+import { useRouter } from 'vue-router'
+import { bus } from '../hooks/bus'
 
 const components = {
     CostCalcAndProfitAnalysis,
@@ -114,18 +114,24 @@ const components = {
     WagesApproval,
     MainBoardPage,
     FinancialRecievableDetail,
-    CustomerAnalysis
+    CustomerAnalysis,
+    BusinessAnalysis
 }
 let currentComponent = ref('MainBoardPage')
+const currentProps = ref({})
 let userName = ref('')
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
-const router = useRouter();
+const router = useRouter()
 
 onMounted(() => {
     setAxiosToken()
     getUserAndCharacter()
     handleMenuClick('MainBoardPage')
+    bus.on('nav:goto', ({ to, props }) => {
+        currentComponent.value = to
+        currentProps.value = props || {}
+    })
 })
 
 // 接口预留，请求后台获取当前登录用户信息
@@ -137,6 +143,7 @@ async function getUserAndCharacter() {
 // 菜单选项切换函数
 function handleMenuClick(value) {
     currentComponent.value = value
+    currentProps.value = {}
 }
 
 // 退出登录
