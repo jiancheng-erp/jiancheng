@@ -7,9 +7,9 @@
     </el-row>
     <el-row :gutter="20">
         <el-col>
-            <el-table :data="orderTableData" stripe border style="height: 40vh">
+            <el-table :data="orderTableData" stripe border style="height: 65vh">
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
-                <el-table-column label="展开" type="expand">
+                <el-table-column width="80" label="展开" type="expand">
                     <template #default="prop">
                         <el-descriptions :column="4" border>
                             <el-descriptions-item label="裁断开始">{{ prop.row.cuttingStartDate }}</el-descriptions-item>

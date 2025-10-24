@@ -2,7 +2,7 @@
     <h3>材料采购数量和入库数量一览</h3>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="logisticsMaterialData" border stripe>
+            <el-table :data="logisticsMaterialData" border stripe style="height: 65vh">
                 <el-table-column prop="orderRId" label="订单号" width="100"></el-table-column>
                 <!-- <el-table-column prop="materialType" label="材料类型"></el-table-column> -->
                 <el-table-column prop="materialName" label="材料名称"></el-table-column>

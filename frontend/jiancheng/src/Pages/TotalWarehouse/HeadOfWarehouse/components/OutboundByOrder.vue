@@ -27,7 +27,7 @@
 
                 <div class="panel-grid">
                     <!-- 表格占满第一行 -->
-                    <el-table :data="orderRows" border stripe height="100%">
+                    <el-table :data="orderRows" border stripe style="height: 55vh;">
                         <el-table-column prop="orderRId" label="订单号" />
                         <el-table-column prop="shoeRId" label="工厂型号" />
                         <el-table-column prop="customerName" label="客户" show-overflow-tooltip />

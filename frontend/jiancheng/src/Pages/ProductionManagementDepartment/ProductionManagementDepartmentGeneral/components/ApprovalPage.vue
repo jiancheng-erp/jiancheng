@@ -31,7 +31,7 @@
 
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="orderTableData" border stripe :cell-style="cellStyle">
+            <el-table :data="orderTableData" border stripe :cell-style="cellStyle" style="height: 65vh;">
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
                 <el-table-column prop="customerProductName" label="客户型号"></el-table-column>

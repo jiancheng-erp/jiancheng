@@ -889,7 +889,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog title="输入工艺名称" v-model="isCraftDialogVisible" width="70%">
+            <el-dialog title="输入工艺名称" v-model="isCraftDialogVisible" append-to-body width="70%">
                 <div v-for="(craft, index) in inputCrafts" :key="index">
                     <el-row :gutter="20">
                         <el-col :span="20" :offset="0"> <el-input type="textarea" resize="both" v-model="inputCrafts[index]" placeholder="请输入工艺名称" size="default"></el-input></el-col>
