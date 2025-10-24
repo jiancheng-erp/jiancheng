@@ -2,7 +2,7 @@
   <div class="login-page">
     <div class="login-form-container">
       <div class="brand">
-        <h1 class="brand-title">浙江健诚集团鞋业有限公司</h1>
+        <h1 class="brand-title">XXXXX集团鞋业有限公司</h1>
         <p class="brand-subtitle">ERP 系统</p>
       </div>
 

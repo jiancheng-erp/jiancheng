@@ -1,5 +1,5 @@
 <template>
-    <div class="main-header">浙江健诚集团鞋业有限公司ERP系统</div>
+    <div class="main-header">XXXXX集团鞋业有限公司ERP系统</div>
 </template>
 
 
