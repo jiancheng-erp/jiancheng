@@ -277,7 +277,7 @@ def get_warehouse_inventory():
         res[to_camel('shoe_rid')] = shoe.shoe_rid
         res[to_camel('material_type')] = material_type.material_type_name
         res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
-        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
+        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.average_price, 4)
 
         current_inventory.append(res)
     return jsonify({'currentInventory':current_inventory, "total":total_count}), 200

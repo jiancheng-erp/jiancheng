@@ -61,7 +61,7 @@
                     <el-menu-item index="12" @click="handleMenuClick(12)">
                         <span>个人信息</span>
                     </el-menu-item>
-                    <el-menu-item index="99" @click="logoutHandler">
+                    <el-menu-item index="99" @click="logout()">
                         <span>退出系统</span>
                     </el-menu-item>
                 </el-menu>
