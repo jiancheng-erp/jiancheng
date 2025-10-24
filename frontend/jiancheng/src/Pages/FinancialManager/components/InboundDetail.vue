@@ -73,7 +73,7 @@
 
     <el-row :gutter="20">
         <el-col>
-            <el-table :data="displayRecords" border stripe height="tabledisplayHeight" style="width: 90vw">
+            <el-table :data="displayRecords" border stripe height="tabledisplayHeight" style="width: 90vw; height: 60vh;">
                 <el-table-column v-for="col in selectedColumns" :prop="col.attrName" :key="col.id"
                     :label="col.labelName" :min-width="col.width">
                 </el-table-column>

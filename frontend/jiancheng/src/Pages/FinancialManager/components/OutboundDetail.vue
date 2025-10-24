@@ -59,7 +59,7 @@
     
    
     <el-row :gutter="20">
-        <el-table :data="displayRecords" border stripe>
+        <el-table :data="displayRecords" border stripe style="width: 90vw; height: 60vh;">
         <el-table-column v-for="col in selectedColumns"
             :prop="col.attrName"
             :key="col.id"

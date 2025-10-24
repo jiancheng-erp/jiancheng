@@ -13,7 +13,7 @@
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
         <el-col :span="24" :offset="0">
-            <el-table :data="logisticsOrderData" border stripe>
+            <el-table :data="logisticsOrderData" border stripe style="height: 65vh">
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
                 <el-table-column prop="orderAmount" label="订单数量"></el-table-column>

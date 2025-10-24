@@ -1,6 +1,6 @@
 <template>
     <el-table :data="data" style="width: 100%" v-loading="loading" element-loading-text="Loading..." border default-expand-all>
-        <el-table-column type="expand" width="55" v-if="reportType === 'productionAmount'">
+        <el-table-column type="expand" width="65" v-if="reportType === 'productionAmount'">
             <template #default="meta">
                 <el-table :data="meta.row.productionLines" border stripe style="width: 100%">
                     <el-table-column width="55"></el-table-column>

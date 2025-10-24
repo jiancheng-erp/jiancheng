@@ -67,7 +67,7 @@
                     isBack: true,
                     isEsc: true,
                     editMode: 'insert',
-                }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow height="500">
+                }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow style="height: 65vh">
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
