@@ -1132,6 +1132,7 @@ def _create_outbound_record_details(items, outbound_record):
                 column_name = f"size_{shoe_size}_outbound_amount"
                 setattr(record_detail, column_name, size_outbound_amount)
         else:
+            storage.outbound_amount += outbound_quantity
             storage.current_amount -= outbound_quantity
             if storage.current_amount < 0:
                 error_message = json.dumps({"message": "出库数量大于库存数量"})
@@ -1146,6 +1147,7 @@ def _create_outbound_record_details(items, outbound_record):
                 if new_value < 0:
                     error_message = json.dumps({"message": "出库数量大于库存数量"})
                     abort(Response(error_message, 400))
+                size_detail[i].outbound_amount += size_outbound_amount
                 size_detail[i].current_amount = new_value
                 column_name = f"size_{shoe_size}_outbound_amount"
                 setattr(record_detail, column_name, size_outbound_amount)
