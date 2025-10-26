@@ -3,7 +3,7 @@ from accounting import accounting
 from models import *
 from api_utility import to_camel, to_snake, db_obj_to_res,format_date, format_datetime,format_outbound_type, accounting_audit_status_converter
 from api_utility import normalize_decimal
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
 from general_document.accounting_summary_excel import generate_accounting_summary_excel
 from general_document.accounting_warehouse_excel import generate_accounting_warehouse_excel
@@ -30,7 +30,7 @@ INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","
 INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
 
 # inventory attrnames
-INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["pending_inbound", "pending_outbound", "inbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
+INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["material_storage_id", "pending_inbound", "pending_outbound", "inbound_amount", "outbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
                                         "material_estimated_arrival_date", "actual_inbound_unit", "average_price", "material_storage_status"]
 
 MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name"]
@@ -47,8 +47,8 @@ name_mapping_inventory = {
     "material_type":"材料类型",
     "material_name":"材料名称",
     "material_model":"材料型号",
-    "color":"材料颜色",
     "material_specification":"材料规格",
+    "color":"材料颜色",
     "order_rid":"订单号",
     "customer_product_name":"客户鞋型号",
     "shoe_rid":"工厂鞋型号",
@@ -56,7 +56,8 @@ name_mapping_inventory = {
     "pending_inbound":"未审核入库数",
     "pending_outbound":"未审核出库数",
     "inbound_amount":"已审核入库数",
-    "current_amount":"已审核库存",
+    "outbound_amount":"已审核出库数",
+    "current_amount":"库存数",
     "unit_price":"最新采购单价",
     "actual_inbound_unit":"入库单位",
     "average_price":"库存均价",
@@ -228,14 +229,24 @@ def get_warehouse_inventory():
     shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
     not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
     query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
-             .join(Order,MaterialStorage.order_id == Order.order_id)
-             .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
-             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+             .outerjoin(Order,MaterialStorage.order_id == Order.order_id)
+             .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+             .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
              .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
              .join(Material, SPUMaterial.material_id == Material.material_id)
              .join(Supplier, Material.material_supplier == Supplier.supplier_id)
              .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
              .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
+    # 过滤早期没有入库记录的库存
+    query = query.filter(
+        or_(
+            MaterialStorage.pending_inbound != 0,
+            MaterialStorage.pending_outbound != 0,
+            MaterialStorage.inbound_amount != 0,
+            MaterialStorage.outbound_amount != 0,
+            MaterialStorage.current_amount != 0,
+        )
+    )
     
     if warehouse_filter:
         query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
@@ -258,12 +269,11 @@ def get_warehouse_inventory():
     if shoe_rid_filter:
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
     
-    # TODO
-    if not_zero_flag_filter:
-        if not_zero_flag_filter == 'true':
-            query = query.filter(MaterialStorage.current_amount > 0)
+    if not_zero_flag_filter == 'true':
+        query = query.filter(or_(MaterialStorage.pending_inbound > 0, MaterialStorage.current_amount > 0))
+
+    query = query.order_by(MaterialStorage.material_storage_id.asc())
     total_count = query.distinct().count()
-    # 
     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     current_inventory = []
     department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
@@ -272,12 +282,13 @@ def get_warehouse_inventory():
         res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
         res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res[to_camel('order_rid')] = order.order_rid
-        res[to_camel('customer_product_name')] = order_shoe.customer_product_name
-        res[to_camel('shoe_rid')] = shoe.shoe_rid
+        average_price = material_storage.average_price if material_storage.average_price else 0
+        res[to_camel('order_rid')] = order.order_rid if order else None
+        res[to_camel('customer_product_name')] = order_shoe.customer_product_name if order_shoe else None
+        res[to_camel('shoe_rid')] = shoe.shoe_rid if shoe else None
         res[to_camel('material_type')] = material_type.material_type_name
         res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
-        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.average_price, 4)
+        res[to_camel('item_total_price')] = round(material_storage.current_amount * average_price, 4)
 
         current_inventory.append(res)
     return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
