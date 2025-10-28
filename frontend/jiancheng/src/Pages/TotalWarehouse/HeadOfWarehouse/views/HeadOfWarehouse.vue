@@ -77,16 +77,12 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import MaterialInbound from '../components/MaterialInbound.vue'
 import InboundOutboundHistory from '../components/InboundOutboundHistory.vue'
-import MaterialOutbound from '../components/MaterialOutbound.vue'
 import FileDownload from '../components/FileDownload.vue'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
-import InboundView from '../components/InboundView.vue'
-import OutboundView from '../components/OutboundView.vue'
 import FixedAssetsConsumablesView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/FixedAssetsConsumablesView.vue'
 import LogisticsBatchTypeManagement from '@/components/LogisticsBatchInfoTypeManagement.vue'
 import SecondPurchaseListView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/SecondPurchaseListView.vue'
@@ -105,13 +101,9 @@ import MissingPurchaseAmountInput from '@/Pages/LogisticsControlDepartment/Logis
 export default {
     components: {
         AllHeader,
-        MaterialInbound,
-        MaterialOutbound,
         InboundOutboundHistory,
         FileDownload,
         OrderProgress,
-        InboundView,
-        OutboundView,
         FixedAssetsConsumablesView,
         LogisticsBatchTypeManagement,
         SecondPurchaseListView,
