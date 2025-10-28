@@ -226,6 +226,7 @@ def snapshot_material_storage(app):
                 pending_inbound,
                 pending_outbound,
                 inbound_amount,
+                outbound_amount,
                 current_amount,
                 unit_price,
                 average_price,
@@ -245,6 +246,7 @@ def snapshot_material_storage(app):
                 ms.pending_inbound,
                 ms.pending_outbound,
                 ms.inbound_amount,
+                ms.outbound_amount,
                 ms.current_amount,
                 ms.unit_price,
                 ms.average_price,
@@ -262,6 +264,7 @@ def snapshot_material_storage(app):
                 pending_inbound = VALUES(pending_inbound),
                 pending_outbound = VALUES(pending_outbound),
                 inbound_amount = VALUES(inbound_amount),
+                outbound_amount = VALUES(outbound_amount),
                 current_amount = VALUES(current_amount),
                 unit_price = VALUES(unit_price),
                 average_price = VALUES(average_price),
@@ -286,6 +289,7 @@ def snapshot_material_storage(app):
                 pending_inbound,
                 pending_outbound,
                 inbound_amount,
+                outbound_amount,
                 current_amount
             )
             SELECT
@@ -297,6 +301,7 @@ def snapshot_material_storage(app):
                 msd.pending_inbound,
                 msd.pending_outbound,
                 msd.inbound_amount,
+                msd.outbound_amount,
                 msd.current_amount
             FROM material_storage_size_detail msd
             ON DUPLICATE KEY UPDATE
@@ -306,6 +311,7 @@ def snapshot_material_storage(app):
                 pending_inbound = VALUES(pending_inbound),
                 pending_outbound = VALUES(pending_outbound),
                 inbound_amount = VALUES(inbound_amount),
+                outbound_amount = VALUES(outbound_amount),
                 current_amount = VALUES(current_amount),
                 update_time = CURRENT_TIMESTAMP
         """)

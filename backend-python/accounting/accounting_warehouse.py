@@ -212,22 +212,21 @@ def get_warehouse_outbound_record():
         res[to_camel('item_total_price')] = outbound_record_detail.item_total_price
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
-    
-@accounting_warehouse_bp.route("/accounting/get_warehouse_inventory", methods=["GET"])
-def get_warehouse_inventory():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
-    warehouse_filter = request.args.get('selectedWarehouse')
-    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-    material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
 
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
-    shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
-    not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
+def _get_warehouse_inventory_query(data: dict, all_records=False):
+    page_num = data.get('pageNumber',type=int)
+    page_size = data.get('pageSize', type=int)
+    warehouse_filter = data.get('selectedWarehouse')
+    supplier_name_filter = data.get('supplierNameFilter', type=str)
+    material_model_filter = data.get('materialModelFilter', type=str)
+    material_name_filter = data.get('materialNameFilter', type=str)
+    material_specification_filter = data.get('materialSpecificationFilter', type=str)
+    material_color_filter = data.get('materialColorFilter', type=str)
+
+    order_rid_filter = data.get('orderRidFilter', type=str)
+    order_shoe_customer_name_filter = data.get('customerProductNameFilter', type=str)
+    shoe_rid_filter = data.get('shoeRidFilter', type=str)
+    not_zero_flag_filter = data.get('includeZeroFilter', type=str)
     query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
              .outerjoin(Order,MaterialStorage.order_id == Order.order_id)
              .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
@@ -274,9 +273,11 @@ def get_warehouse_inventory():
 
     query = query.order_by(MaterialStorage.material_storage_id.asc())
     total_count = query.distinct().count()
-    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    if all_records:
+        response_entities = query.all()
+    else:
+        response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     current_inventory = []
-    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
     for material_storage, order, order_shoe, shoe, spu_material, material, supplier, material_type, material_warehouse in response_entities:
         res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES)
         res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
@@ -289,8 +290,12 @@ def get_warehouse_inventory():
         res[to_camel('material_type')] = material_type.material_type_name
         res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
         res[to_camel('item_total_price')] = round(material_storage.current_amount * average_price, 4)
-
         current_inventory.append(res)
+    return current_inventory, total_count
+    
+@accounting_warehouse_bp.route("/accounting/get_warehouse_inventory", methods=["GET"])
+def get_warehouse_inventory():
+    current_inventory, total_count = _get_warehouse_inventory_query(request.args)
     return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
     
 
@@ -661,78 +666,16 @@ def create_inbound_summary_excel_and_download():
 
 @accounting_warehouse_bp.route("/accounting/createinventoryexcelanddownload", methods=["GET"])
 def create_inventory_excel_and_download():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
     warehouse_filter = request.args.get('selectedWarehouse')
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
-    shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
-    not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
-
-    query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
-             .join(Order,MaterialStorage.order_id == Order.order_id)
-             .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
-             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-             .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-             .join(Material, SPUMaterial.material_id == Material.material_id)
-             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-             .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-             .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
-    
-    if warehouse_filter:
-        query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
-    if supplier_name_filter:
-        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-    if material_model_filter:
-        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-    if material_name_filter:
-        query = query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
-    if material_model_filter:
-        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-    if material_specification_filter:
-        query = query.filter(SPUMaterial.material_specification.ilike(f"%{material_specification_filter}%"))
-    if material_color_filter:
-        query = query.filter(SPUMaterial.color.ilike(f"%{material_color_filter}%"))
-    if order_rid_filter:
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
-    if order_shoe_customer_name_filter:
-        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{order_shoe_customer_name_filter}"))
-    if shoe_rid_filter:
-        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
-    # TODO
-    if not_zero_flag_filter:
-        if not_zero_flag_filter == 'true':
-            query = query.filter(MaterialStorage.current_amount > 0)
-    total_count = query.distinct().count()
-    # 
-    response_entities = query.distinct().all()
-    current_inventory = []
-    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
-    for material_storage, order, order_shoe, shoe, spu_material, material, supplier, material_type, material_warehouse in response_entities:
-        res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES)
-        res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
-        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res[to_camel('order_rid')] = order.order_rid
-        res[to_camel('customer_product_name')] = order_shoe.customer_product_name
-        res[to_camel('shoe_rid')] = shoe.shoe_rid
-        res[to_camel('material_type')] = material_type.material_type_name
-        res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
-        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
-
-        current_inventory.append(res)
-        template_path = os.path.join(FILE_STORAGE_PATH, "财务库存汇总单模板.xlsx")
-        timestamp = str(time.time())
-        new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
-        target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单")
-        os.makedirs(target_folder, exist_ok=True)
-        save_path = os.path.join(target_folder, new_file_name)
+    current_inventory, total_count = _get_warehouse_inventory_query(request.args, all_records=True)
+    template_path = os.path.join(FILE_STORAGE_PATH, "财务库存汇总单模板.xlsx")
+    timestamp = str(time.time())
+    new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
+    target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单")
+    os.makedirs(target_folder, exist_ok=True)
+    save_path = os.path.join(target_folder, new_file_name)
     time_range_string = "全部"
     generate_accounting_warehouse_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)

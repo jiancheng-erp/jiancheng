@@ -63,7 +63,6 @@
                 <el-table-column prop="unitPrice" label="最新采购单价" />
                 <el-table-column prop="averagePrice" label="库存均价" />
                 <el-table-column prop="currentItemTotalPrice" label="余量总金额" />
-                <el-table-column prop="inboundedItemTotalPrice" label="入库总金额" />
             </el-table>
         </el-col>
     </el-row>
@@ -99,7 +98,7 @@ const orderRidFilter = ref('')
 const customerProductNameFilter = ref('')
 const shoeRidFilter = ref('')
 const dateFilter = ref(null)
-const displayZeroInventory = ref(true)
+const displayZeroInventory = ref(false)
 
 let warehouseOptions = ref([])
 
