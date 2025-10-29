@@ -17,7 +17,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="orderTableData" stripe border style="height: 600px"
+            <el-table :data="orderTableData" stripe border style="height: 75vh"
                 @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="orderRid" label="订单号"></el-table-column>

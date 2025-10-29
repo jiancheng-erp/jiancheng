@@ -56,7 +56,7 @@
                     isBack: true,
                     isEsc: true,
                     editMode: 'insert',
-                }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow height="500">
+                }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow style="height: 65vh">
                 <vxe-column type="checkbox" width="50"></vxe-column>
                 <vxe-column field="orderRId" title="生产订单号" width="150"></vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" width="150"></vxe-column>

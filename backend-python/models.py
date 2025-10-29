@@ -224,6 +224,7 @@ class MaterialStorage(db.Model):
     pending_inbound = db.Column(DECIMAL(13, 5), default=0)
     pending_outbound = db.Column(DECIMAL(13, 5), default=0)
     inbound_amount = db.Column(DECIMAL(13, 5), default=0)
+    outbound_amount = db.Column(DECIMAL(13, 5), default=0)
     current_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0)
     unit_price = db.Column(DECIMAL(13, 4), default=0)
     material_outsource_status = db.Column(TINYINT, nullable=False, default=0)
@@ -294,6 +295,7 @@ class MaterialStorageSizeDetail(db.Model):
     pending_inbound = db.Column(db.Integer, nullable=False, default=0)
     pending_outbound = db.Column(db.Integer, nullable=False, default=0)
     inbound_amount = db.Column(db.Integer, nullable=False, default=0)
+    outbound_amount = db.Column(db.Integer, nullable=False, default=0)
     current_amount = db.Column(db.Integer, nullable=False, default=0)
 
 

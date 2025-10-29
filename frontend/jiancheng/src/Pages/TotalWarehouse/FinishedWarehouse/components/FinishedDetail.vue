@@ -120,7 +120,7 @@
         </el-row>
 
         <!-- 主表（按明细行展示） -->
-        <el-table :data="rows" border stripe height="560" show-summary :summary-method="tableSummary" :row-key="rowKey" v-loading="loading" element-loading-text="加载中...">
+        <el-table :data="rows" border stripe show-summary :summary-method="tableSummary" :row-key="rowKey" v-loading="loading" element-loading-text="加载中..." style="height: 55vh;">
             <el-table-column prop="rid" label="业务单号" width="220" show-overflow-tooltip />
             <el-table-column prop="direction" label="方向" width="90">
                 <template #default="{ row }">
@@ -129,8 +129,8 @@
                     </el-tag>
                 </template>
             </el-table-column>
-            <el-table-column prop="shoeRid" label="工厂型号" width="200" show-overflow-tooltip />
-            <el-table-column prop="category" label="类型" width="200" show-overflow-tooltip />
+            <el-table-column prop="shoeRid" label="工厂型号" show-overflow-tooltip />
+            <el-table-column prop="category" label="类型" show-overflow-tooltip />
             <el-table-column prop="color" label="颜色" width="140" show-overflow-tooltip />
             <el-table-column prop="designer" label="设计师" width="120" show-overflow-tooltip />
             <el-table-column prop="adjuster" label="调版师" width="120" show-overflow-tooltip />
@@ -141,7 +141,7 @@
             <el-table-column prop="amount" label="金额" width="140">
                 <template #default="{ row }">{{ fmtMoney(row.amount) }}</template>
             </el-table-column>
-            <el-table-column prop="occurTime" label="时间">
+            <el-table-column prop="occurTime" label="时间" width="200">
                 <template #default="{ row }">{{ formatTime(row.occurTime) }}</template>
             </el-table-column>
             <el-table-column prop="currency" label="币种" />

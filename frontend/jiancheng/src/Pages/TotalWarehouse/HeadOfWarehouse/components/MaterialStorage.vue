@@ -83,7 +83,7 @@
             </el-button>
         </div>
     </div>
-    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 50vh; width: 100%"
+    <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 70vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
         <el-table-column v-if="readonly === false" type="selection" width="55" />
         <el-table-column prop="orderRId" label="订单号"></el-table-column>
