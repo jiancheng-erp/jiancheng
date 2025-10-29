@@ -1171,10 +1171,10 @@ class InboundRecordDetail(db.Model):
     size_46_inbound_amount = db.Column(db.Integer, nullable=True)
 
     order_id = db.Column(db.BigInteger, nullable=True)
-    material_storage_id = db.Column(db.BigInteger, nullable=True)
+    material_storage_id = db.Column(db.BigInteger, nullable=False)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
-    spu_material_id = db.Column(db.Integer, nullable=True)
+    spu_material_id = db.Column(db.Integer, nullable=False)
 
     def __repr__(self):
         return f"<InboundRecordDetail id={self.id} inbound_record_id={self.inbound_record_id}>"
