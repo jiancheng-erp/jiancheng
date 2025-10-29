@@ -62,8 +62,8 @@ const components = {
 }
 
 const userName = ref('财务部-审核')
-const activeIndex = ref('1')
-const currentComponent = ref('FinancialDetailsDisplay')
+const activeIndex = ref('2')
+const currentComponent = ref('InOutboundRecords')
 
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl

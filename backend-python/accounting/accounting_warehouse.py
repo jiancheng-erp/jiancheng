@@ -316,6 +316,7 @@ def get_warehouse_inbound_record():
                 .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
                 .join(Material, SPUMaterial.material_id == Material.material_id)
                 .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
+                .filter(InboundRecord.display == 1)
                 )
     # order by time
     query = query.order_by(InboundRecord.inbound_datetime.desc())
@@ -384,7 +385,7 @@ def get_warehouse_inbound_summery():
     order_by_filter = request.args.get('orderByFilter', type=str)
     # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
 
-    inbound_records = (db.session.query(InboundRecord.inbound_record_id))
+    inbound_records = (db.session.query(InboundRecord.inbound_record_id).filter(InboundRecord.display == 1))
     if warehouse_filter:
         inbound_records = inbound_records.filter(InboundRecord.warehouse_id == warehouse_filter)
     if date_range_filter_start:
@@ -522,6 +523,7 @@ def create_excel_and_download():
                 .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
                 .join(Material, SPUMaterial.material_id == Material.material_id)
                 .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
+                .filter(InboundRecord.display == 1)
                 )
     # order by time
     query = query.order_by(InboundRecord.inbound_datetime.desc())
@@ -592,7 +594,7 @@ def create_inbound_summary_excel_and_download():
     order_rid_filter = request.args.get('orderRidFilter', type=str)
     order_by_filter = request.args.get('orderByFilter', type=str)
 
-    inbound_records = (db.session.query(InboundRecord.inbound_record_id))
+    inbound_records = (db.session.query(InboundRecord.inbound_record_id).filter(InboundRecord.display == 1))
     if warehouse_filter:
         inbound_records = inbound_records.filter(InboundRecord.warehouse_id == warehouse_filter)
     if date_range_filter_start:

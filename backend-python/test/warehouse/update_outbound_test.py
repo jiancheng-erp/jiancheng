@@ -135,6 +135,7 @@ def test_update_outbound_record_model_specification_color(client: FlaskClient):
         item_total_price=125.0,
         material_storage_id=1,
         order_id=1,
+        spu_material_id=1,
     )
 
     outbound_record = OutboundRecord(
@@ -156,6 +157,7 @@ def test_update_outbound_record_model_specification_color(client: FlaskClient):
         item_total_price=125.0,
         material_storage_id=1,
         order_id=1,
+        spu_material_id=1,
     )
 
     supplier = Supplier(
@@ -247,6 +249,12 @@ def test_update_outbound_record_model_specification_color(client: FlaskClient):
     }
     response = client.put("/warehouse/updateoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
+
+    old_record = (
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=1).first()
+    )
+    assert old_record.display == 0
+
     updated_record = (
         db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
@@ -326,6 +334,7 @@ def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient
         size_40_inbound_amount=10,
         size_41_inbound_amount=10,
         material_storage_id=1,
+        spu_material_id=1,
     )
 
     outbound_record = OutboundRecord(
@@ -339,6 +348,7 @@ def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient
         remark="remark",
         approval_status=0,
         staff_id=WAREHOUSE_CLERK_STAFF_ID,
+        reject_reason="测试驳回",
     )
 
     outbound_record_detail = OutboundRecordDetail(
@@ -355,6 +365,7 @@ def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient
         size_40_outbound_amount=5,
         size_41_outbound_amount=5,
         material_storage_id=1,
+        spu_material_id=1,
     )
 
     supplier = Supplier(
@@ -469,6 +480,14 @@ def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient
     }
     response = client.put("/warehouse/updateoutboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
+
+    old_record = (
+        db.session.query(OutboundRecord).filter_by(outbound_record_id=1).first()
+    )
+    assert old_record.display == 0
+    assert old_record.reject_reason == "测试驳回"
+
+
     updated_record = (
         db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
