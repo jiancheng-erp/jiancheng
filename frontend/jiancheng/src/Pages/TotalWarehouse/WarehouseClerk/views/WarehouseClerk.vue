@@ -76,8 +76,7 @@ import InboundOutboundHistory from '../../HeadOfWarehouse/components/InboundOutb
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
-import InboundView from '../../HeadOfWarehouse/components/InboundView.vue'
-import OutboundView from '../../HeadOfWarehouse/components/OutboundView.vue'
+import PurchaseInbound from '../../HeadOfWarehouse/components/PurchaseInbound.vue'
 import InOutboundRecords from '../../HeadOfWarehouse/components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue'
@@ -89,8 +88,7 @@ export default {
     components: {
         AllHeader,
         InboundOutboundHistory,
-        InboundView,
-        OutboundView,
+        PurchaseInbound,
         InOutboundRecords,
         PersonalInfo,
         GeneralOrderSearch,
@@ -115,7 +113,7 @@ export default {
         async getUserAndCharacter() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/getcurrentstaffandcharacter`)
             this.userName = response.data.staffName + '-' + response.data.characterName
-            this.currentComponent = ['35', '39'].includes(this.staffId) ? 'InboundView' : 'OutboundMaterial'
+            this.currentComponent = ['35', '39'].includes(this.staffId) ? 'PurchaseInbound' : 'OutboundMaterial'
         },
         defaultPage() {
             if (['35', '39'].includes(this.staffId)) {
@@ -127,7 +125,7 @@ export default {
         handleMenuClick(index){
             switch(index) {
                 case 1:
-                    this.currentComponent = 'InboundView'
+                    this.currentComponent = 'PurchaseInbound'
                     break
                 case 2:
                     this.currentComponent = 'OutboundMaterial'
