@@ -1141,6 +1141,7 @@ class InboundRecord(db.Model):
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
 
     def __repr__(self):
         return f"<InboundRecord {self.inbound_rid}>"
@@ -1175,6 +1176,7 @@ class InboundRecordDetail(db.Model):
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
     spu_material_id = db.Column(db.Integer, nullable=False)
+    display = db.Column(db.Boolean, nullable=False, default=True)
 
     def __repr__(self):
         return f"<InboundRecordDetail id={self.id} inbound_record_id={self.inbound_record_id}>"
@@ -1198,6 +1200,7 @@ class OutboundRecord(db.Model):
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"
@@ -1236,6 +1239,7 @@ class OutboundRecordDetail(db.Model):
     remark = db.Column(db.String(40), nullable=True)
     order_shoe_id = db.Column(db.BigInteger, nullable=True)
     spu_material_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
 
     def __repr__(self):
         return f"<OutboundRecordDetail {self.id}>"

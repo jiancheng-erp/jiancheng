@@ -216,7 +216,8 @@ def get_all_material_info():
             "shoeRId": shoe.shoe_rid if shoe else None,
             "materialStorageId": storage.material_storage_id,
             "shoeSizeColumns": storage.shoe_size_columns,
-            "allowedOutboundAmount": storage.current_amount - storage.pending_outbound, # 允许出库数量 = 当前库存 - 待出库
+            "allowedOutboundAmount": storage.current_amount
+            - storage.pending_outbound,  # 允许出库数量 = 当前库存 - 待出库
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
@@ -225,14 +226,24 @@ def get_all_material_info():
                 if purchase_order_item
                 else 0
             )
-            size_details = size_details_map.get(storage.material_storage_id, []) if storage else []
-            inbound_amount = size_details[i].inbound_amount if i < len(size_details) else 0
-            current_amount = size_details[i].current_amount if i < len(size_details) else 0
-            pending_outbound = size_details[i].pending_outbound if i < len(size_details) else 0
+            size_details = (
+                size_details_map.get(storage.material_storage_id, []) if storage else []
+            )
+            inbound_amount = (
+                size_details[i].inbound_amount if i < len(size_details) else 0
+            )
+            current_amount = (
+                size_details[i].current_amount if i < len(size_details) else 0
+            )
+            pending_outbound = (
+                size_details[i].pending_outbound if i < len(size_details) else 0
+            )
             obj[f"estimatedInboundAmount{i}"] = estimated_amount
             obj[f"actualInboundAmount{i}"] = inbound_amount
             obj[f"currentAmount{i}"] = current_amount
-            obj[f"allowedOutboundAmount{i}"] = current_amount - pending_outbound # 允许出库数量 = 当前库存 - 待出库
+            obj[f"allowedOutboundAmount{i}"] = (
+                current_amount - pending_outbound
+            )  # 允许出库数量 = 当前库存 - 待出库
         result.append(obj)
     return {"result": result, "total": count_result}
 
@@ -288,7 +299,9 @@ def get_size_material_storage_by_storage_id():
         obj[f"estimatedInboundAmount{i}"] = estimated_inbound_amount
         obj[f"actualInboundAmount{i}"] = size_details[i].inbound_amount
         obj[f"currentAmount{i}"] = size_details[i].current_amount
-        obj[f"allowedOutboundAmount{i}"] = size_details[i].current_amount - size_details[i].pending_outbound # 允许出库数量 = 当前库存 - 待出库
+        obj[f"allowedOutboundAmount{i}"] = (
+            size_details[i].current_amount - size_details[i].pending_outbound
+        )  # 允许出库数量 = 当前库存 - 待出库
     return obj
 
 
@@ -391,7 +404,7 @@ def get_materials():
         actual_inbound_amount = storage.inbound_amount if storage else 0
         pending_inbound = storage.pending_inbound if storage else 0
         size_table = json.loads(order.order_size_table)
-        if material.material_name == "大底":
+        if material.material_name == "大底" or material.material_name == "烫底":
             shoe_size_columns = size_table["大底"]
         elif material.material_name == "中底":
             shoe_size_columns = size_table["中底"]
@@ -586,7 +599,7 @@ def _find_storage_in_db(
             item.get("shoeSizeColumns", []) if item.get("shoeSizeColumns", []) else []
         )
         if len(shoe_size_columns) == 0 and (
-            material_name == "大底" or material_name == "中底"
+            material_name == "大底" or material_name == "中底" or material_name == "烫底"
         ):
             shoe_size_columns = []
             result = (
@@ -1013,7 +1026,7 @@ def _create_outbound_record_details(items, outbound_record):
                 column_name = f"size_{shoe_size}_outbound_amount"
                 setattr(record_detail, column_name, size_outbound_amount)
         else:
-            if outbound_quantity > storage.current_amount- storage.pending_outbound:
+            if outbound_quantity > storage.current_amount - storage.pending_outbound:
                 error_message = json.dumps({"message": "出库数量大于库存数量"})
                 abort(Response(error_message, 400))
             storage.outbound_amount += outbound_quantity
@@ -1022,7 +1035,10 @@ def _create_outbound_record_details(items, outbound_record):
                 if f"amount{i}" not in item:
                     break
                 size_outbound_amount = int(item[f"amount{i}"])
-                if size_outbound_amount > size_detail[i].current_amount - size_detail[i].pending_outbound:
+                if (
+                    size_outbound_amount
+                    > size_detail[i].current_amount - size_detail[i].pending_outbound
+                ):
                     error_message = json.dumps({"message": "出库数量大于库存数量"})
                     abort(Response(error_message, 400))
                 size_detail[i].outbound_amount += size_outbound_amount
@@ -1130,6 +1146,7 @@ def get_material_inbound_records():
             Supplier,
             Supplier.supplier_id == InboundRecord.supplier_id,
         )
+        .filter(InboundRecord.display == 1)
     )
     # 如果是仓库文员角色，入库记录只能查询自己的
     character_id = character.character_id
@@ -1454,6 +1471,7 @@ def get_material_outbound_records():
             Supplier,
             OutboundRecord.supplier_id == Supplier.supplier_id,
         )
+        .filter(OutboundRecord.display == 1)
     )
     # 如果是仓库文员角色，出库记录只能查询自己的
     character_id = character.character_id
@@ -1615,7 +1633,7 @@ def get_inbound_records_for_material():
             InboundRecordDetail,
             InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id,
         )
-        .filter(InboundRecordDetail.material_storage_id == storage_id)
+        .filter(InboundRecordDetail.material_storage_id == storage_id, InboundRecord.display == 1)
         .order_by(desc(InboundRecord.inbound_datetime))
         .all()
     )
@@ -1661,7 +1679,7 @@ def get_outbound_records_for_material():
         .outerjoin(
             Department, Department.department_id == OutboundRecord.outbound_department
         )
-        .filter(OutboundRecordDetail.material_storage_id == storage_id)
+        .filter(OutboundRecordDetail.material_storage_id == storage_id, OutboundRecord.display == 1)
         .order_by(desc(OutboundRecord.outbound_datetime))
         .all()
     )
@@ -1704,35 +1722,6 @@ def get_outbound_records_for_material():
     return result
 
 
-def _handle_delete_inbound_record_detail(
-    inbound_record_detail, storage_id, is_sized_material
-):
-    storage = db.session.query(MaterialStorage).get(storage_id)
-    storage.inbound_amount -= inbound_record_detail.inbound_amount
-    storage.current_amount -= inbound_record_detail.inbound_amount
-    for i in range(len(SHOESIZERANGE)):
-        shoe_size = SHOESIZERANGE[i]
-        column_name = f"size_{shoe_size}_inbound_amount"
-        size_amount = getattr(inbound_record_detail, column_name, 0)
-
-        db_column_name = f"size_{shoe_size}_current_amount"
-        final_amount = (
-            getattr(storage, db_column_name) - size_amount
-            if getattr(storage, db_column_name) - size_amount >= 0
-            else 0
-        )
-        setattr(storage, db_column_name, final_amount)
-
-        db_column_name = f"size_{shoe_size}_inbound_amount"
-        final_amount = (
-            getattr(storage, db_column_name) - size_amount
-            if getattr(storage, db_column_name) - size_amount >= 0
-            else 0
-        )
-        setattr(storage, db_column_name, final_amount)
-    db.session.delete(inbound_record_detail)
-
-
 def _handle_delete_storage(storage, is_sized_material):
     total_purchase_order_id = storage.total_purchase_order_id
     # search dependency
@@ -1761,8 +1750,6 @@ def update_inbound_record():
 
     if inbound_record.approval_status == 1:
         return jsonify({"message": "入库单已审核，无法修改"}), 400
-
-    inbound_timestamp: datetime = inbound_record.inbound_datetime
 
     details = (
         db.session.query(InboundRecordDetail)
@@ -1795,15 +1782,14 @@ def update_inbound_record():
             size_detail = size_details[i]
             size_detail.pending_inbound -= size_amount
 
-        db.session.delete(detail)
+        detail.display = 0
 
-    db.session.delete(inbound_record)
+    inbound_record.display = 0
     db.session.flush()
 
-    # 4) recreate, reusing inbound_timestamp and inbound_record_id
     data = request.get_json()
-    data["currentDateTime"] = format_datetime(inbound_timestamp)
-    data["inboundRecordId"] = inbound_record_id
+    inbound_timestamp: str = format_datetime(datetime.now())
+    data["currentDateTime"] = inbound_timestamp
 
     new_rid, new_ts, warehouse_name = create_inbound_record(data)
     db.session.commit()
@@ -1838,9 +1824,6 @@ def update_outbound_record():
     if outbound_record.approval_status == 1:
         return jsonify({"message": "入库单已审核，无法修改"}), 400
 
-    outbound_timestamp: datetime = outbound_record.outbound_datetime
-    outbound_rid = outbound_record.outbound_rid
-
     details = (
         db.session.query(OutboundRecordDetail)
         .filter(OutboundRecordDetail.outbound_record_id == outbound_record_id)
@@ -1872,15 +1855,14 @@ def update_outbound_record():
             size_detail = size_details[i]
             size_detail.pending_outbound -= size_amount
 
-        db.session.delete(detail)
+        detail.display = 0
 
-    db.session.delete(outbound_record)
+    outbound_record.display = 0
     db.session.flush()
 
-    # 4) recreate, reusing inbound_timestamp and outbound_record_id
     data = request.get_json()
-    data["currentDateTime"] = format_datetime(outbound_timestamp)
-    data["outboundRecordId"] = outbound_record_id
+    outbound_timestamp: str = format_datetime(datetime.now())
+    data["currentDateTime"] = outbound_timestamp
 
     new_rid, new_ts = _outbound_material_helper(data)
     db.session.commit()
@@ -1934,8 +1916,8 @@ def delete_inbound_record():
             new_value = current_value - inbound_value
             size_detail[i].current_amount = new_value
 
-        db.session.delete(inbound_record_detail)
-    db.session.delete(inbound_record)
+        inbound_record_detail.display = 0
+    inbound_record.display = 0
     db.session.commit()
     return jsonify({"message": "操作成功"})
 
@@ -2094,7 +2076,9 @@ def get_order_outbound_materials():
         size_detail = size_detail if size_detail else []
         for i in range(len(storage.shoe_size_columns)):
             obj[f"currentAmount{i}"] = size_detail[i].current_amount
-            obj[f"allowedOutboundAmount{i}"] = size_detail[i].current_amount - size_detail[i].pending_outbound
+            obj[f"allowedOutboundAmount{i}"] = (
+                size_detail[i].current_amount - size_detail[i].pending_outbound
+            )
 
         result.append(obj)
     return {"result": result, "total": total}
@@ -2158,7 +2142,7 @@ def list_order_outbound_records():
             OutboundRecord.outbound_record_id
             == OutboundRecordDetail.outbound_record_id,
         )
-        .filter(OutboundRecordDetail.order_id == order.order_id)
+        .filter(OutboundRecordDetail.order_id == order.order_id, OutboundRecord.display == 1)
         .order_by(desc(OutboundRecord.outbound_datetime))
     )
     total = q.count()

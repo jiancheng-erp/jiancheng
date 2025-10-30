@@ -123,8 +123,9 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         pay_method="应付账款",
         is_sized_material=0,
         remark="remark",
-        approval_status=0,
+        approval_status=2,
         staff_id=WAREHOUSE_CLERK_STAFF_ID,
+        reject_reason='测试驳回',
     )
 
     inbound_record_detail = InboundRecordDetail(
@@ -135,6 +136,7 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         item_total_price=125.0,
         material_storage_id=1,
         order_id=1,
+        spu_material_id=1,
     )
 
     supplier = Supplier(
@@ -225,6 +227,15 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
     }
     response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
+
+    old_record = (
+        db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+    )
+    assert old_record.display == 0
+    assert old_record.approval_status == 2
+    assert old_record.reject_reason == '测试驳回'
+
+
     updated_record = (
         db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
     )
@@ -284,6 +295,8 @@ def test_update_inbound_record_material_type(client: FlaskClient):
         pay_method="应付账款",
         is_sized_material=0,
         remark="remark",
+        approval_status=2,
+        reject_reason='测试驳回',
     )
 
     inbound_record_detail = InboundRecordDetail(
@@ -293,6 +306,7 @@ def test_update_inbound_record_material_type(client: FlaskClient):
         inbound_amount=10.0,
         item_total_price=125.0,
         material_storage_id=1,
+        spu_material_id=1,
     )
 
     supplier = Supplier(
@@ -403,12 +417,20 @@ def test_update_inbound_record_material_type(client: FlaskClient):
     }
     response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
+
+    old_record = (
+        db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+    )
+
+    assert old_record.display == 0
+    assert old_record.approval_status == 2
+    assert old_record.reject_reason == '测试驳回'
+
     updated_record = (
         db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
     )
     assert updated_record.inbound_record_id == 2
     assert updated_record.remark == "2025-05-14"
-    assert updated_record.inbound_rid == "IR20231001120000T0"
     assert updated_record.warehouse_id == 2
     assert updated_record.supplier_id == 2
 
@@ -482,6 +504,8 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         pay_method="应付账款",
         is_sized_material=1,
         remark="remark",
+        approval_status=2,
+        reject_reason='测试驳回',
     )
 
     inbound_record_detail = InboundRecordDetail(
@@ -495,6 +519,7 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
         size_38_inbound_amount=3,
         size_39_inbound_amount=4,
         material_storage_id=1,
+        spu_material_id=1,
     )
 
     supplier = Supplier(
@@ -606,6 +631,14 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
     }
     response = client.put("/warehouse/updateinboundrecord", json=query_string, headers=return_header_with_token())
     assert response.status_code == 200
+
+    old_record = (
+        db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
+    )
+    assert old_record.display == 0
+    assert old_record.approval_status == 2
+    assert old_record.reject_reason == '测试驳回'
+
     updated_record = (
         db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
     )

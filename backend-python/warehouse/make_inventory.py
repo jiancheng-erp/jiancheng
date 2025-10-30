@@ -863,6 +863,7 @@ def confirm_make_inventory():
                 func.min(InboundRecord.inbound_datetime).label("first_inbound_dt")
             )
             .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+            .filter(InboundRecord.display == 1)
             .group_by(InboundRecordDetail.material_storage_id)
         ).subquery()
 
