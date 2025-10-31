@@ -240,6 +240,9 @@ def test_update_inbound_record_model_specification_color(client: FlaskClient):
         db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
     )
 
+    assert updated_record.inbound_datetime == datetime_obj
+    assert updated_record.inbound_rid == "IR20231001120000T0"
+
     updated_record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).first()
     )
@@ -433,6 +436,8 @@ def test_update_inbound_record_material_type(client: FlaskClient):
     assert updated_record.remark == "2025-05-14"
     assert updated_record.warehouse_id == 2
     assert updated_record.supplier_id == 2
+    assert updated_record.inbound_datetime == datetime_obj
+    assert updated_record.inbound_rid == "IR20231001120000T0"
 
     updated_record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).all()
@@ -642,6 +647,9 @@ def test_update_inbound_record_change_unit_price_and_amount(client: FlaskClient)
     updated_record = (
         db.session.query(InboundRecord).filter_by(inbound_record_id=2).first()
     )
+
+    assert updated_record.inbound_datetime == datetime_obj
+    assert updated_record.inbound_rid == "IR20231001120000T0"
 
     updated_record_detail = (
         db.session.query(InboundRecordDetail).filter_by(inbound_record_id=2).first()
