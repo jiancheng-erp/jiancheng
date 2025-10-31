@@ -259,6 +259,9 @@ def test_update_outbound_record_model_specification_color(client: FlaskClient):
         db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
 
+    assert updated_record.outbound_datetime == datetime_obj
+    assert updated_record.outbound_rid == "OR20231001120000T4"
+
     updated_record_detail = (
         db.session.query(OutboundRecordDetail).filter_by(outbound_record_id=2).first()
     )
@@ -491,6 +494,9 @@ def test_update_outbound_record_change_unit_price_and_amount(client: FlaskClient
     updated_record = (
         db.session.query(OutboundRecord).filter_by(outbound_record_id=2).first()
     )
+
+    assert updated_record.outbound_datetime == datetime_obj
+    assert updated_record.outbound_rid == "OR20231001120000T4"
 
     updated_record_detail = (
         db.session.query(OutboundRecordDetail).filter_by(outbound_record_id=2).first()

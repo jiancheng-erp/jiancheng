@@ -730,7 +730,8 @@ def _handle_purchase_inbound(data, next_group_id):
             )
             if not size_detail:
                 return jsonify({"message": "没有找到尺码材料库存明细"}), 404
-            for i, shoe_size in enumerate(SHOESIZERANGE):
+            for i in range(len(size_detail)):
+                shoe_size = SHOESIZERANGE[i]
                 if f"amount{i}" not in item:
                     break
                 size_inbound_amount = int(item[f"amount{i}"])
@@ -794,7 +795,8 @@ def _handle_production_remain_inbound(data, next_group_id):
             )
             if not size_detail:
                 return jsonify({"message": "没有找到尺码材料库存明细"}), 404
-            for i, shoe_size in enumerate(SHOESIZERANGE):
+            for i in range(len(size_detail)):
+                shoe_size = SHOESIZERANGE[i]
                 if f"amount{i}" not in item:
                     break
                 size_inbound_amount = int(item[f"amount{i}"])
@@ -878,6 +880,11 @@ def create_inbound_record(data):
         item["inboundSpecification"] = inbound_specification
         item["materialColor"] = material_color
         item["actualInboundUnit"] = actual_inbound_unit
+
+        for i in range(len(SHOESIZERANGE)):
+            if f"amount{i}" not in item:
+                break
+            item[f"amount{i}"] = item[f"amount{i}"] if item[f"amount{i}"] else 0
 
     # 5) dispatch
     itype = data.get("inboundType", 0)
@@ -1088,7 +1095,6 @@ def _handle_composite_outbound(data):
 def _outbound_material_helper(data):
     data = request.get_json()
     outbound_type = data.get("outboundType", 0)
-    data["currentDateTime"] = format_datetime(datetime.now())
     # 工厂使用
     if outbound_type == 0:
         record = _handle_production_outbound(data)
@@ -1116,6 +1122,7 @@ def _outbound_material_helper(data):
 def outbound_material():
     data = request.get_json()
     logger.debug(f"outbound data: {data}")
+    data["currentDateTime"] = format_datetime(datetime.now())
     outbound_rid, timestamp = _outbound_material_helper(data)
 
     db.session.commit()
@@ -1788,8 +1795,8 @@ def update_inbound_record():
     db.session.flush()
 
     data = request.get_json()
-    inbound_timestamp: str = format_datetime(datetime.now())
-    data["currentDateTime"] = inbound_timestamp
+    inbound_timestamp: datetime = inbound_record.inbound_datetime
+    data["currentDateTime"] = format_datetime(inbound_timestamp)
 
     new_rid, new_ts, warehouse_name = create_inbound_record(data)
     db.session.commit()
@@ -1861,8 +1868,8 @@ def update_outbound_record():
     db.session.flush()
 
     data = request.get_json()
-    outbound_timestamp: str = format_datetime(datetime.now())
-    data["currentDateTime"] = outbound_timestamp
+    outbound_timestamp: datetime = outbound_record.outbound_datetime
+    data["currentDateTime"] = format_datetime(outbound_timestamp)
 
     new_rid, new_ts = _outbound_material_helper(data)
     db.session.commit()
