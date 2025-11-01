@@ -10,7 +10,7 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
     sheet = workbook["Sheet1"]
     
     # Insert metadata
-    sheet["B2"] = warehouse_name if warehouse_name else "全部"
+    sheet["C2"] = warehouse_name if warehouse_name else "全部"
     sheet["F2"] = supplier_name if supplier_name else "全部"
     sheet["H2"] = material_model if material_model else "全部"
     sheet["K2"] = time_range if time_range else "全部"
@@ -38,6 +38,7 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         item_total_price = data.get("itemTotalPrice", 0)
         pending_inbound = data.get("pendingInbound", 0)
         pending_outbound = data.get("pendingOutbound", 0)
+        outbound_amount = data.get("outboundAmount", 0)
         
         # Fill the cells
         sheet[f"A{index}"] = str(warehouse_name)
@@ -53,11 +54,12 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         sheet[f"K{index}"] = str(pending_inbound) 
         sheet[f"L{index}"] = str(pending_outbound)
         sheet[f"M{index}"] = str(inbound_amount)
-        sheet[f"N{index}"] = current_amount
-        sheet[f"O{index}"] = str(unit_price)
-        sheet[f"P{index}"] = str(material_unit)
-        sheet[f"Q{index}"] = str(average_price)
-        sheet[f"R{index}"] = str(item_total_price)
+        sheet[f"N{index}"] = str(outbound_amount)
+        sheet[f"O{index}"] = str(current_amount)
+        sheet[f"P{index}"] = str(unit_price)
+        sheet[f"Q{index}"] = str(material_unit)
+        sheet[f"R{index}"] = str(average_price)
+        sheet[f"S{index}"] = str(item_total_price)
 
     # Save the modified file
     workbook.save(save_path)

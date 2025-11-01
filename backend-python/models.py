@@ -9,17 +9,7 @@ from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
 )
-from sqlalchemy import (
-    text,
-    DECIMAL,
-    CHAR,
-    Date,
-    DATETIME,
-    BigInteger,
-    Integer,
-    TIMESTAMP,
-    func,
-)
+from sqlalchemy import text, DECIMAL, CHAR, Date, DATETIME, BigInteger, Integer, TIMESTAMP, func
 from decimal import Decimal
 
 
@@ -159,6 +149,50 @@ class Department(db.Model):
 
     def __repr__(self):
         return f"<Department(department_id={self.department_id})>"
+    
+
+class DailyMaterialStorageChange(db.Model):
+    __tablename__ = 'daily_material_storage_change'
+    __table_args__ = (
+        db.UniqueConstraint('snapshot_date', 'material_storage_id', name='unq_daily_change'),
+    )
+
+    daily_change_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    snapshot_date = db.Column(DATE, nullable=False, comment='每日净变动日期')
+    material_storage_id = db.Column(BIGINT, nullable=False, comment='库存id')
+    latest_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的单价')
+    avg_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的平均价')
+    pending_inbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核入库数量总和')
+    pending_outbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核出库数量总和')
+    inbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核入库数量总和')
+    outbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核出库数量总和')
+    net_change = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='净变动，入库数量-出库数量')
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyMaterialStorageChange(id={self.daily_change_id}, date={self.snapshot_date}, msid={self.material_storage_id})>"
+
+
+class DailyMaterialStorageSizeDetailChange(db.Model):
+    __tablename__ = 'daily_material_storage_size_detail_change'
+    __table_args__ = (
+        db.UniqueConstraint('daily_change_id', 'order_number', name='unq_size_detail_change'),
+    )
+
+    id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    daily_change_id = db.Column(BIGINT, db.ForeignKey('daily_material_storage_change.daily_change_id', ondelete='CASCADE'), nullable=False)
+    size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    pending_inbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核入库数量总和')
+    pending_outbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核出库数量总和')
+    inbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核入库数量总和')
+    outbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核出库数量总和')
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyMaterialStorageSizeDetailChange(id={self.id}, daily_change_id={self.daily_change_id}, order_number={self.order_number})>"
 
 
 class Material(db.Model):
@@ -291,12 +325,68 @@ class MaterialStorageSizeDetail(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_storage_id = db.Column(db.BigInteger, nullable=False)
     size_value = db.Column(db.String(10), nullable=False)
-    order_number = db.Column(db.Integer, nullable=False)  # 排序字段
+    order_number = db.Column(db.Integer, nullable=False) # 排序字段
     pending_inbound = db.Column(db.Integer, nullable=False, default=0)
     pending_outbound = db.Column(db.Integer, nullable=False, default=0)
     inbound_amount = db.Column(db.Integer, nullable=False, default=0)
     outbound_amount = db.Column(db.Integer, nullable=False, default=0)
     current_amount = db.Column(db.Integer, nullable=False, default=0)
+
+
+class MaterialStorageSnapshot(db.Model):
+    __tablename__ = 'material_storage_snapshot'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('snapshot_date', 'material_storage_id'),
+        db.Index('idx_snapshot_spu', 'spu_material_id', 'snapshot_date'),
+        db.Index('idx_snapshot_order', 'order_id', 'snapshot_date'),
+        db.Index('idx_msid_date', 'material_storage_id', 'snapshot_date'),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    material_storage_id = db.Column(BIGINT, nullable=False)
+    order_id = db.Column(BIGINT)
+    order_shoe_id = db.Column(BIGINT)
+    spu_material_id = db.Column(db.Integer, nullable=False)
+    actual_inbound_unit = db.Column(CHAR(5), nullable=False)
+    pending_inbound = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    pending_outbound = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    inbound_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    current_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000)
+    average_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000)
+    material_outsource_status = db.Column(TINYINT, default=0, comment='del')
+    material_outsource_date = db.Column(DATE)
+    purchase_order_item_id = db.Column(BIGINT)
+    material_storage_status = db.Column(CHAR(1))
+    shoe_size_columns = db.Column(JSON, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<MaterialStorageSnapshot(date={self.snapshot_date}, msid={self.material_storage_id})>"
+
+
+class MaterialStorageSizeDetailSnapshot(db.Model):
+    __tablename__ = 'material_storage_size_detail_snapshot'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('snapshot_date', 'size_detail_id'),
+        db.UniqueConstraint('snapshot_date', 'material_storage_id', 'order_number', name='unq_size_detail'),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    size_detail_id = db.Column(BIGINT, nullable=False)
+    material_storage_id = db.Column(BIGINT, nullable=False)
+    size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    pending_inbound = db.Column(INTEGER, nullable=False, default=0)
+    pending_outbound = db.Column(INTEGER, nullable=False, default=0)
+    inbound_amount = db.Column(INTEGER, nullable=False, default=0)
+    current_amount = db.Column(INTEGER, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<MaterialStorageSizeDetailSnapshot(date={self.snapshot_date}, msid={self.material_storage_id}, order={self.order_number})>"
 
 
 class Operation(db.Model):
@@ -1627,38 +1717,31 @@ class MakeInventoryRecord(db.Model):
     make_inventory_status = db.Column(db.SmallInteger, nullable=False, default=0)
     # 0=未回传  1=已回传
     excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)
-
-
+    
+    # models.py (示例，仅供参考)
 class WarehouseMissingPurchaseRecord(db.Model):
     __tablename__ = "warehouse_missing_purchase_record"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_id = db.Column(db.BigInteger, nullable=False, index=True)
     order_shoe_id = db.Column(db.BigInteger, nullable=True, index=True)
-    status = db.Column(
-        db.String(1), nullable=False, index=True
-    )  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
+    status = db.Column(db.String(1), nullable=False, index=True)  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
     reason = db.Column(db.String(100))
     remark = db.Column(db.String(255))
     created_at = db.Column(db.DateTime)
 
-
 class WarehouseMissingPurchaseRecordItem(db.Model):
     __tablename__ = "warehouse_missing_purchase_record_item"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    record_id = db.Column(
-        db.BigInteger,
-        db.ForeignKey("warehouse_missing_purchase_record.id"),
-        nullable=False,
-        index=True,
-    )
+    record_id = db.Column(db.BigInteger, db.ForeignKey('warehouse_missing_purchase_record.id'), nullable=False, index=True)
     material_type = db.Column(db.String(1), nullable=True)  # 'S','I','O',...
     material_id = db.Column(db.BigInteger, nullable=True, index=True)
     material_model = db.Column(db.String(120))
     material_specification = db.Column(db.String(120))
     color = db.Column(db.String(60))
-    unit_usage = db.Column(db.Numeric(18, 4))  # 单位用量
-    approval_usage = db.Column(db.Numeric(18, 4))  # 核定用量
-    purchase_amount = db.Column(db.Numeric(18, 4))  # 采购数量
+    unit_usage = db.Column(db.Numeric(18,4))      # 单位用量
+    approval_usage = db.Column(db.Numeric(18,4))  # 核定用量
+    purchase_amount = db.Column(db.Numeric(18,4)) # 采购数量
     order_shoe_type_id = db.Column(db.BigInteger, nullable=True, index=True)
     size_qty_arr = db.Column(db.JSON)
     size_purchase_amount_arr = db.Column(db.JSON)
+
