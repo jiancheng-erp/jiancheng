@@ -667,6 +667,13 @@ def create_inbound_summary_excel_and_download():
 @accounting_warehouse_bp.route("/accounting/createinventoryexcelanddownload", methods=["GET"])
 def create_inventory_excel_and_download():
     warehouse_filter = request.args.get('selectedWarehouse')
+    warehouse_name = None
+    if warehouse_filter:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+            .scalar()
+        )
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
     current_inventory, total_count = _get_warehouse_inventory_query(request.args, all_records=True)
@@ -677,6 +684,6 @@ def create_inventory_excel_and_download():
     os.makedirs(target_folder, exist_ok=True)
     save_path = os.path.join(target_folder, new_file_name)
     time_range_string = "全部"
-    generate_accounting_warehouse_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
+    generate_accounting_warehouse_excel(template_path, save_path, warehouse_name, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
 
