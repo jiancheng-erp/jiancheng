@@ -1,56 +1,39 @@
 <template>
-    <el-row :gutter="20">
-        <el-col :span="24" :offset="0">
-            <el-button type="primary" @click="isMaterialDialogVisible = true">搜索条件设置</el-button>
-            <!-- <el-button v-if="readonly === false" type="success" @click="confirmOrderShoesToOutbound">
-                出库
-            </el-button> -->
-        </el-col>
-        <MaterialSearchDialog :visible="isMaterialDialogVisible" :materialSupplierOptions="materialSupplierOptions"
-            :materialTypeOptions="materialTypeOptions" :material-name-options="materialNameOptions"
-            :warehouse-options="warehouseOptions" :searchForm="searchForm" @update-visible="updateDialogVisible"
-            @confirm="handleSearch" />
-    </el-row>
-    <!-- <el-row :gutter="20">
+    <el-row>
         <el-col>
-            <el-form :inline="true" :model="outboundForm" class="demo-form-inline" :rules="rules" ref="outboundForm">
-                <el-form-item v-if="readonly === false" prop="outboundType" label="出库类型">
-                    <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
-                        <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
-                            :label="item.label"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item v-if="outboundForm.outboundType == 0 && readonly === false" prop="departmentId" label="部门">
-                    <el-select v-model="outboundForm.departmentId" filterable clearable>
-                        <el-option v-for="item in departmentOptions" :label="item.label"
-                            :value="item.value"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item v-if="[2, 3, 4].includes(outboundForm.outboundType) && readonly === false" prop="supplierName"
-                    label="出库厂家">
-                    <el-autocomplete v-model="outboundForm.supplierName" :fetch-suggestions="querySuppliers" clearable
-                        @select="handleSupplierSelect" />
-                </el-form-item>
-                <el-form-item v-if="readonly === false" prop="picker" label="领料人">
-                    <el-input v-model="outboundForm.picker"></el-input>
-                </el-form-item>
-                <el-form-item v-if="readonly === false" prop="remark" label="备注">
-                    <el-input v-model="outboundForm.remark"></el-input>
-                </el-form-item>
-            </el-form>
+            <el-select v-model="searchForm.warehouseNameSearch" filterable clearable placeholder="仓库名搜索" style="width: 200px;"
+                @change="getMaterialTableData">
+                <el-option v-for="item in warehouseOptions" :value="item.value" :label="item.label"></el-option>
+            </el-select>
+            <el-select v-model="searchForm.materialSupplierSearch" value-key="" placeholder="供应商搜索" clearable filterable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;">
+                <el-option v-for="item in materialSupplierOptions" :value="item" />
+            </el-select>
+            <el-select v-model="searchForm.materialNameSearch" value-key="" placeholder="材料名搜索" clearable filterable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;">
+                <el-option v-for="item in materialNameOptions" :value="item.value" :label="item.label" />
+            </el-select>
+            <el-input v-model="searchForm.materialModelSearch" placeholder="材料型号搜索" clearable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
+            <el-input v-model="searchForm.materialSpecificationSearch" placeholder="材料规格搜索" clearable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
+            <el-input v-model="searchForm.materialColorSearch" placeholder="材料颜色搜索" clearable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
+            <el-input v-model="searchForm.orderRIdSearch" placeholder="订单号搜索" clearable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
+            <el-input v-model="searchForm.shoeRIdSearch" placeholder="工厂型号搜索" clearable
+                @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
         </el-col>
-
-    </el-row> -->
+    </el-row>
     <div class="transfer-tables">
         <!-- Top Table -->
         <el-table v-if="readonly === false" ref="topTableData" :data="topTableData"
             style="width: 100%; margin-bottom: 20px; height: 20vh" @selection-change="handleTopSelectionChange" border
             stripe>
             <el-table-column type="selection" width="55" />
-            <el-table-column prop="orderRId" label="订单号"></el-table-column>
-            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-            <el-table-column prop="materialType" label="类型"></el-table-column>
-            <el-table-column prop="materialName" label="名称" width="100">
+            <el-table-column prop="supplierName" label="供应商"></el-table-column>
+            <el-table-column prop="warehouseName" label="仓库名"></el-table-column>
+            <el-table-column prop="materialName" label="材料名称" width="100">
                 <template #default="scope">
                     <el-tooltip effect="dark" :content="scope.row.materialName" placement="bottom">
                         <span class="truncate-text">
@@ -59,14 +42,15 @@
                     </el-tooltip>
                 </template>
             </el-table-column>
-            <el-table-column prop="materialModel" label="型号"></el-table-column>
-            <el-table-column prop="materialSpecification" label="规格"></el-table-column>
-            <el-table-column prop="colorName" label="颜色"></el-table-column>
+            <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+            <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+            <el-table-column prop="colorName" label="材料颜色"></el-table-column>
+            <el-table-column prop="orderRId" label="订单号"></el-table-column>
+            <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
             <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-            <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-            <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
+            <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
+                <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column> -->
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
-            <el-table-column prop="supplierName" label="供应商"></el-table-column>
         </el-table>
 
         <!-- Control Buttons -->
@@ -86,10 +70,9 @@
     <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 70vh; width: 100%"
         @selection-change="handleBottomSelectionChange">
         <el-table-column v-if="readonly === false" type="selection" width="55" />
-        <el-table-column prop="orderRId" label="订单号"></el-table-column>
-        <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
-        <el-table-column prop="materialType" label="类型"></el-table-column>
-        <el-table-column prop="materialName" label="名称" width="100">
+        <el-table-column prop="supplierName" label="供应商"></el-table-column>
+        <el-table-column prop="warehouseName" label="仓库名" width="100"></el-table-column>
+        <el-table-column prop="materialName" label="材料名称" width="100">
             <template #default="scope">
                 <el-tooltip effect="dark" :content="scope.row.materialName" placement="bottom">
                     <span class="truncate-text">
@@ -98,20 +81,20 @@
                 </el-tooltip>
             </template>
         </el-table-column>
-        <el-table-column prop="materialModel" label="型号"></el-table-column>
-        <el-table-column prop="materialSpecification" label="规格"></el-table-column>
-        <el-table-column prop="colorName" label="颜色"></el-table-column>
+        <el-table-column prop="materialModel" label="材料型号"></el-table-column>
+        <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
+        <el-table-column prop="colorName" label="材料颜色"></el-table-column>
+        <el-table-column prop="orderRId" label="订单号"></el-table-column>
+        <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
         <el-table-column prop="averagePrice" label="平均价"></el-table-column>
-        <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-        <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column>
+        <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
+            <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column> -->
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
-        <el-table-column prop="supplierName" label="供应商"></el-table-column>
         <el-table-column fixed="right" label="操作" width="120">
             <template #default="scope">
                 <el-button-group>
-                    <el-button type="primary" size="small"
-                        @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
+                    <el-button type="primary" size="small" @click="viewSizeMaterialStock(scope.row)">查看多鞋码库存</el-button>
                     <el-button type="primary" size="small" @click="viewRecords(scope.row)">入/出库记录</el-button>
                 </el-button-group>
             </template>
@@ -162,7 +145,6 @@
                     <el-table-column prop="remark" label="备注"></el-table-column>
                     <el-table-column v-for="column in shoeSizeColumns" :key="column.prop" :prop="column.prop"
                         :label="column.label"></el-table-column>
-                    <el-table-column prop="remark" label="备注"></el-table-column>
                 </el-table>
             </el-tab-pane>
             <el-tab-pane label="出库记录">
@@ -178,7 +160,6 @@
                     <el-table-column prop="remark" label="备注"></el-table-column>
                     <el-table-column v-for="column in shoeSizeColumns" :key="column.prop" :prop="column.prop"
                         :label="column.label"></el-table-column>
-                    <el-table-column prop="remark" label="备注"></el-table-column>
                 </el-table>
             </el-tab-pane>
         </el-tabs>
@@ -199,7 +180,6 @@
 </template>
 <script>
 import axios from 'axios'
-import MaterialSearchDialog from './MaterialSearchDialog.vue';
 import OutboundDialog from './OutboundDialog.vue';
 import { ElMessage } from 'element-plus';
 export default {
@@ -214,7 +194,6 @@ export default {
         },
     },
     components: {
-        MaterialSearchDialog,
         OutboundDialog
     },
     data() {
@@ -225,8 +204,8 @@ export default {
             isMaterialDialogVisible: false,
             searchForm: {
                 isNonOrderMaterial: 0,
-                orderNumberSearch: '',
-                shoeNumberSearch: '',
+                orderRIdSearch: '',
+                shoeRIdSearch: '',
                 materialTypeSearch: '',
                 materialNameSearch: '',
                 materialModelSearch: '',
@@ -297,7 +276,8 @@ export default {
     },
     async mounted() {
         console.log("Mounted MaterialStorage")
-        this.searchForm = { ...this.inputSearchParams }
+        console.log("inputSearchParams", this.inputSearchParams)
+        this.searchForm = { ...this.searchForm, ...this.inputSearchParams }
         this.getAllMaterialTypes()
         this.getAllSuppliers()
         this.getMaterialNameOptions()
@@ -343,7 +323,7 @@ export default {
             this.outboundForm.outboundType = value
         },
         async getWarehouseOptions() {
-            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allwarehouses`)
+            const response = await axios.get(`${this.$apiBaseUrl}/logistics/allwarehousenames`)
             this.warehouseOptions = response.data
         },
         async getMaterialNameOptions() {
@@ -417,9 +397,6 @@ export default {
             this.sizeMaterialStockData = temp
             this.isViewSizeMaterialStockOpen = true
         },
-        updateDialogVisible(newVal) {
-            this.isMaterialDialogVisible = newVal
-        },
         handleSearch(values) {
             this.searchForm = { ...values }
             this.getMaterialTableData()
@@ -448,10 +425,10 @@ export default {
                 "materialColor": this.searchForm.materialColorSearch,
                 "supplier": this.searchForm.materialSupplierSearch,
                 "craftName": this.searchForm.craftNameSearch,
-                "orderRId": this.searchForm.orderNumberSearch,
-                "shoeRId": this.searchForm.shoeNumberSearch,
+                "orderRId": this.searchForm.orderRIdSearch,
+                "shoeRId": this.searchForm.shoeRIdSearch,
                 "purchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
-                "warehouseId": this.searchForm.warehouseId,
+                "warehouseName": this.searchForm.warehouseNameSearch,
                 "isNonOrderMaterial": this.searchForm.isNonOrderMaterial,
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
