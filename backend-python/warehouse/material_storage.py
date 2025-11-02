@@ -102,6 +102,7 @@ def get_all_material_info():
         "material_model": request.args.get("materialModel", ""),
         "material_color": request.args.get("materialColor", ""),
         "supplier": request.args.get("supplier", ""),
+        "warehouse_name": request.args.get("warehouseName", ""),
     }
     if is_non_order_material == 0:
         filters["order_rid"] = request.args.get("orderRId", "")
@@ -114,6 +115,7 @@ def get_all_material_info():
         "supplier": Supplier.supplier_name,
         "order_rid": Order.order_rid,
         "shoe_rid": Shoe.shoe_rid,
+        "warehouse_name": MaterialWarehouse.material_warehouse_name,
     }
     query1 = (
         db.session.query(
@@ -126,6 +128,7 @@ def get_all_material_info():
             OrderShoe,
             Shoe,
             PurchaseOrderItem,
+            MaterialWarehouse,
         )
         .join(
             SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id
@@ -133,6 +136,7 @@ def get_all_material_info():
         .join(Material, Material.material_id == SPUMaterial.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
         .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
         .outerjoin(Order, OrderShoe.order_id == Order.order_id)
@@ -149,10 +153,6 @@ def get_all_material_info():
     for key, value in filters.items():
         if value and value != "":
             query1 = query1.filter(material_filter_map[key].ilike(f"%{value}%"))
-
-    warehouse_id = request.args.get("warehouseId")
-    if warehouse_id and warehouse_id != "":
-        query1 = query1.filter(MaterialType.warehouse_id == warehouse_id)
 
     material_type_id = request.args.get("materialTypeId")
     if material_type_id and material_type_id != "":
@@ -187,6 +187,7 @@ def get_all_material_info():
             order_shoe,
             shoe,
             purchase_order_item,
+            material_warehouse,
         ) = row
         obj = {
             "materialId": spu_material.material_id,
@@ -218,6 +219,7 @@ def get_all_material_info():
             "shoeSizeColumns": storage.shoe_size_columns,
             "allowedOutboundAmount": storage.current_amount
             - storage.pending_outbound,  # 允许出库数量 = 当前库存 - 待出库
+            "warehouseName": material_warehouse.material_warehouse_name,
         }
         for i in range(len(SHOESIZERANGE)):
             shoe_size = SHOESIZERANGE[i]
