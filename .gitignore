@@ -12,3 +12,7 @@ frontend/jiancheng/node_modules/
 
 # Node modules in general
 node_modules/
+
+# log
+backend-python/app.log
+
