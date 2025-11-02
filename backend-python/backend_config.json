@@ -1,11 +1,11 @@
 {
-    "db_username": "jiancheng_dev1",
+    "db_username": "juqi_mgt",
     "db_password": "123456Ab",
     "db_name": "jiancheng",
-    "db_host": "rm-wz9e6065n2281l3i56o.mysql.rds.aliyuncs.com",
+    "db_host": "rm-bp1ok4lv4965v7x262o.mysql.rds.aliyuncs.com",
     "secret_key": "EC63AF9BA57B9F20",
     "jwt_secret_key": "EC63AF9BA57B9F20",
-    "redis_host": "localhost",
+    "redis_host": "redis",
     "redis_port": 6379,
     "redis_db": 0,
     "session_lifetime_days": 7

@@ -17,6 +17,7 @@ import VxeUITable from 'vxe-table'
 import 'vxe-table/lib/style.css'
 import VxeUIPluginRenderElement from '@vxe-ui/plugin-render-element'
 import '@vxe-ui/plugin-render-element/dist/style.css'
+import axiosInstance from './utils/axios'; // Import your axios setup
 import '@/styles/utilities.css'
 
 const app = createApp(App)
@@ -46,6 +47,11 @@ fetch('/frontend_config.json')
         for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
             app.component(key, component)
         }
+        // debug
+        // axios.interceptors.request.use(cfg => {
+        //     console.log('[axios request] method:', cfg.method, 'url:', cfg.url, 'baseURL:', cfg.baseURL, 'full:', (cfg.baseURL || '') + (cfg.url || ''));
+        //     return cfg;
+        // });
         axios.interceptors.response.use(
             response => response, // If the response is successful, return it
             error => {
@@ -69,7 +75,7 @@ fetch('/frontend_config.json')
 
         ElDialog.props.top.default = '15px'
         ElDialog.props.closeOnClickModal.default = false
-
+        app.config.globalProperties.$axios = axiosInstance;
         app.use(createPinia())
         app.use(router)
         app.use(ElementPlus, { locale: zhCn })

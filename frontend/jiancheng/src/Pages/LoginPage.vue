@@ -59,7 +59,7 @@ const loginFormRef = ref(null)
 const secretKey = '6f8e6f9178b12c08dce94bcf57b8df22'
 const proxy = getCurrentInstance()
 const apiBaseUrl = proxy.appContext.config.globalProperties.$apiBaseUrl
-
+console.log(apiBaseUrl)
 const handleSubmit = () => {
   loginFormRef.value.validate((valid) => {
     if (!valid) return

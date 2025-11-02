@@ -18,7 +18,7 @@ db = SQLAlchemy()
 
 def create_app(config_override=None):
     app = Flask(__name__)
-    CORS(app, supports_credentials=True)
+    CORS(app,supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
 
     # Load configuration from file or use an override.
     if config_override:

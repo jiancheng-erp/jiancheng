@@ -7,8 +7,10 @@ from logger import logger
 shoe_manage_bp = Blueprint("shoe_manage_bp", __name__)
 
 
-@shoe_manage_bp.route("/shoemanage/uploadshoeimage", methods=["POST"])
+@shoe_manage_bp.route("/shoemanage/uploadshoeimage", methods=["POST", "OPTIONS"])
 def upload_shoe_image():
+    if request.method == 'OPTIONS':
+        return '', 200 
     shoe_rid = request.form.get("shoeRid")
     shoe_id = request.form.get('shoeId')
     shoe_color_name = request.form.get("shoeColorName")

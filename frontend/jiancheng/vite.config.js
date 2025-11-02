@@ -18,5 +18,18 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+    define: {
+    // Ensure that process.env is available if needed
+    'process.env': process.env,
+  },
+  server: {
+    proxy: {
+    '/api': {
+      target: 'http://localhost:8000',
+      changeOrigin: true,
+      rewrite: path => path.replace(/^\/api/, ''),
+    }
   }
+}
 })

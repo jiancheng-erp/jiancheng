@@ -996,6 +996,12 @@ def delete_order():
     order_entity = db.session.query(Order).filter_by(order_id=order_id).first()
     if not order_entity:
         return jsonify({"message": "delete failed"}), 404
+    # check order status before delete
+    status_entity = db.session.query(OrderStatus).filter_by(order_id=order_id).first()
+    if status_entity.order_status_value == ORDER_CREATION_STATUS:
+        print("order deletable")
+    else:
+        return jsonify({"message": "order status not deletable"})
     order_local_path = os.path.join(FILE_STORAGE_PATH, order_entity.order_rid)
     if os.path.exists(order_local_path):
         for file_name in os.listdir(order_local_path):

@@ -1,0 +1,42 @@
+
+services:
+  backend:
+    build:
+      context: .              # Root of your project
+      dockerfile: backend-python/Dockerfile
+    container_name: jiancheng-backend
+    ports:
+      - "8000:8000"           # Expose backend to host
+
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1     # ensures logs flush immediately
+    volumes:
+      - ./backend-python/app.log:/app/backend-python/app.log  # persist logs
+      - ./backend-python:/app/backend-python                  # optional: live reload dev mapping
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: jiancheng-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  imgserver:
+    image: python:3.11-alpine
+    container_name: jiancheng-imgserver
+    restart: always
+    ports:
+      - "12667:12667"
+    volumes:
+      - /home/desktop99/Desktop/imgserver:/app/uploads
+    working_dir: /app/uploads
+    command: python3 -m http.server 12667
+volumes:
+  redis_data:
