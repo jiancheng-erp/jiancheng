@@ -302,6 +302,7 @@ export default {
         this.getAllColors()
         this.getFilterShoes()
         this.updateColorInfo()
+        console.log(this.$apiBaseUrl)
     },
     computed: {
         uploadHeaders() {
@@ -336,6 +337,7 @@ export default {
             this.totalItems = response.data.total
         },
         async getFilterShoes() {
+            console.log('resolved URL (should be at 5173):', new URL(`${this.$apiBaseUrl}/shoe/getallshoesnew`, window.location.origin).href);
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
                 params: { shoerid: this.inheritIdSearch, role: this.staffRole, page: this.currentPage, pageSize: this.pageSize, available: this.availableFilter }
             })
@@ -663,7 +665,6 @@ export default {
             })
         },
         deleteAbled() {
-            console.log(this.userRole)
             return this.userRole == 4 || this.userRole == 21
         },
         deprecateShoe(row) {

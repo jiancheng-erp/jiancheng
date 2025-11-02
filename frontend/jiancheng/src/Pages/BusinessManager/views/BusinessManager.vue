@@ -22,6 +22,9 @@
           <el-menu-item index="2" @click="handleMenuClick(2)">
             <span>订单管理</span>
           </el-menu-item>
+          <el-menu-item index="12" @click="handleMenuClick(12)">
+              <span>订单1管理</span>
+          </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
             <span>订单出库</span>
           </el-menu-item>
@@ -63,7 +66,9 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
+import { markRaw } from 'vue';
 import OrderManagement from '../components/OrderManagement.vue';
+import OrderManagementNew from '../components/OrderManagementNew.vue';
 import CustomerManagement from '../components/CustomerManagement.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import axios from 'axios'
@@ -73,6 +78,7 @@ import OrderExport from '../components/OrderExport.vue';
 import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue';
 import HistoryOrder from '../components/HistoryOrder.vue';
 import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue';
+const UserFilledIcon = markRaw(UserFilled)
 export default {
     components: {
         AllHeader,
@@ -84,11 +90,12 @@ export default {
         OrderExport,
         OutboundProduct,
         HistoryOrder,
+        OrderManagementNew,,
         OutboundRecordsDownload
     },
     data() {
         return {
-            UserFilled,
+            UserFilledIcon,
             currentComponent: 'OrderManagement',
             userName: '',
             currentProps: {}
@@ -139,6 +146,9 @@ export default {
                 case 11:
                     this.currentComponent = 'HistoryOrder'
                     this.currentProps = { editable: false }
+                    break
+                case 12:
+                    this.currentComponent = 'OrderManagementNew'
                     break
             }
         },
