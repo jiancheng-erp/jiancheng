@@ -23,6 +23,8 @@
                 @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
             <el-input v-model="searchForm.shoeRIdSearch" placeholder="工厂型号搜索" clearable
                 @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
+            <el-switch v-model="searchForm.showAllMaterials" inactive-text="有余量库存" active-text="所有库存"
+                @change="getMaterialTableData" style="margin-left: 20px;" />
         </el-col>
     </el-row>
     <div class="transfer-tables">
@@ -48,8 +50,11 @@
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
             <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
-            <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-                <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column> -->
+            <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column> -->
+            <el-table-column prop="pendingInbound" label="未审核入库数"></el-table-column>
+            <el-table-column prop="pendingOutbound" label="未审核出库数"></el-table-column>
+            <el-table-column prop="actualInboundAmount" label="已审核入库数"></el-table-column>
+            <el-table-column prop="outboundAmount" label="已审核出库数"></el-table-column>
             <el-table-column prop="currentAmount" label="库存"></el-table-column>
         </el-table>
 
@@ -88,8 +93,11 @@
         <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
         <el-table-column prop="actualInboundUnit" label="单位"></el-table-column>
         <el-table-column prop="averagePrice" label="平均价"></el-table-column>
-        <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column>
-            <el-table-column prop="actualInboundAmount" label="入库数量"></el-table-column> -->
+        <!-- <el-table-column prop="estimatedInboundAmount" label="采购数量"></el-table-column> -->
+        <el-table-column prop="pendingInbound" label="未审核入库数"></el-table-column>
+        <el-table-column prop="pendingOutbound" label="未审核出库数"></el-table-column>
+        <el-table-column prop="actualInboundAmount" label="已审核入库数"></el-table-column>
+        <el-table-column prop="outboundAmount" label="已审核出库数"></el-table-column>
         <el-table-column prop="currentAmount" label="库存"></el-table-column>
         <el-table-column fixed="right" label="操作" width="120">
             <template #default="scope">
@@ -213,6 +221,7 @@ export default {
                 materialSpecificationSearch: '',
                 materialSupplierSearch: '',
                 totalPurchaseOrderRIdSearch: '',
+                showAllMaterials: false,
             },
             materialTypeOptions: [],
             materialSupplierOptions: [],
@@ -430,6 +439,7 @@ export default {
                 "purchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
                 "warehouseName": this.searchForm.warehouseNameSearch,
                 "isNonOrderMaterial": this.searchForm.isNonOrderMaterial,
+                "showAllMaterials": this.searchForm.showAllMaterials ? "true" : "false",
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
             this.bottomTableData = response.data.result
