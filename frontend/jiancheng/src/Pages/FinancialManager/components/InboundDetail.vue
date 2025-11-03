@@ -20,6 +20,12 @@
                 </el-select>
                 <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
+                <el-select v-model="inboundTypeFilter" multiple clearable @change="updateInboundDisplayRecord"
+                    placeholder="入库类型搜索" style="width: 300px;">
+                    <el-option v-for="item in inboundRecordTypes" :key="item.value" :label="item.label"
+                        :value="item.value">
+                    </el-option>
+                </el-select>
                 <el-date-picker v-model="dateRangeFilter" type="daterange"
                     value-format="YYYY-MM-DD" unlink-panels range-separator="至" start-placeholder="时间范围起始"
                     end-placeholder="时间范围结束" size="default" clearable @change="updateInboundDisplayRecord"
@@ -41,7 +47,8 @@
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
                 <el-input v-model="orderRidFilter" placeholder="订单号搜索" clearable
                     @change="updateInboundDisplayRecord" style="width: 200px;"></el-input>
-                <el-select v-model="statusFilter" multiple style="width:200px；"
+                <el-select v-model="statusFilter" multiple style="width:200px;"
+                    placeholder="审核状态搜索" clearable
                     @change="updateInboundDisplayRecord">
                     <el-option v-for="statusOption in statusFilterOptions"
                     :key="statusOption.key"
@@ -136,6 +143,7 @@ const statusFilterOptions = ref([
 const detailOrSummary = ref(true)
 const currentApi = ref('')
 const tabledisplayHeight = ref(1300 )
+const inboundTypeFilter = ref([])
 
 // const shortcuts: [
 //                 {
@@ -162,17 +170,25 @@ interface WarehouseEntity {
     warehouseName: string
 }
 let warehouseOptions = ref([])
+const inboundRecordTypes = ref([])
 
 
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 onMounted(async () => {
     getWarehouseInfo()
+    getInboundRecordType()
     await getSelectableColumns()
     selectAllColumns()
     updateInboundDisplayRecord()
     mountApi()
 })
+
+async function getInboundRecordType() {
+    const res = await axios.get($api_baseUrl + `/accounting/getinboundrecordtype`)
+    inboundRecordTypes.value = res.data.result
+}
+
 function deselectAllColumns() {
     checkedColumnValues.value = []
     updateCheckBox()
@@ -220,8 +236,8 @@ function getCurrentPageInfo() {
         'materialSpecificationFilter': materialSpecificationFilter.value,
         'materialColorFilter': materialColorFilter.value,
         'orderRidFilter': orderRidFilter.value,
-        'statusFilter':statusFilter.value
-        // 'approvalStatusFilter':[0,1,2]
+        'statusFilter':statusFilter.value,
+        'inboundTypeFilter': inboundTypeFilter.value
     }
 }
 function pageSizeChange(newSize) {
@@ -257,7 +273,7 @@ async function updateInboundDisplayRecord() {
         displayRecords.value = res.data.inboundRecords
     }
     else {
-        const res = await axios.get($api_baseUrl + `/accounting/get_warehouse_inbound_summery`
+        const res = await axios.get($api_baseUrl + `/accounting/get_warehouse_inbound_summary`
             , { params: apiParams }
         )
         totalNum.value = res.data.total
