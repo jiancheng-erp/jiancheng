@@ -195,3 +195,18 @@ MAT_TYPE_NAME = {
     'S':'面料','I':'里料','A':'辅料',
     'O':'大底','M':'中底','H':'烫底'
 }
+
+INBOUND_RECORD_TYPE_OPTIONS = [
+    {
+        "value": 0,
+        "label": "采购入库"
+    },
+    {
+        "value": 1,
+        "label": "生产入库"
+    },
+    {
+        "value": 4,
+        "label": "回填入库"
+    }
+]
