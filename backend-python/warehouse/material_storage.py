@@ -117,6 +117,7 @@ def get_all_material_info():
         "shoe_rid": Shoe.shoe_rid,
         "warehouse_name": MaterialWarehouse.material_warehouse_name,
     }
+    show_all_materials = request.args.get("showAllMaterials", default="false")
     query1 = (
         db.session.query(
             MaterialStorage,
@@ -145,10 +146,21 @@ def get_all_material_info():
             MaterialStorage.purchase_order_item_id
             == PurchaseOrderItem.purchase_order_item_id,
         )
-        .filter(
-            or_(MaterialStorage.pending_inbound > 0, MaterialStorage.current_amount > 0)
-        )  # TODO: 稍后增加过滤库存条件
     )
+    # 过滤早期没有入库记录的库存
+    query1 = query1.filter(
+        or_(
+            MaterialStorage.pending_inbound != 0,
+            MaterialStorage.pending_outbound != 0,
+            MaterialStorage.inbound_amount != 0,
+            MaterialStorage.outbound_amount != 0,
+            MaterialStorage.current_amount != 0,
+        )
+    )
+    if show_all_materials == "false":
+        query1 = query1.filter(
+            or_(MaterialStorage.pending_inbound > 0, MaterialStorage.current_amount > 0)
+        )
 
     for key, value in filters.items():
         if value and value != "":
@@ -200,7 +212,10 @@ def get_all_material_info():
             "estimatedInboundAmount": (
                 purchase_order_item.purchase_amount if purchase_order_item else 0
             ),
+            "pendingInbound": storage.pending_inbound,
+            "pendingOutbound": storage.pending_outbound,
             "actualInboundAmount": storage.inbound_amount,
+            "outboundAmount": storage.outbound_amount,
             "actualInboundUnit": storage.actual_inbound_unit,
             "currentAmount": storage.current_amount,
             "unitPrice": storage.unit_price,
