@@ -9,17 +9,7 @@ from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
 )
-from sqlalchemy import (
-    text,
-    DECIMAL,
-    CHAR,
-    Date,
-    DATETIME,
-    BigInteger,
-    Integer,
-    TIMESTAMP,
-    func,
-)
+from sqlalchemy import text, DECIMAL, CHAR, Date, DATETIME, BigInteger, Integer, TIMESTAMP, func
 from decimal import Decimal
 
 
@@ -28,9 +18,12 @@ class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_name = db.Column(db.String(50), nullable=False)
     user_passwd = db.Column(db.String(50), nullable=False)
-    staff_id = db.Column(
-        db.Integer,
-    )
+    staff_id = db.Column(db.Integer)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<User(user_id={self.user_id}, user_name={self.user_name})>"
 
 
 class BomItem(db.Model):
@@ -68,6 +61,8 @@ class BomItem(db.Model):
     craft_name = db.Column(db.String(200), nullable=True)
     pairs = db.Column(db.DECIMAL(12, 5), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<BomItem(bom_item_id={self.bom_item_id})>"
@@ -83,6 +78,8 @@ class Bom(db.Model):
     )
     bom_status = db.Column(db.String(1), nullable=True)
     total_bom_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Bom(bom_id={self.bom_id})>"
@@ -92,6 +89,8 @@ class Character(db.Model):
     __tablename__ = "character"
     character_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     character_name = db.Column(db.String(40), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Character(character_id={self.character_id})>"
@@ -104,6 +103,8 @@ class Color(db.Model):
     color_en_name = db.Column(db.String(50), nullable=True)
     color_sp_name = db.Column(db.String(50), nullable=True)
     color_it_name = db.Column(db.String(40), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Color(color_id={self.color_id})>"
@@ -114,6 +115,8 @@ class Customer(db.Model):
     customer_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     customer_name = db.Column(db.String(50), nullable=False)
     customer_brand = db.Column(db.String(25), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Customer(customer_id={self.customer_id})>"
@@ -128,6 +131,8 @@ class QuantityReportItem(db.Model):
     order_shoe_type_id = db.Column(db.BigInteger, nullable=False)
     report_amount = db.Column(db.Integer, default=0)
     production_line_id = db.Column(db.Integer)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<QuantityReportItem(report_id={self.quantity_report_item_id}>"
@@ -147,6 +152,8 @@ class QuantityReport(db.Model):
     status = db.Column(db.SmallInteger, nullable=True)
     rejection_reason = db.Column(db.String(40))
     total_report_amount = db.Column(db.Integer, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<QuantityReport(report_id={self.report_id})>"
@@ -156,9 +163,55 @@ class Department(db.Model):
     __tablename__ = "department"
     department_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     department_name = db.Column(db.String(20), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Department(department_id={self.department_id})>"
+    
+
+class DailyMaterialStorageChange(db.Model):
+    __tablename__ = 'daily_material_storage_change'
+    __table_args__ = (
+        db.UniqueConstraint('snapshot_date', 'material_storage_id', name='unq_daily_change'),
+    )
+
+    daily_change_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    snapshot_date = db.Column(DATE, nullable=False, comment='每日净变动日期')
+    material_storage_id = db.Column(BIGINT, nullable=False, comment='库存id')
+    latest_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的单价')
+    avg_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的平均价')
+    pending_inbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核入库数量总和')
+    pending_outbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核出库数量总和')
+    inbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核入库数量总和')
+    outbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核出库数量总和')
+    net_change = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='净变动，入库数量-出库数量')
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyMaterialStorageChange(id={self.daily_change_id}, date={self.snapshot_date}, msid={self.material_storage_id})>"
+
+
+class DailyMaterialStorageSizeDetailChange(db.Model):
+    __tablename__ = 'daily_material_storage_size_detail_change'
+    __table_args__ = (
+        db.UniqueConstraint('daily_change_id', 'order_number', name='unq_size_detail_change'),
+    )
+
+    id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    daily_change_id = db.Column(BIGINT, db.ForeignKey('daily_material_storage_change.daily_change_id', ondelete='CASCADE'), nullable=False)
+    size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    pending_inbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核入库数量总和')
+    pending_outbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核出库数量总和')
+    inbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核入库数量总和')
+    outbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核出库数量总和')
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyMaterialStorageSizeDetailChange(id={self.id}, daily_change_id={self.daily_change_id}, order_number={self.order_number})>"
 
 
 class Material(db.Model):
@@ -171,6 +224,8 @@ class Material(db.Model):
     material_creation_date = db.Column(db.Date, nullable=True)
     material_category = db.Column(db.SmallInteger, nullable=False, default=0)
     material_usage_department = db.Column(db.String(1), nullable=True, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     __table_args__ = (
         db.UniqueConstraint("material_supplier", "material_name", name="unq_material"),
@@ -187,10 +242,9 @@ class MaterialType(db.Model):
     __tablename__ = "material_type"
     material_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     material_type_name = db.Column(db.String(50), nullable=False)
-    warehouse_id = db.Column(
-        db.Integer,
-        nullable=False,
-    )
+    warehouse_id = db.Column(db.Integer,nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<MaterialType(material_type_id={self.material_type_id})>"
@@ -210,6 +264,8 @@ class Event(db.Model):
     event_order_id = db.Column(db.BigInteger, nullable=True)
     event_order_shoe_id = db.Column(db.BigInteger, nullable=True)
     event_type = db.Column(db.SmallInteger, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Event(event_id={self.event_id})>"
@@ -265,6 +321,8 @@ class MaterialStorage(db.Model):
     size_44_inbound_amount = db.Column(INTEGER, nullable=False, default=0)
     size_45_inbound_amount = db.Column(INTEGER, nullable=False, default=0)
     size_46_inbound_amount = db.Column(INTEGER, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     __table_args__ = (
         db.UniqueConstraint(
@@ -291,12 +349,70 @@ class MaterialStorageSizeDetail(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     material_storage_id = db.Column(db.BigInteger, nullable=False)
     size_value = db.Column(db.String(10), nullable=False)
-    order_number = db.Column(db.Integer, nullable=False)  # 排序字段
+    order_number = db.Column(db.Integer, nullable=False) # 排序字段
     pending_inbound = db.Column(db.Integer, nullable=False, default=0)
     pending_outbound = db.Column(db.Integer, nullable=False, default=0)
     inbound_amount = db.Column(db.Integer, nullable=False, default=0)
     outbound_amount = db.Column(db.Integer, nullable=False, default=0)
     current_amount = db.Column(db.Integer, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+
+class MaterialStorageSnapshot(db.Model):
+    __tablename__ = 'material_storage_snapshot'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('snapshot_date', 'material_storage_id'),
+        db.Index('idx_snapshot_spu', 'spu_material_id', 'snapshot_date'),
+        db.Index('idx_snapshot_order', 'order_id', 'snapshot_date'),
+        db.Index('idx_msid_date', 'material_storage_id', 'snapshot_date'),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    material_storage_id = db.Column(BIGINT, nullable=False)
+    order_id = db.Column(BIGINT)
+    order_shoe_id = db.Column(BIGINT)
+    spu_material_id = db.Column(db.Integer, nullable=False)
+    actual_inbound_unit = db.Column(CHAR(5), nullable=False)
+    pending_inbound = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    pending_outbound = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    inbound_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    current_amount = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000)
+    unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000)
+    average_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000)
+    material_outsource_status = db.Column(TINYINT, default=0, comment='del')
+    material_outsource_date = db.Column(DATE)
+    purchase_order_item_id = db.Column(BIGINT)
+    material_storage_status = db.Column(CHAR(1))
+    shoe_size_columns = db.Column(JSON, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<MaterialStorageSnapshot(date={self.snapshot_date}, msid={self.material_storage_id})>"
+
+
+class MaterialStorageSizeDetailSnapshot(db.Model):
+    __tablename__ = 'material_storage_size_detail_snapshot'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('snapshot_date', 'size_detail_id'),
+        db.UniqueConstraint('snapshot_date', 'material_storage_id', 'order_number', name='unq_size_detail'),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    size_detail_id = db.Column(BIGINT, nullable=False)
+    material_storage_id = db.Column(BIGINT, nullable=False)
+    size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    pending_inbound = db.Column(INTEGER, nullable=False, default=0)
+    pending_outbound = db.Column(INTEGER, nullable=False, default=0)
+    inbound_amount = db.Column(INTEGER, nullable=False, default=0)
+    current_amount = db.Column(INTEGER, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<MaterialStorageSizeDetailSnapshot(date={self.snapshot_date}, msid={self.material_storage_id}, order={self.order_number})>"
 
 
 class Operation(db.Model):
@@ -306,6 +422,8 @@ class Operation(db.Model):
     operation_type = db.Column(db.Integer, nullable=False, default=0)
     operation_modified_status = db.Column(db.Integer, nullable=True)
     operation_modified_value = db.Column(db.Integer, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Operation(operation_id={self.operation_id})>"
@@ -343,6 +461,8 @@ class Order(db.Model):
     )
     is_paid = db.Column(db.SmallInteger, nullable=False, default=0)
     order_actual_end_date = db.Column(db.Date, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Order(order_id={self.order_id})>"
@@ -365,6 +485,8 @@ class OrderShoeStatus(db.Model):
     )
     current_status_value = db.Column(db.Integer, nullable=False)
     revert_info = db.Column(db.JSON, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoeStatus(order_shoe_status_id={self.order_shoe_status_id})>"
@@ -392,6 +514,8 @@ class OutsourceBatchInfo(db.Model):
     size_46_outsource_amount = db.Column(db.Integer, default=0)
     outsource_info_id = db.Column(db.Integer, nullable=False)
     is_product_arrived = db.Column(db.SmallInteger, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class PackagingInfo(db.Model):
@@ -418,6 +542,8 @@ class PackagingInfo(db.Model):
     size_46_ratio = db.Column(db.Integer, nullable=True)
     total_quantity_ratio = db.Column(db.Integer, nullable=True)
     is_active = db.Column(db.String(1), nullable=False, default="1")
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<PackagingInfo(packaging_info_id={self.packaging_info_id})>"
@@ -452,6 +578,8 @@ class OrderShoeBatchInfo(db.Model):
         db.BigInteger,
     )
     total_price = db.Column(db.DECIMAL(13, 4), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoeBatchInfo(order_shoe_batch_info_id={self.order_shoe_batch_info_id})>"
@@ -481,6 +609,8 @@ class OrderShoeProductionAmount(db.Model):
     total_production_amount = db.Column(db.Integer, default=0)
     production_team = db.Column(db.SmallInteger, nullable=False)
     order_shoe_type_id = db.Column(db.BigInteger)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoeProductionAmount(order_shoe_production_amount_id={self.order_shoe_production_amount_id})>"
@@ -500,6 +630,8 @@ class OrderShoe(db.Model):
     customer_product_name = db.Column(db.String(50), nullable=False)
     business_technical_remark = db.Column(db.String(255), nullable=True)
     business_material_remark = db.Column(db.String(255), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoe(order_shoe_id={self.order_shoe_id})>"
@@ -529,6 +661,8 @@ class OutsourceInfo(db.Model):
     order_shoe_id = db.Column(db.BigInteger)
     outbound_counter = db.Column(db.SmallInteger, default=0)
     total_cost = db.Column(db.DECIMAL(10, 3), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class OutsourceCostDetail(db.Model):
@@ -554,6 +688,8 @@ class OutsourceFactory(db.Model):
     )
     factory_name = db.Column(db.String(50), nullable=False)
     is_deleted = db.Column(db.Boolean, default=0, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class OrderShoeProductionInfo(db.Model):
@@ -580,12 +716,19 @@ class OrderShoeProductionInfo(db.Model):
     order_shoe_id = db.Column(
         db.BigInteger,
     )
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<OrderShoeProductionInfo(id={self.production_info_id})>"
 
 
 class OrderShoeStatusReference(db.Model):
     __tablename__ = "order_shoe_status_reference"
     status_id = db.Column(db.Integer, primary_key=True)
     status_name = db.Column(db.String(40), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoeStatusReference(status_id={self.status_id})>"
@@ -604,6 +747,8 @@ class OrderStatus(db.Model):
     order_status_value = db.Column(db.Integer, nullable=False)
     order_id = db.Column(db.BigInteger)
     revert_info = db.Column(db.JSON, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderStatus(order_status_id={self.order_status_id})>"
@@ -616,6 +761,8 @@ class OrderStatusReference(db.Model):
     __tablename__ = "order_status_reference"
     order_status_id = db.Column(db.Integer, primary_key=True)
     order_status_name = db.Column(db.String(40), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderStatusReference(order_status_id={self.order_status_id})>"
@@ -630,6 +777,8 @@ class ProcedureReference(db.Model):
     procedure_name = db.Column(db.String(100), nullable=False)
     team = db.Column(db.String(10), nullable=True)
     current_price = db.Column(DECIMAL(13, 4), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ProcedureReference(procedure_id={self.procedure_id})>"
@@ -675,6 +824,8 @@ class PurchaseOrderItem(db.Model):
     remark = db.Column(VARCHAR(100), nullable=True)
 
     related_selected_material_storage = db.Column(JSON, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     __table_args__ = (
         db.Index("fk_purchase_order_items_bom_item_0", "bom_item_id"),
@@ -721,6 +872,8 @@ class AssetsPurchaseOrderItem(db.Model):
     inbound_material_id = db.Column(db.BigInteger, nullable=True)
     inbound_unit = db.Column(db.String(5), nullable=True)
     adjust_purchase_amount = db.Column(db.DECIMAL(10, 5), default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<AssetsPurchaseOrderItem(assets_purchase_order_item_id={self.assets_purchase_order_item_id})>"
@@ -741,6 +894,8 @@ class PurchaseDivideOrder(db.Model):
     shipment_address = db.Column(db.String(100), nullable=True)
     shipment_deadline = db.Column(db.String(100), nullable=True)
     total_purchase_order_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<PurchaseDivideOrder(purchase_divide_order_id={self.purchase_divide_order_id})>"
@@ -756,6 +911,8 @@ class PurchaseOrder(db.Model):
     order_id = db.Column(db.BigInteger)
     order_shoe_id = db.Column(db.BigInteger)
     purchase_order_status = db.Column(db.String(1), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<PurchaseOrder(purchase_order_id={self.purchase_order_id})>"
@@ -811,6 +968,8 @@ class SemifinishedShoeStorage(db.Model):
     size_45_amount = db.Column(db.Integer, default=0)
     size_46_amount = db.Column(db.Integer, default=0)
     semifinished_status = db.Column(db.SmallInteger)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class Shoe(db.Model):
@@ -820,6 +979,8 @@ class Shoe(db.Model):
     shoe_designer = db.Column(db.String(10), nullable=True)
     shoe_department_id = db.Column(db.String(10), nullable=True)
     shoe_available = db.Column(db.Boolean, nullable=False, default=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Shoe(shoe_id={self.shoe_id})>"
@@ -851,6 +1012,8 @@ class ShoeInboundRecord(db.Model):
     related_inbound_record_id = db.Column(
         db.BigInteger, nullable=True, comment="撤回时关联的入库记录ID"
     )
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ShoeInboundRecord(id={self.shoe_inbound_record_id}, rid={self.shoe_inbound_rid})>"
@@ -881,6 +1044,8 @@ class ShoeInboundRecordDetail(db.Model):
     semifinished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     finished_shoe_storage_id = db.Column(db.BigInteger, nullable=True)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class ShoeOutboundRecord(db.Model):
@@ -898,6 +1063,8 @@ class ShoeOutboundRecord(db.Model):
     outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
     picker = db.Column(db.String(15), default=None)
     remark = db.Column(db.String(40), default=None)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class ShoeOutboundRecordDetail(db.Model):
@@ -924,6 +1091,8 @@ class ShoeOutboundRecordDetail(db.Model):
     remark = db.Column(db.String(40), default=None)
     semifinished_shoe_storage_id = db.Column(db.BigInteger, default=None)
     finished_shoe_storage_id = db.Column(db.BigInteger, default=None)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class Staff(db.Model):
@@ -941,6 +1110,8 @@ class Staff(db.Model):
     phone_number = db.Column(db.String(20), nullable=True)
     birth_date = db.Column(db.Date, nullable=True)
     wechat_id = db.Column(db.String(50), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Staff(staff_id={self.staff_id})>"
@@ -954,6 +1125,8 @@ class Supplier(db.Model):
     supplier_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     supplier_name = db.Column(db.String(50), nullable=False)
     supplier_type = db.Column(db.String(1), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Supplier(supplier_id={self.supplier_id})>"
@@ -961,7 +1134,7 @@ class Supplier(db.Model):
     def __name__(self):
         return "Supplier"
 
-
+#TODO：下个pr删除
 class ExternalProcessingCost(db.Model):
     __tablename__ = "external_processing_cost"
 
@@ -992,6 +1165,8 @@ class UnitPriceReportDetail(db.Model):
     procedure_name = db.Column(db.String(50), nullable=False)
     price = db.Column(db.DECIMAL(13, 4), nullable=False)
     note = db.Column(db.String(100), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))    
 
     def __repr__(self):
         return f"<UnitPriceReportDetail(report_id={self.report_id}, row_id={self.row_id}, procedure_name={self.procedure_name}, note={self.note})>"
@@ -1010,6 +1185,8 @@ class UnitPriceReport(db.Model):
     )  # 1: "未提交", 2: "生产副总审核中", 3: "生产副总驳回", 4: "总经理审核中", 5: "总经理驳回", 6: "已审批"
     rejection_reason = db.Column(db.String(40), nullable=True)
     price_sum = db.Column(db.DECIMAL(13, 4), default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<UnitPriceReport(report_id={self.report_id})>"
@@ -1026,6 +1203,8 @@ class UnitPriceReportTemplate(db.Model):
     )
     shoe_id = db.Column(db.Integer, nullable=False)
     team = db.Column(db.String(10), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class ReportTemplateDetail(db.Model):
@@ -1036,6 +1215,8 @@ class ReportTemplateDetail(db.Model):
     procedure_name = db.Column(db.String(50), nullable=True)
     price = db.Column(db.DECIMAL(13, 4), nullable=True)
     note = db.Column(db.String(100), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class MaterialWarehouse(db.Model):
@@ -1043,6 +1224,8 @@ class MaterialWarehouse(db.Model):
     material_warehouse_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     material_warehouse_name = db.Column(db.String(20), nullable=False)
     material_warehouse_creation_date = db.Column(db.Date, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Warehouse(material_warehouse_id={self.material_warehouse_id})>"
@@ -1100,6 +1283,8 @@ class FinishedShoeStorage(db.Model):
         db.SmallInteger,
         nullable=True,
     )
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class BatchInfoType(db.Model):
@@ -1120,6 +1305,8 @@ class BatchInfoType(db.Model):
     size_44_name = db.Column(db.String(5), nullable=True)
     size_45_name = db.Column(db.String(5), nullable=True)
     size_46_name = db.Column(db.String(2), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<BatchInfoType(batch_info_type_id={self.batch_info_type_id}, batch_info_type_name='{self.batch_info_type_name}')>"
@@ -1141,6 +1328,9 @@ class InboundRecord(db.Model):
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<InboundRecord {self.inbound_rid}>"
@@ -1171,10 +1361,13 @@ class InboundRecordDetail(db.Model):
     size_46_inbound_amount = db.Column(db.Integer, nullable=True)
 
     order_id = db.Column(db.BigInteger, nullable=True)
-    material_storage_id = db.Column(db.BigInteger, nullable=True)
+    material_storage_id = db.Column(db.BigInteger, nullable=False)
     size_material_storage_id = db.Column(db.BigInteger, nullable=True)
     remark = db.Column(db.String(40), nullable=True)
-    spu_material_id = db.Column(db.Integer, nullable=True)
+    spu_material_id = db.Column(db.Integer, nullable=False)
+    display = db.Column(db.Boolean, nullable=False, default=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<InboundRecordDetail id={self.id} inbound_record_id={self.inbound_record_id}>"
@@ -1198,6 +1391,9 @@ class OutboundRecord(db.Model):
     approval_status = db.Column(db.SmallInteger, nullable=False, default=0)
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OutboundRecord {self.outbound_rid}>"
@@ -1236,6 +1432,9 @@ class OutboundRecordDetail(db.Model):
     remark = db.Column(db.String(40), nullable=True)
     order_shoe_id = db.Column(db.BigInteger, nullable=True)
     spu_material_id = db.Column(db.Integer, nullable=True)
+    display = db.Column(db.Boolean, nullable=False, default=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OutboundRecordDetail {self.id}>"
@@ -1247,6 +1446,8 @@ class ShoeType(db.Model):
     shoe_image_url = db.Column(db.String(100), nullable=True)
     color_id = db.Column(db.Integer, nullable=False)
     shoe_id = db.Column(db.Integer, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ShoeType(shoe_type_id={self.shoe_type_id})>"
@@ -1264,6 +1465,8 @@ class OrderShoeType(db.Model):
     unit_price = db.Column(db.DECIMAL(13, 4), default=0)
     customer_color_name = db.Column(db.String(40), default="")
     currency_type = db.Column(db.String(4), nullable=True, default="")
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<OrderShoeType(order_shoe_type_id={self.order_shoe_type_id})>"
@@ -1274,6 +1477,8 @@ class TotalBom(db.Model):
     total_bom_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     total_bom_rid = db.Column(db.String(50), nullable=False)
     order_shoe_id = db.Column(db.BigInteger, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<TotalBom(total_bom_id={self.total_bom_id})>"
@@ -1293,6 +1498,8 @@ class ProductionInstruction(db.Model):
     last_type = db.Column(db.String(20), nullable=True)
     burn_sole_craft = db.Column(db.String(100), nullable=True)
     craft_remark = db.Column(db.String(150), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ProductionInstruction(production_instruction_id={self.production_instruction_id})>"
@@ -1316,6 +1523,8 @@ class ProductionInstructionItem(db.Model):
     material_second_type = db.Column(db.String(10), nullable=False)
     pre_craft_name = db.Column(db.String(100), nullable=True)
     processing_remark = db.Column(db.String(200), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ProductionInstructionItem(production_instruction_item_id={self.production_instruction_item_id})>"
@@ -1337,6 +1546,8 @@ class CraftSheet(db.Model):
     pic_note_img_path = db.Column(db.String(100), nullable=True)
     craft_sheet_status = db.Column(db.String(1), nullable=False)
     reviewer = db.Column(db.String(20), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<CraftSheet(craft_sheet_id={self.craft_sheet_id})>"
@@ -1363,6 +1574,8 @@ class CraftSheetItem(db.Model):
     after_usage_symbol = db.Column(db.String(1), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     processing_remark = db.Column(db.String(200), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<CraftSheetItem(craft_sheet_item_id={self.craft_sheet_item_id})>"
@@ -1375,6 +1588,8 @@ class ProductionLine(db.Model):
     production_line_name = db.Column(db.String(15), nullable=False)
     production_team = db.Column(db.String(10), nullable=False)
     is_deleted = db.Column(db.Boolean, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<ProductionLine(production_line_id={self.production_line_id})>"
@@ -1395,6 +1610,8 @@ class TotalPurchaseOrder(db.Model):
     shipment_address = db.Column(db.String(100), nullable=True)
     shipment_deadline = db.Column(db.String(100), nullable=True)
     total_purchase_order_rid = db.Column(db.String(60), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<TotalPurchaseOrder(total_purchase_order_id={self.total_purchase_order_id})>"
@@ -1405,6 +1622,8 @@ class FirstGradeAccount(db.Model):
     account_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     account_name = db.Column(db.String(20), nullable=False)
     account_balance = db.Column(db.DECIMAL(13, 4), nullable=True, default=0.000)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class SecondGradeAccount(db.Model):
@@ -1417,6 +1636,8 @@ class SecondGradeAccount(db.Model):
         db.DECIMAL(13, 3), nullable=True, default=0.000
     )
     account_cash_balance = db.Column(db.DECIMAL(13, 3), nullable=True, default=0.000)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class ThirdGradeAccount(db.Model):
@@ -1427,12 +1648,16 @@ class ThirdGradeAccount(db.Model):
     account_belongs_sg = db.Column(db.Integer, nullable=False)
     account_type = db.Column(db.String(1), nullable=False)
     account_bound_event = db.Column(db.String(1), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class Unit(db.Model):
     __tablename__ = "unit"
     unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     unit_name = db.Column(db.String(10), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     def __repr__(self):
         return f"<Unit(unit_id={self.unit_id})>"
@@ -1451,6 +1676,8 @@ class AccountingPayableAccount(db.Model):
     account_owner_id = db.Column(
         db.Integer, nullable=False, comment="AccountPayeePayer表的主键"
     )
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 # class AccountingPayableTransaction(db.Model):
@@ -1475,6 +1702,8 @@ class AccountingPayableTransaction(db.Model):
     from_account_grade = db.Column(db.BigInteger, nullable=False)
     from_account_id = db.Column(db.BigInteger, nullable=False)
     to_account_id = db.Column(db.BigInteger, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingRecievableAccount(db.Model):
@@ -1485,6 +1714,8 @@ class AccountingRecievableAccount(db.Model):
     account_recievable_balance = db.Column(db.DECIMAL(13, 4), nullable=False)
     account_unit_id = db.Column(db.Integer, nullable=False)
     account_owner_id = db.Column(db.Integer, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingPayeePayer(db.Model):
@@ -1497,6 +1728,8 @@ class AccountingPayeePayer(db.Model):
     payee_bank_info = db.Column(db.String(50), nullable=True)
     payee_contact_info = db.Column(db.String(20), nullable=True)
     entity_type = db.Column(db.String(1), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingForeignAccountEvent(db.Model):
@@ -1517,6 +1750,8 @@ class AccountingForeignAccountEvent(db.Model):
     transaction_conversion_id = db.Column(db.Integer, nullable=True)
     inbound_record_id = db.Column(db.BigInteger, nullable=True)
     outbound_record_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingCurrencyUnit(db.Model):
@@ -1524,6 +1759,8 @@ class AccountingCurrencyUnit(db.Model):
     unit_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     unit_name_en = db.Column(db.String(20), nullable=False)
     unit_name_cn = db.Column(db.String(20), nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingUnitConversionTable(db.Model):
@@ -1534,6 +1771,8 @@ class AccountingUnitConversionTable(db.Model):
     rate = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
     rate_date = db.Column(db.DateTime, nullable=True)
     rate_active = db.Column(db.Boolean, nullable=False, default=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class AccountingThirdGradeRecord(db.Model):
@@ -1558,6 +1797,8 @@ class AccountingThirdGradeRecord(db.Model):
     record_is_processed = db.Column(db.Integer, nullable=False)
     # 记录id
     record_id = db.Column(db.Integer, primary_key=True, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class RevertEvent(db.Model):
@@ -1568,6 +1809,8 @@ class RevertEvent(db.Model):
     initialing_department = db.Column(db.String(10), nullable=True)
     event_time = db.Column(db.DateTime, nullable=True)
     order_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class DefaultBom(db.Model):
@@ -1577,6 +1820,8 @@ class DefaultBom(db.Model):
     shoe_type_id = db.Column(db.BigInteger, nullable=False)
     bom_status = db.Column(db.String(1), nullable=False)
     bom_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     __table_args__ = (db.UniqueConstraint("shoe_type_id", name="unq_default_bom"),)
 
@@ -1586,6 +1831,8 @@ class DefaultCraftSheet(db.Model):
     default_craft_sheet_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     shoe_id = db.Column(db.Integer, nullable=False)
     craft_sheet_id = db.Column(db.BigInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     __table_args__ = (db.UniqueConstraint("shoe_id", name="unq_default_craft_sheet"),)
 
@@ -1598,6 +1845,8 @@ class SPUMaterial(db.Model):
     material_specification = db.Column(db.String(100), nullable=True)
     color = db.Column(db.String(40), nullable=True)
     spu_rid = db.Column(db.String(50), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class BatchInfoTemplate(db.Model):
@@ -1607,6 +1856,8 @@ class BatchInfoTemplate(db.Model):
     pakaging_info_id_json = db.Column(db.JSON, nullable=False)
     template_name = db.Column(db.String(50), nullable=False)
     template_description = db.Column(db.String(200), nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
 class MakeInventoryRecord(db.Model):
@@ -1623,38 +1874,37 @@ class MakeInventoryRecord(db.Model):
     make_inventory_status = db.Column(db.SmallInteger, nullable=False, default=0)
     # 0=未回传  1=已回传
     excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)
-
-
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+    
+    # models.py (示例，仅供参考)
 class WarehouseMissingPurchaseRecord(db.Model):
     __tablename__ = "warehouse_missing_purchase_record"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_id = db.Column(db.BigInteger, nullable=False, index=True)
     order_shoe_id = db.Column(db.BigInteger, nullable=True, index=True)
-    status = db.Column(
-        db.String(1), nullable=False, index=True
-    )  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
+    status = db.Column(db.String(1), nullable=False, index=True)  # 0:技术部下发, 1:用量填写完成, 2:采购用量完成
     reason = db.Column(db.String(100))
     remark = db.Column(db.String(255))
     created_at = db.Column(db.DateTime)
-
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 class WarehouseMissingPurchaseRecordItem(db.Model):
     __tablename__ = "warehouse_missing_purchase_record_item"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    record_id = db.Column(
-        db.BigInteger,
-        db.ForeignKey("warehouse_missing_purchase_record.id"),
-        nullable=False,
-        index=True,
-    )
+    record_id = db.Column(db.BigInteger, db.ForeignKey('warehouse_missing_purchase_record.id'), nullable=False, index=True)
     material_type = db.Column(db.String(1), nullable=True)  # 'S','I','O',...
     material_id = db.Column(db.BigInteger, nullable=True, index=True)
     material_model = db.Column(db.String(120))
     material_specification = db.Column(db.String(120))
     color = db.Column(db.String(60))
-    unit_usage = db.Column(db.Numeric(18, 4))  # 单位用量
-    approval_usage = db.Column(db.Numeric(18, 4))  # 核定用量
-    purchase_amount = db.Column(db.Numeric(18, 4))  # 采购数量
+    unit_usage = db.Column(db.Numeric(18,4))      # 单位用量
+    approval_usage = db.Column(db.Numeric(18,4))  # 核定用量
+    purchase_amount = db.Column(db.Numeric(18,4)) # 采购数量
     order_shoe_type_id = db.Column(db.BigInteger, nullable=True, index=True)
     size_qty_arr = db.Column(db.JSON)
     size_purchase_amount_arr = db.Column(db.JSON)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+

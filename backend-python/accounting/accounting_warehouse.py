@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from logger import logger
 from app_config import db
 import os
+from constants import INBOUND_RECORD_TYPE_OPTIONS
 
 
 accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
@@ -212,22 +213,21 @@ def get_warehouse_outbound_record():
         res[to_camel('item_total_price')] = outbound_record_detail.item_total_price
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
-    
-@accounting_warehouse_bp.route("/accounting/get_warehouse_inventory", methods=["GET"])
-def get_warehouse_inventory():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
-    warehouse_filter = request.args.get('selectedWarehouse')
-    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-    material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
 
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
-    shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
-    not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
+def _get_warehouse_inventory_query(data: dict, all_records=False):
+    page_num = data.get('pageNumber',type=int)
+    page_size = data.get('pageSize', type=int)
+    warehouse_filter = data.get('selectedWarehouse')
+    supplier_name_filter = data.get('supplierNameFilter', type=str)
+    material_model_filter = data.get('materialModelFilter', type=str)
+    material_name_filter = data.get('materialNameFilter', type=str)
+    material_specification_filter = data.get('materialSpecificationFilter', type=str)
+    material_color_filter = data.get('materialColorFilter', type=str)
+
+    order_rid_filter = data.get('orderRidFilter', type=str)
+    order_shoe_customer_name_filter = data.get('customerProductNameFilter', type=str)
+    shoe_rid_filter = data.get('shoeRidFilter', type=str)
+    not_zero_flag_filter = data.get('includeZeroFilter', type=str)
     query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
              .outerjoin(Order,MaterialStorage.order_id == Order.order_id)
              .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
@@ -274,9 +274,11 @@ def get_warehouse_inventory():
 
     query = query.order_by(MaterialStorage.material_storage_id.asc())
     total_count = query.distinct().count()
-    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    if all_records:
+        response_entities = query.all()
+    else:
+        response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     current_inventory = []
-    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
     for material_storage, order, order_shoe, shoe, spu_material, material, supplier, material_type, material_warehouse in response_entities:
         res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES)
         res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
@@ -289,26 +291,25 @@ def get_warehouse_inventory():
         res[to_camel('material_type')] = material_type.material_type_name
         res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
         res[to_camel('item_total_price')] = round(material_storage.current_amount * average_price, 4)
-
         current_inventory.append(res)
-    return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
-    
+    return current_inventory, total_count
 
-@accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_record", methods=["GET"])
-def get_warehouse_inbound_record():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
-    warehouse_filter = request.args.get('selectedWarehouse')
-    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
-    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-    inbound_rid_filter = request.args.get('inboundRIdFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    status_filter = [int(status) for status in request.args.getlist('statusFilter[]')]
+
+def _get_warehouse_inbound_record_query(data: dict):
+    page_num = data.get('pageNumber',type=int)
+    page_size = data.get('pageSize', type=int)
+    warehouse_filter = data.get('selectedWarehouse')
+    supplier_name_filter = data.get('supplierNameFilter', type=str)
+    date_range_filter_start = data.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = data.get('dateRangeFilterEnd', type=str)
+    inbound_rid_filter = data.get('inboundRIdFilter', type=str)
+    material_name_filter = data.get('materialNameFilter', type=str)
+    material_model_filter = data.get('materialModelFilter', type=str)
+    material_specification_filter = data.get('materialSpecificationFilter', type=str)
+    material_color_filter = data.get('materialColorFilter', type=str)
+    order_rid_filter = data.get('orderRidFilter', type=str)
+    status_filter = [int(status) for status in data.getlist('statusFilter[]')]
+    inbound_type_filter = [int(inbound_type) for inbound_type in data.getlist('inboundTypeFilter[]')]
     query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial,Order.order_rid, MaterialStorage)
                 .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
                 .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
@@ -316,6 +317,7 @@ def get_warehouse_inbound_record():
                 .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
                 .join(Material, SPUMaterial.material_id == Material.material_id)
                 .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
+                .filter(InboundRecord.display == 1)
                 )
     # order by time
     query = query.order_by(InboundRecord.inbound_datetime.desc())
@@ -347,6 +349,8 @@ def get_warehouse_inbound_record():
     if status_filter != []:
         query = query.filter(InboundRecord.approval_status.in_(status_filter))
     warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
+    if inbound_type_filter != []:
+        query = query.filter(InboundRecord.inbound_type.in_(inbound_type_filter))
 
     total_count = query.distinct().count()
     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
@@ -366,25 +370,25 @@ def get_warehouse_inbound_record():
         res[to_camel('inbound_amount')] = normalize_decimal(res[to_camel('inbound_amount')])
         res[to_camel('item_total_price')] = normalize_decimal(res[to_camel('item_total_price')])
         inbound_records.append(res)
-    return jsonify({"inboundRecords":inbound_records, "total":total_count}), 200
+    return inbound_records, total_count
 
-@accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_summery", methods=["GET"])
-def get_warehouse_inbound_summery():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
-    warehouse_filter = request.args.get('selectedWarehouse')
-    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
-    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_by_filter = request.args.get('orderByFilter', type=str)
-    # approval_status_filter = request.args.get('approvalStatusFilter', type=str)
+def _get_warehouse_inbound_summary_query(data: dict):
+    page_num = data.get('pageNumber',type=int)
+    page_size = data.get('pageSize', type=int)
+    warehouse_filter = data.get('selectedWarehouse')
+    supplier_name_filter = data.get('supplierNameFilter', type=str)
+    date_range_filter_start = data.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = data.get('dateRangeFilterEnd', type=str)
+    material_name_filter = data.get('materialNameFilter', type=str)
+    material_model_filter = data.get('materialModelFilter', type=str)
+    material_specification_filter = data.get('materialSpecificationFilter', type=str)
+    material_color_filter = data.get('materialColorFilter', type=str)
+    order_rid_filter = data.get('orderRidFilter', type=str)
+    order_by_filter = data.get('orderByFilter', type=str)
+    inbound_type_filter = [int(inbound_type) for inbound_type in data.getlist('inboundTypeFilter[]')]
+    # approval_status_filter = data.get('approvalStatusFilter', type=str)
 
-    inbound_records = (db.session.query(InboundRecord.inbound_record_id))
+    inbound_records = (db.session.query(InboundRecord.inbound_record_id).filter(InboundRecord.display == 1))
     if warehouse_filter:
         inbound_records = inbound_records.filter(InboundRecord.warehouse_id == warehouse_filter)
     if date_range_filter_start:
@@ -395,14 +399,10 @@ def get_warehouse_inbound_summery():
         next_day_delta = timedelta(days=1)
         query_compare_date = format_date((input_date_time + next_day_delta))
         inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= query_compare_date)
+    if inbound_type_filter != []:
+        inbound_records = inbound_records.filter(InboundRecord.inbound_type.in_(inbound_type_filter))
+
     inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
-    # query = (db.session.query(SPUMaterial.material_id, SPUMaterial.material_model, InboundRecordDetail.unit_price, func.sum(InboundRecordDetail.inbound_amount))
-    #          .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
-    #          .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-    #          .join(Material, MaterialStorage.material_id == Material.material_id)
-    #          .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
-    #                  .group_by(SPUMaterial.material_id ,SPUMaterial.material_model, InboundRecordDetail.unit_price)
-    #                  )
     query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount), func.max(InboundRecordDetail.inbound_record_id).label("inbound_record_id"))
              .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
              .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
@@ -411,7 +411,6 @@ def get_warehouse_inbound_summery():
                      .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
                     )
     time_period_subquery = query.subquery()
-    logger.debug(time_period_subquery.c)
     response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
                       .join(Material, time_period_subquery.c.material_id == Material.material_id)
                       .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
@@ -419,15 +418,7 @@ def get_warehouse_inbound_summery():
                       .join(InboundRecord, InboundRecord.inbound_record_id == time_period_subquery.c.inbound_record_id)
                       .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
                       )
-    # inbound_record_summery_subquery = query.subquery()
-    # response_query = (db.session.query(inbound_record_summery_subquery, MaterialStorage, Material, Supplier)
-    #                   .join(MaterialStorage, inbound_record_summery_subquery.c.material_storage_id == MaterialStorage.material_storage_id)
-    #                   .join(Material, MaterialStorage.material_id == Material.material_id)
-    #                   .join(Supplier, Supplier.supplier_id == Material.material_supplier))
-    # logger.debug(response_query.all())
     if supplier_name_filter:
-        logger.debug("supplier name filter")
-        logger.debug("filter is " + str(supplier_name_filter))
         response_query  = response_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
     if material_name_filter:
         response_query = response_query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
@@ -455,6 +446,23 @@ def get_warehouse_inbound_summery():
         res['materialWarehouse'] = warehouse_name
         res['orderRid'] = order_rid
         inbound_summary.append(res)
+    return inbound_summary, total_count
+
+    
+@accounting_warehouse_bp.route("/accounting/get_warehouse_inventory", methods=["GET"])
+def get_warehouse_inventory():
+    current_inventory, total_count = _get_warehouse_inventory_query(request.args)
+    return jsonify({'currentInventory':current_inventory, "total":total_count}), 200
+
+
+@accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_record", methods=["GET"])
+def get_warehouse_inbound_record():
+    inbound_records, total_count = _get_warehouse_inbound_record_query(request.args)
+    return jsonify({"inboundRecords":inbound_records, "total":total_count}), 200
+
+@accounting_warehouse_bp.route("/accounting/get_warehouse_inbound_summary", methods=["GET"])
+def get_warehouse_inbound_summary():
+    inbound_summary, total_count = _get_warehouse_inbound_summary_query(request.args)
     return jsonify({"inboundSummary":inbound_summary, "total":total_count}), 200
 
 
@@ -508,68 +516,8 @@ def create_excel_and_download():
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-    inbound_rid_filter = request.args.get('inboundRIdFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    status_filter = [int(status) for status in request.args.getlist('statusFilter[]')]
-    query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial,Order.order_rid, MaterialStorage)
-                .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
-                .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
-                .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-                .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-                .join(Material, SPUMaterial.material_id == Material.material_id)
-                .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                )
-    # order by time
-    query = query.order_by(InboundRecord.inbound_datetime.desc())
-
-    if inbound_rid_filter:
-        query = query.filter(InboundRecord.inbound_rid.ilike(f"%{inbound_rid_filter}%"))
-    if warehouse_filter:
-        query = query.filter(InboundRecord.warehouse_id == warehouse_filter)
-    if supplier_name_filter:
-        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-    if date_range_filter_start:
-        query = query.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
-    if date_range_filter_end:
-        ### next day
-        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
-        next_day_delta = timedelta(days=1)
-        query_compare_date = format_date((input_date_time + next_day_delta))
-        query = query.filter(InboundRecord.inbound_datetime <= query_compare_date)
-    if material_name_filter:
-        query = query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
-    if material_model_filter:
-        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-    if material_specification_filter:
-        query = query.filter(SPUMaterial.material_specification.ilike(f"%{material_specification_filter}%"))
-    if material_color_filter:
-        query = query.filter(SPUMaterial.color.ilike(f"%{material_color_filter}%"))
-    if order_rid_filter:
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
-    if status_filter != []:
-        query = query.filter(InboundRecord.approval_status.in_(status_filter))
-    warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
-
-    total_count = query.distinct().count()
-    response_entities = query.distinct().all()
-    inbound_records = []
-    for inbound_record, inbound_record_detail,material, supplier, spu, order_rid, material_storage in response_entities:
-        res = db_obj_to_res(inbound_record, InboundRecord,attr_name_list=type_to_attr_mapping["InboundRecord"])
-        res = db_obj_to_res(inbound_record_detail, InboundRecordDetail,attr_name_list=type_to_attr_mapping['InboundRecordDetail'],initial_res=res)
-        res = db_obj_to_res(supplier, Supplier,attr_name_list=type_to_attr_mapping['Supplier'],initial_res=res)
-        res = db_obj_to_res(spu, SPUMaterial, attr_name_list = type_to_attr_mapping['SPUMaterial'], initial_res=res)
-        res = db_obj_to_res(material, Material, attr_name_list=type_to_attr_mapping['Material'], initial_res = res)
-        res[to_camel('inbound_datetime')] = format_datetime(inbound_record.inbound_datetime)
-        res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
-        res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
-        res[to_camel('order_rid')] = order_rid
-        res[to_camel('actual_inbound_unit')] = material_storage.actual_inbound_unit
-        inbound_records.append(res)
-
+    inbound_records, total_count = _get_warehouse_inbound_record_query(request.args)
     # Generate the Excel file using the inbound_summary data
     template_path = FILE_STORAGE_PATH + "/财务入库总单模板.xlsx"
     timestamp = str(time.time())
@@ -585,70 +533,9 @@ def create_inbound_summary_excel_and_download():
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_by_filter = request.args.get('orderByFilter', type=str)
+    inbound_summary, total_count = _get_warehouse_inbound_summary_query(request.args)
 
-    inbound_records = (db.session.query(InboundRecord.inbound_record_id))
-    if warehouse_filter:
-        inbound_records = inbound_records.filter(InboundRecord.warehouse_id == warehouse_filter)
-    if date_range_filter_start:
-        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime >= date_range_filter_start)
-    if date_range_filter_end:
-        ### next day
-        input_date_time = datetime.strptime(date_range_filter_end, '%Y-%m-%d')
-        next_day_delta = timedelta(days=1)
-        query_compare_date = format_date((input_date_time + next_day_delta))
-        inbound_records = inbound_records.filter(InboundRecord.inbound_datetime <= query_compare_date)
-    inbound_records_result = [r.inbound_record_id for r in inbound_records.all()]
-    query = (db.session.query(SPUMaterial, InboundRecordDetail.unit_price, Order.order_rid, func.sum(InboundRecordDetail.inbound_amount), func.max(InboundRecordDetail.inbound_record_id).label("inbound_record_id"))
-             .filter(InboundRecordDetail.inbound_record_id.in_(inbound_records_result))
-             .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-             .join(SPUMaterial,MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-             .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                     .group_by(SPUMaterial.spu_material_id, InboundRecordDetail.unit_price, Order.order_rid)
-                    )
-    time_period_subquery = query.subquery()
-    logger.debug(time_period_subquery.c)
-    response_query = (db.session.query(time_period_subquery, Material, MaterialWarehouse.material_warehouse_name, Supplier)
-                      .join(Material, time_period_subquery.c.material_id == Material.material_id)
-                      .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-                      .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
-                      .join(InboundRecord, InboundRecord.inbound_record_id == time_period_subquery.c.inbound_record_id)
-                      .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
-                      )
-    if supplier_name_filter:
-        logger.debug("supplier name filter")
-        logger.debug("filter is " + str(supplier_name_filter))
-        response_query  = response_query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-    if material_name_filter:
-        response_query = response_query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
-    if material_model_filter:
-        response_query = response_query.filter(time_period_subquery.c.material_model.ilike(f"%{material_model_filter}%"))
-    if material_specification_filter:
-        response_query = response_query.filter(time_period_subquery.c.material_specification.ilike(f"%{material_specification_filter}%"))
-    if material_color_filter:
-        response_query = response_query.filter(time_period_subquery.c.color.ilike(f"%{material_color_filter}%"))
-    if order_rid_filter:
-        response_query = response_query.filter(time_period_subquery.c.order_rid.ilike(f"%{order_rid_filter}%"))
-    response_entities = response_query.distinct().all()
-    inbound_summary = []
-    for spu_id,m_id,m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, inbound_record_id, material, warehouse_name, supplier in response_entities:
-        res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
-        res['supplierName'] = supplier.supplier_name
-        res['unitPrice'] = unit_price
-        res['totalAmount'] = round(inbound_amount_sum, 3)
-        res['totalPrice'] = round(unit_price * inbound_amount_sum, 4)
-        res['materialModel'] = m_model
-        res['materialSpecification'] = m_specification
-        res['materialColor'] = color
-        res['spuRid'] = spu_rid
-        res['materialWarehouse'] = warehouse_name
-        res['orderRid'] = order_rid
-        inbound_summary.append(res)
     template_path = FILE_STORAGE_PATH + "/财务入库汇总单模板.xlsx"
     timestamp = str(time.time())
     new_file_name = f"财务入库单汇总输出_{timestamp}.xlsx"
@@ -659,79 +546,28 @@ def create_inbound_summary_excel_and_download():
 
 @accounting_warehouse_bp.route("/accounting/createinventoryexcelanddownload", methods=["GET"])
 def create_inventory_excel_and_download():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
     warehouse_filter = request.args.get('selectedWarehouse')
+    warehouse_name = None
+    if warehouse_filter:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+            .scalar()
+        )
     supplier_name_filter = request.args.get('supplierNameFilter', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-
-    order_rid_filter = request.args.get('orderRidFilter', type=str)
-    order_shoe_customer_name_filter = request.args.get('customerProductNameFilter', type=str)
-    shoe_rid_filter = request.args.get('shoeRidFilter', type=str)
-    not_zero_flag_filter = request.args.get('includeZeroFilter', type=str)
-
-    query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
-             .join(Order,MaterialStorage.order_id == Order.order_id)
-             .join(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
-             .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-             .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-             .join(Material, SPUMaterial.material_id == Material.material_id)
-             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-             .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-             .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
-    
-    if warehouse_filter:
-        query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
-    if supplier_name_filter:
-        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name_filter}%"))
-    if material_model_filter:
-        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-    if material_name_filter:
-        query = query.filter(Material.material_name.ilike(f"%{material_name_filter}%"))
-    if material_model_filter:
-        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model_filter}%"))
-    if material_specification_filter:
-        query = query.filter(SPUMaterial.material_specification.ilike(f"%{material_specification_filter}%"))
-    if material_color_filter:
-        query = query.filter(SPUMaterial.color.ilike(f"%{material_color_filter}%"))
-    if order_rid_filter:
-        query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
-    if order_shoe_customer_name_filter:
-        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{order_shoe_customer_name_filter}"))
-    if shoe_rid_filter:
-        query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
-    # TODO
-    if not_zero_flag_filter:
-        if not_zero_flag_filter == 'true':
-            query = query.filter(MaterialStorage.current_amount > 0)
-    total_count = query.distinct().count()
-    # 
-    response_entities = query.distinct().all()
-    current_inventory = []
-    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
-    for material_storage, order, order_shoe, shoe, spu_material, material, supplier, material_type, material_warehouse in response_entities:
-        res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES)
-        res = db_obj_to_res(spu_material, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
-        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res[to_camel('order_rid')] = order.order_rid
-        res[to_camel('customer_product_name')] = order_shoe.customer_product_name
-        res[to_camel('shoe_rid')] = shoe.shoe_rid
-        res[to_camel('material_type')] = material_type.material_type_name
-        res[to_camel('material_warehouse')] = material_warehouse.material_warehouse_name
-        res[to_camel('item_total_price')] = round(material_storage.current_amount * material_storage.unit_price, 4)
-
-        current_inventory.append(res)
-        template_path = os.path.join(FILE_STORAGE_PATH, "财务库存汇总单模板.xlsx")
-        timestamp = str(time.time())
-        new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
-        target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单")
-        os.makedirs(target_folder, exist_ok=True)
-        save_path = os.path.join(target_folder, new_file_name)
+    current_inventory, total_count = _get_warehouse_inventory_query(request.args, all_records=True)
+    template_path = os.path.join(FILE_STORAGE_PATH, "财务库存汇总单模板.xlsx")
+    timestamp = str(time.time())
+    new_file_name = f"财务库存单汇总输出_{timestamp}.xlsx"
+    target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单")
+    os.makedirs(target_folder, exist_ok=True)
+    save_path = os.path.join(target_folder, new_file_name)
     time_range_string = "全部"
-    generate_accounting_warehouse_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
+    generate_accounting_warehouse_excel(template_path, save_path, warehouse_name, supplier_name_filter, material_model_filter,time_range_string ,current_inventory)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+@accounting_warehouse_bp.route("/accounting/getinboundrecordtype", methods=["GET"])
+def get_inbound_record_type():
+    return jsonify({"result":INBOUND_RECORD_TYPE_OPTIONS}), 200
 

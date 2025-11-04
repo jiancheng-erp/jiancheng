@@ -58,13 +58,61 @@
                     editMode: 'insert',
                 }" :mouse-config="{ selected: true }" @keydown="handleKeydown" show-overflow style="height: 65vh">
                 <vxe-column type="checkbox" width="50"></vxe-column>
-                <vxe-column field="orderRId" title="生产订单号" width="150"></vxe-column>
+                <vxe-column field="warehouseName" title="仓库名" :edit-render="{ autoFocus: true }" width="150">
+                    <template #default="{ row }">
+                        <span>{{ row.warehouseName }}</span>
+                    </template>
+                    <template #edit="scope">
+                        <el-select v-model="scope.row.warehouseName" filterable clearable :disabled="scope.row.locked">
+                            <el-option v-for="item in warehouseOptions" :key="item.orderId" :value="item.value"
+                                :label="item.label"></el-option>
+                        </el-select>
+                    </template>
+                </vxe-column>
+                <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
+                    <template #edit="scope">
+                        <el-select v-model="scope.row.orderRId" @change="handleOrderRIdSelect(scope.row, $event)"
+                            :disabled="scope.row.locked" filterable clearable>
+                            <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
+                                :label="item.orderRId"></el-option>
+                        </el-select>
+                    </template>
+                </vxe-column>
                 <vxe-column field="shoeRId" title="工厂鞋型" width="150"></vxe-column>
-                <vxe-column title="材料名称" field="materialName" width="150"></vxe-column>
-                <vxe-column field="materialModel" title="材料型号" width="150"></vxe-column>
-                <vxe-column field="materialSpecification" title="材料规格" width="200"></vxe-column>
-                <vxe-column field="materialColor" title="颜色" width="150"></vxe-column>
-                <vxe-column field="actualInboundUnit" title="计量单位" width="120"></vxe-column>
+                <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{ autoFocus: true }">
+                    <template #default="{ row }">
+                        <span>{{ row.materialName }}</span>
+                    </template>
+                    <template #edit="scope">
+                        <el-select v-model="scope.row.materialName" :disabled="scope.row.locked"
+                            @change="handleMaterialNameSelect(scope.row, $event)" filterable clearable>
+                            <el-option v-for="item in materialNameOptions" :key="item.value" :value="item.value"
+                                :label="item.label"></el-option>
+                        </el-select>
+                    </template>
+                </vxe-column>
+                <vxe-column field="materialModel" title="材料型号" :edit-render="{ autofocus: '.el-input__inner' }"
+                    width="150">
+                    <template #edit="{ row }">
+                        <el-autocomplete v-model="row.materialModel" :fetch-suggestions="fetchMaterialModels"
+                            :disabled="isMaterialModelDisabled(row)" placeholder="输入型号搜索"
+                            @change="val => row.materialModel = val" />
+                    </template>
+                </vxe-column>
+                <vxe-column field="materialSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }"
+                    width="200">
+                    <template #edit="scope">
+                        <vxe-input v-model="scope.row.materialSpecification" clearable
+                            :disabled="scope.row.locked"></vxe-input>
+                    </template>
+                </vxe-column>
+                <vxe-column field="materialColor" title="颜色" :edit-render="{ autoFocus: 'input' }" width="150">
+                    <template #edit="scope">
+                        <vxe-input v-model="scope.row.materialColor" clearable :disabled="scope.row.locked"></vxe-input>
+                    </template>
+                </vxe-column>
+                <vxe-column field="actualInboundUnit" title="计量单位" width="120">
+                </vxe-column>
                 <vxe-column field="outboundQuantity" title="出库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.outboundQuantity" :digits="3" :step="0.001" :min="0"
@@ -104,8 +152,7 @@
     </el-row>
 
     <el-dialog title="搜索材料" v-model="isMaterialSelectDialogVis" fullscreen destroy-on-close @close="handleCloseDialog">
-        <MaterialStorage :readonly="false" ref="materialStorageRef"
-            :input-search-params="{ materialSupplierSearch: outboundForm.supplierName, warehouseId: filterWarehouse() }" />
+        <MaterialStorage :readonly="false" ref="materialStorageRef" :input-search-params="searchParams" />
         <template #footer>
             <el-button type="primary" @click="confirmUpdateData">确认选择</el-button>
         </template>
@@ -227,8 +274,8 @@
             <el-table-column prop="allowedOutboundAmount" label="可出库数量"></el-table-column>
             <el-table-column label="出库数量">
                 <template #default="{ row }">
-                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)" :max="row.allowedOutboundAmount"
-                        :min="0"></el-input-number>
+                    <el-input-number v-model="row.outboundQuantity" @change="updateTotalShoes(currentKeyDownRow)"
+                        :max="row.allowedOutboundAmount" :min="0"></el-input-number>
                 </template>
             </el-table-column>
         </el-table>
@@ -288,6 +335,7 @@ export default {
                 warehouseId: null,
             },
             rowTemplate: {
+                warehouseName: '',
                 materialName: '',
                 materialModel: '',
                 materialSpecification: '',
@@ -332,14 +380,7 @@ export default {
             rejectedRecordId: null,
             rejectRecordData: [],
             warehouseOptions: [],
-            searchParams: {
-                orderId: null,
-                materialName: null,
-                materialSpec: null,
-                materialModel: null,
-                materialColor: null,
-                supplier: null
-            },
+            searchParams: {},
             showMaterialSelectDialog: false,
             departmentOptions: [],
         }
@@ -385,18 +426,27 @@ export default {
         },
     },
     methods: {
+        async fetchMaterialModels(queryString, cb) {
+            const params = { materialModel: queryString }
+            const res = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialmodels`, { params })
+            cb(res.data)
+        },
+        isMaterialModelDisabled(row) {
+            // 自定义你的禁用条件
+            return row.status === '已审核' || row.locked === true
+        },
         filterWarehouse() {
             // 面料仓文员
             if (this.staffId == 40) {
-                return 1
+                return '面料仓'
             }
             // 底材仓文员
             else if (this.staffId == 41) {
-                return 7
+                return '底材仓'
             }
             // 包材仓文员
             else if (this.staffId == 42) {
-                return 6
+                return '包材仓'
             }
             return null
         },
@@ -499,6 +549,10 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/order/getactiveordershoes`)
             this.activeOrderShoes = response.data
         },
+        handleWarehouseIdSelect(row, value) {
+            console.log(value)
+            row.warehouseName = value
+        },
         handleOrderRIdSelect(row, value) {
             // console.log(value)
             const resultShoeRIds = this.activeOrderShoes.filter(item => item.orderRId == value)
@@ -561,6 +615,15 @@ export default {
             temp.push(...newData)
             temp.splice(this.currentIndex, 1)
             this.materialTableData = JSON.parse(JSON.stringify(temp))
+            // 遍历table，把有materialStorageId的行锁定
+            for (let i = 0; i < this.materialTableData.length; i++) {
+                let row = this.materialTableData[i]
+                if (row.materialStorageId) {
+                    row.locked = true
+                } else {
+                    row.locked = false
+                }
+            }
             this.handleCloseDialog();
         },
         openShoeSizesDialog(scope) {
@@ -572,7 +635,7 @@ export default {
             if (value == 0) {
                 this.rules.departmentId = [{ required: true, message: '此项为必填项', trigger: 'change' }]
                 this.rules.supplierName = []
-            } 
+            }
             else {
                 this.rules.departmentId = []
                 this.rules.supplierName = [
@@ -609,6 +672,7 @@ export default {
         },
         addRow() {
             const newRow = { "id": XEUtils.uniqueId(), ...JSON.parse(JSON.stringify(this.rowTemplate)) };
+            newRow.warehouseName = this.filterWarehouse()
             this.materialTableData.push(newRow)
         },
         copyRows() {
@@ -649,12 +713,13 @@ export default {
         },
         async fetchMaterialData() {
             const params = {
-                "orderRId": this.currentKeyDownRow.orderRId,
-                "materialName": this.currentKeyDownRow.materialName,
-                "materialSpec": this.currentKeyDownRow.materialSpecification,
-                "materialModel": this.currentKeyDownRow.materialModel,
-                "materialColor": this.currentKeyDownRow.materialColor,
-                "supplier": this.outboundForm.supplierName,
+                "warehouseNameSearch": this.currentKeyDownRow.warehouseName,
+                "orderRIdSearch": this.currentKeyDownRow.orderRId,
+                "materialNameSearch": this.currentKeyDownRow.materialName,
+                "materialSpecSearch": this.currentKeyDownRow.materialSpecification,
+                "materialModelSearch": this.currentKeyDownRow.materialModel,
+                "materialColorSearch": this.currentKeyDownRow.materialColor,
+                "supplierNameSearch": this.outboundForm.supplierName,
             }
             this.searchParams = params; // Update search parameters
         },

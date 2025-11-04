@@ -583,6 +583,7 @@ def get_material_price_info():
             InboundRecord,
             InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id,
         )
+        .filter(InboundRecord.display == 1)
         .subquery()
     )
 
@@ -687,6 +688,7 @@ def get_material_inbound_curve():
             InboundRecord,
             InboundRecordDetail.inbound_record_id == InboundRecord.inbound_record_id,
         )
+        .filter(InboundRecord.display == 1)
         .filter(SPUMaterial.spu_material_id == spu_material_id)
         .filter(MaterialStorage.unit_price != 0)
         .all()

@@ -68,7 +68,8 @@ export default {
                 "page": this.logisticsCurrentPage,
                 "pageSize": this.logisticsPageSize,
                 "orderRId": this.currentRow.orderRId,
-                "shoeRId": this.currentRow.shoeRId
+                "shoeRId": this.currentRow.shoeRId,
+                "showAllMaterials": "true"
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })
             this.logisticsMaterialData = response.data.result
