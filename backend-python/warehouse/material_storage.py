@@ -1021,11 +1021,11 @@ def _create_outbound_record_details(items, outbound_record):
         # set cost
         if outbound_record.outbound_type == 4:
             unit_price = Decimal(item.get("unitPrice", 0))
-            record_detail.unit_price = (unit_price,)
+            record_detail.unit_price = unit_price
             record_detail.item_total_price = Decimal(item.get("itemTotalPrice", 0))
         else:
-            record_detail.unit_price = storage.unit_price
-            record_detail.item_total_price = outbound_quantity * storage.unit_price
+            record_detail.unit_price = storage.average_price
+            record_detail.item_total_price = outbound_quantity * storage.average_price
 
         total_price += record_detail.item_total_price
         outbound_quantity = round(outbound_quantity, 5)
