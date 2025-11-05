@@ -322,18 +322,18 @@ def _get_warehouse_inbound_record_query(data: dict):
     order_rid_filter = data.get('orderRidFilter', type=str)
     status_filter = [int(status) for status in data.getlist('statusFilter[]')]
     inbound_type_filter = [int(inbound_type) for inbound_type in data.getlist('inboundTypeFilter[]')]
-    query = (db.session.query(InboundRecord,InboundRecordDetail, Material, Supplier,SPUMaterial,Order.order_rid, MaterialStorage)
-                .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
-                .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
-                .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
-                .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
-                .join(Material, SPUMaterial.material_id == Material.material_id)
-                .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
-                .filter(InboundRecord.display == 1)
-                )
-    # order by time
-    query = query.order_by(InboundRecord.inbound_datetime.desc())
 
+    # ------- 1) 把公共 FROM/JOIN/WHERE 封装成一个“轻”查询（只到 IRD 为止）-------
+    query = (
+        db.session.query(InboundRecordDetail.id)
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
+        .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, SPUMaterial.material_id == Material.material_id)
+        .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)
+        .filter(InboundRecord.display == 1)
+    )
     if inbound_rid_filter:
         query = query.filter(InboundRecord.inbound_rid.ilike(f"%{inbound_rid_filter}%"))
     if warehouse_filter:
@@ -360,12 +360,46 @@ def _get_warehouse_inbound_record_query(data: dict):
         query = query.filter(Order.order_rid.ilike(f"%{order_rid_filter}%"))
     if status_filter != []:
         query = query.filter(InboundRecord.approval_status.in_(status_filter))
-    warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
     if inbound_type_filter != []:
         query = query.filter(InboundRecord.inbound_type.in_(inbound_type_filter))
 
-    total_count = query.distinct().count()
-    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    # ------- 2) 计数：只数去重的 IRD.id -------
+    id_subq = (
+        query.with_entities(InboundRecordDetail.id) # 只投影 id
+            .distinct()
+            .subquery()
+    )
+    total_count = db.session.query(func.count()).select_from(id_subq).scalar()
+    # ------- 3) 分页：先取当前页的 id 列表 -------
+    page_ids = (
+        query
+        .with_entities(InboundRecordDetail.id) # 只拿 id，轻量
+        .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
+        .limit(page_size)
+        .offset((page_num - 1) * page_size)
+        .all()
+    )
+    page_ids = [x[0] for x in page_ids]
+    if not page_ids:
+        response_entities = []
+    else:
+        # ------- 4) 再用 id 列表拉全量需要的列（避免对大元组 distinct）-------
+        query = (
+            db.session.query(
+                InboundRecord, InboundRecordDetail, Material, Supplier, SPUMaterial, Order.order_rid, MaterialStorage
+            )
+            .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
+            .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+            .join(MaterialStorage, InboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
+            .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+            .join(Material, SPUMaterial.material_id == Material.material_id)
+            .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)  # 仅在确实需要时保留外连接
+            .filter(InboundRecordDetail.id.in_(page_ids))
+            .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
+            # 这里通常不再需要 distinct()，因为已收敛到本页的 id 集合
+        )
+        response_entities = query.all()
+    warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
     inbound_records = []
     for inbound_record, inbound_record_detail,material, supplier, spu, order_rid, material_storage in response_entities:
         res = db_obj_to_res(inbound_record, InboundRecord,attr_name_list=type_to_attr_mapping["InboundRecord"])
