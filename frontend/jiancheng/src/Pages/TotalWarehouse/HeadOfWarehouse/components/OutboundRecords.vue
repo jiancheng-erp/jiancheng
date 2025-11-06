@@ -76,7 +76,7 @@
     </el-row>
 
     <el-dialog title="出库单详情" v-model="dialogVisible" width="80%">
-        <div id="printView" v-show="true">
+        <div id="outboundRecordPrintView" class="record-print-style" v-show="true">
             <table style="width:100%; border-collapse: collapse;">
                 <!-- Header repeated on each page -->
                 <thead>
@@ -91,6 +91,7 @@
                             </div>
                             <table class="table" border="0" cellspacing="0" align="left" width="100%"
                                 style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <thead>
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">出库至: {{
                                         currentRow.destination }}</td>
@@ -101,6 +102,7 @@
                                         currentRow.outboundType }}
                                     </td>
                                 </tr>
+                                </thead>
                             </table>
                         </td>
                     </tr>
@@ -167,7 +169,7 @@
         </div>
         <template #footer>
             <el-button type="primary" @click="dialogVisible = false">返回</el-button>
-            <el-button type="primary" v-print="'#printView'">打印</el-button>
+            <el-button type="primary" v-print="'#outboundRecordPrintView'">打印</el-button>
         </template>
     </el-dialog>
     <el-dialog title="驳回确认" v-model="rejectDialogVisible" width="40%">

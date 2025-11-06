@@ -1966,6 +1966,26 @@ def get_all_material_models():
     return jsonify(result)
 
 
+@material_storage_bp.route("/warehouse/getallmaterialspecifications", methods=["GET"])
+def get_all_material_specifications():
+    material_specification = request.args.get("materialSpecification")
+    if not material_specification or material_specification == "":
+        return jsonify([])
+    # get all material specifications from material storage
+    material_specification = (
+        db.session.query(
+            SPUMaterial.material_specification,
+        )
+        .filter(SPUMaterial.material_specification.ilike(f"%{material_specification}%"))
+        .distinct()
+    )
+    result = []
+    for spec in material_specification:
+        obj = {"value": spec[0], "name": spec[0]}
+        result.append(obj)
+    return jsonify(result)
+
+
 # 按订单出库代码
 # 在 material_storage.py 里，追加：
 @material_storage_bp.route("/warehouse/orderoutbound/materials", methods=["GET"])
