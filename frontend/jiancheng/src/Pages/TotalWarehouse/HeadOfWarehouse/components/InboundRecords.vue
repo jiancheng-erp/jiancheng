@@ -70,7 +70,7 @@
     </el-row>
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="90%">
-        <div id="printView">
+        <div id="printView" class="record-print-style">
             <table style="width:100%; border-collapse: collapse;">
                 <!-- Header repeated on each page -->
                 <thead>
@@ -85,6 +85,7 @@
                             </div>
                             <table class="table" border="0" cellspacing="0" align="left" width="100%"
                                 style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all;">
+                                <thead>
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">供应商: {{
                                         currentRow.supplierName
@@ -98,6 +99,7 @@
                                         currentRow.payMethod }}
                                     </td>
                                 </tr>
+                                </thead>
                             </table>
                         </td>
                     </tr>

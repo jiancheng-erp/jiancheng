@@ -160,7 +160,7 @@
 
     <el-dialog title="出库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
         @closed="closePreviewDialog">
-        <div id="printView">
+        <div id="printView" class="record-print-style">
             <table style="width:100%; border-collapse: collapse;">
                 <thead>
                     <tr>
@@ -174,6 +174,7 @@
                             </div>
                             <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
                                 style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <thead>
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">供应商:{{
                                         previewOutboundForm.supplierName }}</td>
@@ -187,6 +188,7 @@
                                         convertOutboundType(previewOutboundForm.outboundType) }}
                                     </td>
                                 </tr>
+                                </thead>
                             </table>
                         </td>
                     </tr>

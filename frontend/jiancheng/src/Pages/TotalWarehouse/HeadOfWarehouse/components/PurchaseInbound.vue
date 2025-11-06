@@ -95,17 +95,17 @@
                         </el-select>
                     </template>
                 </vxe-column>
-                <vxe-column field="inboundModel" title="材料型号" :edit-render="inboundModelRender" width="150">
-
-                </vxe-column>
-                <!-- <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autoFocus: 'input' }" width="150">
+                <vxe-column field="inboundModel" title="材料型号" :edit-render="{ autofocus: '.el-input__inner' }"
+                    width="150">
                     <template #edit="scope">
-                        <vxe-input v-model="scope.row.inboundModel" clearable></vxe-input>
+                        <el-autocomplete v-model="scope.row.inboundModel" :fetch-suggestions="fetchMaterialModels"
+                            @change="val => row.inboundModel = val"/>
                     </template>
-                </vxe-column> -->
+                </vxe-column>
                 <vxe-column field="inboundSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
-                    <template #edit="scope">
-                        <vxe-input v-model="scope.row.inboundSpecification" clearable></vxe-input>
+                     <template #edit="scope">
+                        <el-autocomplete v-model="scope.row.inboundSpecification" :fetch-suggestions="fetchMaterialSpecifications"
+                            @change="val => row.inboundSpecification = val"/>
                     </template>
                 </vxe-column>
                 <vxe-column field="materialColor" title="颜色" :edit-render="{ autoFocus: 'input' }" width="150">
@@ -171,7 +171,7 @@
 
     <el-dialog title="入库预览" v-model="isPreviewDialogVis" width="90%" :close-on-click-modal="false" destroy-on-close
         @closed="closePreviewDialog">
-        <div id="printView">
+        <div id="printView" class="record-print-style">
             <table style="width:100%; border-collapse: collapse;">
                 <thead>
                     <tr>
@@ -185,6 +185,7 @@
                             </div>
                             <table class="table" border="0pm" cellspacing="0" align="left" width="100%"
                                 style="font-size: 16px;margin-bottom: 10px; table-layout:fixed;word-wrap:break-word;word-break:break-all">
+                                <thead>
                                 <tr>
                                     <td style="padding:5px; width: 150px;" align="left">供应商:{{
                                         previewInboundForm.supplierName }}</td>
@@ -197,6 +198,7 @@
                                         previewInboundForm.payMethod
                                         }}</td>
                                 </tr>
+                                </thead>
                             </table>
                         </td>
                     </tr>
@@ -386,23 +388,6 @@ export default {
             rejectedRecordId: null,
             rejectRecordData: [],
             warehouseOptions: [],
-            inboundModelRender: {
-                name: 'ElAutocomplete',
-                props: {
-                    fetchSuggestions: async function (queryString, cb) {
-                        let params = {
-                            materialModel: queryString,
-                        }
-                        const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialmodels`, { params });
-                        cb(response.data);
-                    }.bind(this)
-                },
-                events: {
-                    change: function (row, selected) {
-                        row.inboundModel = selected;
-                    }
-                }
-            },
             searchParams: {
                 orderId: null,
                 materialName: null,
@@ -463,6 +448,16 @@ export default {
         },
     },
     methods: {
+        async fetchMaterialModels(queryString, cb) {
+            const params = { materialModel: queryString }
+            const res = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialmodels`, { params })
+            cb(res.data)
+        },
+        async fetchMaterialSpecifications(queryString, cb) {
+            const params = { materialSpecification: queryString }
+            const res = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialspecifications`, { params })
+            cb(res.data)
+        },
         clearShoeSizeColumns() {
             if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
                 this.shoeSizeColumns = []
@@ -960,12 +955,5 @@ export default {
 .inner-table td {
     border: 1px solid #000;
     padding: 4px;
-}
-
-#printView {
-    padding-left: 20px;
-    padding-right: 20px;
-    color: black;
-    font-family: SimHei;
 }
 </style>

@@ -17,6 +17,7 @@ import VxeUITable from 'vxe-table'
 import 'vxe-table/lib/style.css'
 import VxeUIPluginRenderElement from '@vxe-ui/plugin-render-element'
 import '@vxe-ui/plugin-render-element/dist/style.css'
+import '@/styles/utilities.css'
 
 const app = createApp(App)
 fetch('/frontend_config.json')
