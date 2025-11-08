@@ -307,7 +307,7 @@ def _get_warehouse_inventory_query(data: dict, all_records=False):
     return current_inventory, total_count
 
 
-def _get_warehouse_inbound_record_query(data: dict):
+def _get_warehouse_inbound_record_query(data: dict, all_records=False):
     page_num = data.get('pageNumber',type=int)
     page_size = data.get('pageSize', type=int)
     warehouse_filter = data.get('selectedWarehouse')
@@ -371,14 +371,22 @@ def _get_warehouse_inbound_record_query(data: dict):
     )
     total_count = db.session.query(func.count()).select_from(id_subq).scalar()
     # ------- 3) 分页：先取当前页的 id 列表 -------
-    page_ids = (
-        query
-        .with_entities(InboundRecordDetail.id) # 只拿 id，轻量
-        .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
-        .limit(page_size)
-        .offset((page_num - 1) * page_size)
-        .all()
-    )
+    if all_records:
+        page_ids = (
+            query
+            .with_entities(InboundRecordDetail.id) # 只拿 id，轻量
+            .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
+            .all()
+        )
+    else:
+        page_ids = (
+            query
+            .with_entities(InboundRecordDetail.id) # 只拿 id，轻量
+            .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
+            .limit(page_size)
+            .offset((page_num - 1) * page_size)
+            .all()
+        )
     page_ids = [x[0] for x in page_ids]
     if not page_ids:
         response_entities = []
@@ -418,7 +426,7 @@ def _get_warehouse_inbound_record_query(data: dict):
         inbound_records.append(res)
     return inbound_records, total_count
 
-def _get_warehouse_inbound_summary_query(data: dict):
+def _get_warehouse_inbound_summary_query(data: dict, all_records=False):
     page_num = data.get('pageNumber',type=int)
     page_size = data.get('pageSize', type=int)
     warehouse_filter = data.get('selectedWarehouse')
@@ -489,7 +497,10 @@ def _get_warehouse_inbound_summary_query(data: dict):
     if order_rid_filter:
         response_query = response_query.filter(time_period_subquery.c.order_rid.ilike(f"%{order_rid_filter}%"))
     total_count = response_query.distinct().count()
-    response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    if all_records:
+        response_entities = response_query.all()
+    else:
+        response_entities = response_query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     inbound_summary = []
     for spu_id, m_id, m_model,m_specification, color, spu_rid, unit_price, order_rid, inbound_amount_sum, inbound_record_id, material, warehouse_name, supplier in response_entities:
         res = db_obj_to_res(material, Material,attr_name_list=INBOUND_SUMMARY_MATERIAL_COLUMNS)
@@ -575,7 +586,7 @@ def create_excel_and_download():
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    inbound_records, total_count = _get_warehouse_inbound_record_query(request.args)
+    inbound_records, total_count = _get_warehouse_inbound_record_query(request.args, all_records=True)
     # Generate the Excel file using the inbound_summary data
     template_path = FILE_STORAGE_PATH + "/财务入库总单模板.xlsx"
     timestamp = str(time.time())
@@ -592,7 +603,7 @@ def create_inbound_summary_excel_and_download():
     date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
-    inbound_summary, total_count = _get_warehouse_inbound_summary_query(request.args)
+    inbound_summary, total_count = _get_warehouse_inbound_summary_query(request.args, all_records=True)
 
     template_path = FILE_STORAGE_PATH + "/财务入库汇总单模板.xlsx"
     timestamp = str(time.time())
