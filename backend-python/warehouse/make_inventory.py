@@ -921,6 +921,7 @@ def confirm_make_inventory():
                     outsource_info_id=None,
                     total_price=Decimal("0"),
                     is_sized_material=0,
+                    approval_datetime=now,
                 )
                 db.session.add(outbound); db.session.flush()
                 if hasattr(outbound, "warehouse_id"):
@@ -1156,6 +1157,7 @@ def confirm_make_inventory():
                     total_price=Decimal("0"),
                     approval_status=1,
                     is_sized_material=0,
+                    approval_datetime=now,
                     # 如模型需要：approval_status=0, staff_id=None 等按你的表结构补
                 )
                 db.session.add(inbound); db.session.flush()

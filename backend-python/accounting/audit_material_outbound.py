@@ -9,6 +9,7 @@ from constants import ACCOUNTING_PAYEE_NOT_FOUND, ACCOUNTING_PAYABLE_ACCOUNT_NOT
 from accounting.audit_material_inbound import update_average_price
 from decimal import Decimal
 from collections import defaultdict
+from datetime import datetime
 
 audit_material_outbound_bp = Blueprint("audit_material_outbound_bp", __name__)
 
@@ -115,6 +116,7 @@ def approve_outbound_record():
     total_price = outbound_record.total_price
     outbound_record.approval_status = 1
     outbound_record.reject_reason = None
+    outbound_record.approval_datetime = datetime.now()
     db.session.flush()
     
     if outbound_record.outbound_type == 4:  # 如果是材料退回
@@ -146,5 +148,6 @@ def reject_outbound_record():
         return jsonify({"message": "outbound record not found"}), 404
     outbound_record.approval_status = 2
     outbound_record.reject_reason = reject_reason
+    outbound_record.reject_datetime = datetime.now()
     db.session.commit()
     return jsonify({"message": "success"})

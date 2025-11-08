@@ -967,7 +967,7 @@ def _create_outbound_record(data, approval_status):
 
     # create outbound record
     outbound_record = OutboundRecord(
-        outbound_datetime=formatted_timestamp,
+        outbound_datetime=timestamp,
         outbound_type=outbound_type,
         outbound_rid=outbound_rid,
         supplier_id=supplier_id,
@@ -977,6 +977,10 @@ def _create_outbound_record(data, approval_status):
         approval_status=approval_status,
         outsource_info_id=outsource_info_id,
     )
+
+    if approval_status == 1:
+        outbound_record.approval_datetime = datetime.now()
+
     db.session.add(outbound_record)
     db.session.flush()
     return outbound_record

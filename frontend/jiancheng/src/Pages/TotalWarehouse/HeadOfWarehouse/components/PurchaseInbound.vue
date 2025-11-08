@@ -370,7 +370,7 @@ export default {
             isInbounded: 0, // 0: 未入库, 1: 已入库
             inboundOptions: [
                 { label: '采购入库', value: 0 },
-                { label: '生产剩余', value: 1 },
+                // { label: '生产剩余', value: 1 }, TODO: 生产剩余入库暂未开放
             ],
             shoeSizeColumns: [],
             previewData: [],
