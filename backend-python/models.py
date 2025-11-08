@@ -1320,6 +1320,7 @@ class InboundRecord(db.Model):
     supplier_id = db.Column(db.Integer, nullable=True)
     warehouse_id = db.Column(db.Integer, nullable=False)
     inbound_datetime = db.Column(db.DateTime, nullable=False)
+    approval_datetime = db.Column(db.DateTime, nullable=True)
     inbound_type = db.Column(db.SmallInteger, nullable=False)
     total_price = db.Column(db.DECIMAL(13, 4), nullable=True)
     remark = db.Column(db.String(40), nullable=True)
@@ -1329,6 +1330,7 @@ class InboundRecord(db.Model):
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
     display = db.Column(db.Boolean, nullable=False, default=True)
+    reject_datetime = db.Column(db.DateTime, nullable=True)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
@@ -1379,6 +1381,7 @@ class OutboundRecord(db.Model):
     outbound_rid = db.Column(db.String(60))
     outbound_batch_id = db.Column(db.Integer)
     outbound_datetime = db.Column(db.DateTime, nullable=False)
+    approval_datetime = db.Column(db.DateTime, nullable=True)
     outbound_type = db.Column(db.SmallInteger, nullable=False)
     outbound_department = db.Column(db.SmallInteger, nullable=True)
     picker = db.Column(db.String(15), nullable=True)
@@ -1392,6 +1395,7 @@ class OutboundRecord(db.Model):
     reject_reason = db.Column(db.String(255), nullable=True)
     staff_id = db.Column(db.Integer, nullable=True)
     display = db.Column(db.Boolean, nullable=False, default=True)
+    reject_datetime = db.Column(db.DateTime, nullable=True)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 

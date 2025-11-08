@@ -11,6 +11,7 @@ from accounting.accounting_transaction import (
 from constants import SHOESIZERANGE
 from decimal import Decimal
 from collections import defaultdict
+from datetime import datetime
 
 audit_material_inbound_bp = Blueprint("audit_material_inbound_bp", __name__)
 
@@ -193,6 +194,7 @@ def approve_inbound_record():
 
     inbound_record.approval_status = 1
     inbound_record.reject_reason = None
+    inbound_record.approval_datetime = datetime.now()
     db.session.flush()
 
     # update average price of material
@@ -228,5 +230,6 @@ def reject_inbound_record():
         return jsonify({"message": "inbound record not found"}), 404
     inbound_record.approval_status = 2
     inbound_record.reject_reason = reject_reason
+    inbound_record.reject_datetime = datetime.now()
     db.session.commit()
     return jsonify({"message": "success"})

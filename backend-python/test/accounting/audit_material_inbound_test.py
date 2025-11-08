@@ -162,6 +162,7 @@ def test_audit_material_inbound(client: FlaskClient):
         db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
     )
     assert inbound_record.approval_status == 1
+    assert inbound_record.approval_datetime is not None
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     assert storage.average_price == 16.25
@@ -309,6 +310,7 @@ def test_audit_size_material_inbound(client: FlaskClient):
         db.session.query(InboundRecord).filter_by(inbound_record_id=1).first()
     )
     assert inbound_record.approval_status == 1
+    assert inbound_record.approval_datetime is not None
 
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     assert storage.average_price == 16.25
