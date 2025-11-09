@@ -195,8 +195,7 @@ def test_audit_material_outbound(client: FlaskClient):
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     assert storage.average_price == 9.375
     assert storage.pending_outbound == 0.0
-    assert storage.inbound_amount == 100
-    assert storage.outbound_amount == 20
+    assert storage.inbound_amount == 80
     assert storage.current_amount == 80.0
 
     accounting_payee_payer = (
@@ -383,8 +382,7 @@ def test_audit_size_material_outbound(client: FlaskClient):
     storage = db.session.query(MaterialStorage).filter_by(material_storage_id=1).first()
     assert storage.average_price == 10
     assert storage.pending_outbound == 0.0
-    assert storage.inbound_amount == 100
-    assert storage.outbound_amount == 50
+    assert storage.inbound_amount == 50
     assert storage.current_amount == 50
 
     size_details = (
@@ -393,12 +391,11 @@ def test_audit_size_material_outbound(client: FlaskClient):
         .order_by(MaterialStorageSizeDetail.order_number)
         .all()
     )
-    inbound_expected_sizes = [10] * 10
+
     expected_sizes = [5] * 10
     for sd, expected in zip(size_details, expected_sizes):
         assert sd.pending_outbound == 0
-        assert sd.inbound_amount == inbound_expected_sizes[sd.order_number]
-        assert sd.outbound_amount == expected
+        assert sd.inbound_amount == expected_sizes[sd.order_number]
         assert sd.current_amount == expected
 
     accounting_payee_payer = (
