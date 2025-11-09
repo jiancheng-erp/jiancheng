@@ -956,15 +956,19 @@ def confirm_make_inventory():
                     db.session.execute(
                         update(MaterialStorage)
                         .where(MaterialStorage.material_storage_id.in_(ids))
-                        .values(current_amount=Decimal("0"))
-                    )
-                if SHOESIZERANGE:
-                    set_frag = ", ".join([f"size_{sz}_current_amount=0" for sz in SHOESIZERANGE])
-                    for ids in _chunk(id_list, 1000):
-                        db.session.execute(
-                            text(f"UPDATE material_storage SET {set_frag} WHERE material_storage_id IN :ids"),
-                            {"ids": tuple(ids)}
+                        .values(
+                            make_inventory_outbound=MaterialStorage.make_inventory_outbound + MaterialStorage.current_amount,
+                            current_amount=Decimal("0")
                         )
+                    )
+                    db.session.execute(
+                        update(MaterialStorageSizeDetail)
+                        .where(MaterialStorageSizeDetail.material_storage_id.in_(ids))
+                        .values(
+                            make_inventory_outbound=MaterialStorageSizeDetail.make_inventory_outbound + MaterialStorageSizeDetail.current_amount,
+                            current_amount=Decimal("0")
+                        )
+                    )
 
         # ==========================
         # B) 回填入库（聚合+复用）
@@ -1195,7 +1199,7 @@ def confirm_make_inventory():
                         text(
                             f"""
                             UPDATE material_storage
-                            SET inbound_amount = inbound_amount + CASE material_storage_id {case_qty} END,
+                            SET make_inventory_inbound = make_inventory_inbound + CASE material_storage_id {case_qty} END,
                                 current_amount = current_amount + CASE material_storage_id {case_qty} END,
                                 unit_price     = CASE material_storage_id {case_price} END,
                                 average_price  = CASE material_storage_id {case_price} END

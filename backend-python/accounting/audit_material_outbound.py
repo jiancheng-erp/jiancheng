@@ -79,7 +79,7 @@ def update_outbound_amount(outbound_detail_list: list[OutboundRecordDetail]):
         total = agg_total.get(msid, Decimal("0"))
         if total:  # only touch rows that actually have outbound totals
             storage.pending_outbound -= total
-            storage.outbound_amount += total # 材料退回，应该增加出库总量
+            storage.inbound_amount -= total # 材料退回，应该扣除采购入库数量
             storage.current_amount  -= total
 
             # Update per-size amounts (respect the ordering by order_number)
@@ -91,7 +91,7 @@ def update_outbound_amount(outbound_detail_list: list[OutboundRecordDetail]):
                 if size_delta:
                     sd = sds[i]
                     sd.pending_outbound -= size_delta
-                    sd.outbound_amount += size_delta
+                    sd.inbound_amount -= size_delta
                     sd.current_amount  -= size_delta
 
 
