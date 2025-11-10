@@ -1629,48 +1629,70 @@ def get_past_production_instruction_info():
     
 
 
-@dev_producion_order_bp.route(("/devproductionorder/getsizetable"), methods=["GET"])
+@dev_producion_order_bp.route("/devproductionorder/getsizetable", methods=["GET"])
 def get_size_table():
     order_id = request.args.get("orderId")
-    json_table = (
-        db.session.query(Order).filter(Order.order_id == order_id).first()
-    ).order_size_table
-    if json_table == None:
-        customer_size = (
-            db.session.query(Order, BatchInfoType)
-            .join(
-                BatchInfoType,
-                Order.batch_info_type_id == BatchInfoType.batch_info_type_id,
-            )
-            .filter(Order.order_id == order_id)
-            .first()
-        )
-        customer_size_list = []
-        if customer_size:
-            order, batch_info = customer_size
-            # Extract values from the BatchInfoType model
-            for col in BatchInfoType.__table__.columns:
-                size = getattr(batch_info, col.name)
-                if size != "":
-                    customer_size_list.append(getattr(batch_info, col.name))
-        customer_size_list = customer_size_list[3:]
-        standard_size_dict = {
-            "客人码": customer_size_list,
-            "大底": customer_size_list,
-            "中底": customer_size_list,
-            "楦头": customer_size_list,
-            "备注": [""],
-        }
-        grid_options = transform_standard_size_dict_to_grid(standard_size_dict)
-        order.order_size_table = json.dumps(standard_size_dict, ensure_ascii=False)
-        db.session.commit()
-        return jsonify(grid_options), 200
-    else:
+
+    # 先拿订单本身
+    order = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order:
+        return jsonify({"error": "订单不存在"}), 404
+
+    json_table = order.order_size_table
+    if json_table is not None:
         table_dict = (
             json.loads(json_table) if isinstance(json_table, str) else json_table
         )
         grid_options = transform_standard_size_dict_to_grid(table_dict)
         return jsonify(grid_options), 200
+
+    customer_size_list: list[str] = []
+
+    if order.batch_info_type_id is not None:
+        batch_info = (
+            db.session.query(BatchInfoType)
+            .filter(BatchInfoType.batch_info_type_id == order.batch_info_type_id)
+            .first()
+        )
+    else:
+        batch_info = None
+
+    if batch_info:
+        size_fields = [
+            "size_34_name",
+            "size_35_name",
+            "size_36_name",
+            "size_37_name",
+            "size_38_name",
+            "size_39_name",
+            "size_40_name",
+            "size_41_name",
+            "size_42_name",
+            "size_43_name",
+            "size_44_name",
+            "size_45_name",
+            "size_46_name",
+        ]
+
+        for field in size_fields:
+            size = getattr(batch_info, field, None)
+            if size:
+                customer_size_list.append(size)
+    standard_size_dict = {
+        "客人码": customer_size_list,
+        "大底": customer_size_list,
+        "中底": customer_size_list,
+        "楦头": customer_size_list,
+        "备注": [""],
+    }
+
+    grid_options = transform_standard_size_dict_to_grid(standard_size_dict)
+
+    order.order_size_table = json.dumps(standard_size_dict, ensure_ascii=False)
+    db.session.commit()
+
+    return jsonify(grid_options), 200
+
 
 
 @dev_producion_order_bp.route(
