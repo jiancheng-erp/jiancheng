@@ -37,17 +37,16 @@ def update_average_price(storage_id_list):
     inbound_subq = (
         db.session.query(
             InboundRecordDetail.material_storage_id,
-            func.sum(InboundRecordDetail.item_total_price).label(
-                "in_total_price"
-            ),
+            func.sum(InboundRecordDetail.item_total_price).label("in_total_price"),
             func.sum(InboundRecordDetail.inbound_amount).label("in_amount"),
         )
         .join(
             InboundRecord,
-            InboundRecordDetail.inbound_record_id
-            == InboundRecord.inbound_record_id,
+            InboundRecordDetail.inbound_record_id == InboundRecord.inbound_record_id,
         )
         .filter(
+            InboundRecord.inbound_type == 0, # 0:采购入库
+            InboundRecord.display == 1,
             InboundRecord.approval_status == 1,
             InboundRecordDetail.material_storage_id.in_(storage_id_list),
         )
@@ -65,6 +64,8 @@ def update_average_price(storage_id_list):
         )
         .join(OutboundRecord, OutboundRecordDetail.outbound_record_id == OutboundRecord.outbound_record_id)
         .filter(
+            OutboundRecord.outbound_type == 4, # 4:材料退回
+            OutboundRecord.display == 1,
             OutboundRecord.approval_status == 1,
             OutboundRecordDetail.material_storage_id.in_(storage_id_list),
         )
@@ -92,8 +93,7 @@ def update_average_price(storage_id_list):
         )
         .join(
             final_query,
-            MaterialStorage.material_storage_id
-            == final_query.c.material_storage_id,
+            MaterialStorage.material_storage_id == final_query.c.material_storage_id,
         )
         .all()
     )
@@ -137,7 +137,7 @@ def update_inbound_amount(inbound_detail_list: list[InboundRecordDetail]):
         .filter(MaterialStorageSizeDetail.material_storage_id.in_(msids))
         .order_by(
             MaterialStorageSizeDetail.material_storage_id,
-            MaterialStorageSizeDetail.order_number
+            MaterialStorageSizeDetail.order_number,
         )
         .all()
     )
@@ -153,8 +153,8 @@ def update_inbound_amount(inbound_detail_list: list[InboundRecordDetail]):
         total = agg_total.get(msid, Decimal("0"))
         if total:  # only touch rows that actually have incoming totals
             storage.pending_inbound -= total
-            storage.inbound_amount  += total
-            storage.current_amount  += total
+            storage.inbound_amount += total
+            storage.current_amount += total
 
             # Update per-size amounts (respect the ordering by order_number)
             sds = size_details_map.get(msid, [])
@@ -165,9 +165,8 @@ def update_inbound_amount(inbound_detail_list: list[InboundRecordDetail]):
                 if size_delta:
                     sd = sds[i]
                     sd.pending_inbound -= size_delta
-                    sd.inbound_amount  += size_delta
-                    sd.current_amount  += size_delta
-
+                    sd.inbound_amount += size_delta
+                    sd.current_amount += size_delta
 
 
 @audit_material_inbound_bp.route("/accounting/approveinboundrecord", methods=["PATCH"])
