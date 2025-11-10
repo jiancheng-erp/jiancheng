@@ -222,7 +222,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'">
+                                            <el-select v-model="row.supplierName" filterable >
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
@@ -237,7 +237,6 @@
                                                 @change="handleMaterialNameSelect(row, $event)"
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
-                                                :disabled="row.materialSource === 'P'"
                                             >
                                                 <el-option v-for="item in filterByTypes(materialNameOptions, [1])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
@@ -247,7 +246,6 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"
@@ -326,7 +324,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" >
                                                 <el-option-group v-for="(names, letter) in sortSupplierOptions" :key="letter" :label="letter">
                                                     <el-option v-for="name in names" :key="name" :value="name" :label="name"></el-option>
                                                 </el-option-group>
@@ -343,7 +341,7 @@
                                                 @change="handleMaterialNameSelect(row, $event)"
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                             >
                                                 <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
@@ -353,7 +351,7 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"
@@ -432,7 +430,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'">
+                                            <el-select v-model="row.supplierName" filterable >
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
@@ -447,7 +445,7 @@
                                                 @change="handleMaterialNameSelect(row, $event)"
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                             >
                                                 <el-option v-for="item in filterByTypes(materialNameOptions, [3, 5])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
@@ -457,7 +455,7 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"
@@ -535,7 +533,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" >
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
@@ -550,7 +548,7 @@
                                                 @change="handleMaterialNameSelect(row, $event)"
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                             >
                                                 <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
@@ -560,7 +558,7 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"
@@ -638,7 +636,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable :disabled="row.materialSource === 'P'" @blur="trimField(row, 'supplierName')">
+                                            <el-select v-model="row.supplierName" filterable  @blur="trimField(row, 'supplierName')">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
@@ -653,7 +651,7 @@
                                                 @change="handleMaterialNameSelect(row, $event)"
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                             >
                                                 <el-option v-for="item in filterByTypes(materialNameOptions, [7])" :key="item.value" :value="item.value" :label="item.label"></el-option>
                                             </el-select>
@@ -663,7 +661,7 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"
@@ -747,7 +745,7 @@
                                             <span>{{ row.supplierName }}</span>
                                         </template>
                                         <template #edit="{ row }">
-                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" :disabled="row.materialSource === 'P'">
+                                            <el-select v-model="row.supplierName" filterable @blur="trimField(row, 'supplierName')" >
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName"></el-option>
                                             </el-select>
                                         </template>
@@ -762,7 +760,7 @@
                                                 filterable
                                                 @blur="trimField(row, 'materialName')"
                                                 @change="handleMaterialNameSelect(row, $event)"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                             >
                                                 <div v-if="row.materialType === '里料'">
                                                     <el-option v-for="item in filterByTypes(materialNameOptions, [2])" :key="item.value" :value="item.value" :label="item.label"> </el-option>
@@ -777,7 +775,7 @@
                                         <template #edit="{ row }">
                                             <vxe-input
                                                 v-model="row.materialModel"
-                                                :disabled="row.materialSource === 'P'"
+                                                
                                                 clearable
                                                 :max-length="wordLengths.MODEL_LENGTH"
                                                 @blur="trimField(row, 'materialModel')"

@@ -2142,109 +2142,196 @@ def upload_process_sheet():
 
 @process_sheet_upload_bp.route("/craftsheet/issue", methods=["POST"])
 def issue_production_order():
-    order_shoe_rids = request.json.get("orderShoeIds")
+    order_shoe_rids = request.json.get("orderShoeIds") or []
     order_rid = request.json.get("orderId")
-    for order_shoe_rid in order_shoe_rids:
-        order_shoe = (
-            db.session.query(Order, OrderShoe, Shoe)
-            .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .filter(Order.order_rid == order_rid, Shoe.shoe_rid == order_shoe_rid)
-            .first()
+
+    if not order_shoe_rids or not order_rid:
+        return jsonify({"error": "orderId 或 orderShoeIds 缺失"}), 400
+
+    rows = (
+        db.session.query(Order, OrderShoe, Shoe)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(
+            Order.order_rid == order_rid,
+            Shoe.shoe_rid.in_(order_shoe_rids),
         )
-        order_id = order_shoe.Order.order_id
-        order_shoe_id = order_shoe.OrderShoe.order_shoe_id
-        if order_shoe.OrderShoe.process_sheet_upload_status != "1":
-            return jsonify({"error": "Production order not uploaded yet"}), 500
-        order_shoe.OrderShoe.process_sheet_upload_status = "2"
-        craft_sheet = db.session.query(CraftSheet).filter(
-            CraftSheet.order_shoe_id == order_shoe_id
-        ).first()
-        craft_sheet.craft_sheet_status = "2"
-        craft_sheet_items = (
-            db.session.query(CraftSheetItem)
-            .filter(CraftSheetItem.craft_sheet_id == craft_sheet.craft_sheet_id)
-            .all()
-        )
-        order_shoe_types = (
-            db.session.query(OrderShoeType)
-            .filter(OrderShoeType.order_shoe_id == order_shoe_id)
-            .all()
-        )
-        for order_shoe_type in order_shoe_types:
-            order_shoe_type_id = order_shoe_type.order_shoe_type_id
-            current_time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
-            random_string = randomIdGenerater(6)
-            second_bom_rid = current_time_stamp + random_string + "S"
-            second_bom = Bom(
-                order_shoe_type_id=order_shoe_type_id,
-                bom_rid=second_bom_rid,
-                bom_type=1,
-                bom_status=0,
+        .all()
+    )
+    row_map = {r.Shoe.shoe_rid: r for r in rows}
+    missing = [rid for rid in order_shoe_rids if rid not in row_map]
+    if missing:
+        return jsonify({"error": f"部分工厂型号未找到: {', '.join(missing)}"}), 400
+
+    event_processor: EventProcessor = current_app.config["event_processor"]
+    all_events = []
+
+    try:
+        for order_shoe_rid in order_shoe_rids:
+            row = row_map[order_shoe_rid]
+            order: Order = row.Order
+            order_shoe: OrderShoe = row.OrderShoe
+            shoe: Shoe = row.Shoe
+
+            order_id = order.order_id
+            order_shoe_id = order_shoe.order_shoe_id
+            if order_shoe.process_sheet_upload_status != "1":
+                db.session.rollback()
+                return jsonify({"error": "Production order not uploaded yet"}), 500
+            order_shoe.process_sheet_upload_status = "2"
+            craft_sheet = (
+                db.session.query(CraftSheet)
+                .filter(CraftSheet.order_shoe_id == order_shoe_id)
+                .first()
             )
-            db.session.add(second_bom)
-            db.session.flush()
-            # find and update default bom
-            shoe_type_id = order_shoe_type.shoe_type_id
-            exist_default_second_bom = db.session.query(DefaultBom).filter(
-                DefaultBom.shoe_type_id == shoe_type_id, DefaultBom.bom_type == 1
-            ).first()
-            if exist_default_second_bom:
-                exist_default_second_bom.bom_id = second_bom.bom_id
-                exist_default_second_bom.bom_status = 2
-            else:
-                default_second_bom = DefaultBom(
-                    shoe_type_id=shoe_type_id,
-                    bom_id=second_bom.bom_id,
-                    bom_type=1,
-                    bom_status=2,
+            if not craft_sheet:
+                db.session.rollback()
+                return jsonify({"error": "Craft sheet not found"}), 500
+
+            craft_sheet.craft_sheet_status = "2"
+            craft_sheet_items = (
+                db.session.query(CraftSheetItem)
+                .filter(CraftSheetItem.craft_sheet_id == craft_sheet.craft_sheet_id)
+                .all()
+            )
+            order_shoe_types = (
+                db.session.query(OrderShoeType)
+                .filter(OrderShoeType.order_shoe_id == order_shoe_id)
+                .all()
+            )
+            pi_ids = [
+                item.production_instruction_item_id
+                for item in craft_sheet_items
+                if item.production_instruction_item_id is not None
+            ]
+
+            pi_map = {}
+            if pi_ids:
+                production_items = (
+                    db.session.query(ProductionInstructionItem)
+                    .filter(
+                        ProductionInstructionItem.production_instruction_item_id.in_(
+                            pi_ids
+                        )
+                    )
+                    .all()
                 )
-                db.session.add(default_second_bom)
-            db.session.flush()
-            # find and update default craft sheet
-            shoe_id = order_shoe.Shoe.shoe_id
-            exist_default_craft_sheet = db.session.query(DefaultCraftSheet).filter(
-                DefaultCraftSheet.shoe_id == shoe_id
-            ).first()
+                pi_map = {
+                    p.production_instruction_item_id: p for p in production_items
+                }
+            first_bom_map = {}
+            if pi_ids:
+                first_bom_items = (
+                    db.session.query(BomItem)
+                    .filter(
+                        BomItem.production_instruction_item_id.in_(pi_ids),
+                        BomItem.bom_item_add_type == "0",
+                    )
+                    .all()
+                )
+                for bi in first_bom_items:
+                    if bi.production_instruction_item_id not in first_bom_map:
+                        first_bom_map[bi.production_instruction_item_id] = bi
+
+            po_map = {}
+            if first_bom_map:
+                bom_ids = [bi.bom_item_id for bi in first_bom_map.values()]
+                purchase_items = (
+                    db.session.query(PurchaseOrderItem)
+                    .filter(PurchaseOrderItem.bom_item_id.in_(bom_ids))
+                    .all()
+                )
+                for po in purchase_items:
+                    po_map[po.bom_item_id] = po
+            for item in craft_sheet_items:
+                if not item.production_instruction_item_id:
+                    continue
+
+                pi = pi_map.get(item.production_instruction_item_id)
+                if pi:
+                    pi.material_specification = item.material_specification
+                    pi.material_model = item.material_model
+                    pi.color = item.color
+                    pi.material_id = item.material_id
+
+                first_bom_item = first_bom_map.get(item.production_instruction_item_id)
+                if first_bom_item:
+                    first_bom_item.material_specification = (
+                        item.material_specification
+                    )
+                    first_bom_item.material_model = item.material_model
+                    first_bom_item.bom_item_color = item.color
+                    first_bom_item.material_id = item.material_id
+                    first_bom_item.craft_name = item.craft_name
+
+                    po_item = po_map.get(first_bom_item.bom_item_id)
+                    if po_item:
+                        po_item.material_specification = item.material_specification
+                        po_item.material_model = item.material_model
+                        po_item.color = item.color
+                        po_item.material_id = item.material_id
+                        po_item.inbound_material_id = item.material_id
+            exist_default_craft_sheet = (
+                db.session.query(DefaultCraftSheet)
+                .filter(DefaultCraftSheet.shoe_id == shoe.shoe_id)
+                .first()
+            )
             if exist_default_craft_sheet:
                 exist_default_craft_sheet.craft_sheet_id = craft_sheet.craft_sheet_id
             else:
                 default_craft_sheet = DefaultCraftSheet(
-                    shoe_id=shoe_id, craft_sheet_id=craft_sheet.craft_sheet_id
+                    shoe_id=shoe.shoe_id, craft_sheet_id=craft_sheet.craft_sheet_id
                 )
                 db.session.add(default_craft_sheet)
-            
-            second_bom_id = second_bom.bom_id
-            for item in craft_sheet_items:
-                production_instruction_item = (
-                    db.session.query(ProductionInstructionItem)
+
+            for order_shoe_type in order_shoe_types:
+                order_shoe_type_id = order_shoe_type.order_shoe_type_id
+                current_ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")[:-5]
+                random_string = randomIdGenerater(6)
+                second_bom_rid = current_ts + random_string + "S"
+
+                second_bom = Bom(
+                    order_shoe_type_id=order_shoe_type_id,
+                    bom_rid=second_bom_rid,
+                    bom_type=1,
+                    bom_status=0,
+                )
+                db.session.add(second_bom)
+                db.session.flush()
+                second_bom_id = second_bom.bom_id
+                shoe_type_id = order_shoe_type.shoe_type_id
+                exist_default_second_bom = (
+                    db.session.query(DefaultBom)
                     .filter(
-                        ProductionInstructionItem.production_instruction_item_id
-                        == item.production_instruction_item_id
+                        DefaultBom.shoe_type_id == shoe_type_id,
+                        DefaultBom.bom_type == 1,
                     )
                     .first()
                 )
-                material_type = ""
-                if production_instruction_item:
-                    production_instruction_item.material_specification = item.material_specification
-                    material_type = production_instruction_item.material_type
-                    db.session.flush()
-                
-                first_bom_item = (
-                    db.session.query(BomItem)
-                    .filter(
-                        BomItem.production_instruction_item_id
-                        == item.production_instruction_item_id,
-                        BomItem.bom_item_add_type == "0",
-                    ).first()
-                )
-                if first_bom_item:
-                    first_bom_item.material_specification = item.material_specification
-                    first_bom_item.craft_name = item.craft_name
-                    db.session.flush()
-                if item.order_shoe_type_id == order_shoe_type.order_shoe_type_id:
-                    craft_list = item.craft_name.split("@")
-                    if craft_list != []:
+                if exist_default_second_bom:
+                    exist_default_second_bom.bom_id = second_bom_id
+                    exist_default_second_bom.bom_status = 2
+                else:
+                    default_second_bom = DefaultBom(
+                        shoe_type_id=shoe_type_id,
+                        bom_id=second_bom_id,
+                        bom_type=1,
+                        bom_status=2,
+                    )
+                    db.session.add(default_second_bom)
+                related_items = [
+                    item
+                    for item in craft_sheet_items
+                    if item.order_shoe_type_id == order_shoe_type_id
+                ]
+
+                for item in related_items:
+                    craft_list = (
+                        item.craft_name.split("@")
+                        if item.craft_name and item.craft_name.strip()
+                        else []
+                    )
+                    if craft_list:
                         for craft in craft_list:
                             bom_item = BomItem(
                                 bom_id=second_bom_id,
@@ -2260,10 +2347,11 @@ def issue_production_order():
                                 total_usage=0,
                                 material_second_type=item.material_second_type,
                                 craft_name=craft,
-                                production_instruction_item_id = item.production_instruction_item_id
+                                production_instruction_item_id=(
+                                    item.production_instruction_item_id
+                                ),
                             )
                             db.session.add(bom_item)
-                            db.session.flush()
                     else:
                         bom_item = BomItem(
                             bom_id=second_bom_id,
@@ -2279,15 +2367,12 @@ def issue_production_order():
                             total_usage=0,
                             material_second_type=item.material_second_type,
                             craft_name="",
-                            production_instruction_item_id=item.production_instruction_item_id
+                            production_instruction_item_id=(
+                                item.production_instruction_item_id
+                            ),
                         )
                         db.session.add(bom_item)
-                        db.session.flush()
-        db.session.flush()
-        event_arr = []
-        processor: EventProcessor = current_app.config["event_processor"]
-        try:
-            for operation_id in [56,57,58,59]:
+            for operation_id in [56, 57, 58, 59]:
                 event = Event(
                     staff_id=1,
                     handle_time=datetime.datetime.now(),
@@ -2295,14 +2380,19 @@ def issue_production_order():
                     event_order_id=order_id,
                     event_order_shoe_id=order_shoe_id,
                 )
-                processor.processEvent(event)
-                event_arr.append(event)
-        except Exception:
-            return jsonify({"error": "Failed to issue production order"}), 500
-        db.session.add_all(event_arr)
-        db.session.flush()
-    db.session.commit()
-    return jsonify({"message": "Production order issued successfully"})
+                event_processor.processEvent(event)
+                all_events.append(event)
+        if all_events:
+            db.session.add_all(all_events)
+
+        db.session.commit()
+        return jsonify({"message": "Production order issued successfully"})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Failed to issue production order")
+        return jsonify({"error": "Failed to issue production order"}), 500
+
 
 
 @process_sheet_upload_bp.route("/devproductionorder/uploadpicnotes", methods=["POST"])
