@@ -38,6 +38,7 @@
             <el-table-column prop="customerName" label="客人名称"></el-table-column>
             <el-table-column prop="shoeRid" label="工厂型号"></el-table-column>
             <el-table-column prop="customerId" label="客户型号"></el-table-column>
+            <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
