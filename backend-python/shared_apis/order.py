@@ -1175,6 +1175,27 @@ def get_order_full_info():
         .subquery()
     )
 
+    order_amount_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
+        )
+        .join(
+            OrderShoe,
+            OrderShoe.order_id == Order.order_id,
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+        )
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(OrderShoe.order_id)
+        .subquery()
+    )
+
     query = (
         db.session.query(
             Order,
@@ -1185,6 +1206,7 @@ def get_order_full_info():
             ),
             Customer,
             Shoe,
+            order_amount_subquery.c.order_amount,
         )
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(
@@ -1202,6 +1224,10 @@ def get_order_full_info():
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(
+            order_amount_subquery,
+            Order.order_id == order_amount_subquery.c.order_id,
+        )
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
@@ -1252,6 +1278,7 @@ def get_order_full_info():
         order_shoe_status_reference_names,
         customer,
         shoe,
+        order_amount,
     ) in response:
         formatted_start_date = (
             order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A"
@@ -1276,6 +1303,7 @@ def get_order_full_info():
                     else "N/A"
                 ),
                 "shoes": {},  # Using a dictionary to avoid duplicate shoes
+                "orderAmount": order_amount if order_amount else 0,
             }
 
         # Use a unique key for each shoe to avoid duplicates
