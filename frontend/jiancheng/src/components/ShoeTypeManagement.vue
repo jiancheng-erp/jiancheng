@@ -569,30 +569,48 @@ export default {
             reader.readAsDataURL(file)
         },
         uploadCroppedImage() {
-            const result = this.$refs.cropper.getResult()
-            const canvas = result.canvas
-            if (!canvas) return
+            const cropper = this.$refs.cropper
+            if (!cropper) {
+                this.$message.error('裁剪器未初始化')
+                return
+            }
 
-            canvas.toBlob((blob) => {
-                const formData = new FormData()
-                formData.append('file', blob, 'cropped.jpg')
-                formData.append('shoeRid', this.currentShoeImageId)
-                formData.append('shoeColorId', this.currentShoeColorId)
-                formData.append('shoeColorName', this.currentShoeColor)
-                // 你可以根据需要添加其他字段
-                // formData.append('shoeRid', this.currentShoeImageId)
+            const result = cropper.getResult()
+            if (!result || !result.canvas) {
+                this.$message.warning('请先裁剪图片')
+                return
+            }
 
-                this.$axios
-                    .post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData)
-                    .then(() => {
+            // 保证 canvas 正常生成 Blob
+            result.canvas.toBlob(
+                async (blob) => {
+                    if (!blob) {
+                        this.$message.error('生成图片失败')
+                        return
+                    }
+
+                    try {
+                        const formData = new FormData()
+                        formData.append('file', blob, 'cropped.jpg')
+                        formData.append('shoeRid', this.currentShoeImageId || '')
+                        formData.append('shoeColorId', this.currentShoeColorId || '')
+                        formData.append('shoeColorName', this.currentShoeColor || '')
+
+                        const { data } = await axios.post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        })
+
                         this.$message.success('上传成功')
                         this.dialogVisible = false
-                        this.imageUrl = null
-                    })
-                    .catch(() => {
-                        this.$message.error('上传失败')
-                    })
-            }, 'image/jpeg')
+                        this.imageUrl = data?.url || null
+                    } catch (err) {
+                        console.error(err)
+                        this.$message.error('上传失败，请重试')
+                    }
+                },
+                'image/jpeg'
+            )
+            this.reUploadImageDialogVis = false
         },
         editShoeRId(row) {
             this.shoeForm = row
