@@ -99,13 +99,13 @@
                     width="150">
                     <template #edit="scope">
                         <el-autocomplete v-model="scope.row.inboundModel" :fetch-suggestions="fetchMaterialModels"
-                            @change="val => row.inboundModel = val"/>
+                            @change="val => scope.row.inboundModel = val"/>
                     </template>
                 </vxe-column>
                 <vxe-column field="inboundSpecification" title="材料规格" :edit-render="{ autoFocus: 'input' }" width="200">
                      <template #edit="scope">
                         <el-autocomplete v-model="scope.row.inboundSpecification" :fetch-suggestions="fetchMaterialSpecifications"
-                            @change="val => row.inboundSpecification = val"/>
+                            @change="val => scope.row.inboundSpecification = val"/>
                     </template>
                 </vxe-column>
                 <vxe-column field="materialColor" title="颜色" :edit-render="{ autoFocus: 'input' }" width="150">

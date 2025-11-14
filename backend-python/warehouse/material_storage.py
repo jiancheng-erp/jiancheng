@@ -1007,7 +1007,7 @@ def _create_outbound_record_details(items, outbound_record):
         )
 
         order_rid = item.get("orderRId", None)
-        order_id, order_shoe_id = None, None
+        order_id, order_shoe_id = item.get("orderId"), None
         if order_rid:
             order, order_shoe = _find_order_shoe(order_rid)
             order_id = order.order_id
@@ -1113,8 +1113,7 @@ def _handle_composite_outbound(data):
     return outbound_record
 
 
-def _outbound_material_helper(data):
-    data = request.get_json()
+def _outbound_material_helper(data, staff_id=None):
     outbound_type = data.get("outboundType", 0)
     # 工厂使用
     if outbound_type == 0:
@@ -1135,7 +1134,10 @@ def _outbound_material_helper(data):
         error_message = json.dumps({"message": "无效的出库类型"})
         abort(Response(error_message, 400))
 
-    record.staff_id = current_user_info()[1].staff_id
+    if staff_id:
+        record.staff_id = staff_id
+    else:
+        record.staff_id = current_user_info()[1].staff_id
     return record.outbound_rid, data["currentDateTime"]
 
 

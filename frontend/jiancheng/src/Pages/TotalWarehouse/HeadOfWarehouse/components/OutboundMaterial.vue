@@ -367,7 +367,7 @@ export default {
                 { label: '生产出库', value: 0 },
                 { label: '废料处理', value: 1 },
                 { label: '外包出库', value: 2 },
-                { label: '复合出库', value: 3 },
+                // { label: '复合出库', value: 3 }, # 暂时取消复合出库
                 { label: '材料退回', value: 4 },
             ],
             previewData: [],

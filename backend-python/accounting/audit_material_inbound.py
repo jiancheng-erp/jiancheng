@@ -2,16 +2,17 @@ from flask import Blueprint, jsonify, request, abort, Response
 from sqlalchemy import func
 import json
 from models import *
-from api_utility import to_camel, to_snake
+from api_utility import to_camel, to_snake, format_datetime
 from app_config import db
 from accounting.accounting_transaction import (
     add_payable_entity,
     material_inbound_accounting_event,
 )
-from constants import SHOESIZERANGE
+from constants import *
 from decimal import Decimal
 from collections import defaultdict
 from datetime import datetime
+from warehouse.material_storage import _outbound_material_helper
 
 audit_material_inbound_bp = Blueprint("audit_material_inbound_bp", __name__)
 
@@ -210,6 +211,27 @@ def approve_inbound_record():
 
     # 更新库存数量
     update_inbound_amount(inbound_detail_list)
+
+    # 如果是复合材料入库，直接出库到生产，出库staff_id为面料仓管理员
+    if inbound_record.warehouse_id == COMPOSITE_MATERIAL_WAREHOUSE_ID:
+        data = {
+            "items": [], 
+            "outboundType": 0, 
+            "departmentId": CUTTING_DEPARTMENT, 
+            "totalPrice": 0,
+            "currentDateTime": format_datetime(datetime.now()),
+        }
+        for detail in inbound_detail_list:
+            item = {
+                "materialStorageId": detail.material_storage_id,
+                "outboundQuantity": detail.inbound_amount,
+                "orderId": detail.order_id,
+                "unitPrice": detail.unit_price,
+                "itemTotalPrice": detail.item_total_price,
+            }
+            data["items"].append(item)
+            data["totalPrice"] += detail.item_total_price
+        _outbound_material_helper(data, staff_id=SURFACE_MATERIAL_CLERK_STAFF_ID)
 
     db.session.commit()
     return jsonify({"message": "success"})
