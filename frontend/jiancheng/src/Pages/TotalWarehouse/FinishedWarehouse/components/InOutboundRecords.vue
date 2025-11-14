@@ -8,6 +8,10 @@
                 <el-tab-pane label="出库记录">
                     <OutboundRecords />
                 </el-tab-pane>
+                <el-tab-pane label="出库记录导出视图">
+                    <OutboundRecordsDownload />
+                </el-tab-pane>
+
             </el-tabs>
         </el-col>
     </el-row>
@@ -15,10 +19,12 @@
 <script>
 import InboundRecords from './InboundRecords.vue'
 import OutboundRecords from './OutboundRecords.vue'
+import OutboundRecordsDownload from './OutboundRecordsDownload.vue';
 export default {
     components: {
         InboundRecords,
-        OutboundRecords
+        OutboundRecords,
+        OutboundRecordsDownload
     }
 }
 </script>

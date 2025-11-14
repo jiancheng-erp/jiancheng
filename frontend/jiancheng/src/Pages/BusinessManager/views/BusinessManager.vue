@@ -40,6 +40,9 @@
           <el-menu-item index="6" @click="handleMenuClick(6)">
             <span>订单导出</span>
           </el-menu-item>
+          <el-menu-item index="12" @click="handleMenuClick(12)">
+            <span>成品出库单详情</span>
+          </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick(8)">
             <span>个人信息</span>
           </el-menu-item>
@@ -69,6 +72,7 @@ import BatchInfoTypeManagement from '../components/BatchInfoTypeManagement.vue';
 import OrderExport from '../components/OrderExport.vue';
 import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue';
 import HistoryOrder from '../components/HistoryOrder.vue';
+import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue';
 export default {
     components: {
         AllHeader,
@@ -79,7 +83,8 @@ export default {
         PersonalInfo,
         OrderExport,
         OutboundProduct,
-        HistoryOrder
+        HistoryOrder,
+        OutboundRecordsDownload
     },
     data() {
         return {
@@ -120,6 +125,9 @@ export default {
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'
+                    break
+                case 12:
+                    this.currentComponent = 'OutboundRecordsDownload'
                     break
                 case 9:
                     this.$router.push('/')

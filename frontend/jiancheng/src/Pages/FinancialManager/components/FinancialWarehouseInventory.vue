@@ -25,6 +25,9 @@
         <el-tab-pane label="成品仓库型号入出库明细">
             <FinishedInheritDetail />
         </el-tab-pane>
+        <el-tab-pane label="成品出库单详情">
+            <OutboundRecordsDownload />
+        </el-tab-pane>
     </el-tabs>
 </template>
 
@@ -35,13 +38,14 @@ import axios from 'axios'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import { ElRow } from 'element-plus'
 import Inventory from './FinancialInventory.vue'
-import OutboundRecords from './OutboundDetail.vue'
 import SemifinishedInOutHistory from '@/Pages/TotalWarehouse/SemifinishedWarehouse/components/SemifinishedInOutHistory.vue'
 import FinishedInOutHistory from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInOutHistory.vue'
 import FinishedInherit from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInherit.vue'
 import FinishedDetail from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedDetail.vue'
-import FinishedInheritDetail from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInheritDetail.vue'
+import FinishedInheritDetail from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInheritDetail.vue'   
 import MaterialStorageSnapshot from './MaterialStorageSnapshot.vue'
+import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue'   
+
 const { setAxiosToken } = useSetAxiosToken()
 const router = useRouter()
 
