@@ -581,36 +581,39 @@ export default {
                 return
             }
 
-            // 保证 canvas 正常生成 Blob
-            result.canvas.toBlob(
-                async (blob) => {
-                    if (!blob) {
-                        this.$message.error('生成图片失败')
-                        return
-                    }
+            result.canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    this.$message.error('生成图片失败')
+                    return
+                }
 
-                    try {
-                        const formData = new FormData()
-                        formData.append('file', blob, 'cropped.jpg')
-                        formData.append('shoeRid', this.currentShoeImageId || '')
-                        formData.append('shoeColorId', this.currentShoeColorId || '')
-                        formData.append('shoeColorName', this.currentShoeColor || '')
+                try {
+                    const formData = new FormData()
+                    formData.append('file', blob, 'cropped.jpg')
+                    formData.append('shoeRid', this.currentShoeImageId || '')
+                    formData.append('shoeColorId', this.currentShoeColorId || '')
+                    formData.append('shoeColorName', this.currentShoeColor || '')
 
-                        const { data } = await axios.post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
-                        })
+                    const { data } = await axios.post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 
-                        this.$message.success('上传成功')
-                        this.dialogVisible = false
-                        this.imageUrl = data?.url || null
-                    } catch (err) {
-                        console.error(err)
-                        this.$message.error('上传失败，请重试')
-                    }
-                },
-                'image/jpeg'
-            )
-            this.reUploadImageDialogVis = false
+                    this.$message.success('上传成功')
+
+                    // —— 关闭对话框 ——
+                    this.reUploadImageDialogVis = false
+
+                    // —— 清空裁剪器和预览 ——
+                    this.clearImageDialog()
+
+                    // —— 刷新表格 ——
+                    await this.getFilterShoes()
+
+                    // —— 更新前端展示的图片地址（如果后端返回） ——
+                    this.imageUrl = data?.url || null
+                } catch (err) {
+                    console.error(err)
+                    this.$message.error('上传失败，请重试')
+                }
+            }, 'image/jpeg')
         },
         editShoeRId(row) {
             this.shoeForm = row
@@ -720,6 +723,21 @@ export default {
                     this.getFilterShoes()
                 }
             })
+        },
+        clearImageDialog() {
+            // 清空裁剪器
+            if (this.$refs.cropper) {
+                this.$refs.cropper.reset()
+            }
+
+            // 清空本地图片预览
+            this.imageUrl = null
+            this.rawImage = null
+
+            // 清空临时变量
+            this.currentShoeImageId = null
+            this.currentShoeColorId = null
+            this.currentShoeColor = null
         }
     }
 }
