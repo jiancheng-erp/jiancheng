@@ -4,6 +4,8 @@ from typing import Dict, Optional
 from collections import defaultdict, OrderedDict
 from api_utility import format_date
 from app_config import db
+from file_locations import FILE_STORAGE_PATH
+from shared_apis import shoe
 from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import *
 from event_processor import EventProcessor
@@ -20,8 +22,10 @@ from general_document.finished_warehouse_excel import (
     build_finished_outbound_excel,
     build_finished_inout_excel
 )
+from general_document.shoe_outbound_list import generate_finished_outbound_excel
 from shared_apis.utility_func import normalize_category_by_batch_type
 from shared_apis.utility_func import normalize_currency
+import os
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 
@@ -934,6 +938,7 @@ def get_finished_outbound_records():
             Color.color_name,
             Customer,
             OrderShoe.customer_product_name,
+            ShoeOutboundRecord.shoe_outbound_record_id,
             ShoeOutboundRecord.shoe_outbound_rid,
             ShoeOutboundRecord.outbound_datetime,
             ShoeOutboundRecordDetail,
@@ -993,6 +998,7 @@ def get_finished_outbound_records():
             color_name,
             customer,
             customer_product_name,
+            outbound_id,
             outbound_rid,
             outbound_datetime,
             record_detail,
@@ -1006,6 +1012,7 @@ def get_finished_outbound_records():
             "customerName": customer.customer_name,
             "customerProductName": customer_product_name,
             "outboundRId": outbound_rid,
+            "outboundId": outbound_id,
             "timestamp": format_datetime(outbound_datetime),
             "detailAmount": record_detail.outbound_amount,
             "customerBrand": customer.customer_brand,
@@ -1962,6 +1969,53 @@ def export_finished_inout_records():
     bio, filename = build_finished_inout_excel(filters)
     return send_file(bio, as_attachment=True, download_name=filename,
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    
+@finished_storage_bp.route("/warehouse/downloadfinishedoutboundrecordbybatchid", methods=["POST"])
+def download_finished_outbound_record_by_batch_id():
+    """
+    接口只负责：
+    1. 接收前端参数
+    2. 调用生成 Excel 的函数
+    3. send_file 返回给前端
+    """
+    data = request.get_json(silent=True) or {}
+
+    outbound_record_ids = data.get("outboundRecordIds")  # [1,2,3]
+    outbound_rids = data.get("outboundRIds")  # 可选，业务单号过滤
+    
+
+    if not outbound_record_ids:
+        return jsonify({"error": "缺少参数：outboundRecordIds"}), 400
+    # 模板路径：按你的项目实际位置来
+    # 你说模板叫“出货清单模板.xlsx”，比如你放在 app 根目录 / templates/excel 里
+    template_path = os.path.join(
+        FILE_STORAGE_PATH, "出货清单模板.xlsx"
+    )
+    # 如果你直接放在项目根目录，也可以这么写：
+    # template_path = os.path.join(current_app.root_path, "出货清单模板.xlsx")
+
+    try:
+        excel_io, filename = generate_finished_outbound_excel(
+            template_path=template_path,
+            outbound_record_ids=outbound_record_ids,
+            outbound_rids=outbound_rids,
+        )
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 500
+    except ValueError as e:
+        # 比如未找到记录
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        # 兜底错误，方便调试
+        current_app.logger.exception("导出出货清单失败")
+        return jsonify({"error": "导出出货清单失败"}), 500
+
+    return send_file(
+        excel_io,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 

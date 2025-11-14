@@ -40,25 +40,6 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="出库单详情" v-model="dialogVisible" width="80%">
-        <el-descriptions>
-            <template #title>
-                <h2 style="text-align: center">健诚鞋业出库单</h2>
-            </template>
-            <template #extra>
-                <span style="font-weight: bolder; font-size: 16px"> 单据编号：{{ currentRow.outboundRId }} </span>
-            </template>
-            <el-descriptions-item label="订单号">{{ currentRow.orderRId }}</el-descriptions-item>
-            <el-descriptions-item label="工厂型号">{{ currentRow.shoeRId }}</el-descriptions-item>
-            <el-descriptions-item label="出库时间">{{ currentRow.timestamp }}</el-descriptions-item>
-        </el-descriptions>
-        <template #footer>
-            <el-button type="primary" @click="dialogVisible = false">返回</el-button>
-            <!-- <el-button type="primary" v-print="'#printView'">打印</el-button>
-            <el-button type="primary"
-                @click="downloadPDF(`健诚鞋业出库单${currentRow.outboundRId}`, `printView`)">下载PDF</el-button> -->
-        </template>
-    </el-dialog>
 </template>
 <script>
 import axios from 'axios'
@@ -76,23 +57,6 @@ export default {
     },
     data() {
         return {
-            printLoading: true,
-            printObj: {
-                id: 'printView', // 需要打印的区域id
-                preview: true, // 打印预览
-                previewTitle: '打印预览',
-                popTitle: 'good print',
-                extraHead: '<meta http-equiv="Content-Language"content="zh-cn"/>',
-                beforeOpenCallback(vue) {
-                    console.log('打开之前')
-                },
-                openCallback(vue) {
-                    console.log('执行了打印')
-                },
-                closeCallback(vue) {
-                    console.log('关闭了打印工具')
-                }
-            },
             currentPage: 1,
             pageSize: PAGESIZE,
             pageSizes: PAGESIZES,
@@ -256,7 +220,7 @@ export default {
             } finally {
                 this.exportLoadingInout = false
             }
-        }
+        },
     }
 }
 </script>
