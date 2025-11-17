@@ -20,7 +20,7 @@ accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
 
 # outbound attrnames
 OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["outbound_rid", "outbound_datetime", "outbound_type", "outbound_department","picker", "approval_status"]
-OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["outbound_amount",]
+OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["outbound_amount"]
 OUTBOUND_MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name", "material_unit"]
 
 # inbound attrnames
@@ -31,7 +31,8 @@ INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","
 INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
 
 # inventory attrnames
-INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["material_storage_id", "pending_inbound", "pending_outbound", "inbound_amount", "outbound_amount", "current_amount", "unit_price", "material_outsource_status", "material_outsource_date",
+INVENTORY_MATERIAL_STORAGE_ATTRNAMES = ["material_storage_id", "pending_inbound", "pending_outbound", "inbound_amount", "outbound_amount", "current_amount", "make_inventory_inbound", "make_inventory_outbound",
+                                        "unit_price", "material_outsource_status", "material_outsource_date",
                                         "material_estimated_arrival_date", "actual_inbound_unit", "average_price", "material_storage_status"]
 
 MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name"]
@@ -56,13 +57,15 @@ name_mapping_inventory = {
     "material_warehouse":"仓库",
     "pending_inbound":"未审核入库数",
     "pending_outbound":"未审核出库数",
-    "inbound_amount":"已审核入库数",
-    "outbound_amount":"已审核出库数",
+    "inbound_amount":"采购入库数",
+    "outbound_amount":"生产出库数",
+    "make_inventory_inbound": "盘库入库数",
+    "make_inventory_outbound":"盘库出库数",
     "current_amount":"库存数",
-    "unit_price":"最新采购单价",
     "actual_inbound_unit":"入库单位",
+    "unit_price":"最新采购单价",
     "average_price":"库存均价",
-    "item_total_price":"总价",
+    "item_total_price":"库存总金额",
 }
 
 name_en_cn_mapping_inbound = {
@@ -176,7 +179,7 @@ def get_warehouse_outbound_record():
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id)
-        .filter(OutboundRecord.display == 1)
+        .filter(OutboundRecord.display == 1, OutboundRecordDetail.display == 1)
         .order_by(OutboundRecord.outbound_datetime.desc())
     )
     if outbound_type_filter != []:

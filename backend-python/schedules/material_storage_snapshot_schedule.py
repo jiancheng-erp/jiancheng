@@ -24,26 +24,10 @@ def _yesterday_range_beijing():
 
 
 def snapshot_daily_storage_change(app):
-    """
-    生成每日净变动（按 msid 聚合到一条）：
-    - inbound_amount_sum / outbound_amount_sum：当天已审核
-    - pending_inbound_sum / pending_outbound_sum：当天未审核或被驳回(0,2)
-    - latest_unit_price：截至当日结束，最近一次已审核入库单价
-    - avg_unit_price：截至当日结束，累计(已审核)总金额/总数量
-    默认取北京时间“昨天”的范围。
-    幂等：ON DUPLICATE KEY UPDATE
-    """
     with app.app_context():
-
         start_dt, end_dt, snapshot_date = _yesterday_range_beijing()
-
-        # 说明：
-        # - inbound_record.approval_status：1=已审核, 0=未审核；2=被驳回（你之前说明要算进 pending）
-        # - outbound_record.approval_status：同理
-        # - 单价/总价：来自 inbound_record_detail.unit_price 和 item_total_price
-        # - 约束：daily_material_storage_change 的主键应为 (snapshot_date, material_storage_id)
-
-        sql = text("""
+        sql = text(
+            """
             INSERT INTO daily_material_storage_change (
                 snapshot_date,
                 material_storage_id,
@@ -53,149 +37,354 @@ def snapshot_daily_storage_change(app):
                 pending_outbound_sum,
                 inbound_amount_sum,
                 outbound_amount_sum,
+                make_inventory_inbound_sum,
+                make_inventory_outbound_sum,
                 net_change
             )
             SELECT
-                :snapshot_date AS snapshot_date,
-                msid.material_storage_id,
-
-                -- latest_unit_price：截至 end_dt 最近一次“已审核”入库的单价
-                COALESCE((
-                    SELECT ird2.unit_price
-                    FROM inbound_record_detail ird2
-                    JOIN inbound_record ir2
-                      ON ir2.inbound_record_id = ird2.inbound_record_id
-                    WHERE ir2.approval_status = 1
-                      AND ird2.material_storage_id = msid.material_storage_id
-                      AND ir2.inbound_datetime < :end_dt
-                    ORDER BY ir2.inbound_datetime DESC, ird2.id DESC
-                    LIMIT 1
-                ), 0) AS latest_unit_price,
-
-                -- avg_unit_price：截至 end_dt 的累计(已审核)总金额/总数量
-                COALESCE((
-                    SELECT
-                        CASE WHEN SUM(ird3.inbound_amount) = 0
-                             THEN 0
-                             ELSE SUM(COALESCE(ird3.item_total_price, ird3.unit_price * ird3.inbound_amount))
-                                  / SUM(ird3.inbound_amount)
-                        END
-                    FROM inbound_record_detail ird3
-                    JOIN inbound_record ir3
-                      ON ir3.inbound_record_id = ird3.inbound_record_id
-                    WHERE ir3.approval_status = 1
-                      AND ird3.material_storage_id = msid.material_storage_id
-                      AND ir3.inbound_datetime < :end_dt
-                ), 0) AS avg_unit_price,
-
-                -- 当天 pending 入库（未审核/被驳回）
-                COALESCE((
-                    SELECT SUM(ird4.inbound_amount)
-                    FROM inbound_record_detail ird4
-                    JOIN inbound_record ir4
-                      ON ir4.inbound_record_id = ird4.inbound_record_id
-                    WHERE ir4.approval_status IN (0, 2)
-                      AND ird4.material_storage_id = msid.material_storage_id
-                      AND ir4.inbound_datetime >= :start_dt
-                      AND ir4.inbound_datetime <  :end_dt
-                ), 0) AS pending_inbound_sum,
-
-                -- 当天 pending 出库（未审核/被驳回）
-                COALESCE((
-                    SELECT SUM(ord4.outbound_amount)
-                    FROM outbound_record_detail ord4
-                    JOIN outbound_record or4
-                      ON or4.outbound_record_id = ord4.outbound_record_id
-                    WHERE or4.approval_status IN (0, 2)
-                      AND ord4.material_storage_id = msid.material_storage_id
-                      AND or4.outbound_datetime >= :start_dt
-                      AND or4.outbound_datetime <  :end_dt
-                ), 0) AS pending_outbound_sum,
-
-                -- 当天已审核入库
-                COALESCE((
-                    SELECT SUM(ird5.inbound_amount)
-                    FROM inbound_record_detail ird5
-                    JOIN inbound_record ir5
-                      ON ir5.inbound_record_id = ird5.inbound_record_id
-                    WHERE ir5.approval_status = 1
-                      AND ird5.material_storage_id = msid.material_storage_id
-                      AND ir5.inbound_datetime >= :start_dt
-                      AND ir5.inbound_datetime <  :end_dt
-                ), 0) AS inbound_amount_sum,
-
-                -- 当天已审核出库
-                COALESCE((
-                    SELECT SUM(ord5.outbound_amount)
-                    FROM outbound_record_detail ord5
-                    JOIN outbound_record or5
-                      ON or5.outbound_record_id = ord5.outbound_record_id
-                    WHERE or5.approval_status = 1
-                      AND ord5.material_storage_id = msid.material_storage_id
-                      AND or5.outbound_datetime >= :start_dt
-                      AND or5.outbound_datetime <  :end_dt
-                ), 0) AS outbound_amount_sum,
-
-                -- 净变动
-                COALESCE((
-                    SELECT SUM(ird6.inbound_amount)
-                    FROM inbound_record_detail ird6
-                    JOIN inbound_record ir6
-                      ON ir6.inbound_record_id = ird6.inbound_record_id
-                    WHERE ir6.approval_status = 1
-                      AND ird6.material_storage_id = msid.material_storage_id
-                      AND ir6.inbound_datetime >= :start_dt
-                      AND ir6.inbound_datetime <  :end_dt
-                ), 0)
-                -
-                COALESCE((
-                    SELECT SUM(ord6.outbound_amount)
-                    FROM outbound_record_detail ord6
-                    JOIN outbound_record or6
-                      ON or6.outbound_record_id = ord6.outbound_record_id
-                    WHERE or6.approval_status = 1
-                      AND ord6.material_storage_id = msid.material_storage_id
-                      AND or6.outbound_datetime >= :start_dt
-                      AND or6.outbound_datetime <  :end_dt
-                ), 0)
-                AS net_change
+                agg.snapshot_date,
+                agg.material_storage_id,
+                COALESCE(lp.unit_price, 0)              AS latest_unit_price,
+                COALESCE(ap.avg_unit_price, 0)          AS avg_unit_price,
+                COALESCE(agg.pending_inbound_sum, 0)    AS pending_inbound_sum,
+                COALESCE(agg.pending_outbound_sum, 0)   AS pending_outbound_sum,
+                COALESCE(agg.inbound_amount_sum, 0)     AS inbound_amount_sum,
+                COALESCE(agg.outbound_amount_sum, 0)    AS outbound_amount_sum,
+                COALESCE(agg.make_inventory_inbound_sum, 0)
+                    AS make_inventory_inbound_sum,
+                COALESCE(agg.make_inventory_outbound_sum, 0)
+                    AS make_inventory_outbound_sum,
+                COALESCE(agg.inbound_amount_sum, 0)
+                    - COALESCE(agg.outbound_amount_sum, 0)
+                    + COALESCE(agg.make_inventory_inbound_sum, 0)
+                    - COALESCE(agg.make_inventory_outbound_sum, 0)
+                    AS net_change
             FROM (
-                -- 驱动集：取当天窗口内有任一入/出库（已审/未审）或历史上曾有入库（用于单价/均价计算）的 msid
-                SELECT DISTINCT material_storage_id
+                -- =============================================================
+                -- 聚合出“某日 + 某 material_storage_id”的 6 个数量字段
+                -- =============================================================
+                SELECT
+                    t.snapshot_date,
+                    t.material_storage_id,
+                    SUM(t.pending_inbound_sum)          AS pending_inbound_sum,
+                    SUM(t.pending_outbound_sum)         AS pending_outbound_sum,
+                    SUM(t.inbound_amount_sum)           AS inbound_amount_sum,
+                    SUM(t.outbound_amount_sum)          AS outbound_amount_sum,
+                    SUM(t.make_inventory_inbound_sum)   AS make_inventory_inbound_sum,
+                    SUM(t.make_inventory_outbound_sum)  AS make_inventory_outbound_sum
                 FROM (
-                    SELECT ird.material_storage_id
+                    -- ---------------------------------------------------------
+                    -- 1) 当日未审核入库（含驳回），按入库时间 inbound_datetime
+                    --     + 当日审批通过的跨日入库单，负数冲销 pending
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(ir.inbound_datetime)             AS snapshot_date,
+                        ird.material_storage_id               AS material_storage_id,
+                        SUM(COALESCE(ird.inbound_amount, 0)) AS pending_inbound_sum,
+                        0                                     AS pending_outbound_sum,
+                        0                                     AS inbound_amount_sum,
+                        0                                     AS outbound_amount_sum,
+                        0                                     AS make_inventory_inbound_sum,
+                        0                                     AS make_inventory_outbound_sum
                     FROM inbound_record_detail ird
                     JOIN inbound_record ir
-                      ON ir.inbound_record_id = ird.inbound_record_id
-                    WHERE ir.inbound_datetime < :end_dt
-                      AND ir.inbound_datetime >= DATE_SUB(:end_dt, INTERVAL 1 DAY)
+                    ON ir.inbound_record_id = ird.inbound_record_id
+                    WHERE ir.inbound_datetime >= :start_dt
+                    AND ir.inbound_datetime <  :end_dt
+                    AND (
+                            ir.approval_status IN (0, 2)
+                        OR (
+                                ir.approval_status = 1
+                            AND (
+                                    ir.approval_datetime IS NULL
+                                OR DATE(ir.approval_datetime) > :start_dt
+                                )
+                            )
+                    )
+                    AND ir.display = 1
+                    AND ird.display = 1
+                    GROUP BY DATE(ir.inbound_datetime), ird.material_storage_id
+
                     UNION ALL
-                    SELECT ord.material_storage_id
+
+                    -- 1b) 当日审核通过的跨日入库单，负数计入 pending_inbound_sum
+                    SELECT
+                        DATE(ir.approval_datetime)             AS snapshot_date,
+                        ird.material_storage_id                AS material_storage_id,
+                        -SUM(COALESCE(ird.inbound_amount, 0))  AS pending_inbound_sum,
+                        0                                      AS pending_outbound_sum,
+                        0                                      AS inbound_amount_sum,
+                        0                                      AS outbound_amount_sum,
+                        0                                      AS make_inventory_inbound_sum,
+                        0                                      AS make_inventory_outbound_sum
+                    FROM inbound_record_detail ird
+                    JOIN inbound_record ir
+                    ON ir.inbound_record_id = ird.inbound_record_id
+                    WHERE ir.approval_datetime >= :start_dt
+                    AND ir.approval_datetime <  :end_dt
+                    AND ir.approval_status     = 1
+                    AND DATE(ir.inbound_datetime) < DATE(ir.approval_datetime)
+                    AND ir.display = 1
+                    AND ird.display = 1
+                    GROUP BY DATE(ir.approval_datetime), ird.material_storage_id
+
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 2) 当日未审核出库（含驳回），按出库时间 outbound_datetime
+                    --     + 当日审批通过的跨日出库单，负数冲销 pending
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(orh.outbound_datetime)           AS snapshot_date,
+                        ord.material_storage_id               AS material_storage_id,
+                        0                                     AS pending_inbound_sum,
+                        SUM(COALESCE(ord.outbound_amount, 0)) AS pending_outbound_sum,
+                        0                                     AS inbound_amount_sum,
+                        0                                     AS outbound_amount_sum,
+                        0                                     AS make_inventory_inbound_sum,
+                        0                                     AS make_inventory_outbound_sum
                     FROM outbound_record_detail ord
                     JOIN outbound_record orh
-                      ON orh.outbound_record_id = ord.outbound_record_id
-                    WHERE orh.outbound_datetime < :end_dt
-                      AND orh.outbound_datetime >= DATE_SUB(:end_dt, INTERVAL 1 DAY)
+                    ON orh.outbound_record_id = ord.outbound_record_id
+                    WHERE orh.outbound_datetime >= :start_dt
+                    AND orh.outbound_datetime <  :end_dt
+                    AND (
+                            orh.approval_status IN (0, 2)
+                        OR (
+                                orh.approval_status = 1
+                            AND (
+                                    orh.approval_datetime IS NULL
+                                OR DATE(orh.approval_datetime) > :start_dt
+                                )
+                            )
+                    )
+                    AND orh.display = 1
+                    AND ord.display = 1
+                    GROUP BY DATE(orh.outbound_datetime), ord.material_storage_id
+
                     UNION ALL
-                    -- 保证当日虽然没有单据、但历史有入库的 msid 也能刷新 latest/avg 单价
-                    SELECT ird.material_storage_id
+
+                    -- 2b) 当日审核通过的跨日出库单，负数计入 pending_outbound_sum
+                    SELECT
+                        DATE(orh.approval_datetime)              AS snapshot_date,
+                        ord.material_storage_id                  AS material_storage_id,
+                        0                                        AS pending_inbound_sum,
+                        -SUM(COALESCE(ord.outbound_amount, 0))   AS pending_outbound_sum,
+                        0                                        AS inbound_amount_sum,
+                        0                                        AS outbound_amount_sum,
+                        0                                        AS make_inventory_inbound_sum,
+                        0                                        AS make_inventory_outbound_sum
+                    FROM outbound_record_detail ord
+                    JOIN outbound_record orh
+                    ON orh.outbound_record_id = ord.outbound_record_id
+                    WHERE orh.approval_datetime >= :start_dt
+                    AND orh.approval_datetime <  :end_dt
+                    AND orh.approval_status    = 1
+                    AND DATE(orh.outbound_datetime) < DATE(orh.approval_datetime)
+                    AND orh.display = 1
+                    AND ord.display = 1
+                    GROUP BY DATE(orh.approval_datetime), ord.material_storage_id
+
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 3) 当日已审核“采购入库”（inbound_type = 0），按 approval_datetime
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(ir.approval_datetime)            AS snapshot_date,
+                        ird.material_storage_id               AS material_storage_id,
+                        0                                     AS pending_inbound_sum,
+                        0                                     AS pending_outbound_sum,
+                        SUM(COALESCE(ird.inbound_amount, 0))  AS inbound_amount_sum,
+                        0                                     AS outbound_amount_sum,
+                        0                                     AS make_inventory_inbound_sum,
+                        0                                     AS make_inventory_outbound_sum
                     FROM inbound_record_detail ird
                     JOIN inbound_record ir
-                      ON ir.inbound_record_id = ird.inbound_record_id
-                    WHERE ir.inbound_datetime < :end_dt
-                ) u
-            ) msid
-            ON DUPLICATE KEY UPDATE
-                latest_unit_price   = VALUES(latest_unit_price),
-                avg_unit_price      = VALUES(avg_unit_price),
-                pending_inbound_sum = VALUES(pending_inbound_sum),
-                pending_outbound_sum= VALUES(pending_outbound_sum),
-                inbound_amount_sum  = VALUES(inbound_amount_sum),
-                outbound_amount_sum = VALUES(outbound_amount_sum),
-                net_change          = VALUES(net_change),
-                update_time         = CURRENT_TIMESTAMP
-        """)
+                    ON ir.inbound_record_id = ird.inbound_record_id
+                    WHERE ir.approval_datetime >= :start_dt
+                    AND ir.approval_datetime <  :end_dt
+                    AND ir.approval_status     = 1
+                    AND ir.inbound_type        = 0
+                    AND ir.display = 1
+                    AND ird.display = 1
+                    GROUP BY DATE(ir.approval_datetime), ird.material_storage_id
 
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 4) 当日已审核“材料退回出库”（outbound_type = 4），按 approval_datetime
+                    --    以负数计入 inbound_amount_sum
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(orh.approval_datetime)              AS snapshot_date,
+                        ord.material_storage_id                  AS material_storage_id,
+                        0                                        AS pending_inbound_sum,
+                        0                                        AS pending_outbound_sum,
+                        -SUM(COALESCE(ord.outbound_amount, 0))   AS inbound_amount_sum,
+                        0                                        AS outbound_amount_sum,
+                        0                                        AS make_inventory_inbound_sum,
+                        0                                        AS make_inventory_outbound_sum
+                    FROM outbound_record_detail ord
+                    JOIN outbound_record orh
+                    ON orh.outbound_record_id = ord.outbound_record_id
+                    WHERE orh.approval_datetime >= :start_dt
+                    AND orh.approval_datetime <  :end_dt
+                    AND orh.approval_status    = 1
+                    AND orh.outbound_type      = 4
+                    AND orh.display = 1
+                    AND ord.display = 1
+                    GROUP BY DATE(orh.approval_datetime), ord.material_storage_id
+
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 5) 当日已审核“生产出库”（outbound_type = 0），按 approval_datetime
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(orh.approval_datetime)             AS snapshot_date,
+                        ord.material_storage_id                 AS material_storage_id,
+                        0                                       AS pending_inbound_sum,
+                        0                                       AS pending_outbound_sum,
+                        0                                       AS inbound_amount_sum,
+                        SUM(COALESCE(ord.outbound_amount, 0))   AS outbound_amount_sum,
+                        0                                       AS make_inventory_inbound_sum,
+                        0                                       AS make_inventory_outbound_sum
+                    FROM outbound_record_detail ord
+                    JOIN outbound_record orh
+                    ON orh.outbound_record_id = ord.outbound_record_id
+                    WHERE orh.approval_datetime >= :start_dt
+                    AND orh.approval_datetime <  :end_dt
+                    AND orh.approval_status    = 1
+                    AND orh.outbound_type      = 0
+                    AND orh.display = 1
+                    AND ord.display = 1
+                    GROUP BY DATE(orh.approval_datetime), ord.material_storage_id
+
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 6) 当日已审核“盘库入库”（inbound_type = 4），按 approval_datetime
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(ir.approval_datetime)            AS snapshot_date,
+                        ird.material_storage_id               AS material_storage_id,
+                        0                                     AS pending_inbound_sum,
+                        0                                     AS pending_outbound_sum,
+                        0                                     AS inbound_amount_sum,
+                        0                                     AS outbound_amount_sum,
+                        SUM(COALESCE(ird.inbound_amount, 0))  AS make_inventory_inbound_sum,
+                        0                                     AS make_inventory_outbound_sum
+                    FROM inbound_record_detail ird
+                    JOIN inbound_record ir
+                    ON ir.inbound_record_id = ird.inbound_record_id
+                    WHERE ir.approval_datetime >= :start_dt
+                    AND ir.approval_datetime <  :end_dt
+                    AND ir.approval_status     = 1
+                    AND ir.inbound_type        = 4
+                    AND ir.display = 1
+                    AND ird.display = 1
+                    GROUP BY DATE(ir.approval_datetime), ird.material_storage_id
+
+                    UNION ALL
+
+                    -- ---------------------------------------------------------
+                    -- 7) 当日已审核“盘库出库”（outbound_type = 5），按 approval_datetime
+                    -- ---------------------------------------------------------
+                    SELECT
+                        DATE(orh.approval_datetime)             AS snapshot_date,
+                        ord.material_storage_id                 AS material_storage_id,
+                        0                                       AS pending_inbound_sum,
+                        0                                       AS pending_outbound_sum,
+                        0                                       AS inbound_amount_sum,
+                        0                                       AS outbound_amount_sum,
+                        0                                       AS make_inventory_inbound_sum,
+                        SUM(COALESCE(ord.outbound_amount, 0))   AS make_inventory_outbound_sum
+                    FROM outbound_record_detail ord
+                    JOIN outbound_record orh
+                    ON orh.outbound_record_id = ord.outbound_record_id
+                    WHERE orh.approval_datetime >= :start_dt
+                    AND orh.approval_datetime <  :end_dt
+                    AND orh.approval_status    = 1
+                    AND orh.outbound_type      = 5
+                    AND orh.display = 1
+                    AND ord.display = 1
+                    GROUP BY DATE(orh.approval_datetime), ord.material_storage_id
+                ) t
+                WHERE t.snapshot_date = :start_dt
+                GROUP BY t.snapshot_date, t.material_storage_id
+            ) agg
+
+            -- =============================================================
+            -- latest_unit_price：截止 deadline 之前，最后一次入库的单价（不分审批）
+            -- =============================================================
+            LEFT JOIN (
+                SELECT
+                    ird.material_storage_id AS material_storage_id,
+                    ird.unit_price          AS unit_price
+                FROM inbound_record_detail ird
+                JOIN inbound_record ir
+                ON ir.inbound_record_id = ird.inbound_record_id
+                JOIN (
+                    SELECT
+                        ird2.material_storage_id AS msid,
+                        MAX(
+                            CONCAT(
+                                DATE_FORMAT(ir2.inbound_datetime, '%Y%m%d%H%i%S'),
+                                LPAD(ird2.id, 12, '0')
+                            )
+                        ) AS max_key
+                    FROM inbound_record_detail ird2
+                    JOIN inbound_record ir2
+                    ON ir2.inbound_record_id = ird2.inbound_record_id
+                    WHERE ir2.inbound_datetime < :end_dt
+                    AND ir2.display = 1
+                    AND ird2.display = 1
+                    GROUP BY ird2.material_storage_id
+                ) last_k
+                ON last_k.msid = ird.material_storage_id
+                AND CONCAT(
+                        DATE_FORMAT(ir.inbound_datetime, '%Y%m%d%H%i%S'),
+                        LPAD(ird.id, 12, '0')
+                    ) = last_k.max_key
+                WHERE ir.display = 1
+                AND ird.display = 1
+            ) lp
+            ON lp.material_storage_id = agg.material_storage_id
+
+            -- =============================================================
+            -- avg_unit_price：截止 deadline 之前，所有“已审核入库”的加权平均价
+            -- =============================================================
+            LEFT JOIN (
+                SELECT
+                    ird.material_storage_id AS material_storage_id,
+                    SUM(ird.inbound_amount * ird.unit_price)
+                        / NULLIF(SUM(ird.inbound_amount), 0)   AS avg_unit_price
+                FROM inbound_record_detail ird
+                JOIN inbound_record ir
+                ON ir.inbound_record_id = ird.inbound_record_id
+                WHERE ir.approval_datetime < :end_dt
+                AND ir.approval_status   = 1
+                AND ir.display = 1
+                AND ird.display = 1
+                GROUP BY ird.material_storage_id
+            ) ap
+            ON ap.material_storage_id = agg.material_storage_id
+
+            ON DUPLICATE KEY UPDATE
+                latest_unit_price           = VALUES(latest_unit_price),
+                avg_unit_price              = VALUES(avg_unit_price),
+                pending_inbound_sum         = VALUES(pending_inbound_sum),
+                pending_outbound_sum        = VALUES(pending_outbound_sum),
+                inbound_amount_sum          = VALUES(inbound_amount_sum),
+                outbound_amount_sum         = VALUES(outbound_amount_sum),
+                make_inventory_inbound_sum  = VALUES(make_inventory_inbound_sum),
+                make_inventory_outbound_sum = VALUES(make_inventory_outbound_sum),
+                net_change                  = VALUES(net_change),
+                update_time                 = CURRENT_TIMESTAMP
+            ;
+            """
+        )
         db.session.execute(sql, {
             "snapshot_date": snapshot_date,  # 昨天的日期（北京）
             "start_dt": start_dt,            # 昨天 00:00:00
@@ -228,6 +417,8 @@ def snapshot_material_storage(app):
                 inbound_amount,
                 outbound_amount,
                 current_amount,
+                make_inventory_inbound,
+                make_inventory_outbound,
                 unit_price,
                 average_price,
                 material_outsource_status,
@@ -248,6 +439,8 @@ def snapshot_material_storage(app):
                 ms.inbound_amount,
                 ms.outbound_amount,
                 ms.current_amount,
+                ms.make_inventory_inbound,
+                ms.make_inventory_outbound,
                 ms.unit_price,
                 ms.average_price,
                 ms.material_outsource_status,
@@ -266,6 +459,8 @@ def snapshot_material_storage(app):
                 inbound_amount = VALUES(inbound_amount),
                 outbound_amount = VALUES(outbound_amount),
                 current_amount = VALUES(current_amount),
+                make_inventory_inbound = VALUES(make_inventory_inbound),
+                make_inventory_outbound = VALUES(make_inventory_outbound),
                 unit_price = VALUES(unit_price),
                 average_price = VALUES(average_price),
                 material_outsource_status = VALUES(material_outsource_status),
@@ -290,7 +485,9 @@ def snapshot_material_storage(app):
                 pending_outbound,
                 inbound_amount,
                 outbound_amount,
-                current_amount
+                current_amount,
+                make_inventory_inbound,
+                make_inventory_outbound
             )
             SELECT
                 :snapshot_date AS snapshot_date,
@@ -313,6 +510,8 @@ def snapshot_material_storage(app):
                 inbound_amount = VALUES(inbound_amount),
                 outbound_amount = VALUES(outbound_amount),
                 current_amount = VALUES(current_amount),
+                make_inventory_inbound = VALUES(make_inventory_inbound),
+                make_inventory_outbound = VALUES(make_inventory_outbound),
                 update_time = CURRENT_TIMESTAMP
         """)
         db.session.execute(sql_size_detail, {"snapshot_date": snapshot_date})
