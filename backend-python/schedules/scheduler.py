@@ -1,6 +1,6 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from wechat_api.auto_send_wechat_message_on_time import *
-from material_storage_snapshot_schedule import *
+from schedules.material_storage_snapshot_schedule import *
 
 
 # 启动调度器函数（在主程序中调用）

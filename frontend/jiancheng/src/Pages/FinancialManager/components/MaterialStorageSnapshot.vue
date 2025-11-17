@@ -56,13 +56,15 @@
                 <el-table-column prop="shoeRId" label="工厂型号" />
                 <el-table-column prop="pendingInbound" label="未审核入库数" />
                 <el-table-column prop="pendingOutbound" label="未审核出库数" />
-                <el-table-column prop="inboundAmount" label="已审核入库数" />
-                <el-table-column prop="outboundAmount" label="已审核出库数" />
+                <el-table-column prop="inboundAmount" label="采购入库数" />
+                <el-table-column prop="outboundAmount" label="生产出库数" />
+                <el-table-column prop="makeInventoryInbound" label="盘库入库数" />
+                <el-table-column prop="makeInventoryOutbound" label="盘库出库数" />
                 <el-table-column prop="currentAmount" label="库存数量" />
                 <el-table-column prop="actualInboundUnit" label="入库单位" />
                 <el-table-column prop="unitPrice" label="最新采购单价" />
                 <el-table-column prop="averagePrice" label="库存均价" />
-                <el-table-column prop="currentItemTotalPrice" label="余量总金额" />
+                <el-table-column prop="currentItemTotalPrice" label="库存总金额" />
             </el-table>
         </el-col>
     </el-row>

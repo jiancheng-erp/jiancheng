@@ -42,6 +42,8 @@ def generate_accounting_warehouse_excel(
                 "pendingOutbound",
                 "inboundAmount",
                 "outboundAmount",
+                "makeInventoryInbound",
+                "makeInventoryOutbound",
                 "currentAmount",
                 "unitPrice",
                 "actualInboundUnit",

@@ -91,7 +91,7 @@ def _union_msids_subq(base_snapshot_date: date, target_date: date, filters: dict
             MaterialStorageSnapshot.snapshot_date == base_snapshot_date,
             or_(
                 MaterialStorageSnapshot.pending_inbound > 0,
-                MaterialStorageSnapshot.inbound_amount > 0,
+                MaterialStorageSnapshot.current_amount > 0,
             ),
         )
     )
@@ -130,7 +130,10 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
             func.coalesce(MaterialStorageSnapshot.pending_inbound, 0).label("base_pending_in"),
             func.coalesce(MaterialStorageSnapshot.pending_outbound, 0).label("base_pending_out"),
             func.coalesce(MaterialStorageSnapshot.inbound_amount, 0).label("base_inbound"),
+            func.coalesce(MaterialStorageSnapshot.outbound_amount, 0).label("base_outbound"),
             func.coalesce(MaterialStorageSnapshot.current_amount, 0).label("base_current"),
+            func.coalesce(MaterialStorageSnapshot.make_inventory_inbound, 0).label("base_make_inbound"),
+            func.coalesce(MaterialStorageSnapshot.make_inventory_outbound, 0).label("base_make_outbound"),
         )
         .where(MaterialStorageSnapshot.snapshot_date == base_snapshot_date)
     ).subquery()
@@ -144,6 +147,8 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
             func.coalesce(func.sum(DailyMaterialStorageChange.net_change), 0).label("delta_net"),
             func.coalesce(func.sum(DailyMaterialStorageChange.pending_inbound_sum), 0).label("delta_pending_in"),
             func.coalesce(func.sum(DailyMaterialStorageChange.pending_outbound_sum), 0).label("delta_pending_out"),
+            func.coalesce(func.sum(DailyMaterialStorageChange.make_inventory_inbound_sum), 0).label("delta_make_inbound"),
+            func.coalesce(func.sum(DailyMaterialStorageChange.make_inventory_outbound_sum), 0).label("delta_make_outbound"),
         )
         .where(
             DailyMaterialStorageChange.snapshot_date >= start_change_date,
@@ -158,7 +163,10 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
             (func.coalesce(base_snap.c.base_pending_in, 0) + func.coalesce(delta_sum.c.delta_pending_in, 0)).label("final_pending_in"),
             (func.coalesce(base_snap.c.base_pending_out, 0) + func.coalesce(delta_sum.c.delta_pending_out, 0)).label("final_pending_out"),
             (func.coalesce(base_snap.c.base_inbound, 0) + func.coalesce(delta_sum.c.delta_in, 0)).label("final_inbound"),
+            (func.coalesce(base_snap.c.base_outbound, 0) + func.coalesce(delta_sum.c.delta_out, 0)).label("final_outbound"),
             (func.coalesce(base_snap.c.base_current, 0) + func.coalesce(delta_sum.c.delta_net, 0)).label("final_current"),
+            (func.coalesce(base_snap.c.base_make_inbound, 0) + func.coalesce(delta_sum.c.delta_make_inbound, 0)).label("final_make_inbound"),
+            (func.coalesce(base_snap.c.base_make_outbound, 0) + func.coalesce(delta_sum.c.delta_make_outbound, 0)).label("final_make_outbound"),
         )
         .join(base_snap, base_snap.c.msid == msids_all.c.msid, isouter=True)
         .join(delta_sum, delta_sum.c.msid == msids_all.c.msid, isouter=True)
@@ -220,7 +228,10 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
             "final_pending_in": r.final_pending_in,
             "final_pending_out": r.final_pending_out,
             "final_inbound": r.final_inbound,
+            "final_outbound": r.final_outbound,
             "final_current": r.final_current,
+            "final_make_inbound": r.final_make_inbound,
+            "final_make_outbound": r.final_make_outbound,
         }
         for r in page_rows
     }
@@ -381,7 +392,10 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
         final_pending_in = fin.get("final_pending_in", Decimal("0"))
         final_pending_out = fin.get("final_pending_out", Decimal("0"))
         final_inbound = fin.get("final_inbound", Decimal("0"))
+        final_outbound = fin.get("final_outbound", Decimal("0"))
         final_current = fin.get("final_current", Decimal("0"))
+        final_make_inbound = fin.get("final_make_inbound", Decimal("0"))
+        final_make_outbound = fin.get("final_make_outbound", Decimal("0"))
 
         items.append(
             {
@@ -402,8 +416,10 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
                 "pendingInbound": final_pending_in,
                 "pendingOutbound": final_pending_out,
                 "inboundAmount": final_inbound,
-                "outboundAmount": (final_inbound - final_current),
+                "outboundAmount": final_outbound,
                 "currentAmount": final_current,
+                "makeInventoryInbound": final_make_inbound,
+                "makeInventoryOutbound": final_make_outbound,
                 "inboundedItemTotalPrice": final_inbound * price_info.get("average_price"),
                 "currentItemTotalPrice": final_current * price_info.get("average_price"),
             }
