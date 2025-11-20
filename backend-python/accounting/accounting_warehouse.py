@@ -590,13 +590,22 @@ def create_excel_and_download():
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
     inbound_records, total_count = _get_warehouse_inbound_record_query(request.args, all_records=True)
+
+    warehouse_name = None
+    if warehouse_filter:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+            .scalar()
+        )
+
     # Generate the Excel file using the inbound_summary data
     template_path = FILE_STORAGE_PATH + "/财务入库总单模板.xlsx"
     timestamp = str(time.time())
     new_file_name = f"财务入库单总单输出_{timestamp}.xlsx"
     save_path = FILE_STORAGE_PATH + "/财务部文件/入库总单/" + new_file_name
     time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
-    generate_accounting_inbound_excel(template_path, save_path, warehouse_filter, supplier_name_filter, material_model_filter,time_range_string ,inbound_records)
+    generate_accounting_inbound_excel(template_path, save_path, warehouse_name, supplier_name_filter, material_model_filter,time_range_string ,inbound_records)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
     
 @accounting_warehouse_bp.route("/accounting/createinboundsummaryexcelanddownload", methods=["GET"])
@@ -607,7 +616,14 @@ def create_inbound_summary_excel_and_download():
     date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
     material_model_filter = request.args.get('materialModelFilter', type=str)
     inbound_summary, total_count = _get_warehouse_inbound_summary_query(request.args, all_records=True)
-    warehouse_name = inbound_summary[0]['materialWarehouse'] if inbound_summary and 'materialWarehouse' in inbound_summary[0] else ''
+
+    warehouse_name = None
+    if warehouse_filter:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+            .scalar()
+        )
 
     template_path = FILE_STORAGE_PATH + "/财务入库汇总单模板.xlsx"
     timestamp = str(time.time())
