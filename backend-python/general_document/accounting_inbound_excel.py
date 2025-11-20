@@ -27,6 +27,7 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         inbound_amount = data.get("inboundAmount", 0)
         item_total_price = data.get("itemTotalPrice", 0)
         order_rid = data.get("orderRid", "")
+        remark = data.get("remark", "")
         
         # Fill the cells
         sheet[f"A{index}"] = str(inbound_rid)
@@ -41,6 +42,7 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         sheet[f"J{index}"] = material_unit
         sheet[f"K{index}"] = str(inbound_amount)
         sheet[f"L{index}"] = str(item_total_price)
+        sheet[f"M{index}"] = remark
 
     # Save the modified file
     workbook.save(save_path)
