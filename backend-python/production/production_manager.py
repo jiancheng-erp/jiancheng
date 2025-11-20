@@ -611,7 +611,6 @@ def get_all_order_shoe_info():
         .group_by(Order.order_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_rid)
     )
-    logger.debug(query)
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
