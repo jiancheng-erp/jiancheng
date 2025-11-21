@@ -20,7 +20,7 @@ accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
 
 # outbound attrnames
 OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["outbound_rid", "outbound_datetime", "outbound_type", "outbound_department","picker", "approval_status"]
-OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["outbound_amount"]
+OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["outbound_amount", "unit_price", "item_total_price", "remark"]
 OUTBOUND_MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name", "material_unit"]
 
 # inbound attrnames
@@ -171,7 +171,7 @@ def get_warehouse_outbound_record():
     outbound_rid_filter = request.args.get('outboundRIdFilter', type=str)
     audit_status_filter = request.args.getlist('auditStatusFilter[]')
     query = (
-        db.session.query(OutboundRecord, OutboundRecordDetail, Material, Supplier, MaterialType, MaterialWarehouse, SPUMaterial, MaterialStorage)
+        db.session.query(OutboundRecord, OutboundRecordDetail, MaterialStorage, SPUMaterial, Material, Supplier)
         .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
         .join(MaterialStorage, OutboundRecordDetail.material_storage_id == MaterialStorage.material_storage_id)
         .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
@@ -213,18 +213,16 @@ def get_warehouse_outbound_record():
     response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     outbound_records = []
     department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
-    for outbound_record, outbound_record_detail, material, supplier, material_type, material_warehouse, spu, material_storage in response_entities:
+    for outbound_record, outbound_record_detail, material_storage, spu, material, supplier in response_entities:
         res = db_obj_to_res(outbound_record, OutboundRecord, attr_name_list=OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES)
         res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
         res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
         res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res = db_obj_to_res(material_storage, MaterialStorage, attr_name_list=INVENTORY_MATERIAL_STORAGE_ATTRNAMES,initial_res=res)
-        res[to_camel('unit_price')] = outbound_record_detail.unit_price
+        res[to_camel('actual_inbound_unit')] = material_storage.actual_inbound_unit
         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
         res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department] if outbound_record.outbound_department else ''
-        res[to_camel('item_total_price')] = outbound_record_detail.item_total_price
         res[to_camel('approval_status')] = accounting_audit_status_converter(outbound_record.approval_status)
         outbound_records.append(res)
     return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200

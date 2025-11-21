@@ -1,14 +1,16 @@
 <template>
     <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
-            订单号筛选：
-            <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getlogisticsOrderData()"
-                @clear="getlogisticsOrderData" />
-        </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
-            鞋型号筛选：
-            <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getlogisticsOrderData()"
-                @clear="getlogisticsOrderData" />
+        <el-col>
+            <el-select v-model="orderRIdSearch" @change="getlogisticsOrderData()" filterable clearable
+                placeholder="订单号筛选" style="width: 200px; margin-right: 20px;">
+                <el-option v-for="item in activeOrderShoes" :key="item.orderId" :value="item.orderRId"
+                    :label="item.orderRId"></el-option>
+            </el-select>
+            <el-select v-model="shoeRIdSearch" @change="getlogisticsOrderData()" filterable clearable
+                placeholder="工厂型号筛选" style="width: 200px; margin-right: 20px;">
+                <el-option v-for="item in activeOrderShoes" :key="item.shoeRId" :value="item.shoeRId"
+                    :label="item.shoeRId"></el-option>
+            </el-select>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 20px">
@@ -68,12 +70,18 @@ export default {
             currentLogisticsPage: 1,
             logisticsPageSize: 10,
             currentRow: {},
+            activeOrderShoes: []
         }
     },
     mounted() {
+        this.getActiveOrderShoes()
         this.getlogisticsOrderData()
     },
     methods: {
+        async getActiveOrderShoes() {
+            const response = await axios.get(`${this.$apiBaseUrl}/order/getactiveordershoes`)
+            this.activeOrderShoes = response.data
+        },
         async getlogisticsOrderData() {
             const params = {
                 "page": this.currentPage,
