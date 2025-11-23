@@ -1058,10 +1058,13 @@ def get_dashboard_statistic():
     )
     today_new_orders = (
         db.session.query(Order)
+        .join(Event, Order.order_id == Event.event_order_id)
         .filter(
-            Order.start_date >= datetime.now().date(),
-            Order.start_date < (datetime.now() + timedelta(days=1)).date(),
+            Event.handle_time >= datetime.now().date(),
+            Event.handle_time < (datetime.now() + timedelta(days=1)).date(),
+            Event.operation_id == 15,
         )
+        .order_by(Order.order_id)
         .count()
     )
 
