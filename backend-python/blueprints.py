@@ -60,6 +60,7 @@ from technical.missing_material_purchase import missing_material_purchase_bp
 from head_manager.customer_analysis import customer_analysis_bp
 from head_manager.business_analysis import business_analysis_bp
 from warehouse.material_storage_snapshot import material_storage_snapshot_bp
+from production_dashboard.dashboard import production_dashboard_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -124,3 +125,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(customer_analysis_bp)
     app.register_blueprint(business_analysis_bp)
     app.register_blueprint(material_storage_snapshot_bp)
+    app.register_blueprint(production_dashboard_bp)
