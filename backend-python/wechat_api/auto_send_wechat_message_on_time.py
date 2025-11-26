@@ -58,6 +58,28 @@ def send_message_to_production(app):
 
 def send_message_to_all(app):
     with app.app_context():
+        business_order_pending_submit_status = (
+            db.session.query(Order, OrderStatus)
+            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+            .filter(
+                and_(
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 0,
+                    )
+                )
+            .all()
+        )
+        business_order_pending_approval_status = (
+            db.session.query(Order, OrderStatus)
+            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+            .filter(
+                and_(
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 1,
+                    )
+                )
+            .all()
+        )
         order_approval_status = (
             db.session.query(Order, OrderStatus)
             .join(OrderStatus, Order.order_id == OrderStatus.order_id)
@@ -148,6 +170,8 @@ def send_message_to_all(app):
         status_message = (
             f"采购流程状态定时通知\n"
             f"当前时间：{current_time}\n"
+            f"当前业务员创建未提交订单数：{len(business_order_pending_submit_status)}\n"
+            f"当前业务经理未审批订单数：{len(business_order_pending_approval_status)}\n"
             f"当前总经理待审批订单数：{len(order_approval_status)}\n"
             f"当前投产指令单创建订单数：{len(production_instruction_status)}\n"
             f"当前面料用量填写订单数：{len(first_usage_input_status)}\n"

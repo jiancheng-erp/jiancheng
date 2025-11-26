@@ -20,5 +20,6 @@ EXPOSE 8000
 
 # Run Gunicorn (with logging piped into app.log)
 CMD gunicorn --bind 0.0.0.0:8000 --timeout 60 wsgi:app --access-logfile - --error-logfile -
+# CMD python3 main.py
 # \
 #      2>&1 | tee -a app.log
