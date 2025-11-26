@@ -161,6 +161,130 @@ def send_message_to_all(app):
 
         send_massage_to_users(status_message, "070d09bbc28c2cec22535b7ec5d1316b|Wang|ZhongGuiKang|55232b966e1a1348da858dc23135274a|FanJianMing|XieShuWa|YangShuYao")
 
+def send_massage_to_business(app):
+    with app.app_context():
+        # 这里可以添加查询业务相关状态的代码
+        # 构造通知内容
+        manager1 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 10,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 1)
+            .all()        
+        )
+        manager2 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 24,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 1)
+            .all()        
+        )
+        manager3 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 30,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 1)
+            .all()        
+        )
+        pre_create_orders_for_manager1 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 10,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 0)
+            .all()    
+        )
+        pre_create_orders_for_manager2 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 24,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 0)
+            .all()    
+        )
+        pre_create_orders_for_manager3 = (
+            db.session.query(
+                Order, OrderShoe, Shoe, Customer, OrderStatus
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .filter(Order.supervisor_id == 30,
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == 0)
+            .all()    
+        )
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        status_message = (
+            f"业务流程状态定时通知\n"
+            f"当前时间：{current_time}\n"
+            f"待业务经理1审批订单数：{len(manager1)}\n"
+            f"待业务经理2审批订单数：{len(manager2)}\n"
+            f"待业务经理3审批订单数：{len(manager3)}\n"
+            f"订单创建待提交审批订单数（业务经理1）：{len(pre_create_orders_for_manager1)}\n"
+            f"订单创建待提交审批订单数（业务经理2）：{len(pre_create_orders_for_manager2)}\n"
+            f"订单创建待提交审批订单数（业务经理3）：{len(pre_create_orders_for_manager3)}\n"
+            f"请相关人员及时处理！\n"
+            f"如果有任何问题，请联系相关负责人！"
+        )
+        status_message_for_manager1 = (
+            f"业务流程状态定时通知\n"
+            f"您的身份是业务经理1\n"
+            f"当前时间：{current_time}\n"
+            f"待审批订单数：{len(manager1)}\n"
+            f"订单创建待提交审批订单数：{len(pre_create_orders_for_manager1)}\n"
+            f"请及时处理！\n"
+        )
+        status_message_for_manager2 = (
+            f"业务流程状态定时通知\n"
+            f"您的身份是业务经理2\n"
+            f"当前时间：{current_time}\n"
+            f"待审批订单数：{len(manager2)}\n"
+            f"订单创建待提交审批订单数：{len(pre_create_orders_for_manager2)}\n"
+            f"请及时处理！\n"
+        )
+        status_message_for_manager3 = (
+            f"业务流程状态定时通知\n"
+            f"您的身份是业务经理3\n"
+            f"当前时间：{current_time}\n"
+            f"待审批订单数：{len(manager3)}\n"
+            f"订单创建待提交审批订单数：{len(pre_create_orders_for_manager3)}\n"
+            f"请及时处理！\n"
+        )
+
+        send_massage_to_users(status_message, "070d09bbc28c2cec22535b7ec5d1316b|55232b966e1a1348da858dc23135274a")
+        send_massage_to_users(status_message_for_manager1, "utopa.")
+        send_massage_to_users(status_message_for_manager2, "ellen")
+        send_massage_to_users(status_message_for_manager3, "55232b966e1a1348da858dc23135274a")
 
 # 启动调度器函数（在主程序中调用）
 def start_scheduler(app):
@@ -206,5 +330,26 @@ def start_scheduler(app):
         hour=18, minute=0,
         args=[app],
         id='production_evening_status_message'
+    )
+    scheduler.add_job(
+        func=send_massage_to_business,
+        trigger='cron',
+        hour=9, minute=0,
+        args=[app],
+        id='business_morning_status_message'
+    )
+    scheduler.add_job(
+        func=send_massage_to_business,
+        trigger='cron',
+        hour=12, minute=0,
+        args=[app],
+        id='business_afternoon_status_message'
+    )
+    scheduler.add_job(
+        func=send_massage_to_business,
+        trigger='cron',
+        hour=18, minute=0,
+        args=[app],
+        id='business_evening_status_message'
     )
     scheduler.start()
