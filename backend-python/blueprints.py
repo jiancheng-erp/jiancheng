@@ -61,6 +61,7 @@ from head_manager.customer_analysis import customer_analysis_bp
 from head_manager.business_analysis import business_analysis_bp
 from warehouse.material_storage_snapshot import material_storage_snapshot_bp
 from production_dashboard.dashboard import production_dashboard_bp
+from accounting.currency_exchange_management import currency_exchange_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -102,6 +103,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(head_manager_bp)
     app.register_blueprint(process_sheet_review)
     #app.register_blueprint(order_export_bp)
+    app.register_blueprint(currency_exchange_bp)
     app.register_blueprint(production_lines_bp)
     app.register_blueprint(production_report_bp)
     app.register_blueprint(multiissue_purchase_order_bp)

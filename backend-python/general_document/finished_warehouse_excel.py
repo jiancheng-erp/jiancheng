@@ -1,6 +1,7 @@
 # services/finished_exports.py
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
+from decimal import Decimal
 from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -10,6 +11,7 @@ from sqlalchemy import desc, func
 # === 按你的项目结构调整这些 import ===
 from app_config import db
 from models import (
+    AccountingUnitConversionTable,
     Order,
     OrderShoe,
     OrderShoeType,
@@ -378,6 +380,8 @@ def build_finished_outbound_excel(filters: dict):
             Customer,
             FinishedShoeStorage,
             OrderShoe.customer_product_name,
+            OrderShoeType.unit_price,
+            OrderShoeType.currency_type,
             ShoeOutboundRecord,
             ShoeOutboundRecordDetail,
             func.coalesce(outbound_sum_sq.c.total_outbound, 0).label(
@@ -442,6 +446,11 @@ def build_finished_outbound_excel(filters: dict):
         "出库数量",
         "订单总数量",
         "未出库数量",
+        "单价",
+        "发货金额",
+        "币种",
+        "汇率",
+        "人民币金额",
         "备注",
     ]
     widths: list[int] = []
@@ -451,7 +460,15 @@ def build_finished_outbound_excel(filters: dict):
     data_start_row = header_row + 1
     center_cols = {9, 10}  # 出库时间、出库数量
     r = data_start_row
-
+    exchange_USD = db.session.query(
+        AccountingUnitConversionTable
+    ).filter(AccountingUnitConversionTable.unit_from == 1, AccountingUnitConversionTable.unit_to == 4).first()
+    exchange_EUR = db.session.query(
+        AccountingUnitConversionTable
+    ).filter(AccountingUnitConversionTable.unit_from == 1, AccountingUnitConversionTable.unit_to == 2).first()
+    exchange_USD_rate = Decimal(exchange_USD.rate) if exchange_USD else Decimal("0")
+    exchange_EUR_rate = Decimal(exchange_EUR.rate) if exchange_EUR else Decimal("0")
+    exchange_CNY_rate = Decimal("1.0")
     for (
         order,
         shoe_rid_v,
@@ -459,6 +476,8 @@ def build_finished_outbound_excel(filters: dict):
         customer,
         storage,
         cust_prod_name,
+        unit_price,
+        currency_type,
         record,
         detail,
         all_time_outbound,
@@ -467,7 +486,16 @@ def build_finished_outbound_excel(filters: dict):
         qty = getattr(detail, "outbound_amount", None) or getattr(
             detail, "amount", None
         )
+        
         remaining = (storage.finished_estimated_amount or 0) - (all_time_outbound or 0)
+        if currency_type in ["CNY", "人民币", "RMB"]:
+            exchange_rate = exchange_CNY_rate
+        elif currency_type in ["USD", "USA", "美元"]:
+            exchange_rate = exchange_USD_rate
+        elif currency_type in ["EUR", "欧元"]:
+            exchange_rate = exchange_EUR_rate
+        else:
+            exchange_rate = Decimal("1.0")
 
         _write_data_row(
             ws,
@@ -485,6 +513,11 @@ def build_finished_outbound_excel(filters: dict):
                 qty,
                 storage.finished_estimated_amount,
                 remaining,  # ✅ 用全时段累计出库量计算的“未出库数量”
+                unit_price,
+                (unit_price or 0) * (qty or 0),
+                currency_type,
+                exchange_rate,
+                ((unit_price or 0) * (qty or 0)) * exchange_rate,
                 getattr(detail, "remark", "") or "",
             ],
             widths,
@@ -653,6 +686,7 @@ def build_finished_inout_excel(filters: dict):
                 record.shoe_inbound_rid,
                 _format_dt(record.inbound_datetime),
                 detail.inbound_amount,
+                
                 detail.remark or "",
             ],
             widths,
