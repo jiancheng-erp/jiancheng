@@ -3,7 +3,12 @@
         <el-col :span="24" style="font-size: xx-large; text-align: center">绩效管理</el-col>
     </el-row>
     <el-row :gutter="20" style="margin-bottom: 10px">
-        <el-col :span="6">
+        <el-col :span="3">
+            <el-select v-model="departmentSelect" placeholder="搜索部门" clearable @change="fetchDesignerList" style="width: 100%">
+                <el-option v-for="dept in departmentOptions" :key="dept" :label="dept" :value="dept" />
+            </el-select>
+        </el-col>
+        <el-col :span="5">
             <el-input v-model="designerSearchText" placeholder="搜索设计师" clearable @input="fetchDesignerList" />
         </el-col>
         <el-col :span="4">
@@ -133,6 +138,8 @@ import axios from 'axios'
 export default {
     data() {
         return {
+            departmentSelect: '',
+            departmentOptions: ["全部", "开发一部", "开发二部", "开发三部", "开发五部"],
             designerSearchText: '',
             designerList: [],
             performanceData: [],
@@ -210,7 +217,8 @@ export default {
                 startDate: this.startDateFilter ?? '',
                 endDate: this.endDateFilter ?? '',
                 year: this.yearFilter ?? '',
-                month: this.monthFilter ?? ''
+                month: this.monthFilter ?? '',
+                department: this.departmentSelect === '全部' ? '' : this.departmentSelect
             }
             const res = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getalldesigners`, { params })
             this.designerList = res.data.data

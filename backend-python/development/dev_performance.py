@@ -28,6 +28,7 @@ def get_all_designers():
     end_date = request.args.get("endDate", "").strip()
     year = request.args.get("year", "").strip()
     month = request.args.get("month", "").strip()
+    department = request.args.get("department", "").strip()
 
     # 每个 order_shoe_type_id 的业务量
     batch_amount_subquery = (
@@ -77,6 +78,8 @@ def get_all_designers():
     # 设计师与时间筛选
     if designer_keyword:
         base_q = base_q.filter(Shoe.shoe_designer.like(f"%{designer_keyword}%"))
+    if department:
+        base_q = base_q.filter(Shoe.shoe_department_id == department)
 
     if year:
         base_q = base_q.filter(func.year(Order.start_date) == int(year))
