@@ -18,6 +18,9 @@
           <el-menu-item index="2" @click="handleMenuClick('FinancialWarehouseInventory','2')">
             <span>库存</span>
           </el-menu-item>
+          <el-menu-item index="9" @click="handleMenuClick('InOutboundRecords','9')">
+            <span>成品仓出入库记录</span>
+          </el-menu-item>          
           <el-menu-item index="3" @click="handleMenuClick('FinancialRecievableDetail','3')">
             <span>应收记录</span>
           </el-menu-item>
@@ -35,6 +38,9 @@
           </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick('OrderSearch','8')">
             <span>BOM查询</span>
+          </el-menu-item>
+          <el-menu-item index="10" @click="handleMenuClick('FinancialExchangeManagement','10')">
+            <span>汇率管理</span>
           </el-menu-item>
           <el-menu-item index="99" @click="logout">
             <span>退出系统</span>
@@ -73,6 +79,8 @@ import SupplierManagementView from '@/Pages/LogisticsControlDepartment/Logistics
 import MaterialManagementView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MaterialManagementView.vue'
 import DevelopmentPerformanceManagement from '@/Pages/DevelopmentManager/components/DevelopmentPerformanceManagement.vue'
 import OrderSearch from '@/Pages/UsageCalculation/components/OrderSearch.vue'
+import InOutboundRecords from '@/Pages/TotalWarehouse/FinishedWarehouse/components/InOutboundRecords.vue'
+import FinancialExchangeManagement from '../components/FinancialExchangeManagement.vue'
 
 const components = {
   FinancialPayableDetail,
@@ -90,7 +98,9 @@ const components = {
   SupplierManagementView,
   MaterialManagementView,
   DevelopmentPerformanceManagement,
-  OrderSearch
+  OrderSearch,
+  InOutboundRecords,
+  FinancialExchangeManagement
 }
 
 const userName = ref('财务部-主管')

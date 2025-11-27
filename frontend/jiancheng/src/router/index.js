@@ -23,6 +23,7 @@ import FinancialClerk from '@/Pages/FinancialManager/views/FinancialClerk.vue'
 import WarehouseClerk from '@/Pages/TotalWarehouse/WarehouseClerk/views/WarehouseClerk.vue'
 import Administrator from '@/Pages/Administrator/views/Administrator.vue'
 import LaborCostReportClerk from '@/Pages/ProductionManagementDepartment/LaborCostReportClerk/views/LaborCostReportClerk.vue'
+import ProductionBoard from '@/Pages/ProductionBoard/ProductionBoard.vue'
 
 //引入子路由
 import LogisticsRoutes from '../Pages/LogisticsControlDepartment/LogisticsControlManager/routers/logistics'
@@ -53,6 +54,15 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginPage
+    },
+    {
+      path: '/productionboard',
+      name: 'productionboard',
+      component: ProductionBoard,
+      meta:{
+        requiresAuth: true,
+        role: 26
+      }
     },
     {
       path :'/administrator',

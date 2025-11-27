@@ -12,7 +12,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <el-table :data="tableData" border stripe height="500" show-summary :summary-method="getSummaries">
+            <el-table :data="tableData" border stripe show-summary :summary-method="getSummaries" style="height: 70vh;">
                 <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>

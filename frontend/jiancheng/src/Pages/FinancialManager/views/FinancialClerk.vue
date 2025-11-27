@@ -27,6 +27,9 @@
           <el-menu-item index="4" @click="handleMenuClick('FinancialRecievableDetail','4')">
             <span>应收记录</span>
           </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick('InOutboundRecordsForFinished','5')">
+            <span>成品仓出入库记录</span>
+          </el-menu-item>
           <el-menu-item index="99" @click="logout">
             <span>退出系统</span>
           </el-menu-item>
@@ -54,16 +57,18 @@ import useSetAxiosToken from '../hooks/useSetAxiosToken'
 import InOutboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InOutboundRecords.vue'
 import InboundDetails from '../components/FinancialWarehouseDetail.vue'
 import FinancialRecievableDetail from '../components/FinancialRecievableDetail.vue'
+import InOutboundRecordsForFinished from '@/Pages/TotalWarehouse/FinishedWarehouse/components/InOutboundRecords.vue'
 
 const components = {
   InOutboundRecords,
   InboundDetails,
-  FinancialRecievableDetail
+  FinancialRecievableDetail,
+  InOutboundRecordsForFinished
 }
 
 const userName = ref('财务部-审核')
 const activeIndex = ref('2')
-const currentComponent = ref('InOutboundRecords')
+const currentComponent = ref('InOutboundRecordsForFinished')
 
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
