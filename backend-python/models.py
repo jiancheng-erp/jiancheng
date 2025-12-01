@@ -202,7 +202,7 @@ class DailyMaterialStorageSizeDetailChange(db.Model):
     )
 
     id = db.Column(BIGINT, primary_key=True, autoincrement=True)
-    daily_change_id = db.Column(BIGINT, db.ForeignKey('daily_material_storage_change.daily_change_id', ondelete='CASCADE'), nullable=False)
+    daily_change_id = db.Column(BIGINT, nullable=False)
     size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
     order_number = db.Column(INTEGER, nullable=False)
     pending_inbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核入库数量总和')
@@ -1301,6 +1301,124 @@ class FinishedShoeStorage(db.Model):
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
 
+class DailyFinishedShoeStorageChange(db.Model):
+    __tablename__ = "daily_finished_shoe_storage_change"
+    __table_args__ = (
+        db.UniqueConstraint("snapshot_date", "finished_shoe_storage_id", name="unq_daily_finished_change"),
+    )
+
+    daily_change_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    snapshot_date = db.Column(DATE, nullable=False, comment="每日净变动日期")
+    finished_shoe_storage_id = db.Column(BIGINT, nullable=False, comment="成品仓库存id")
+    inbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment="当日已入库数量总和（含撤回为负数）")
+    outbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment="当日已出库数量总和")
+    net_change = db.Column(INTEGER, nullable=False, default=0, comment="净变动，inbound_amount_sum - outbound_amount_sum")
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyFinishedShoeStorageChange(id={self.daily_change_id}, date={self.snapshot_date}, fsid={self.finished_shoe_storage_id})>"
+
+
+class DailyFinishedShoeSizeDetailChange(db.Model):
+    __tablename__ = "daily_finished_shoe_size_detail_change"
+    __table_args__ = (
+        db.UniqueConstraint("daily_change_id", "order_number", name="unq_finished_size_detail_change"),
+    )
+
+    id = db.Column(BIGINT, primary_key=True, autoincrement=True)
+    daily_change_id = db.Column(BIGINT, db.ForeignKey("daily_finished_shoe_storage_change.daily_change_id", ondelete="CASCADE"), nullable=False)
+    size_value = db.Column(VARCHAR(10, collation="utf8mb4_0900_ai_ci"), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    inbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment="当日已入库数量总和")
+    outbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment="当日已出库数量总和")
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<DailyFinishedShoeSizeDetailChange(id={self.id}, daily_change_id={self.daily_change_id}, order_number={self.order_number})>"
+
+
+class FinishedShoeStorageSnapshot(db.Model):
+    __tablename__ = "finished_shoe_storage_snapshot"
+    __table_args__ = (
+        db.PrimaryKeyConstraint("snapshot_date", "finished_shoe_storage_id"),
+        db.Index("idx_finished_snapshot_order", "order_shoe_type_id", "snapshot_date"),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    finished_shoe_storage_id = db.Column(BIGINT, nullable=False)
+    order_shoe_type_id = db.Column(BIGINT, nullable=False)
+    finished_estimated_amount = db.Column(INTEGER, nullable=False, default=0)
+    size_34_estimated_amount = db.Column(INTEGER, default=0)
+    size_35_estimated_amount = db.Column(INTEGER, default=0)
+    size_36_estimated_amount = db.Column(INTEGER, default=0)
+    size_37_estimated_amount = db.Column(INTEGER, default=0)
+    size_38_estimated_amount = db.Column(INTEGER, default=0)
+    size_39_estimated_amount = db.Column(INTEGER, default=0)
+    size_40_estimated_amount = db.Column(INTEGER, default=0)
+    size_41_estimated_amount = db.Column(INTEGER, default=0)
+    size_42_estimated_amount = db.Column(INTEGER, default=0)
+    size_43_estimated_amount = db.Column(INTEGER, default=0)
+    size_44_estimated_amount = db.Column(INTEGER, default=0)
+    size_45_estimated_amount = db.Column(INTEGER, default=0)
+    size_46_estimated_amount = db.Column(INTEGER, default=0)
+    finished_actual_amount = db.Column(INTEGER, nullable=False, default=0)
+    size_34_actual_amount = db.Column(INTEGER, default=0)
+    size_35_actual_amount = db.Column(INTEGER, default=0)
+    size_36_actual_amount = db.Column(INTEGER, default=0)
+    size_37_actual_amount = db.Column(INTEGER, default=0)
+    size_38_actual_amount = db.Column(INTEGER, default=0)
+    size_39_actual_amount = db.Column(INTEGER, default=0)
+    size_40_actual_amount = db.Column(INTEGER, default=0)
+    size_41_actual_amount = db.Column(INTEGER, default=0)
+    size_42_actual_amount = db.Column(INTEGER, default=0)
+    size_43_actual_amount = db.Column(INTEGER, default=0)
+    size_44_actual_amount = db.Column(INTEGER, default=0)
+    size_45_actual_amount = db.Column(INTEGER, default=0)
+    size_46_actual_amount = db.Column(INTEGER, default=0)
+    finished_amount = db.Column(INTEGER, nullable=False, default=0)
+    size_34_amount = db.Column(INTEGER, default=0)
+    size_35_amount = db.Column(INTEGER, default=0)
+    size_36_amount = db.Column(INTEGER, default=0)
+    size_37_amount = db.Column(INTEGER, default=0)
+    size_38_amount = db.Column(INTEGER, default=0)
+    size_39_amount = db.Column(INTEGER, default=0)
+    size_40_amount = db.Column(INTEGER, default=0)
+    size_41_amount = db.Column(INTEGER, default=0)
+    size_42_amount = db.Column(INTEGER, default=0)
+    size_43_amount = db.Column(INTEGER, default=0)
+    size_44_amount = db.Column(INTEGER, default=0)
+    size_45_amount = db.Column(INTEGER, default=0)
+    size_46_amount = db.Column(INTEGER, default=0)
+    finished_status = db.Column(db.SmallInteger, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<FinishedShoeStorageSnapshot(date={self.snapshot_date}, fsid={self.finished_shoe_storage_id})>"
+
+
+class FinishedShoeSizeDetailSnapshot(db.Model):
+    __tablename__ = "finished_shoe_size_detail_snapshot"
+    __table_args__ = (
+        db.PrimaryKeyConstraint("snapshot_date", "finished_shoe_storage_id", "order_number"),
+    )
+
+    snapshot_date = db.Column(DATE, nullable=False)
+    finished_shoe_storage_id = db.Column(BIGINT, nullable=False)
+    size_value = db.Column(VARCHAR(10, collation="utf8mb4_0900_ai_ci"), nullable=False)
+    order_number = db.Column(INTEGER, nullable=False)
+    estimated_amount = db.Column(INTEGER, nullable=False, default=0)
+    actual_amount = db.Column(INTEGER, nullable=False, default=0)
+    current_amount = db.Column(INTEGER, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+    def __repr__(self):
+        return f"<FinishedShoeSizeDetailSnapshot(date={self.snapshot_date}, fsid={self.finished_shoe_storage_id}, order={self.order_number})>"
+
+
 class BatchInfoType(db.Model):
     __tablename__ = "batch_info_type"
     batch_info_type_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -1911,7 +2029,7 @@ class WarehouseMissingPurchaseRecord(db.Model):
 class WarehouseMissingPurchaseRecordItem(db.Model):
     __tablename__ = "warehouse_missing_purchase_record_item"
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    record_id = db.Column(db.BigInteger, db.ForeignKey('warehouse_missing_purchase_record.id'), nullable=False, index=True)
+    record_id = db.Column(db.BigInteger, nullable=False, index=True)
     material_type = db.Column(db.String(1), nullable=True)  # 'S','I','O',...
     material_id = db.Column(db.BigInteger, nullable=True, index=True)
     material_model = db.Column(db.String(120))

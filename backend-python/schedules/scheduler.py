@@ -1,6 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from wechat_api.auto_send_wechat_message_on_time import *
 from schedules.material_storage_snapshot_schedule import *
+from schedules.finished_storage_snapshot_schedule import *
 
 
 # 启动调度器函数（在主程序中调用）
@@ -61,6 +62,19 @@ def start_scheduler(app):
         replace_existing=True,
     )
 
+    # 每月 1 日 00:10 执行一次（成品仓月末快照）
+    scheduler.add_job(
+        func=snapshot_finished_storage,
+        trigger="cron",
+        day=1,
+        hour=0,
+        minute=10,
+        second=0,
+        args=[app],
+        id="finished_storage_snapshot",
+        replace_existing=True,
+    )
+
     # 每天 00:05 执行一次
     scheduler.add_job(
         func=snapshot_daily_storage_change,
@@ -70,6 +84,18 @@ def start_scheduler(app):
         second=0,
         args=[app],
         id="daily_storage_change_snapshot",
+        replace_existing=True,
+    )
+
+    # 每天 00:10 执行一次（成品仓每日净变动）
+    scheduler.add_job(
+        func=snapshot_daily_finished_storage_change,
+        trigger="cron",
+        hour=0,
+        minute=10,
+        second=0,
+        args=[app],
+        id="daily_finished_storage_change_snapshot",
         replace_existing=True,
     )
     scheduler.start()
