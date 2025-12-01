@@ -90,9 +90,12 @@ def _union_msids_subq(base_snapshot_date: date, target_date: date, filters: dict
         .where(
             MaterialStorageSnapshot.snapshot_date == base_snapshot_date,
             or_(
-                MaterialStorageSnapshot.pending_inbound > 0,
-                MaterialStorageSnapshot.current_amount > 0,
-            ),
+                MaterialStorageSnapshot.pending_inbound != 0, # 过滤早期没有入库记录的库存
+                MaterialStorageSnapshot.pending_outbound != 0,
+                MaterialStorageSnapshot.inbound_amount != 0,
+                MaterialStorageSnapshot.outbound_amount != 0,
+                MaterialStorageSnapshot.current_amount != 0,
+            )
         )
     )
     base_q = add_filter_to_query(base_q, filters, "base")
@@ -185,7 +188,8 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
     """
     page = filters.get("page", 1, type=int)
     page_size = filters.get("pageSize", 20, type=int)
-    display_zero = (filters.get("displayZeroInventory", "true").lower() == "true")
+    quantity_filters_raw = filters.get("quantityFilters", "[]")
+    quantity_filters = json.loads(quantity_filters_raw)
 
     base_snapshot_date = _get_base_snapshot_date(target_date)
     if not base_snapshot_date:
@@ -199,11 +203,38 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
     # 2) Final aggregation for all msids
     final_agg = _final_agg_for_msids_subq(msids_all, base_snapshot_date, start_change_date, target_date)
 
-    # 3) Filter: when display_zero = false, keep only pending_in>0 OR current>0
-    cond = literal(True) if display_zero else or_(
-        final_agg.c.final_pending_in > 0,
-        final_agg.c.final_current > 0,
-    )
+    # 3) quantity filters
+    cond = literal(True)
+    if len(quantity_filters) > 0:
+        quantity_filter_conditions = []
+        for q_filter in quantity_filters:
+            field = q_filter.get('field')
+            op = q_filter.get('op')
+            column = None
+            if field == 'pending_inbound':
+                column = final_agg.c.final_pending_in
+            elif field == 'pending_outbound':
+                column = final_agg.c.final_pending_out
+            elif field == 'inbound_amount':
+                column = final_agg.c.final_inbound
+            elif field == 'outbound_amount':
+                column = final_agg.c.final_outbound
+            elif field == 'make_inventory_inbound':
+                column = final_agg.c.final_make_inbound
+            elif field == 'make_inventory_outbound':
+                column = final_agg.c.final_make_outbound
+            elif field == 'current_amount':
+                column = final_agg.c.final_current
+            else:
+                continue  # 跳过未知字段
+            if op == 'eq_zero':
+                condition = column == 0
+            elif op == 'neq_zero':
+                condition = column != 0
+            else:
+                continue  # 跳过未知操作符
+            quantity_filter_conditions.append(condition)
+        cond = and_(*quantity_filter_conditions)
 
     # 4) Total count in DB
     total_stmt = select(func.count()).select_from(
@@ -221,7 +252,6 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
 
     page_rows = db.session.execute(page_base).all()
     msids_page = [r.msid for r in page_rows]
-    print(msids_page)
     # Map of final metrics
     final_map: Dict[int, Dict[str, Decimal]] = {
         r.msid: {

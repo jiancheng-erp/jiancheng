@@ -12,6 +12,9 @@
                 </el-select>
                 <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable @change="updateInventoryDisplay"
                     style="width: 200px;"></el-input>
+                <el-cascader v-model="quantityFilters" :options="quantityFilterOptions" :props="cascaderProps" @change="updateInventoryDisplay"
+                    placeholder="请选择数量筛选条件" clearable style="width: 400px;">
+                </el-cascader>
             </div>
 
         </el-col>
@@ -33,10 +36,6 @@
                     @change="updateInventoryDisplay" style="width: 200px;"></el-input>
                 <el-input v-model="shoeRidFilter" placeholder="工厂型号搜索" clearable @change="updateInventoryDisplay"
                     style="width: 200px;"></el-input>
-                <el-radio-group v-model="displayZeroInventory" @change="toggleDisplayZero">
-                    <el-radio-button :value="false">现有库存</el-radio-button>
-                    <el-radio-button :value="true">所有库存</el-radio-button>
-                </el-radio-group>
                 <el-button type="primary" @click="createAndDownloadWarehouseExcel">生成并下载excel</el-button>
             </div>
         </el-col>
@@ -79,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, getCurrentInstance, nextTick } from 'vue'
+import { ref, onMounted, getCurrentInstance, nextTick, computed } from 'vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
@@ -100,7 +99,65 @@ const orderRidFilter = ref('')
 const customerProductNameFilter = ref('')
 const shoeRidFilter = ref('')
 const dateFilter = ref(null)
-const displayZeroInventory = ref(false)
+const quantityFilters = ref([])
+const filterConditions = [
+    { value: 'eq_zero', label: '等于 0' },
+    { value: 'neq_zero', label: '不等于 0' }
+]
+const quantityFilterOptions = [
+    {
+        value: 'pending_inbound',
+        label: '未审核入库数',
+        children: filterConditions
+    },
+    {
+        value: 'pending_outbound',
+        label: '未审核出库数',
+        children: filterConditions
+    },
+    {
+        value: 'inbound_amount',
+        label: '采购入库数',
+        children: filterConditions
+    },
+    {
+        value: 'outbound_amount',
+        label: '生产出库数',
+        children: filterConditions
+    },
+    {
+        value: 'current_amount',
+        label: '库存数',
+        children: filterConditions
+    },
+    {
+        value: 'make_inventory_inbound',
+        label: '盘库入库数',
+        children: filterConditions
+    },
+    {
+        value: 'make_inventory_outbound',
+        label: '盘库出库数',
+        children: filterConditions
+    },
+]
+
+const cascaderProps = {
+    multiple: true,        // 允许多选
+    expandTrigger: 'hover',
+    emitPath: true,        // 返回整条路径 ['pending_inbound','gt_zero']
+    value: 'value',
+    label: 'label',
+    checkStrictly: false   // 只允许勾选叶子
+}
+
+// 把 Cascader 的值转换成更好用的结构，方便发给后端
+const parsedQuantityFilters = computed(() => {
+    return quantityFilters.value.map(path => {
+        const [field, op] = path
+        return { field, op }
+    })
+})
 
 let warehouseOptions = ref([])
 
@@ -202,7 +259,7 @@ function getCurrentPageInfo() {
         'customerProductNameFilter': customerProductNameFilter.value,
         'shoeRidFilter': shoeRidFilter.value,
         "snapshotDate": dateFilter.value,
-        "displayZeroInventory": displayZeroInventory.value
+        "quantityFilters": JSON.stringify(parsedQuantityFilters.value)
     }
 }
 async function createAndDownloadWarehouseExcel() {
