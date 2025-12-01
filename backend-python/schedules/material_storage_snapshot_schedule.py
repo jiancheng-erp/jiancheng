@@ -499,7 +499,9 @@ def snapshot_material_storage(app):
                 msd.pending_outbound,
                 msd.inbound_amount,
                 msd.outbound_amount,
-                msd.current_amount
+                msd.current_amount,
+                msd.make_inventory_inbound,
+                msd.make_inventory_outbound
             FROM material_storage_size_detail msd
             ON DUPLICATE KEY UPDATE
                 material_storage_id = VALUES(material_storage_id),

@@ -127,7 +127,7 @@
                 <vxe-column field="inboundQuantity" title="入库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.inboundQuantity" :digits="3" :step="0.001" :min="0"
-                            @blur="updateTotalPrice(row)"></vxe-number-input>
+                            @blur="updateTotalPrice(row)" :disabled="isSizeMaterial(row)"></vxe-number-input>
                     </template>
                 </vxe-column>
                 <vxe-column field="unitPrice" title="采购单价" :edit-render="{ autoFocus: 'input' }" width="120">
@@ -448,6 +448,9 @@ export default {
         },
     },
     methods: {
+        isSizeMaterial(row) {
+            return ['大底', '烫底'].includes(row.materialName)
+        },
         async fetchMaterialModels(queryString, cb) {
             const params = { materialModel: queryString }
             const res = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialmodels`, { params })
@@ -457,11 +460,6 @@ export default {
             const params = { materialSpecification: queryString }
             const res = await axios.get(`${this.$apiBaseUrl}/warehouse/getallmaterialspecifications`, { params })
             cb(res.data)
-        },
-        clearShoeSizeColumns() {
-            if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
-                this.shoeSizeColumns = []
-            }
         },
         clearRejectRecord() {
             this.rejectedRecordId = null
@@ -629,7 +627,7 @@ export default {
             this.materialNameOptions = response.data
         },
         async handleMaterialType() {
-            if (!(this.inboundForm.materialTypeId == 7 && this.inboundForm.materialTypeId == 16)) {
+            if (!(this.inboundForm.materialTypeId == 7 || this.inboundForm.materialTypeId == 16)) {
                 this.inboundForm.shoeSizes = null
                 this.shoeSizeColumns = []
             }

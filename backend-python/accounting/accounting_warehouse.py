@@ -14,6 +14,7 @@ from logger import logger
 from app_config import db
 import os
 from constants import INBOUND_RECORD_TYPE_OPTIONS
+import json
 
 
 accounting_warehouse_bp = Blueprint("accounting_warehouse_bp", __name__)
@@ -240,7 +241,8 @@ def _get_warehouse_inventory_query(data: dict, all_records=False):
     order_rid_filter = data.get('orderRidFilter', type=str)
     order_shoe_customer_name_filter = data.get('customerProductNameFilter', type=str)
     shoe_rid_filter = data.get('shoeRidFilter', type=str)
-    not_zero_flag_filter = data.get('includeZeroFilter', type=str)
+    quantity_filters_raw = data.get('quantityFilters', []) # JSON string
+    quantity_filters = json.loads(quantity_filters_raw)
     query = (db.session.query(MaterialStorage, Order, OrderShoe, Shoe, SPUMaterial, Material, Supplier, MaterialType, MaterialWarehouse)
              .outerjoin(Order,MaterialStorage.order_id == Order.order_id)
              .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
@@ -250,16 +252,6 @@ def _get_warehouse_inventory_query(data: dict, all_records=False):
              .join(Supplier, Material.material_supplier == Supplier.supplier_id)
              .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
              .join(MaterialWarehouse, MaterialType.warehouse_id == MaterialWarehouse.material_warehouse_id))
-    # 过滤早期没有入库记录的库存
-    query = query.filter(
-        or_(
-            MaterialStorage.pending_inbound != 0,
-            MaterialStorage.pending_outbound != 0,
-            MaterialStorage.inbound_amount != 0,
-            MaterialStorage.outbound_amount != 0,
-            MaterialStorage.current_amount != 0,
-        )
-    )
     
     if warehouse_filter:
         query = query.filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
@@ -281,9 +273,49 @@ def _get_warehouse_inventory_query(data: dict, all_records=False):
         query = query.filter(OrderShoe.customer_product_name.ilike(f"%{order_shoe_customer_name_filter}"))
     if shoe_rid_filter:
         query = query.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid_filter}"))
-    
-    if not_zero_flag_filter == 'true':
-        query = query.filter(or_(MaterialStorage.pending_inbound > 0, MaterialStorage.current_amount > 0))
+
+    if len(quantity_filters) > 0:
+        quantity_filter_conditions = []
+        for q_filter in quantity_filters:
+            field = q_filter.get('field')
+            op = q_filter.get('op')
+            column = None
+            if field == 'pending_inbound':
+                column = MaterialStorage.pending_inbound
+            elif field == 'pending_outbound':
+                column = MaterialStorage.pending_outbound
+            elif field == 'inbound_amount':
+                column = MaterialStorage.inbound_amount
+            elif field == 'outbound_amount':
+                column = MaterialStorage.outbound_amount
+            elif field == 'make_inventory_inbound':
+                column = MaterialStorage.make_inventory_inbound
+            elif field == 'make_inventory_outbound':
+                column = MaterialStorage.make_inventory_outbound
+            elif field == 'current_amount':
+                column = MaterialStorage.current_amount
+            else:
+                continue  # 跳过未知字段
+            if op == 'eq_zero':
+                condition = column == 0
+            elif op == 'neq_zero':
+                condition = column != 0
+            else:
+                continue  # 跳过未知操作符
+            quantity_filter_conditions.append(condition)
+        if quantity_filter_conditions:
+            query = query.filter(and_(*quantity_filter_conditions))
+
+    # 过滤早期没有入库记录的库存
+    query = query.filter(
+        or_(
+            MaterialStorage.pending_inbound != 0,
+            MaterialStorage.pending_outbound != 0,
+            MaterialStorage.inbound_amount != 0,
+            MaterialStorage.outbound_amount != 0,
+            MaterialStorage.current_amount != 0,
+        )
+    )
 
     query = query.order_by(MaterialStorage.material_storage_id.asc())
     total_count = query.distinct().count()

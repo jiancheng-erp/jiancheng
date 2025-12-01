@@ -317,7 +317,6 @@ import axios from 'axios'
 import dayjs from 'dayjs'
 import * as echarts from 'echarts'
 import { bus } from '../../hooks/bus'
-import { fromCallback } from 'cypress/types/bluebird'
 
 const router = useRouter()
 const { $apiBaseUrl } = getCurrentInstance().appContext.config.globalProperties
