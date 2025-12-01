@@ -14,10 +14,22 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
     sheet["F2"] = supplier_name if supplier_name else "全部"
     sheet["H2"] = material_model if material_model else "全部"
     sheet["K2"] = time_range if time_range else "全部"
+
+    quantity_sum_map = {
+        "pendingInbound": 0,
+        "pendingOutbound": 0,
+        "inboundAmount": 0,
+        "outboundAmount": 0,
+        "makeInventoryInbound": 0,
+        "makeInventoryOutbound": 0,
+        "currentAmount": 0,
+        "itemTotalPrice": 0,
+    }
     
 
-    # Insert materials data starting from row 3
+    # Insert materials data starting from row 8
     start_row = 8
+    current_row = start_row
     for index, data in enumerate(materials_data, start=start_row):
         warehouse_name = data.get("materialWarehouse", "")
         supplier_name = data.get("supplierName", "")
@@ -29,7 +41,6 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         unit_price = data.get("unitPrice", 0)
         material_unit = data.get("actualInboundUnit", "")
         inbound_amount = data.get("inboundAmount", 0)
-        item_total_price = data.get("itemTotalPrice", 0)
         order_rid = data.get("orderRid", "")
         shoe_rid = data.get("shoeRid", "")
         customer_product_name = data.get("customerProductName", "")
@@ -64,6 +75,30 @@ def generate_accounting_warehouse_excel(template_path, save_path, warehouse_name
         sheet[f"S{index}"] = str(material_unit)
         sheet[f"T{index}"] = str(average_price)
         sheet[f"U{index}"] = str(item_total_price)
+
+        # Update sums
+        quantity_sum_map["pendingInbound"] += pending_inbound
+        quantity_sum_map["pendingOutbound"] += pending_outbound
+        quantity_sum_map["inboundAmount"] += inbound_amount
+        quantity_sum_map["outboundAmount"] += outbound_amount
+        quantity_sum_map["makeInventoryInbound"] += make_inventory_inbound
+        quantity_sum_map["makeInventoryOutbound"] += make_inventory_outbound
+        quantity_sum_map["currentAmount"] += current_amount
+        quantity_sum_map["itemTotalPrice"] += item_total_price
+
+        current_row += 1
+
+    # Insert totals in the row after the last data row
+    total_row = current_row
+    sheet[f"J{total_row}"] = "合计"
+    sheet[f"K{total_row}"] = quantity_sum_map["pendingInbound"]
+    sheet[f"L{total_row}"] = quantity_sum_map["pendingOutbound"]
+    sheet[f"M{total_row}"] = quantity_sum_map["inboundAmount"]
+    sheet[f"N{total_row}"] = quantity_sum_map["outboundAmount"]
+    sheet[f"O{total_row}"] = quantity_sum_map["makeInventoryInbound"]
+    sheet[f"P{total_row}"] = quantity_sum_map["makeInventoryOutbound"]
+    sheet[f"Q{total_row}"] = quantity_sum_map["currentAmount"]
+    sheet[f"U{total_row}"] = quantity_sum_map["itemTotalPrice"]
 
     # Save the modified file
     workbook.save(save_path)
