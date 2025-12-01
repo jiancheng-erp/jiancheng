@@ -14,7 +14,14 @@
             <SemifinishedInOutHistory />
         </el-tab-pane>
         <el-tab-pane label="成品仓库库存">
-            <FinishedInOutHistory />
+            <el-tabs>
+                <el-tab-pane label="实时库存">
+                    <FinishedInOutHistory />
+                </el-tab-pane>
+                <el-tab-pane label="历史库存">
+                    <FinishedStorageSnapshot />
+                </el-tab-pane>
+            </el-tabs>
         </el-tab-pane>
         <el-tab-pane label="成品仓库库存型号视图">
             <FinishedInherit />
@@ -45,6 +52,7 @@ import FinishedDetail from '@/Pages/TotalWarehouse/FinishedWarehouse/components/
 import FinishedInheritDetail from '@/Pages/TotalWarehouse/FinishedWarehouse/components/FinishedInheritDetail.vue'   
 import MaterialStorageSnapshot from './MaterialStorageSnapshot.vue'
 import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue'   
+import FinishedStorageSnapshot from './FinishedStorageSnapshot.vue'
 
 const { setAxiosToken } = useSetAxiosToken()
 const router = useRouter()
