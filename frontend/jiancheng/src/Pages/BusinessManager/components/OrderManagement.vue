@@ -6,7 +6,14 @@
         <el-col :span="4" :offset="0">
             <el-button size="default" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
             <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button>
-            <el-select v-model="orderStore.selectedOrderStatus" placeholder="请选择订单类型" size="default" :disabled="role === '21'" @change="handleOrderStatusChange" style="width: 200px; width: 150px">
+            <el-select
+                v-model="orderStore.selectedOrderStatus"
+                placeholder="请选择订单类型"
+                size="default"
+                :disabled="role === '21'"
+                @change="handleOrderStatusChange"
+                style="width: 200px; width: 150px"
+            >
                 <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
             </el-select>
         </el-col>
@@ -14,9 +21,18 @@
             ><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
 
-        <el-col :span="4"><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input> </el-col>
         <el-col :span="4"
-            ><el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            ><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="4"
+            ><el-input
+                v-model="orderStore.orderCustomerNameFilter"
+                placeholder="客户名称筛选"
+                size="default"
+                :suffix-icon="'el-icon-search'"
+                clearable
+                @input="orderStore.filterDisplayOrder"
+            ></el-input>
         </el-col>
         <el-col :span="4">
             <el-date-picker
@@ -41,13 +57,27 @@
             </el-radio-group>
         </el-col>
         <el-col :span="4">
-            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            <el-input
+                v-model="orderStore.customerProductNameFilter"
+                placeholder="客户型号筛选"
+                size="default"
+                :suffix-icon="'el-icon-search'"
+                clearable
+                @input="orderStore.filterDisplayOrder"
+            ></el-input>
         </el-col>
         <el-col :span="4">
             <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
         <el-col :span="4"
-            ><el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            ><el-input
+                v-model="orderStore.orderCustomerBrandFilter"
+                placeholder="客户商标筛选"
+                size="default"
+                :suffix-icon="'el-icon-search'"
+                clearable
+                @input="orderStore.filterDisplayOrder"
+            ></el-input>
         </el-col>
 
         <el-col :span="4">
@@ -73,7 +103,7 @@
         </el-col> -->
     </el-row>
     <el-row :gutter="20">
-        <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick" style="height: 60vh;">
+        <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick" style="height: 60vh">
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderSalesman" label="创建业务员" />
             <el-table-column prop="orderSupervisor" label="审核" />
@@ -400,7 +430,7 @@
         @close="dialogStore.closeCustomerBatchDialog()"
         @submit="submitAddCustomerBatchForm"
     />
-    <ReUploadImageDialog :image-url="imageUrl" @file-change="onFileChange" @close="dialogStore.closeReUploadImageDialog()" @upload="uploadCroppedImage" />
+    <ReUploadImageDialog ref="reUploadImageDialog" :image-url="imageUrl" @file-change="onFileChange" @close="dialogStore.closeReUploadImageDialog()" @upload="uploadCroppedImage" />
     <CustomerBatchTemplateDialog
         :batch-template-display-data="batchTemplateDisplayData"
         :attr-mapping="attrMapping"
@@ -438,8 +468,6 @@ import CustomerBatchTemplateSaveDialog from './orderDialogs/CustomerBatchTemplat
 
 export default {
     components: {
-        Cropper,
-        AddShoeDialog,
         AddShoeTypeDialog,
         AddBatchInfoDialog,
         TemplateSelectDialog,
@@ -622,7 +650,7 @@ export default {
         },
         computeTotal(row) {
             console.log(row)
-        },
+        }
     },
     mounted() {
         this.$setAxiosToken()
@@ -1437,32 +1465,51 @@ export default {
             reader.readAsDataURL(file)
         },
         async uploadCroppedImage() {
-            const result = this.$refs.cropper.getResult()
+            const dialogRef = this.$refs.reUploadImageDialog
+            if (!dialogRef || typeof dialogRef.getResult !== 'function') {
+                ElMessage.error('裁剪组件未就绪，请稍后重试')
+                return
+            }
+
+            const result = dialogRef.getResult()
+            if (!result || !result.canvas) {
+                ElMessage.error('未获取到裁剪结果')
+                return
+            }
+
             const canvas = result.canvas
-            if (!canvas) return
 
-            await canvas.toBlob(async (blob) => {
-                const formData = new FormData()
-                formData.append('file', blob, 'cropped.jpg')
-                formData.append('shoeRid', this.currentShoeImageId)
-                formData.append('shoeColorId', this.currentShoeColorId)
-                formData.append('shoeColorName', this.currentShoeColor)
+            await new Promise((resolve, reject) => {
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        reject(new Error('生成图片失败'))
+                        return
+                    }
 
-                await axios
-                    .post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData)
-                    .then(() => {
+                    const formData = new FormData()
+                    formData.append('file', blob, 'cropped.jpg')
+                    formData.append('shoeRid', this.currentShoeImageId)
+                    formData.append('shoeColorId', this.currentShoeColorId)
+                    formData.append('shoeColorName', this.currentShoeColor)
+
+                    try {
+                        await axios.post(`${this.$apiBaseUrl}/shoemanage/uploadshoeimage`, formData)
                         this.$message.success('上传成功')
-                        this.dialogVisible = false
-                        this.imageUrl = null
-                        this.refreshRowImage(this.currentShoeImageId, this.currentShoeColorId)
 
-                        // ✅ Update only the image URL of the edited row
-                    })
-                    .catch(() => {
+                        this.dialogStore.closeReUploadImageDialog()
+                        this.imageUrl = null
+
+                        this.refreshRowImage(this.currentShoeImageId, this.currentShoeColorId)
+                        resolve()
+                    } catch (e) {
+                        console.error(e)
                         this.$message.error('上传失败')
-                    })
-            }, 'image/jpeg')
+                        reject(e)
+                    }
+                }, 'image/jpeg')
+            })
         },
+
         async refreshRowImage(shoeId, shoeTypeId) {
             console.log(shoeId, shoeTypeId)
             const shoe = this.shoeTableData.find((s) => s.shoeRid === shoeId)
@@ -1625,7 +1672,7 @@ export default {
         },
         orderRowDbClick(row) {
             this.openOrderDetail(row.orderDbId)
-        },
+        }
     },
     watch: {
         async 'dialogStore.orderCreationInfoVis'(newValue) {
