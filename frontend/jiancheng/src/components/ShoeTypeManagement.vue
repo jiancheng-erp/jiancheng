@@ -136,7 +136,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple>
+                <el-select v-model="shoeForm.colorId" placeholder="请选择" multiple filterable>
                     <el-option v-for="item in colorOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
             </el-form-item>
@@ -175,7 +175,7 @@
                 <el-input v-model="shoeForm.shoeDesigner" :disabled="this.userRole == 21 ? true : false"></el-input>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="shoeForm.shoeTypeColors" placeholder="请选择" multiple>
+                <el-select v-model="shoeForm.shoeTypeColors" placeholder="请选择" multiple filterable>
                     <el-option v-for="item in colorOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
             </el-form-item>
@@ -264,7 +264,7 @@ export default {
                 shoeRid: '',
                 shoeDesigner: '',
                 shoeAdjuster: '',
-                colorId: '',
+                colorId: [],
                 shoeDepartmentId: ''
             },
             colorForm: {
