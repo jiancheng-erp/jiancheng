@@ -16,7 +16,7 @@
                 </el-select>
             </el-form-item>
             <el-form-item label="选择颜色">
-                <el-select v-model="dialogStore.shoeForm.colorId" placeholder="请选择" multiple>
+                <el-select v-model="dialogStore.shoeForm.colorId" placeholder="请选择" multiple filterable>
                     <el-option v-for="item in colorOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
             </el-form-item>

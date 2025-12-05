@@ -468,6 +468,7 @@ import CustomerBatchTemplateSaveDialog from './orderDialogs/CustomerBatchTemplat
 
 export default {
     components: {
+        AddShoeDialog,
         AddShoeTypeDialog,
         AddBatchInfoDialog,
         TemplateSelectDialog,
