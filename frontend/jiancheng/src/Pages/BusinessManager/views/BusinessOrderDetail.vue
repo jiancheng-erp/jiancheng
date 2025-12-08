@@ -132,8 +132,19 @@
                                     </el-table-column>
                                     <el-table-column label="金额单位">
                                         <template #default="scope">
-                                            <el-input size="small" controls-position="right" @change="updateCurrencyUnit(scope.row)" v-model="this.orderCurrencyUnit" :disabled="editOrderInfoDisabled">
-                                            </el-input>
+                                            <el-select
+                                                size="small"
+                                                v-model="this.orderCurrencyUnit"
+                                                @change="updateCurrencyUnit(scope.row)"
+                                                :disabled="editOrderInfoDisabled"
+                                                placeholder="选择"
+                                            >
+                                                <el-option label="RMB" value="RMB"></el-option>
+                                                <el-option label="USD" value="USD"></el-option>
+                                                <el-option label="EUR" value="EUR"></el-option>
+                                                <el-option label="GBP" value="GBP"></el-option>
+                                                <el-option label="SGD" value="SGD"></el-option>
+                                            </el-select>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="shoeTypeBatchData.totalPrice" label="总金额" />

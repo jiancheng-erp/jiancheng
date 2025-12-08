@@ -139,7 +139,7 @@
 
     <!-- ========== 业务：填写 / 编辑 出库申请（配码 + 鞋码比例，多订单） ========== -->
     <el-dialog :title="businessForm.applyId ? '编辑出库申请（配码 + 鞋码比例）' : '业务填写出库申请（配码 + 鞋码比例）'" v-model="isBusinessDialogVisible" width="95%">
-        <el-form :model="businessForm" label-width="60px" class="mb-2">
+        <el-form :model="businessForm" label-width="120px" class="mb-2">
             <el-form-item label="预计出库时间">
                 <el-date-picker v-model="businessForm.expectedOutboundTime" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择预计出库时间" />
             </el-form-item>
