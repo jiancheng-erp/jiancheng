@@ -135,7 +135,7 @@
     </el-row>
 
     <el-dialog title="创建订单鞋型填写" v-model="dialogStore.orderCreationInfoVis" width="100%" fullscreen :close-on-click-modal="false">
-        <el-form :model="newOrderForm" label-width="120px" :inline="false" size="default">
+        <el-form ref="orderCreationForm" :model="newOrderForm" label-width="120px" :inline="false" size="default">
             <el-form-item
                 label="请输入订单号"
                 prop="orderRId"
@@ -143,7 +143,11 @@
                     {
                         required: true,
                         message: '订单号不能为空',
-                        trigger: ['blur']
+                        trigger: ['blur', 'change']
+                    },
+                    {
+                        validator: validateOrderRid,
+                        trigger: ['blur', 'change']
                     }
                 ]"
             >
@@ -548,6 +552,7 @@ export default {
                 status: '',
                 salesman: ''
             },
+            orderRidDuplicated: false,
             newOrderForm: {
                 orderRId: '',
                 orderCid: '',
@@ -753,6 +758,7 @@ export default {
             this.dialogStore.closeTemplateDialog()
         },
         openCreateOrderDialog() {
+            this.orderRidDuplicated = false
             this.newOrderForm.orderStartDate = this.formatDateToYYYYMMDD(new Date())
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
@@ -892,9 +898,20 @@ export default {
             this.dialogStore.closeAddBatchInfoDialog()
             this.$refs.batchInfoDialog.batchTable?.clearSelection()
         },
-        orderCreationSecondStep() {
+        async orderCreationSecondStep() {
             if (this.newOrderForm.orderRId === '') {
                 ElMessage.error('未输入订单号，不允许创建订单')
+                return
+            }
+            const ridValidation = await this.validateOrderRidField()
+            if (!ridValidation.valid) {
+                if (ridValidation.message) {
+                    ElMessage.error(ridValidation.message)
+                }
+                return
+            }
+            if (this.orderRidDuplicated) {
+                ElMessage.error('订单号已存在，不允许创建订单')
                 return
             }
             if (this.newOrderForm.customerName === '') {
@@ -1314,6 +1331,17 @@ export default {
                 ElMessage.error('请添加鞋型配码')
                 return
             }
+            const ridValidation = await this.validateOrderRidField()
+            if (!ridValidation.valid) {
+                if (ridValidation.message) {
+                    ElMessage.error(ridValidation.message)
+                }
+                return
+            }
+            if (this.orderRidDuplicated) {
+                ElMessage.error('订单号已存在，不允许创建订单')
+                return
+            }
 
             ElMessageBox.alert('请检查配码单位数量是否已填写', '', {
                 confirmButtonText: '已填写',
@@ -1357,6 +1385,7 @@ export default {
                                     flag: false,
                                     salesmanId: ''
                                 }
+                                this.orderRidDuplicated = false
                                 this.getAllOrders()
                                 this.openOrderDetail(res.data.newOrderId)
                             } catch (error) {
@@ -1406,20 +1435,47 @@ export default {
                 }
             }
         },
-        async checkOrderRidExists() {
-            const queryRid = this.newOrderForm.orderRId
-            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
-                params: {
-                    pendingRid: queryRid
-                }
-            })
-            const message = response.data.result
-            const exists = response.data.exists
-            if (exists == true) {
-                this.$message.warning(message)
-            } else {
-                this.$message.success(message)
+        async validateOrderRid(rule, value, callback) {
+            if (!value) {
+                this.orderRidDuplicated = false
+                callback()
+                return
             }
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
+                    params: {
+                        pendingRid: value
+                    }
+                })
+                const exists = response.data.exists === true
+                this.orderRidDuplicated = exists
+
+                if (exists) {
+                    callback(new Error(response.data.result || '订单号已存在'))
+                } else {
+                    callback()
+                }
+            } catch (error) {
+                console.error('Error checking order rid:', error)
+                callback(new Error('订单号校验失败，请稍后重试'))
+            }
+        },
+        async validateOrderRidField() {
+            if (!this.$refs.orderCreationForm) {
+                return { valid: false, message: '' }
+            }
+            return new Promise((resolve) => {
+                this.$refs.orderCreationForm.validateField('orderRId', (errorMessage) => {
+                    const message = typeof errorMessage === 'string' ? errorMessage : errorMessage?.message || ''
+                    const noError =
+                        !errorMessage || (Array.isArray(errorMessage) && errorMessage.length === 0) || errorMessage === true
+                    resolve({ valid: noError, message })
+                })
+            })
+        },
+        async checkOrderRidExists() {
+            const result = await this.validateOrderRidField()
+            return result.valid
         },
         async handleOrderStatusChange(value) {
             let response
