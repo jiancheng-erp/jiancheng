@@ -2043,4 +2043,78 @@ class WarehouseMissingPurchaseRecordItem(db.Model):
     size_purchase_amount_arr = db.Column(db.JSON)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+    
+class ShoeOutboundApply(db.Model):
+    __tablename__ = "shoe_outbound_apply"
+
+    apply_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    apply_rid = db.Column(db.String(40), nullable=False, unique=True)
+
+    order_id = db.Column(db.BigInteger, nullable=False)
+
+    business_staff_id = db.Column(db.Integer, nullable=False)
+    gm_staff_id       = db.Column(db.Integer)
+    warehouse_staff_id = db.Column(db.Integer)
+
+    # 0 草稿（业务编辑中）
+    # 1 已提交，待总经理审核
+    # 2 总经理驳回
+    # 3 总经理通过，待仓库出库
+    # 4 仓库已完成出库
+    # 5 已作废/取消
+    status = db.Column(db.SmallInteger, nullable=False, default=0)
+
+    remark = db.Column(db.String(200))
+    expected_outbound_datetime = db.Column(db.DateTime)   # 业务填写
+    actual_outbound_datetime = db.Column(db.DateTime)     # 仓库执行时写入
+
+    # 可选：链接到真正的出库记录（执行后写）
+    outbound_record_id = db.Column(db.BigInteger)
+
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+    
+class ShoeOutboundApplyDetail(db.Model):
+    __tablename__ = "shoe_outbound_apply_detail"
+
+    apply_detail_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    apply_id = db.Column(db.BigInteger, nullable=False)
+
+    # 对应具体库存：某订单、某颜色的成品仓记录
+    finished_shoe_storage_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+    )
+
+    # 冗余存一下结构，方便查询
+    order_shoe_type_id = db.Column(
+        db.BigInteger,
+        nullable=False,
+    )
+
+    # 🔴 关键：配码批次
+    order_shoe_batch_info_id = db.Column(
+        db.BigInteger,
+        nullable=True,
+    )
+
+    packaging_info_id = db.Column(
+        db.BigInteger,
+        nullable=True,
+    )
+
+    # 业务填写：出多少箱
+    carton_count = db.Column(DECIMAL(10, 2), nullable=False, default=0)
+
+    # 每箱多少双（可以从 PackagingInfo / OrderShoeBatchInfo 算出来，也可以业务直接填）
+    pairs_per_carton = db.Column(db.Integer, nullable=False, default=0)
+
+    # 冗余总双数 = carton_count * pairs_per_carton
+    total_pairs = db.Column(db.Integer, nullable=False, default=0)
+
+    remark = db.Column(db.String(200))
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+
 

@@ -47,7 +47,7 @@
                         <span>财务应收明细</span>
                     </el-menu-item>
 
-                    <el-menu-item index="10" @click="handleMenuClick('OutboundProduct', '10')">
+                    <el-menu-item index="10" @click="handleMenuClick('FinishedOutboundAuditGM', '10')">
                         <span>订单出库</span>
                     </el-menu-item>
                     <el-menu-item index="14" @click="handleMenuClick('BusinessAnalysis', '14')">
@@ -98,6 +98,7 @@ import MainBoardPage from '../components/MainBoardPage.vue'
 import FinancialRecievableDetail from '@/Pages/FinancialManager/components/FinancialRecievableDetail.vue'
 import CustomerAnalysis from '../components/CustomerAnalysis/CustomerAnalysis.vue'
 import BusinessAnalysis from '../components/BusinessAnalysis/BusinessAnalysis.vue'
+import FinishedOutboundAuditGM from '../components/FinishedOutboundAudit/FinishedOutboundAuditGM.vue'
 import { useRouter } from 'vue-router'
 import { bus } from '../hooks/bus'
 
@@ -115,7 +116,8 @@ const components = {
     MainBoardPage,
     FinancialRecievableDetail,
     CustomerAnalysis,
-    BusinessAnalysis
+    BusinessAnalysis,
+    FinishedOutboundAuditGM
 }
 let currentComponent = ref('MainBoardPage')
 const currentProps = ref({})

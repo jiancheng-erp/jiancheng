@@ -13,7 +13,6 @@ from models import (
     OrderShoeBatchInfo,
     PackagingInfo,
     ShoeOutboundRecord,
-    ShoeOutboundRecordDetail,
     FinishedShoeStorage,
     OrderShoeType,
     Order,
@@ -21,6 +20,8 @@ from models import (
     Shoe,
     Color,
     ShoeType,
+    ShoeOutboundApply,
+    ShoeOutboundApplyDetail,
 )
 
 
@@ -30,15 +31,14 @@ def generate_finished_outbound_excel(
     outbound_rids=None,
 ):
     """
-    生成成品出库的出货清单 Excel 文件（基于模板），
-    按客户排序，并对相同客户行的【客户】列进行合并。
-
-    :param template_path: 模板文件的绝对路径
-    :param outbound_record_ids: 出库记录主键列表（list[int]）
-    :param outbound_rids: 出库批次号列表（list[str]）
-    :return: (BytesIO 对象, 下载文件名)
-    :raises FileNotFoundError: 模板不存在
-    :raises ValueError: 未找到记录
+    生成成品出库《出货清单》Excel（基于最新模板）：
+    - 列：客户 / 商标 / 预计发货时间 / 实际发货时间 / 型体号 / 颜色 / 工厂型号 / 配码
+           发货数量（双）/ 对/件 / 件数 / 单价 / 发货金额
+    - 按客户排序，并对相同客户的【客户】列做合并
+    - 粒度：一条 ShoeOutboundApplyDetail = Excel 表中一行
+      （同一个 apply_id 下有多条 detail，会全部列出）
+    - 说明：不再依赖出库明细（ShoeOutboundRecordDetail），
+      只用出库记录选择 apply，再按申请明细展开。
     """
     outbound_record_ids = outbound_record_ids or []
     outbound_rids = outbound_rids or []
@@ -49,134 +49,219 @@ def generate_finished_outbound_excel(
     if not outbound_record_ids and not outbound_rids:
         raise ValueError("至少需要提供 outbound_record_ids 或 outbound_rids 之一")
 
-    # ========= 查询数据 =========
-    query = (
-        db.session.query(
-            ShoeOutboundRecord,
-            ShoeOutboundRecordDetail,
-            FinishedShoeStorage,
-            OrderShoeType,
-            OrderShoe,
-            Order,
-            Customer,
-            Shoe,
-            Color,
-        )
-        .join(
-            ShoeOutboundRecordDetail,
-            ShoeOutboundRecordDetail.shoe_outbound_record_id == ShoeOutboundRecord.shoe_outbound_record_id,
-        )
-        .join(
-            FinishedShoeStorage,
-            FinishedShoeStorage.finished_shoe_id == ShoeOutboundRecordDetail.finished_shoe_storage_id,
-        )
-        .join(
-            OrderShoeType,
-            OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id,
-        )
-        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
-        # ⚠️ 这里原来是 Order.order_id == OrderShoeType.order_shoe_id，应该是 order_id == OrderShoe.order_id
-        .join(Order, Order.order_id == OrderShoe.order_id)
-        .join(Customer, Customer.customer_id == Order.customer_id)
-        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
-        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
-        .join(Color, Color.color_id == ShoeType.color_id)
-    )
+    # ========= 先筛出需要的出库记录 =========
+    q_record = db.session.query(ShoeOutboundRecord)
 
     if outbound_record_ids:
-        query = query.filter(ShoeOutboundRecord.shoe_outbound_record_id.in_(outbound_record_ids))
+        q_record = q_record.filter(
+            ShoeOutboundRecord.shoe_outbound_record_id.in_(outbound_record_ids)
+        )
 
     if outbound_rids:
-        query = query.filter(ShoeOutboundRecord.shoe_outbound_rid.in_(outbound_rids))
+        q_record = q_record.filter(
+            ShoeOutboundRecord.shoe_outbound_rid.in_(outbound_rids)
+        )
+
+    records = q_record.all()
+    if not records:
+        raise ValueError("未找到对应的出库记录")
+
+    # 拿到涉及到的 apply_id 列表（排除为 None 的）
+    apply_ids = {r.apply_id for r in records if r.apply_id}
+    if not apply_ids:
+        raise ValueError("这些出库记录没有关联任何申请单（apply_id 为空）")
+
+    # ========= 按申请明细为粒度查询 =========
+    query = (
+        db.session.query(
+            ShoeOutboundRecord,      # 0 出库头，用于拿出库时间
+            ShoeOutboundApply,       # 1 申请头
+            ShoeOutboundApplyDetail, # 2 申请明细（一行）
+            FinishedShoeStorage,     # 3 成品仓
+            OrderShoeType,           # 4 订单鞋型
+            OrderShoe,               # 5 订单鞋款
+            Order,                   # 6 订单
+            Customer,                # 7 客户
+            Shoe,                    # 8 鞋（工厂型号）
+            ShoeType,                # 9 鞋型（含 color_id）
+            Color,                   # 10 颜色
+            OrderShoeBatchInfo,      # 11 配码
+            PackagingInfo,           # 12 包装方案
+        )
+        # 从出库头开始，确保数据范围受 outbound_record_ids / rids 控制
+        .join(
+            ShoeOutboundApply,
+            ShoeOutboundApply.apply_id == ShoeOutboundRecord.apply_id,
+        )
+        .join(
+            ShoeOutboundApplyDetail,
+            ShoeOutboundApplyDetail.apply_id == ShoeOutboundApply.apply_id,
+        )
+        .outerjoin(
+            FinishedShoeStorage,
+            FinishedShoeStorage.finished_shoe_id
+            == ShoeOutboundApplyDetail.finished_shoe_storage_id,
+        )
+        .outerjoin(
+            OrderShoeType,
+            OrderShoeType.order_shoe_type_id
+            == ShoeOutboundApplyDetail.order_shoe_type_id,
+        )
+        .outerjoin(
+            OrderShoe,
+            OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id,
+        )
+        .outerjoin(
+            Order,
+            Order.order_id == OrderShoe.order_id,
+        )
+        .outerjoin(
+            Customer,
+            Customer.customer_id == Order.customer_id,
+        )
+        .outerjoin(
+            ShoeType,
+            ShoeType.shoe_type_id == OrderShoeType.shoe_type_id,
+        )
+        .outerjoin(
+            Shoe,
+            Shoe.shoe_id == ShoeType.shoe_id,
+        )
+        .outerjoin(
+            Color,
+            Color.color_id == ShoeType.color_id,
+        )
+        .outerjoin(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_batch_info_id
+            == ShoeOutboundApplyDetail.order_shoe_batch_info_id,
+        )
+        .outerjoin(
+            PackagingInfo,
+            PackagingInfo.packaging_info_id == ShoeOutboundApplyDetail.packaging_info_id,
+        )
+        .filter(ShoeOutboundApply.apply_id.in_(apply_ids))
+    )
+
+    # 再把 record 过滤条件带进来，避免一个 apply 被多次导出（理论上 1:1，这里保险起见）
+    if outbound_record_ids:
+        query = query.filter(
+            ShoeOutboundRecord.shoe_outbound_record_id.in_(outbound_record_ids)
+        )
+    if outbound_rids:
+        query = query.filter(
+            ShoeOutboundRecord.shoe_outbound_rid.in_(outbound_rids)
+        )
 
     rows = query.all()
     if not rows:
-        raise ValueError("未找到对应的出库记录")
+        raise ValueError("未找到对应的申请明细记录")
 
-    # ========= 先组装成“干净”的记录列表，方便排序 =========
+    # ========= 整理为“干净记录”列表 =========
     record_list = []
+
     for (
         outbound,      # ShoeOutboundRecord
-        detail,        # ShoeOutboundRecordDetail
-        finished,      # FinishedShoeStorage
-        ost,           # OrderShoeType
-        oss,           # OrderShoe
-        order,         # Order
-        customer,      # Customer
-        shoe,          # Shoe
-        color,         # Color
+        apply_obj,     # ShoeOutboundApply
+        apply_detail,  # ShoeOutboundApplyDetail
+        finished,      # FinishedShoeStorage | None
+        ost,           # OrderShoeType | None
+        oss,           # OrderShoe | None
+        order,         # Order | None
+        customer,      # Customer | None
+        shoe,          # Shoe | None
+        shoe_type,     # ShoeType | None
+        color,         # Color | None
+        batch_info,    # OrderShoeBatchInfo | None
+        pkg,           # PackagingInfo | None
     ) in rows:
+        # ======== 客户 & 商标 ========
+        customer_name = getattr(customer, "customer_name", "") or ""
+        customer_brand = getattr(customer, "customer_brand", "") or ""
 
-        # 客户
-        customer_name = getattr(customer, "customer_brand", None) or getattr(customer, "customer_name", "")
+        # ======== 预计 / 实际发货时间 ========
+        expected_dt = None
+        if apply_obj and apply_obj.expected_outbound_datetime:
+            expected_dt = apply_obj.expected_outbound_datetime
 
-        # 发货时间（出库时间）
-        if outbound.outbound_datetime:
-            ship_date = outbound.outbound_datetime.strftime("%Y-%m-%d")
-        else:
-            ship_date = ""
+        # 实际发货时间：优先用申请里的 actual_outbound_datetime，没有就用出库记录上的时间
+        actual_dt = None
+        if apply_obj and apply_obj.actual_outbound_datetime:
+            actual_dt = apply_obj.actual_outbound_datetime
+        elif outbound and outbound.outbound_datetime:
+            actual_dt = outbound.outbound_datetime
 
-        # 型体号（通常是客户型号）
-        style_no_customer = getattr(oss, "customer_product_name", None) or getattr(oss, "customer_shoe_type", "")
+        expected_date_str = expected_dt.strftime("%Y-%m-%d") if expected_dt else ""
+        actual_date_str = actual_dt.strftime("%Y-%m-%d") if actual_dt else ""
 
-        # 颜色
-        color_name = getattr(color, "color_name", None) or getattr(ost, "color_name", "")
-
-        # 工厂型号
-        factory_style_no = getattr(shoe, "shoe_rid", None) or getattr(ost, "shoe_rid", "")
-
-        # 发货数量（双）
-        if detail.outbound_amount:
-            qty_pairs = detail.outbound_amount
-        else:
-            qty_pairs = (
-                (detail.size_34_amount or 0) +
-                (detail.size_35_amount or 0) +
-                (detail.size_36_amount or 0) +
-                (detail.size_37_amount or 0) +
-                (detail.size_38_amount or 0) +
-                (detail.size_39_amount or 0) +
-                (detail.size_40_amount or 0) +
-                (detail.size_41_amount or 0) +
-                (detail.size_42_amount or 0) +
-                (detail.size_43_amount or 0) +
-                (detail.size_44_amount or 0) +
-                (detail.size_45_amount or 0) +
-                (detail.size_46_amount or 0)
+        # ======== 型体号（客户型号） & 颜色 & 工厂型号 & 配码 ========
+        style_no_customer = ""
+        if oss:
+            style_no_customer = (
+                getattr(oss, "customer_product_name", None)
+                or getattr(oss, "customer_shoe_type", "")
+                or ""
             )
+        color_name = getattr(color, "color_name", "") or ""
+        factory_style_no = getattr(shoe, "shoe_rid", "") or ""
+        batch_name = getattr(batch_info, "name", "") if batch_info else ""
 
-        # 单价
-        unit_price: Decimal = ost.unit_price or Decimal("0.000")
+        # ======== 对/件 & 件数（箱数可为小数） ========
+        pairs_per_carton = None
+        carton_count = None
+        if apply_detail:
+            if apply_detail.pairs_per_carton is not None:
+                pairs_per_carton = int(apply_detail.pairs_per_carton or 0)
+            if apply_detail.carton_count is not None:
+                carton_count = float(apply_detail.carton_count)
 
-        # 发货金额 = 数量 * 单价
+        # ======== 发货数量（双） ========
+        # 业务规则：最后双数必须为整数
+        # 优先用申请明细里的 total_pairs，其次 carton_count * pairs_per_carton
+        qty_pairs = 0
+        if apply_detail and apply_detail.total_pairs:
+            qty_pairs = int(apply_detail.total_pairs or 0)
+        elif pairs_per_carton is not None and carton_count is not None:
+            qty_pairs = int(round(pairs_per_carton * carton_count))
+
+        # ======== 单价 & 发货金额 ========
+        unit_price = Decimal("0.000")
+        if ost and ost.unit_price is not None:
+            unit_price = ost.unit_price
         amount: Decimal = (Decimal(qty_pairs) * unit_price).quantize(Decimal("0.01"))
 
-        # 工厂名：视业务调整
+        # 工厂名（如果模板有这一列，可以使用；目前保留字段）
         factory_name = "浙江健诚鞋业集团有限公司"
 
         record_list.append(
             {
                 "customer_name": customer_name,
-                "ship_date": ship_date,
+                "customer_brand": customer_brand,
+                "expected_date": expected_date_str,
+                "actual_date": actual_date_str,
                 "style_no_customer": style_no_customer,
                 "color_name": color_name,
                 "factory_style_no": factory_style_no,
+                "batch_name": batch_name,
                 "qty_pairs": qty_pairs,
+                "pairs_per_carton": pairs_per_carton,
+                "carton_count": carton_count,
                 "unit_price": unit_price,
                 "amount": amount,
                 "factory_name": factory_name,
             }
         )
 
-    # ========= 对相同客户排序（必要时可加多字段） =========
-    # 按：客户 -> 发货时间 -> 工厂型号 -> 颜色 -> 型体号 排序
+    # ========= 排序：客户 -> 商标 -> 实际发货时间 -> 工厂型号 -> 颜色 -> 型体号 -> 配码 =========
     record_list.sort(
         key=lambda r: (
             r["customer_name"] or "",
-            r["ship_date"] or "",
+            r["customer_brand"] or "",
+            r["actual_date"] or "",
             r["factory_style_no"] or "",
             r["color_name"] or "",
             r["style_no_customer"] or "",
+            r["batch_name"] or "",
         )
     )
 
@@ -184,77 +269,106 @@ def generate_finished_outbound_excel(
     wb = load_workbook(template_path)
     ws = wb["出货单"]  # 模板中的 sheet 名
 
-    # 表头在第 2 行，数据从第 3 行开始
+    # 模板第 2 行是表头，数据从第 3 行开始
     start_row = 3
 
-    # 1）先计算每个客户的起止行（在 sheet 中的行号）
+    # 1）计算每个客户在 sheet 中的起止行（用于合并“客户”列）
     groups = []  # [(customer_name, start_row, end_row), ...]
     prev_customer = None
-    group_start = None
+    group_start_idx = None
 
     for idx, rec in enumerate(record_list):
-        customer_name = rec["customer_name"]
-        if customer_name != prev_customer:
-            # 关闭上一组
-            if prev_customer is not None:
-                groups.append((prev_customer,
-                               start_row + group_start,
-                               start_row + idx - 1))
-            # 新开一组
-            prev_customer = customer_name
-            group_start = idx
+        cname = rec["customer_name"]
+        if cname != prev_customer:
+            if prev_customer is not None and group_start_idx is not None:
+                groups.append(
+                    (
+                        prev_customer,
+                        start_row + group_start_idx,
+                        start_row + idx - 1,
+                    )
+                )
+            prev_customer = cname
+            group_start_idx = idx
 
-    # 别忘了最后一组
-    if prev_customer is not None and group_start is not None:
-        groups.append((prev_customer,
-                       start_row + group_start,
-                       start_row + len(record_list) - 1))
+    if prev_customer is not None and group_start_idx is not None:
+        groups.append(
+            (
+                prev_customer,
+                start_row + group_start_idx,
+                start_row + len(record_list) - 1,
+            )
+        )
 
-    # 2）写入数据：只在组首行写客户名，其它行不写客户列
+    # 2）写入数据（列号基于最新模板）：
+    #   A: 客户
+    #   B: 商标
+    #   C: 预计发货时间
+    #   D: 实际发货时间
+    #   E: 型体号
+    #   F: 颜色
+    #   G: 工厂型号
+    #   H: 配码
+    #   I: 发货数量（双）
+    #   J: 对/件
+    #   K: 件数
+    #   L: 单价
+    #   M: 发货金额
     for offset, rec in enumerate(record_list):
         row_idx = start_row + offset
 
-        customer_name = rec["customer_name"]
-        ship_date = rec["ship_date"]
+        cname = rec["customer_name"]
+        brand = rec["customer_brand"]
+        expected_date = rec["expected_date"]
+        actual_date = rec["actual_date"]
         style_no_customer = rec["style_no_customer"]
         color_name = rec["color_name"]
         factory_style_no = rec["factory_style_no"]
+        batch_name = rec["batch_name"]
         qty_pairs = rec["qty_pairs"]
+        pairs_per_carton = rec["pairs_per_carton"]
+        carton_count = rec["carton_count"]
         unit_price = rec["unit_price"]
         amount = rec["amount"]
-        factory_name = rec["factory_name"]
 
-        # 判断当前行是不是该客户分组的起始行
+        # 判断当前行是否是该客户分组起始行
         is_group_start = False
-        for cname, g_start, g_end in groups:
-            if cname == customer_name and g_start == row_idx:
+        for gcname, g_start, g_end in groups:
+            if gcname == cname and g_start == row_idx:
                 is_group_start = True
                 break
 
-        # 只有组首行写客户名
         if is_group_start:
-            ws.cell(row=row_idx, column=1, value=customer_name)
+            ws.cell(row=row_idx, column=1, value=cname)
+        ws.cell(row=row_idx, column=2, value=brand)
 
-        ws.cell(row=row_idx, column=2, value=ship_date)          # 发货时间
-        ws.cell(row=row_idx, column=3, value=style_no_customer)  # 型体号
-        ws.cell(row=row_idx, column=4, value=color_name)         # 颜色
-        ws.cell(row=row_idx, column=5, value=factory_style_no)   # 工厂型号
-        ws.cell(row=row_idx, column=6, value=qty_pairs)          # 发货数量（双）
-        ws.cell(row=row_idx, column=7, value=float(unit_price))  # 单价
-        ws.cell(row=row_idx, column=8, value=float(amount))      # 发货金额
-        ws.cell(row=row_idx, column=9, value=factory_name)       # 工厂
+        ws.cell(row=row_idx, column=3, value=expected_date)
+        ws.cell(row=row_idx, column=4, value=actual_date)
+        ws.cell(row=row_idx, column=5, value=style_no_customer)
+        ws.cell(row=row_idx, column=6, value=color_name)
+        ws.cell(row=row_idx, column=7, value=factory_style_no)
+        ws.cell(row=row_idx, column=8, value=batch_name)
+        ws.cell(row=row_idx, column=9, value=qty_pairs)
 
-    # 3）统一合并客户列（第 1 列）
-    from openpyxl.utils import get_column_letter
-    col = 1  # 客户列
+        if pairs_per_carton is not None:
+            ws.cell(row=row_idx, column=10, value=int(pairs_per_carton))
+        if carton_count is not None:
+            ws.cell(row=row_idx, column=11, value=float(carton_count))
+
+        ws.cell(row=row_idx, column=12, value=float(unit_price))
+        ws.cell(row=row_idx, column=13, value=float(amount))
+
+    # 3）统一合并“客户”列（第 1 列）
     for cname, g_start, g_end in groups:
         if g_start < g_end:
             ws.merge_cells(
-                start_row=g_start, start_column=col,
-                end_row=g_end, end_column=col
+                start_row=g_start,
+                start_column=1,
+                end_row=g_end,
+                end_column=1,
             )
 
-    # ========= 保存到内存并返回 =========
+    # ========= 输出到内存 =========
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
