@@ -63,6 +63,7 @@ import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionShar
 import InOutboundRecords from '../components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import OutboundProduct from '../components/OutboundProduct.vue'
+import OutboundFinishedNew from '../components/OutboundFinishedNew.vue'
 export default {
     components: {
         AllHeader,
@@ -71,7 +72,8 @@ export default {
         OrderProgress,
         InOutboundRecords,
         PersonalInfo,
-        OutboundProduct
+        OutboundProduct,
+        OutboundFinishedNew
     },
     data() {
         return {
@@ -108,7 +110,7 @@ export default {
                     this.currentComponent = 'PersonalInfo'
                     break
                 case 7:
-                    this.currentComponent = 'OutboundProduct'
+                    this.currentComponent = 'OutboundFinishedNew'
                     break
             }
         }
