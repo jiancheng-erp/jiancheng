@@ -17,17 +17,26 @@
             <!-- 填充剩余高度的卡片 -->
             <el-card shadow="never" class="card-fill">
                 <template #header>
-                    有材料可出库的订单（{{ orderTotal }}）
-                    <template v-if="isRoleRestricted">
-                        <el-tag class="ml-2" size="small" type="info">
-                            {{ allowedTypeNames.join(' / ') }}
-                        </el-tag>
-                    </template>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            共 {{ orderTotal }} 条订单
+                            <template v-if="isRoleRestricted">
+                                <el-tag class="ml-2" size="small" type="info">
+                                    {{ allowedTypeNames.join(' / ') }}
+                                </el-tag>
+                            </template>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm opacity-80">已选 {{ selectedOrderRIds.length }} 条</span>
+                            <el-button type="primary" size="small" :disabled="selectedOrderRIds.length === 0" @click="enterOutboundWithSelection">进入出库</el-button>
+                        </div>
+                    </div>
                 </template>
 
                 <div class="panel-grid">
                     <!-- 表格占满第一行 -->
-                    <el-table :data="orderRows" border stripe style="height: 55vh;">
+                    <el-table :data="orderRows" border stripe style="height: 55vh;" :row-key="(row) => row.orderRId" @selection-change="onOrderSelectionChange">
+                        <el-table-column type="selection" width="44" />
                         <el-table-column prop="orderRId" label="订单号" />
                         <el-table-column prop="shoeRId" label="工厂型号" />
                         <el-table-column prop="customerName" label="客户" show-overflow-tooltip />
@@ -36,7 +45,7 @@
                         <el-table-column prop="period" label="订单周期" show-overflow-tooltip />
                         <el-table-column label="操作" width="120" fixed="right">
                             <template #default="{ row }">
-                                <el-button type="primary" link @click="selectOrder(row.orderRId)">选择</el-button>
+                                <el-button type="primary" link @click="selectOrder(row)">进入</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -65,9 +74,14 @@
         <template v-else>
             <el-card shadow="never" class="mb-3">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <span class="text-sm opacity-80">当前订单：</span>
-                        <el-tag type="success">{{ query.orderRId }}</el-tag>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm opacity-80">已选订单：</span>
+                        <template v-if="query.orderRIds.length">
+                            <el-tag v-for="rid in query.orderRIds" :key="rid" type="success" closable @close="removeSelectedOrder(rid)">{{ rid }}</el-tag>
+                        </template>
+                        <template v-else>
+                            <el-tag type="info">未选择</el-tag>
+                        </template>
                     </div>
                     <div class="flex items-center gap-3">
                         <el-button @click="backToOrderSelection">返回订单选择</el-button>
@@ -202,6 +216,7 @@
                 <el-table :data="records" border stripe height="100%">
                     <el-table-column prop="timestamp" label="时间" width="180" />
                     <el-table-column prop="outboundRId" label="出库单号" width="200" />
+                    <el-table-column prop="orderRId" label="订单号" width="160" />
                     <el-table-column prop="picker" label="领料人" width="120" />
                     <el-table-column prop="outboundType" label="类型" width="120" />
                     <el-table-column prop="outboundAmount" label="数量(明细)" width="120" />
@@ -217,7 +232,13 @@
     </div>
     <el-dialog v-model="sizeEditorVisible" title="尺码分配" width="720px" @open="onEditorOpen">
         <div class="mb-2 text-sm opacity-80">
-            订单：<el-tag type="success" size="small">{{ query.orderRId }}</el-tag>
+            订单：
+            <template v-if="query.orderRIds.length">
+                <el-tag v-for="rid in query.orderRIds" :key="rid" type="success" size="small" class="mr-1">{{ rid }}</el-tag>
+            </template>
+            <template v-else>
+                <el-tag type="info" size="small">未选择</el-tag>
+            </template>
         </div>
 
         <el-scrollbar height="340px">
@@ -384,6 +405,15 @@ const recordData = ref([])
 const orderLoading = ref(false)
 const orderQuery = reactive({ keyword: '', page: 1, pageSize: 10 })
 const orderRows = ref([])
+const selectedOrders = ref<any[]>([])
+const selectedOrderRIds = computed(() => {
+    const set = new Set<string>()
+    selectedOrders.value.forEach((o: any) => {
+        const rid = o?.orderRId
+        if (rid) set.add(String(rid))
+    })
+    return Array.from(set)
+})
 const orderTotal = ref(0)
 const departments = ref<Array<{ value: number; label: string }>>([])
 const editCache = reactive(new Map<string, { total: number; amounts: number[]; remark: string }>())
@@ -406,7 +436,7 @@ type DisplayRow = {
     materialSpecification: string
     materialColor: string
     actualInboundUnit: string
-    orderRId: string
+    orderRId: string | null
     shoeRId?: string
     unitPrice?: number | string
 }
@@ -445,21 +475,21 @@ const isPreviewConfirm = ref(false)
 function buildPreviewItems() {
     const list: any[] = []
     selectedIdSet.value.forEach((id) => {
-        const r = rows.value.find((x) => String(x.materialStorageId) === id) // 还在当前页的话也可用
-        const d = displayCache.get(id) // 关键：跨页展示靠它
+        const r = rows.value.find((x) => String(x.materialStorageId) === id)
+        const d = displayCache.get(id)
         const c = editCache.get(id)
         const outboundQuantity = Number((c?.total ?? r?._outboundQuantity) || 0)
         const remark = (c?.remark ?? r?._remark ?? '').toString()
         const unitPriceNum = Number(d?.unitPrice ?? r?.unitPrice ?? 0)
         const itemTotal = unitPriceNum * outboundQuantity
         list.push({
-            materialName: d?.materialName ?? r?.materialName ?? '—',
-            materialModel: d?.materialModel ?? r?.materialModel ?? '—',
-            materialSpecification: d?.materialSpecification ?? r?.materialSpecification ?? '—',
-            materialColor: d?.materialColor ?? r?.materialColor ?? '—',
-            actualInboundUnit: d?.actualInboundUnit ?? r?.actualInboundUnit ?? '—',
-            orderRId: d?.orderRId ?? query.orderRId,
-            shoeRId: d?.shoeRId ?? r?.shoeRId ?? '—',
+            materialName: d?.materialName ?? r?.materialName ?? '',
+            materialModel: d?.materialModel ?? r?.materialModel ?? '',
+            materialSpecification: d?.materialSpecification ?? r?.materialSpecification ?? '',
+            materialColor: d?.materialColor ?? r?.materialColor ?? '',
+            actualInboundUnit: d?.actualInboundUnit ?? r?.actualInboundUnit ?? '',
+            orderRId: d?.orderRId ?? r?.orderRId ?? query.orderRIds[0] ?? null,
+            shoeRId: d?.shoeRId ?? r?.shoeRId ?? '',
             outboundQuantity,
             unitPrice: Number.isFinite(unitPriceNum) ? unitPriceNum.toFixed(2) : '',
             itemTotalPrice: Number.isFinite(itemTotal) ? itemTotal.toFixed(2) : '0.00',
@@ -469,75 +499,72 @@ function buildPreviewItems() {
     return list
 }
 
-// ===== 新增：打开预览确认（复用现有 dialogVisible）=====
-function openConfirm() {
-    if (!query.orderRId) return ElMessage.warning('缺少订单号')
-    if (selectedIdSet.value.size === 0) return ElMessage.warning('请选择要出库的材料')
-    if (form.departmentId == null) return ElMessage.warning('请选择出库至部门')
-
-    // 用于对话框抬头信息（预览阶段还没有出库单号/时间）
-    currentRow.value = {
-        outboundRId: '（提交后生成）',
-        destination: selectedDepartmentName.value || '—',
-        timestamp: '（提交后生成）',
-        outboundType: '订单出库',
-        picker: form.picker || '—',
-        remark: form.remark || '—',
-        totalPrice: '' // 如果需要也可先留空
-    }
-    recordData.value = buildPreviewItems()
-    isPreviewConfirm.value = true
-    dialogVisible.value = true
-}
-
-// ===== 新增：提交载荷（沿用你现有 submit 构造逻辑）=====
+// ===== 构建提交 payload（跨页记忆）=====
 function buildSubmitPayloadItems() {
     const items: any[] = []
     selectedIdSet.value.forEach((id) => {
         const r = rows.value.find((x) => String(x.materialStorageId) === id)
         const cache = editCache.get(id)
+        const display = displayCache.get(id)
         const total = cache?.total ?? r?._outboundQuantity ?? 0
         const amounts = cache?.amounts ?? r?._amounts ?? []
         const remark = (cache?.remark ?? r?._remark ?? '').toString()
         const payload: any = { materialStorageId: id, outboundQuantity: Number(total || 0), remark }
+        const orderRid = display?.orderRId ?? r?.orderRId ?? query.orderRIds[0] ?? null
+        if (orderRid) payload.orderRId = orderRid
         amounts.forEach((val: number, i: number) => (payload[`amount${i}`] = Number(val || 0)))
         items.push(payload)
     })
     return items
 }
 
-// ===== 新增：在对话框中点“确认提交” =====
+// ===== 打开预览确认（复用 dialogVisible）=====
+function openConfirm() {
+    if (!query.orderRIds.length) return ElMessage.warning('请先选择订单')
+    if (selectedIdSet.value.size === 0) return ElMessage.warning('请选择要出库的材料')
+    if (form.departmentId == null) return ElMessage.warning('请选择出库至部门')
+
+    currentRow.value = {
+        outboundRId: '（提交后生成）',
+        destination: selectedDepartmentName.value || '',
+        timestamp: '（提交后生成）',
+        outboundType: '订单出库',
+        picker: form.picker || '',
+        remark: form.remark || '',
+        totalPrice: ''
+    }
+    recordData.value = buildPreviewItems()
+    isPreviewConfirm.value = true
+    dialogVisible.value = true
+}
+
+// ===== 确认提交 =====
 async function doSubmitInDialog() {
     const items = buildSubmitPayloadItems()
     if (items.length === 0) return ElMessage.warning('请选择要出库的材料')
     for (const it of items) {
         if (!it.outboundQuantity || it.outboundQuantity <= 0) {
-            return ElMessage.error('出库总数必须大于 0')
+            return ElMessage.error('出库数量必须大于 0')
         }
     }
     try {
         submitting.value = true
         const { data } = await axios.post(`${apiBaseUrl}/warehouse/orderoutbound/create`, {
-            orderRId: query.orderRId,
+            orderRIds: query.orderRIds,
+            orderRId: query.orderRIds[0],
             picker: form.picker,
             remark: form.remark,
             items,
             departmentId: form.departmentId,
             destinationDepartmentName: selectedDepartmentName.value
         })
-        // 提交成功后，切换为“已生成出库单”的展示（保留同一个对话框用于打印）
         isPreviewConfirm.value = false
-        // 更新抬头为真实单据信息
         currentRow.value = {
             ...currentRow.value,
             outboundRId: data.outboundRId,
             timestamp: data.outboundTime
         }
-        // 如果你能拿到详情接口（含单价/金额），这里也可再调一次刷新 recordData：
-        // await viewOutboundRecord(data.outboundRecordId)
-
-        ElMessage.success('出库成功，已生成出库单！可直接打印')
-        // 清空全局选择，重新加载列表
+        ElMessage.success('出库成功')
         selectedIdSet.value.clear()
         displayCache.clear()
         selectedItems.value = []
@@ -580,15 +607,43 @@ async function loadOrders() {
     }
 }
 function resetOrderSearch() {
-    orderQuery.keyword = ''
+    orderQuery.keyword = ""
     orderQuery.page = 1
     loadOrders()
 }
-function selectOrder(orderRId: string) {
-    query.orderRId = orderRId
+function onOrderSelectionChange(list: any[]) {
+    selectedOrders.value = list
+}
+function enterOutboundWithSelection() {
+    if (!selectedOrderRIds.value.length) return ElMessage.warning('请选择订单')
+    query.orderRIds = selectedOrderRIds.value.slice()
     query.page = 1
-    mode.value = 'materials'
+    mode.value = "materials"
+    selectedIdSet.value.clear()
+    displayCache.clear()
     reload(false)
+}
+function selectOrder(row: any) {
+    const rid = typeof row === "string" ? row : row?.orderRId
+    if (!rid) return
+    selectedOrders.value = typeof row === "object" ? [row] : []
+    query.orderRIds = [rid]
+    query.page = 1
+    mode.value = "materials"
+    selectedIdSet.value.clear()
+    displayCache.clear()
+    reload(false)
+}
+function removeSelectedOrder(rid: string) {
+    query.orderRIds = query.orderRIds.filter((x) => x !== rid)
+    selectedOrders.value = selectedOrders.value.filter((o: any) => o?.orderRId !== rid)
+    selectedIdSet.value.clear()
+    displayCache.clear()
+    if (!query.orderRIds.length) {
+        backToOrderSelection()
+    } else {
+        reload(false)
+    }
 }
 interface MaterialType {
     id: number
@@ -623,7 +678,7 @@ const loadMaterialTypes = async () => {
     }
 }
 
-const query = reactive({ orderRId: '', materialTypeId: undefined as number | undefined, page: 1, pageSize: 10 })
+const query = reactive({ orderRIds: [] as string[], materialTypeId: undefined as number | undefined, page: 1, pageSize: 10 })
 const rows = ref<any[]>([])
 const originalRows = ref<any[]>([])
 const total = ref(0)
@@ -667,15 +722,16 @@ function resetMaterialsTable() {
 }
 function backToOrderSelection() {
     form.departmentId = undefined
-    query.orderRId = ''
+    query.orderRIds = []
+    selectedOrders.value = []
     rows.value = []
     originalRows.value = []
     total.value = 0
     records.value = []
     selectedItems.value = []
-    form.picker = ''
-    form.remark = ''
-    mode.value = 'order'
+    form.picker = ""
+    form.remark = ""
+    mode.value = "order"
     loadOrders()
     selectedIdSet.value.clear()
     displayCache.clear()
@@ -708,7 +764,12 @@ watch(
 )
 
 async function loadRecords() {
-    const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/records`, { params: { orderRId: query.orderRId, page: 1, pageSize: 50 } })
+    if (!query.orderRIds.length) {
+        records.value = []
+        return
+    }
+    const params = { orderRIds: query.orderRIds.join(","), orderRId: query.orderRIds[0], page: 1, pageSize: 50 }
+    const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/records`, { params })
     records.value = data?.result || []
 }
 // ======= 弹窗状态 =======
@@ -871,7 +932,7 @@ function onSelectionChange(currentPageSelection: any[]) {
     currentPageSelection.forEach((r) => selectedIdSet.value.add(String(r.materialStorageId)))
 }
 async function reload(preserveOriginal = true) {
-    if (!query.orderRId) {
+    if (!query.orderRIds.length) {
         ElMessage.warning('请先选择订单')
         return
     }
@@ -879,12 +940,13 @@ async function reload(preserveOriginal = true) {
     try {
         const { data } = await axios.get(`${apiBaseUrl}/warehouse/orderoutbound/materials`, {
             params: {
-                orderRId: query.orderRId,
+                orderRIds: query.orderRIds.join(","),
+                orderRId: query.orderRIds[0],
                 materialTypeId: query.materialTypeId,
                 includeGeneral: includeGeneral.value,
                 page: query.page,
                 pageSize: query.pageSize,
-                staffId: staffId.value ?? undefined // ← 新增
+                staffId: staffId.value ?? undefined // ? ??
             }
         })
         const processed = (data?.result || []).map(normalizeRow)
@@ -892,23 +954,23 @@ async function reload(preserveOriginal = true) {
         rows.value.forEach((r) => {
             const id = getRowId(r)
             displayCache.set(id, {
-                materialName: r?.materialName ?? '—',
-                materialModel: r?.materialModel ?? '—',
-                materialSpecification: r?.materialSpecification ?? '—',
-                materialColor: r?.materialColor ?? '—',
-                actualInboundUnit: r?.actualInboundUnit ?? '—',
-                orderRId: query.orderRId,
-                shoeRId: r?.shoeRId ?? '—',
+                materialName: r?.materialName ?? "?",
+                materialModel: r?.materialModel ?? "?",
+                materialSpecification: r?.materialSpecification ?? "?",
+                materialColor: r?.materialColor ?? "?",
+                actualInboundUnit: r?.actualInboundUnit ?? "?",
+                orderRId: r?.orderRId ?? null,
+                shoeRId: r?.shoeRId ?? "?",
                 unitPrice: r?.unitPrice
             })
             const c = editCache.get(getRowId(r))
             if (c) {
                 r._outboundQuantity = c.total
-                // 如果有尺码列，回填 amounts
+                // 还原缓存的尺码分配
                 if (Array.isArray(r._amounts) && Array.isArray(c.amounts) && r._amounts.length === c.amounts.length) {
                     r._amounts = c.amounts.slice()
                 }
-                r._remark = c.remark || ''
+                r._remark = c.remark || ""
             }
         })
         total.value = data?.total || 0
@@ -916,7 +978,7 @@ async function reload(preserveOriginal = true) {
         await loadRecords()
     } finally {
         loading.value = false
-        // —— 关键：回勾当前页已选 —— //
+        // 重新勾选已选中的行（跨页记忆）
         await nextTick()
         if (tableRef.value) {
             tableRef.value.clearSelection()
