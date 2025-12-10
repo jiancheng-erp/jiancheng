@@ -1999,6 +1999,7 @@ def get_order_outbound_materials():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("pageSize", type=int, default=10)
     order_rid = (request.args.get("orderRId") or "").strip()
+    order_rids_raw = request.args.get("orderRIds")
     shoe_rid = (request.args.get("shoeRId") or "").strip()
     material_type_id = request.args.get("materialTypeId", type=int)
     include_general = request.args.get("includeGeneral", type=int, default=0)
@@ -2013,11 +2014,32 @@ def get_order_outbound_materials():
         "supplier": request.args.get("supplier", ""),
     }
 
-    # 解析 order / shoe
-    order_id, order_shoe_id = None, None
+    # 解析 order / shoe（支持多订单）
+    order_ids: list[int] = []
+    order_shoe_ids: list[int] = []
+    order_rids: list[str] = []
+
+    if order_rids_raw:
+        order_rids.extend(
+            [rid.strip() for rid in str(order_rids_raw).split(",") if rid and rid.strip()]
+        )
     if order_rid:
-        order, order_shoe = _find_order_shoe(order_rid)  # 你现有工具函数
-        order_id, order_shoe_id = order.order_id, order_shoe.order_shoe_id
+        order_rids.append(order_rid)
+
+    # 去重
+    order_rids = list(dict.fromkeys(order_rids))
+
+    if order_rids:
+        orders = db.session.query(Order).filter(Order.order_rid.in_(order_rids)).all()
+        if not orders:
+            return jsonify({"result": [], "total": 0})
+        order_ids = [o.order_id for o in orders]
+        order_shoe_ids = [
+            os.order_shoe_id
+            for os in db.session.query(OrderShoe)
+            .filter(OrderShoe.order_id.in_(order_ids))
+            .all()
+        ]
     elif shoe_rid:
         # 允许只用 shoe_rid 检索
         pair = (
@@ -2029,7 +2051,7 @@ def get_order_outbound_materials():
         )
         if not pair:
             return jsonify({"message": "无法找到该鞋型"}), 404
-        order_id, order_shoe_id = pair.Order.order_id, pair.OrderShoe.order_shoe_id
+        order_ids, order_shoe_ids = [pair.Order.order_id], [pair.OrderShoe.order_shoe_id]
     else:
         return jsonify({"message": "缺少 orderRId 或 shoeRId"}), 400
 
@@ -2057,10 +2079,11 @@ def get_order_outbound_materials():
         .filter(MaterialStorage.current_amount > 0)
     )
 
-    # 订单/通用库存限定（保留你原逻辑）
+    # 订单/通用库存限定（支持多订单）
+    order_condition = MaterialStorage.order_shoe_id.in_(order_shoe_ids)
     q = q.filter(
         or_(
-            MaterialStorage.order_shoe_id == order_shoe_id,
+            order_condition,
             and_(include_general == 1, MaterialStorage.order_shoe_id.is_(None)),
         )
     )
@@ -2138,23 +2161,38 @@ def get_order_outbound_materials():
 def create_order_outbound():
     data = request.get_json()
     order_rid = (data.get("orderRId") or "").strip()
-    if not order_rid:
-        return jsonify({"message": "缺少订单号 orderRId"}), 400
-    # 校验订单存在
-    _find_order_shoe(order_rid)
+    order_rids_raw = data.get("orderRIds") or []
+    parsed_rids = []
+    if isinstance(order_rids_raw, list):
+        parsed_rids.extend([str(x).strip() for x in order_rids_raw if str(x).strip()])
+    elif isinstance(order_rids_raw, str):
+        parsed_rids.extend([x.strip() for x in order_rids_raw.split(",") if x.strip()])
+    if order_rid:
+        parsed_rids.append(order_rid)
 
-    # 规范化为通用出库入参，outboundType=0（生产出库）
+    parsed_rids = list(dict.fromkeys(parsed_rids))
+    if not parsed_rids:
+        return jsonify({"message": "缺少订单号orderRId"}), 400
+
+    valid_rids = set()
+    for rid in parsed_rids:
+        _find_order_shoe(rid)
+        valid_rids.add(rid)
+
     data["outboundType"] = 0
     data["currentDateTime"] = format_datetime(datetime.now())
 
-    # 给每个 item 自动补齐 orderRId，并进行“按尺码合计=总数”简单校验
     items = data.get("items", [])
     if not items:
-        return jsonify({"message": "至少选择一条出库明细"}), 400
+        return jsonify({"message": "请选择要出库的材料"}), 400
 
+    default_rid = parsed_rids[0]
     for it in items:
-        it.setdefault("orderRId", order_rid)
-        # 合计校验（可选，增强友好性）
+        it.setdefault("orderRId", default_rid)
+        if it.get("orderRId"):
+            rid = str(it.get("orderRId")).strip()
+            if rid and rid not in valid_rids:
+                _find_order_shoe(rid)
         total = Decimal(it.get("outboundQuantity", 0))
         sized_sum = 0
         for i, db_name in enumerate(SHOESIZERANGE):
@@ -2168,22 +2206,29 @@ def create_order_outbound():
                 400,
             )
 
-    # 复用你现有的出库流程
-    rid, ts = _outbound_material_helper(
-        data
-    )  # 会调用 _create_outbound_record / _create_outbound_record_details
+    rid, ts = _outbound_material_helper(data)
     db.session.commit()
     return jsonify({"message": "success", "outboundRId": rid, "outboundTime": ts}), 200
-
 
 @material_storage_bp.route("/warehouse/orderoutbound/records", methods=["GET"])
 def list_order_outbound_records():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("pageSize", type=int, default=10)
     order_rid = (request.args.get("orderRId") or "").strip()
-    if not order_rid:
+    order_rids_raw = request.args.get("orderRIds") or ""
+    order_rids = []
+    if order_rids_raw:
+        order_rids.extend([x.strip() for x in str(order_rids_raw).split(",") if x.strip()])
+    if order_rid:
+        order_rids.append(order_rid)
+    order_rids = list(dict.fromkeys(order_rids))
+    if not order_rids:
         return jsonify({"message": "缺少 orderRId"}), 400
-    order, order_shoe = _find_order_shoe(order_rid)
+
+    orders = db.session.query(Order).filter(Order.order_rid.in_(order_rids)).all()
+    if not orders:
+        return {"result": [], "total": 0}
+    order_ids = [o.order_id for o in orders]
 
     q = (
         db.session.query(OutboundRecord, OutboundRecordDetail)
@@ -2192,7 +2237,7 @@ def list_order_outbound_records():
             OutboundRecord.outbound_record_id
             == OutboundRecordDetail.outbound_record_id,
         )
-        .filter(OutboundRecordDetail.order_id == order.order_id, OutboundRecord.display == 1)
+        .filter(OutboundRecordDetail.order_id.in_(order_ids), OutboundRecord.display == 1)
         .order_by(desc(OutboundRecord.outbound_datetime))
     )
     total = q.count()
