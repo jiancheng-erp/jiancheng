@@ -63,6 +63,7 @@ from warehouse.material_storage_snapshot import material_storage_snapshot_bp
 from production_dashboard.dashboard import production_dashboard_bp
 from accounting.currency_exchange_management import currency_exchange_bp
 from warehouse.finished_storage_snapshot import finished_storage_snapshot_bp
+from wechat_api.wechat_template_api import wechat_template_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -130,3 +131,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(material_storage_snapshot_bp)
     app.register_blueprint(finished_storage_snapshot_bp)
     app.register_blueprint(production_dashboard_bp)
+    app.register_blueprint(wechat_template_bp)

@@ -7,7 +7,7 @@ from event_processor import EventProcessor
 import time
 from decimal import Decimal
 from collections import defaultdict
-from wechat_api.send_message_api import send_massage_to_users
+from wechat_api.send_message_api import send_configurable_message
 from login.login import current_user_info
 from constants import *
 from logger import logger
@@ -891,11 +891,13 @@ def confirm_production_order():
         )
         result = processor.processEvent(event)
         db.session.add(event)
-        message = (
-            f"订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        message = "订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        send_configurable_message(
+            "head_confirm_production",
+            message,
+            "YangShuYao",
+            context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
         )
-        users = "YangShuYao"
-        send_massage_to_users(message, users)
         db.session.commit()
         return jsonify({"msg": "Production order confirmed."})
     else:

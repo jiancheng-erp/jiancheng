@@ -17,7 +17,7 @@ from app_config import db
 
 from flask import current_app
 from event_processor import EventProcessor
-from wechat_api.send_message_api import send_massage_to_users
+from wechat_api.send_message_api import send_configurable_message
 from logger import logger
 from api_utility import to_camel, to_snake
 
@@ -339,9 +339,13 @@ def order_next_step():
         processor.processEvent(new_event)
         db.session.add(new_event)
         db.session.commit()
-    message = f"订单已发出至总经理审核，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
-    users = "070d09bbc28c2cec22535b7ec5d1316b"
-    send_massage_to_users(message, users)
+    message = "订单已发出至总经理审核，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    send_configurable_message(
+        "order_submit_to_gm",
+        message,
+        "070d09bbc28c2cec22535b7ec5d1316b",
+        context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+    )
     db.session.commit()
     return "Event Processed In Order Create API CALL", 200
 

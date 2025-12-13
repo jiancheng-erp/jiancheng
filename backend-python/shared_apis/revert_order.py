@@ -18,7 +18,7 @@ from general_document.order_export import (
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from models import *
 from shared_apis import order
-from wechat_api.send_message_api import send_massage_to_users
+from wechat_api.send_message_api import send_configurable_message
 from logger import logger
 DEPARTMENT_STATUS_DICT = {
     "3": ["6"],
@@ -429,18 +429,20 @@ def revert_order_save():
     )
     db.session.add(revert_event)
     db.session.flush()
-    order_rid = db.session.query(Order).filter(Order.order_id == order_id).first().order_rid
-    if revert_to_status == 0: 
-        message = f"订单已被{initialing_department}退回，订单号：{order_rid}，请及时处理"
-        users = "YangShuYao"
-        send_massage_to_users(message, users)
-    elif revert_to_status == 4:
-        message = f"订单已被{initialing_department}退回，订单号：{order_rid}，请及时处理"
-        users = "YangShuYao"
-    elif revert_to_status == 9:
-        message = f"订单已被{initialing_department}退回，订单号：{order_rid}，请及时处理"
-        users = "YangShuYao"
-    send_massage_to_users(message, users)
+    order_rid = (
+        db.session.query(Order).filter(Order.order_id == order_id).first().order_rid
+    )
+    message = "订单已被{initialing_department}退回，订单号：{order_rid}，请及时处理"
+    send_configurable_message(
+        "order_revert_notify",
+        message,
+        "YangShuYao",
+        context={
+            "initialing_department": initialing_department,
+            "order_rid": order_rid,
+            "revert_to_status": revert_to_status,
+        },
+    )
     db.session.commit()
     return jsonify({"message": "success"})
 

@@ -9,7 +9,7 @@ from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
 import json
 from constants import DEFAULT_SUPPLIER
-from wechat_api.send_message_api import send_massage_to_users
+from wechat_api.send_message_api import send_configurable_message
 from logger import logger
 dev_producion_order_bp = Blueprint("dev_producion_order_bp", __name__)
 
@@ -1243,12 +1243,20 @@ def issue_production_order():
         db.session.flush()
     db.session.commit()
     # Send WeChat message to users
-    message = f"投产指令单已发出至一次用量填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
-    users = "YangShuYao"
-    send_massage_to_users(message, users)
-    message = f"投产指令单已发出至工艺单填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
-    users = "YangShuYao"
-    send_massage_to_users(message, users)
+    message_first_usage = "投产指令单已发出至一次用量填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    send_configurable_message(
+        "production_instruction_to_first_usage",
+        message_first_usage,
+        "YangShuYao",
+        context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+    )
+    message_craft_sheet = "投产指令单已发出至工艺单填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+    send_configurable_message(
+        "production_instruction_to_craft_sheet",
+        message_craft_sheet,
+        "YangShuYao",
+        context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+    )
     return jsonify({"message": "Production order issued successfully"})
 
 

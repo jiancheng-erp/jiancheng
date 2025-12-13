@@ -32,6 +32,7 @@ def get_all_staff():
                 "departmentName": entity.Department.department_name,
                 "departmentId": entity.Department.department_id,
                 "staffStatus": status_name,
+                "wechatId": getattr(entity.Staff, "wechat_id", None),
             }
         )
     return jsonify(result)
@@ -86,5 +87,24 @@ def get_staff_info():
         "IdNumber": staff.id_number,
         "phoneNumber": staff.phone_number,
         "birthDate": staff.birth_date,
+        "wechatId": staff.wechat_id,
     }
     return jsonify(result)
+
+
+@staff_manage_bp.route("/staffmanage/updatewechatid", methods=["POST"])
+def update_wechat_id():
+    staff_id = request.json.get("staffId")
+    wechat_id = request.json.get("wechatId")
+    if not staff_id:
+        return jsonify({"error": "staffId is required"}), 400
+    try:
+        staff = Staff.query.filter_by(staff_id=staff_id).first()
+        if not staff:
+            return jsonify({"error": "Staff not found"}), 404
+        staff.wechat_id = wechat_id
+        db.session.commit()
+        return jsonify({"message": "Wechat ID updated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
