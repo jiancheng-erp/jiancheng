@@ -65,10 +65,12 @@
                 <el-table-column prop="characterName" label="职位"></el-table-column>
                 <el-table-column prop="departmentName" label="部门"></el-table-column>
                 <el-table-column prop="staffStatus" label="职员状态"></el-table-column>
+                <el-table-column prop="wechatId" label="微信ID"></el-table-column>
                 <el-table-column label="操作">
                     <template #default="{ row }">
                         <el-button type="danger" @click="resignStaff(row)">离职</el-button>
                         <el-button type="primary" @click="previewStaff(row)">查看职员信息</el-button>
+                        <el-button type="warning" @click="openEditWechat(row)">修改微信ID</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -122,9 +124,24 @@
             <el-descriptions-item label="出生日期">{{ previewStaffForm.birthDate }}</el-descriptions-item>
             <el-descriptions-item label="手机号码">{{ previewStaffForm.phoneNumber }}</el-descriptions-item>
             <el-descriptions-item label="身份证号">{{ previewStaffForm.IdNumber }}</el-descriptions-item>
+            <el-descriptions-item label="微信ID">{{ previewStaffForm.wechatId }}</el-descriptions-item>
         </el-descriptions>
         <span slot="footer" class="dialog-footer">
             <el-button type="primary" @click="previewStaffDialogVisible = false">确定</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog v-model="editWechatDialogVisible" title="修改微信ID" width="30%">
+        <el-form :model="editWechatForm" label-width="90px">
+            <el-form-item label="职员姓名">
+                <el-input v-model="editWechatForm.staffName" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="微信ID">
+                <el-input v-model="editWechatForm.wechatId" placeholder="请输入微信ID"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="editWechatDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="updateWechatId">保存</el-button>
         </span>
     </el-dialog>
 </template>
@@ -142,6 +159,7 @@ export default {
             staffList: [],
             addStaffDialogVisible: false,
             previewStaffDialogVisible: false,
+            editWechatDialogVisible: false,
             addStaffForm: {
                 staffName: '',
                 characterId: '',
@@ -155,6 +173,12 @@ export default {
                 IdNumber: '',
                 phoneNumber: '',
                 birthDate: '',
+                wechatId: '',
+            },
+            editWechatForm: {
+                staffId: '',
+                staffName: '',
+                wechatId: ''
             },
             characterData: [],
             departmentData: [],
@@ -243,6 +267,39 @@ export default {
             this.previewStaffForm = response.data
             this.previewStaffDialogVisible = true
 
+        },
+        async openEditWechat(row) {
+            try {
+                const response = await axios.post(`${this.$apiBaseUrl}/staffmanage/getstaffinfo`, {
+                    staffId: row.staffId
+                })
+                const data = response.data
+                this.editWechatForm = {
+                    staffId: data.staffId,
+                    staffName: data.staffName,
+                    wechatId: data.wechatId || ''
+                }
+                this.editWechatDialogVisible = true
+            } catch (error) {
+                this.$message.error('加载微信ID失败')
+            }
+        },
+        async updateWechatId() {
+            if (!this.editWechatForm.staffId) {
+                this.$message.error('缺少员工ID')
+                return
+            }
+            try {
+                await axios.post(`${this.$apiBaseUrl}/staffmanage/updatewechatid`, {
+                    staffId: this.editWechatForm.staffId,
+                    wechatId: this.editWechatForm.wechatId
+                })
+                this.$message.success('保存成功')
+                this.editWechatDialogVisible = false
+                this.getStaffData()
+            } catch (error) {
+                this.$message.error(error?.response?.data?.error || '保存失败')
+            }
         },
         editStaff(row) {
             console.log(row)

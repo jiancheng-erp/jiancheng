@@ -9,7 +9,7 @@ from api_utility import randomIdGenerater
 from general_document.prodution_instruction import generate_instruction_excel_file
 import json
 from constants import DEFAULT_SUPPLIER
-from wechat_api.send_message_api import send_massage_to_users
+# left import for future messaging hooks; currently unused
 from logger import logger
 from login.login import current_user, current_user_info
 from sqlalchemy import and_, func, case, distinct, or_
@@ -311,6 +311,5 @@ def get_month_date_range(month_str):  # month_str 形如 "2025-04"
     start_date = f"{month_str}-01"
     end_date = f"{month_str}-{last_day:02d}"
     return start_date, end_date
-
 
 

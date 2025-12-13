@@ -1,0 +1,67 @@
+{
+  "production_status_cron": {
+    "content": "生产流程状态定时通知\n当前时间：{current_time}\n当前裁断未排期订单数：{cut_amount}\n当前预备未排期订单数：{pre_sew_amount}\n当前针车未排期订单数：{sew_amount}\n当前成型未排期订单数：{mold_amount}\n请相关人员及时处理！\n如有任何问题，请联系相关负责人。",
+    "users": "070d09bbc28c2cec22535b7ec5d1316b|Wang|ZhongGuiKang|55232b966e1a1348da858dc23135274a|JinKaiXin|WangJinMing|ZouYuanDong",
+    "description": "生产流程定时播报"
+  },
+  "purchase_status_cron": {
+    "content": "采购流程状态定时通知\n当前时间：{current_time}\n当前总经理待审批订单数：{order_approval_count}\n当前投产指令单创建订单数：{production_instruction_count}\n当前面料用量填写订单数：{first_usage_input_count}\n当前一次采购创建订单数：{first_purchase_count}\n当前总仓采购创建订单数：{second_purchase_count}\n当前工艺单创建订单数：{craft_sheet_count}\n当前二次BOM用量填写订单数：{second_usage_input_count}\n请相关人员及时处理！\n如有任何问题，请联系相关负责人。",
+    "users": "070d09bbc28c2cec22535b7ec5d1316b|Wang|ZhongGuiKang|55232b966e1a1348da858dc23135274a|FanJianMing|XieShuWa|YangShuYao",
+    "description": "采购流程定时播报"
+  },
+  "business_status_all": {
+    "content": "业务流程状态定时通知\n当前时间：{current_time}\n待业务经理审批订单数：{manager1_pending}\n待业务经理审批订单数：{manager2_pending}\n待业务经理审批订单数：{manager3_pending}\n订单创建待提交审批订单数（业务经理1）：{manager1_pre_create}\n订单创建待提交审批订单数（业务经理2）：{manager2_pre_create}\n订单创建待提交审批订单数（业务经理3）：{manager3_pre_create}\n请相关人员及时处理！\n如有任何问题，请联系相关负责人。",
+    "users": "070d09bbc28c2cec22535b7ec5d1316b|55232b966e1a1348da858dc23135274a",
+    "description": "业务流程定时播报-汇总"
+  },
+  "business_status_manager1": {
+    "content": "业务流程状态定时通知\n您的身份是业务经理\n当前时间：{current_time}\n待审批订单数：{pending}\n订单创建待提交审批订单数：{pre_create}\n请及时处理！",
+    "users": "utopa.",
+    "description": "业务流程定时播报-经理1"
+  },
+  "business_status_manager2": {
+    "content": "业务流程状态定时通知\n您的身份是业务经理\n当前时间：{current_time}\n待审批订单数：{pending}\n订单创建待提交审批订单数：{pre_create}\n请及时处理！",
+    "users": "ellen",
+    "description": "业务流程定时播报-经理2"
+  },
+  "business_status_manager3": {
+    "content": "业务流程状态定时通知\n您的身份是业务经理\n当前时间：{current_time}\n待审批订单数：{pending}\n订单创建待提交审批订单数：{pre_create}\n请及时处理！",
+    "users": "55232b966e1a1348da858dc23135274a",
+    "description": "业务流程定时播报-经理3"
+  },
+  "order_submit_to_gm": {
+    "content": "订单已发出至总经理审核，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "070d09bbc28c2cec22535b7ec5d1316b",
+    "description": "订单发起总经理审核通知"
+  },
+  "head_confirm_production": {
+    "content": "订单已下发至投产指令单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "YangShuYao",
+    "description": "总经办确认投产通知"
+  },
+  "production_instruction_to_first_usage": {
+    "content": "投产指令单已发出至一次用量填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "YangShuYao",
+    "description": "投产指令单下发到一次用量"
+  },
+  "production_instruction_to_craft_sheet": {
+    "content": "投产指令单已发出至工艺单填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "YangShuYao",
+    "description": "投产指令单下发到工艺单"
+  },
+  "order_revert_notify": {
+    "content": "订单已被{initialing_department}退回，订单号：{order_rid}，请及时处理",
+    "users": "YangShuYao",
+    "description": "退单通知"
+  },
+  "issue_to_first_purchase": {
+    "content": "订单已发出至一次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "XieShuWa",
+    "description": "一次采购下发通知"
+  },
+  "issue_to_second_purchase": {
+    "content": "订单已发出至二次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
+    "users": "FanJianMing",
+    "description": "二次采购下发通知"
+  }
+}
