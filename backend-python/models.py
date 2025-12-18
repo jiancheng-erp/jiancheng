@@ -168,54 +168,6 @@ class Department(db.Model):
 
     def __repr__(self):
         return f"<Department(department_id={self.department_id})>"
-    
-
-class DailyMaterialStorageChange(db.Model):
-    __tablename__ = 'daily_material_storage_change'
-    __table_args__ = (
-        db.UniqueConstraint('snapshot_date', 'material_storage_id', name='unq_daily_change'),
-    )
-
-    daily_change_id = db.Column(BIGINT, primary_key=True, autoincrement=True)
-    snapshot_date = db.Column(DATE, nullable=False, comment='每日净变动日期')
-    material_storage_id = db.Column(BIGINT, nullable=False, comment='库存id')
-    latest_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的单价')
-    avg_unit_price = db.Column(DECIMAL(13, 4), nullable=False, default=0.0000, comment='这个材料快照时最新的平均价')
-    pending_inbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核入库数量总和')
-    pending_outbound_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料未审核出库数量总和')
-    inbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核采购入库数量总和 - 已审核材料退回出库数量总和')
-    outbound_amount_sum = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='当日该材料已审核生产出库数量总和')
-    make_inventory_inbound_sum = db.Column(DECIMAL(13, 5), default=0, comment="盘库入库数量累计")
-    make_inventory_outbound_sum = db.Column(DECIMAL(13, 5), default=0, comment="盘库出库数量累计")
-    net_change = db.Column(DECIMAL(13, 5), nullable=False, default=0.00000, comment='净变动，inbound_amount_sum - outbound_amount_sum + make_inventory_inbound_sum - make_inventory_outbound_sum')
-    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
-    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
-
-    def __repr__(self):
-        return f"<DailyMaterialStorageChange(id={self.daily_change_id}, date={self.snapshot_date}, msid={self.material_storage_id})>"
-
-
-class DailyMaterialStorageSizeDetailChange(db.Model):
-    __tablename__ = 'daily_material_storage_size_detail_change'
-    __table_args__ = (
-        db.UniqueConstraint('daily_change_id', 'order_number', name='unq_size_detail_change'),
-    )
-
-    id = db.Column(BIGINT, primary_key=True, autoincrement=True)
-    daily_change_id = db.Column(BIGINT, nullable=False)
-    size_value = db.Column(VARCHAR(10, collation='utf8mb4_0900_ai_ci'), nullable=False)
-    order_number = db.Column(INTEGER, nullable=False)
-    pending_inbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核入库数量总和')
-    pending_outbound_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料未审核出库数量总和')
-    inbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核入库数量总和')
-    outbound_amount_sum = db.Column(INTEGER, nullable=False, default=0, comment='当日该材料已审核出库数量总和')
-    make_inventory_inbound = db.Column(DECIMAL(13, 5), default=0, comment="盘库入库数量累计")
-    make_inventory_outbound = db.Column(DECIMAL(13, 5), default=0, comment="盘库出库数量累计")
-    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
-    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
-
-    def __repr__(self):
-        return f"<DailyMaterialStorageSizeDetailChange(id={self.id}, daily_change_id={self.daily_change_id}, order_number={self.order_number})>"
 
 
 class Material(db.Model):

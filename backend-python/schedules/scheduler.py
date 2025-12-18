@@ -49,18 +49,6 @@ def start_scheduler(app):
         args=[app],
         id='production_evening_status_message'
     )
-    # 每月 1 号 00:05 执行一次
-    scheduler.add_job(
-        func=snapshot_material_storage,
-        trigger="cron",
-        day=1,
-        hour=0,
-        minute=5,
-        second=0,
-        args=[app],
-        id="material_storage_snapshot",
-        replace_existing=True,
-    )
 
     # 每月 1 日 00:10 执行一次（成品仓月末快照）
     scheduler.add_job(
@@ -75,9 +63,9 @@ def start_scheduler(app):
         replace_existing=True,
     )
 
-    # 每天 00:05 执行一次
+    # 每天 00:05 执行一次, 每月1号00:05会插入新的月末快照
     scheduler.add_job(
-        func=snapshot_daily_storage_change,
+        func=update_material_storage_snapshot,
         trigger="cron",
         hour=0,
         minute=5,

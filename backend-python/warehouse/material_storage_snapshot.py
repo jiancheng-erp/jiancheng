@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time as dt_time
 from decimal import Decimal
 import json
 import os
@@ -12,7 +12,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file, abort, Re
 from app_config import db
 from constants import *
 from models import *
-from sqlalchemy import func, select, or_, and_, desc, literal
+from sqlalchemy import func, select, or_, and_, desc, literal, case
 from sqlalchemy.sql import union_all
 from file_locations import FILE_STORAGE_PATH
 from general_document.accounting_warehouse_history_excel import (
@@ -100,25 +100,60 @@ def _union_msids_subq(base_snapshot_date: date, target_date: date, filters: dict
     )
     base_q = add_filter_to_query(base_q, filters, "base")
 
-    # change-window msids
+    # change-window msids (real-time from inbound/outbound records)
     start_change_date = base_snapshot_date + timedelta(days=1)
-    change_q = (
-        select(DailyMaterialStorageChange.material_storage_id.label("msid"))
-        .join(MaterialStorage, MaterialStorage.material_storage_id == DailyMaterialStorageChange.material_storage_id)
+    start_dt = datetime.combine(start_change_date, dt_time.min)
+    end_dt = datetime.combine(target_date + timedelta(days=1), dt_time.min)
+
+    # NOTE:
+    #   审核可能发生在“单据发生时间(inbound_datetime/outbound_datetime)”之后很多天。
+    #   如果这里只按发生时间过滤，会漏掉“旧单据在窗口内被审核”的情况（典型：月末快照 pending，
+    #   之后某天财务审核 -> pending 归零、inbound/outbound 增加）。
+    #   因此：msid 候选集需要把 approval_datetime 落在窗口内的记录也纳入。
+    inbound_msids_q = (
+        select(InboundRecordDetail.material_storage_id.label("msid"))
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .join(MaterialStorage, MaterialStorage.material_storage_id == InboundRecordDetail.material_storage_id)
         .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
         .join(Material, SPUMaterial.material_id == Material.material_id)
         .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
-        .join(MaterialWarehouse, MaterialWarehouse.material_warehouse_id == MaterialType.warehouse_id)
         .join(Supplier, Supplier.supplier_id == Material.material_supplier)
         .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
         .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
         .outerjoin(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .where(
-            DailyMaterialStorageChange.snapshot_date >= start_change_date,
-            DailyMaterialStorageChange.snapshot_date <= target_date,
+            InboundRecord.display == 1,
+            or_(
+                and_(InboundRecord.inbound_datetime >= start_dt, InboundRecord.inbound_datetime < end_dt),
+                and_(InboundRecord.approval_datetime >= start_dt, InboundRecord.approval_datetime < end_dt),
+            ),
         )
     )
-    change_q = add_filter_to_query(change_q, filters, "change")
+    inbound_msids_q = add_filter_to_query(inbound_msids_q, filters, "change")
+
+    outbound_msids_q = (
+        select(OutboundRecordDetail.material_storage_id.label("msid"))
+        .join(OutboundRecord, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
+        .join(MaterialStorage, MaterialStorage.material_storage_id == OutboundRecordDetail.material_storage_id)
+        .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
+        .join(Material, SPUMaterial.material_id == Material.material_id)
+        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
+        .outerjoin(OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id)
+        .outerjoin(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .where(
+            OutboundRecord.display == 1,
+            or_(
+                and_(OutboundRecord.outbound_datetime >= start_dt, OutboundRecord.outbound_datetime < end_dt),
+                and_(OutboundRecord.approval_datetime >= start_dt, OutboundRecord.approval_datetime < end_dt),
+            ),
+        )
+    )
+    outbound_msids_q = add_filter_to_query(outbound_msids_q, filters, "change")
+
+    change_u = union_all(inbound_msids_q, outbound_msids_q).subquery("u_change")
+    change_q = select(change_u.c.msid)
 
     u = union_all(base_q, change_q).subquery("u_all")
     return select(u.c.msid).distinct().subquery("msids_all")
@@ -141,30 +176,186 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
         .where(MaterialStorageSnapshot.snapshot_date == base_snapshot_date)
     ).subquery()
 
-    # interval sums (including pending_*)
+    # interval deltas (approved amounts) + as-of pending amounts (absolute)
+    #
+    # 关键点：
+    #   - pending_* 是“截至 target_date 当天结束仍未审核”的数量，应按 *发生时间* 截止+当前状态(approval_status==0)
+    #     直接算成【绝对值】；不能用 base + window_delta 的方式，否则会漏掉“旧单在窗口内被审核”的 pending 下降。
+    #   - inbound/outbound/make_inventory/return_out 等“已审核口径”在业务上以 *approval_datetime* 生效；
+    #     因此窗口增量必须用 approval_datetime 过滤，才能捕捉“月末 pending、之后某天审核入账”的情况。
+    start_dt = datetime.combine(start_change_date, dt_time.min)
+    end_dt = datetime.combine(target_date + timedelta(days=1), dt_time.min)
+
+    inbound_agg = (
+        select(
+            InboundRecordDetail.material_storage_id.label("msid"),
+            # 截至 target_date 仍未审核的“待审核入库”绝对值（按发生时间统计）
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                InboundRecord.approval_status == 0,
+                                InboundRecord.inbound_datetime < end_dt,
+                            ),
+                            InboundRecordDetail.inbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("pending_in_asof"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                InboundRecord.approval_status == 1,
+                                InboundRecord.inbound_type == 0,
+                                InboundRecord.approval_datetime >= start_dt,
+                                InboundRecord.approval_datetime < end_dt,
+                            ),
+                            InboundRecordDetail.inbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("purchase_in"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                InboundRecord.approval_status == 1,
+                                InboundRecord.inbound_type == 4,
+                                InboundRecord.approval_datetime >= start_dt,
+                                InboundRecord.approval_datetime < end_dt,
+                            ),
+                            InboundRecordDetail.inbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("make_in"),
+        )
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .where(
+            InboundRecord.display == 1,
+            # pending 需要覆盖所有历史发生记录；approved delta 通过 approval_datetime 限制窗口
+            InboundRecord.inbound_datetime < end_dt,
+        )
+        .group_by(InboundRecordDetail.material_storage_id)
+    ).subquery("inbound_agg")
+
+    outbound_agg = (
+        select(
+            OutboundRecordDetail.material_storage_id.label("msid"),
+            # 截至 target_date 仍未审核的“待审核出库”绝对值（按发生时间统计）
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                OutboundRecord.approval_status == 0,
+                                OutboundRecord.outbound_datetime < end_dt,
+                            ),
+                            OutboundRecordDetail.outbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("pending_out_asof"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                OutboundRecord.approval_status == 1,
+                                OutboundRecord.outbound_type == 0,
+                                OutboundRecord.approval_datetime >= start_dt,
+                                OutboundRecord.approval_datetime < end_dt,
+                            ),
+                            OutboundRecordDetail.outbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("prod_out"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                OutboundRecord.approval_status == 1,
+                                OutboundRecord.outbound_type == 5,
+                                OutboundRecord.approval_datetime >= start_dt,
+                                OutboundRecord.approval_datetime < end_dt,
+                            ),
+                            OutboundRecordDetail.outbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("make_out"),
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            and_(
+                                OutboundRecord.approval_status == 1,
+                                OutboundRecord.outbound_type == 4,
+                                OutboundRecord.approval_datetime >= start_dt,
+                                OutboundRecord.approval_datetime < end_dt,
+                            ),
+                            OutboundRecordDetail.outbound_amount,
+                        ),
+                        else_=0,
+                    )
+                ),
+                0,
+            ).label("return_out"),
+        )
+        .join(OutboundRecord, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
+        .where(
+            OutboundRecord.display == 1,
+            # pending 需要覆盖所有历史发生记录；approved delta 通过 approval_datetime 限制窗口
+            OutboundRecord.outbound_datetime < end_dt,
+        )
+        .group_by(OutboundRecordDetail.material_storage_id)
+    ).subquery("outbound_agg")
+
     delta_sum = (
         select(
-            DailyMaterialStorageChange.material_storage_id.label("msid"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.inbound_amount_sum), 0).label("delta_in"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.outbound_amount_sum), 0).label("delta_out"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.net_change), 0).label("delta_net"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.pending_inbound_sum), 0).label("delta_pending_in"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.pending_outbound_sum), 0).label("delta_pending_out"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.make_inventory_inbound_sum), 0).label("delta_make_inbound"),
-            func.coalesce(func.sum(DailyMaterialStorageChange.make_inventory_outbound_sum), 0).label("delta_make_outbound"),
+            msids_all.c.msid.label("msid"),
+            # 采购入库 - (材料退回出库)
+            (func.coalesce(inbound_agg.c.purchase_in, 0) - func.coalesce(outbound_agg.c.return_out, 0)).label("delta_in"),
+            func.coalesce(outbound_agg.c.prod_out, 0).label("delta_out"),
+            # pending_* 直接用 as-of 绝对值，不参与 base + delta
+            func.coalesce(inbound_agg.c.pending_in_asof, 0).label("pending_in_asof"),
+            func.coalesce(outbound_agg.c.pending_out_asof, 0).label("pending_out_asof"),
+            func.coalesce(inbound_agg.c.make_in, 0).label("delta_make_inbound"),
+            func.coalesce(outbound_agg.c.make_out, 0).label("delta_make_outbound"),
+            (
+                (func.coalesce(inbound_agg.c.purchase_in, 0) - func.coalesce(outbound_agg.c.return_out, 0))
+                - func.coalesce(outbound_agg.c.prod_out, 0)
+                + func.coalesce(inbound_agg.c.make_in, 0)
+                - func.coalesce(outbound_agg.c.make_out, 0)
+            ).label("delta_net"),
         )
-        .where(
-            DailyMaterialStorageChange.snapshot_date >= start_change_date,
-            DailyMaterialStorageChange.snapshot_date <= target_date,
-        )
-        .group_by(DailyMaterialStorageChange.material_storage_id)
-    ).subquery()
+        .join(inbound_agg, inbound_agg.c.msid == msids_all.c.msid, isouter=True)
+        .join(outbound_agg, outbound_agg.c.msid == msids_all.c.msid, isouter=True)
+    ).subquery("delta_sum")
 
     final_agg = (
         select(
             msids_all.c.msid,
-            (func.coalesce(base_snap.c.base_pending_in, 0) + func.coalesce(delta_sum.c.delta_pending_in, 0)).label("final_pending_in"),
-            (func.coalesce(base_snap.c.base_pending_out, 0) + func.coalesce(delta_sum.c.delta_pending_out, 0)).label("final_pending_out"),
+            func.coalesce(delta_sum.c.pending_in_asof, 0).label("final_pending_in"),
+            func.coalesce(delta_sum.c.pending_out_asof, 0).label("final_pending_out"),
             (func.coalesce(base_snap.c.base_inbound, 0) + func.coalesce(delta_sum.c.delta_in, 0)).label("final_inbound"),
             (func.coalesce(base_snap.c.base_outbound, 0) + func.coalesce(delta_sum.c.delta_out, 0)).label("final_outbound"),
             (func.coalesce(base_snap.c.base_current, 0) + func.coalesce(delta_sum.c.delta_net, 0)).label("final_current"),
@@ -361,42 +552,76 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
                 "actual_inbound_unit": getattr(storage, "actual_inbound_unit", None),
             }
 
-    # 8) Prices (latest <= target_date)
-    latest_price_subq = (
+    # 8) Prices (real-time from approved purchase inbound records, latest <= target_date)
+    price_end_dt = datetime.combine(target_date + timedelta(days=1), dt_time.min)
+
+    latest_inbound_dt_subq = (
         select(
-            DailyMaterialStorageChange.material_storage_id.label("msid"),
-            func.max(DailyMaterialStorageChange.snapshot_date).label("latest_date"),
+            InboundRecordDetail.material_storage_id.label("msid"),
+            func.max(InboundRecord.inbound_datetime).label("latest_dt"),
         )
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
         .where(
-            DailyMaterialStorageChange.snapshot_date <= target_date,
-            DailyMaterialStorageChange.material_storage_id.in_(msids_page),
+            InboundRecord.display == 1,
+            InboundRecord.approval_status == 1,
+            InboundRecord.inbound_type == 0,
+            InboundRecord.inbound_datetime < price_end_dt,
+            InboundRecordDetail.material_storage_id.in_(msids_page),
         )
-        .group_by(DailyMaterialStorageChange.material_storage_id)
-        .subquery()
+        .group_by(InboundRecordDetail.material_storage_id)
+        .subquery("latest_inbound_dt")
     )
-    price_stmt = (
+
+    latest_price_stmt = (
         select(
-            DailyMaterialStorageChange.material_storage_id.label("msid"),
-            func.coalesce(DailyMaterialStorageChange.latest_unit_price, 0).label("unit_price"),
-            func.coalesce(DailyMaterialStorageChange.avg_unit_price, 0).label("average_price"),
+            InboundRecordDetail.material_storage_id.label("msid"),
+            func.coalesce(InboundRecordDetail.unit_price, 0).label("unit_price"),
         )
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
         .join(
-            latest_price_subq,
+            latest_inbound_dt_subq,
             and_(
-                DailyMaterialStorageChange.material_storage_id == latest_price_subq.c.msid,
-                DailyMaterialStorageChange.snapshot_date == latest_price_subq.c.latest_date,
+                InboundRecordDetail.material_storage_id == latest_inbound_dt_subq.c.msid,
+                InboundRecord.inbound_datetime == latest_inbound_dt_subq.c.latest_dt,
             ),
         )
-        .where(DailyMaterialStorageChange.material_storage_id.in_(msids_page))
     )
-    price_rows = db.session.execute(price_stmt).all()
-    price_map = {r.msid: {"unit_price": r.unit_price, "average_price": r.average_price} for r in price_rows}
-    for msid in msids_page:
-        if msid not in price_map:
-            price_map[msid] = {"unit_price": Decimal("0"), "average_price": Decimal("0")}
+
+    avg_price_stmt = (
+        select(
+            InboundRecordDetail.material_storage_id.label("msid"),
+            func.coalesce(
+                (
+                    func.sum(InboundRecordDetail.inbound_amount * InboundRecordDetail.unit_price)
+                    / func.nullif(func.sum(InboundRecordDetail.inbound_amount), 0)
+                ),
+                0,
+            ).label("average_price"),
+        )
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .where(
+            InboundRecord.display == 1,
+            InboundRecord.approval_status == 1,
+            InboundRecord.inbound_type == 0,
+            InboundRecord.inbound_datetime < price_end_dt,
+            InboundRecordDetail.material_storage_id.in_(msids_page),
+        )
+        .group_by(InboundRecordDetail.material_storage_id)
+    )
+
+    latest_price_rows = db.session.execute(latest_price_stmt).all()
+    avg_price_rows = db.session.execute(avg_price_stmt).all()
+
+    price_map: Dict[int, Dict[str, Decimal]] = {msid: {"unit_price": Decimal("0"), "average_price": Decimal("0")} for msid in msids_page}
+    for r in latest_price_rows:
+        price_map[r.msid]["unit_price"] = r.unit_price
+    for r in avg_price_rows:
+        price_map[r.msid]["average_price"] = r.average_price
+    # price_map already prefilled with zeros for all msids_page
 
     # 9) Assemble items
     items: List[Dict[str, object]] = []
+    print([id for id in msids_page])
     for msid in msids_page:
         base = base_map.get(msid, None)
         fin = final_map.get(msid, {})
