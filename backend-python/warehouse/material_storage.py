@@ -158,9 +158,7 @@ def get_all_material_info():
         )
     )
     if show_all_materials == "false":
-        query1 = query1.filter(
-            or_(MaterialStorage.pending_inbound > 0, MaterialStorage.current_amount > 0)
-        )
+        query1 = query1.filter(MaterialStorage.current_amount > 0)
 
     for key, value in filters.items():
         if value and value != "":
