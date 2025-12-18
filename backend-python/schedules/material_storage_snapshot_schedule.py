@@ -7,7 +7,7 @@ from logger import logger
 from app_config import db
 
 # 统一用 generate_material_storage_snapshot 的口径生成快照（回放聚合）
-from script import generate_material_storage_snapshot
+from script.generate_material_storage_snapshot import generate_material_storage_snapshot
 
 BEIJING_TZ = "Asia/Shanghai"
 
