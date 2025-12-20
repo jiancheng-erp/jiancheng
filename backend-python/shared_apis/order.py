@@ -436,6 +436,10 @@ def get_order_info():
 def get_order_info_business():
     result = {}
     order_id = request.args.get("orderid")
+    character, _, _ = current_user_info()
+    hide_price_detail = False
+    if character is not None:
+        hide_price_detail = character.character_id == BUSINESS_CLERK_ROLE
     entity = (
         db.session.query(
             Order,
@@ -662,6 +666,12 @@ def get_order_info_business():
                 temp_obj['total'] = int(temp_obj['unitPerRatio'] * temp_obj['totalQuantityRatio'])
                 response_order_shoe["shoeTypeBatchInfoList"].append(temp_obj)
 
+            price_filled = (
+                order_shoe_type_unit_price is not None
+                and float(order_shoe_type_unit_price) > 0
+                and order_shoe_type_currency_type is not None
+            )
+
             shoeTypeBatchData = {
                 "size34Amount": total_size_34,
                 "size35Amount": total_size_35,
@@ -681,6 +691,14 @@ def get_order_info_business():
                 "totalPrice": round(float(total_price), 2),
                 "currencyType": currency_type,
             }
+
+            if hide_price_detail:
+                shoeTypeBatchData["unitPrice"] = None
+                shoeTypeBatchData["totalPrice"] = None
+                shoeTypeBatchData["currencyType"] = None
+
+            response_order_shoe["priceFilled"] = price_filled
+            response_order_shoe["priceMasked"] = hide_price_detail
 
             response_order_shoe["shoeTypeBatchData"] = shoeTypeBatchData
             order_shoe_id_to_order_shoe_types[order_shoe_id].append(response_order_shoe)
