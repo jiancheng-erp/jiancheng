@@ -31,6 +31,7 @@ NEW_ORDER_SHOE_OP = 2
 department_name = "业务部"
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
+BUSINESS_MANAGER_ROLE = 4
 
 
 def allowed_file(filename):
@@ -215,6 +216,13 @@ def order_price_update():
     time_s = time.time()
     unit_price_form = request.json.get("unitPriceForm")
     currency_type_form = request.json.get("currencyTypeForm")
+    staff_id = request.json.get("staffId")
+
+    staff_entity = db.session.query(Staff).filter(Staff.staff_id == staff_id).first()
+    if not staff_entity:
+        return jsonify({"error": "operator not found"}), 404
+    if staff_entity.character_id != BUSINESS_MANAGER_ROLE:
+        return jsonify({"error": "no permission to update price"}), 403
 
     for order_shoe_type_id in unit_price_form.keys():
         unit_price = float(unit_price_form[order_shoe_type_id])
@@ -241,26 +249,12 @@ def order_event_proceed():
     logger.debug("PROCEED")
     order_id = request.json.get("orderId")
     staff_id = request.json.get("staffId")
-    price_all_filled = True
     logger.debug(order_id, staff_id)
-    order_shoe_type_entities = (
-        db.session.query(Order, OrderShoe, OrderShoeType)
-        .filter_by(order_id=order_id)
-        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
-        .join(OrderShoeType, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
-        .all()
-    )
-    for _, _, order_shoe_type_entity in order_shoe_type_entities:
-        if (
-            order_shoe_type_entity.unit_price == 0
-            or order_shoe_type_entity.currency_type == None
-        ):
-            price_all_filled = False
     order_entity = db.session.query(Order).filter_by(order_id=order_id).first()
+    print(order_entity)
     if (
         order_entity != None
         and int(order_entity.production_list_upload_status) == 2
-        and price_all_filled
     ):
         cur_time = format_date(datetime.datetime.now())
         new_event = Event(
@@ -320,6 +314,8 @@ def order_next_step():
     order_id = request.json.get("orderId")
     staff_id = request.json.get("staffId")
     entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not entity:
+        return jsonify({"error": "order not found"}), 404
     order_rid = entity.order_rid
     order_shoe_rid = (
         db.session.query(OrderShoe, Shoe)
@@ -327,6 +323,24 @@ def order_next_step():
         .filter(OrderShoe.order_id == order_id)
         .first()
     ).Shoe.shoe_rid
+    # Validate price info before allowing next step
+    order_shoe_type_entities = (
+        db.session.query(OrderShoeType)
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .all()
+    )
+    price_missing = []
+    for entity_ost in order_shoe_type_entities:
+        unit_price = entity_ost.unit_price or 0
+        currency_type = entity_ost.currency_type
+        if float(unit_price) <= 0 or not currency_type:
+            price_missing.append(entity_ost.order_shoe_type_id)
+    if price_missing:
+        return (
+            jsonify({"error": "订单存在未填写的鞋型价格，无法下发"}),
+            400,
+        )
     if entity:
         cur_time = format_date(datetime.datetime.now())
         new_event = Event(

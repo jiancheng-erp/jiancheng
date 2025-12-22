@@ -118,36 +118,53 @@
                                         width="70"
                                     ></el-table-column>
                                     <el-table-column prop="shoeTypeBatchData.totalAmount" label="总数量" width="90" />
-                                    <el-table-column label="金额" width="80">
+                                    <el-table-column label="金额" width="120">
                                         <template #default="scope">
-                                            <el-input
-                                                size="small"
-                                                controls-position="right"
-                                                @change="updateValue(scope.row)"
-                                                v-model="scope.row.shoeTypeBatchData.unitPrice"
-                                                :disabled="editOrderInfoDisabled"
-                                            >
-                                            </el-input>
+                                            <template v-if="canViewPrice">
+                                                <el-input
+                                                    size="small"
+                                                    controls-position="right"
+                                                    @change="updateValue(scope.row)"
+                                                    v-model="scope.row.shoeTypeBatchData.unitPrice"
+                                                    :disabled="!canEditPrice"
+                                                >
+                                                </el-input>
+                                            </template>
+                                            <div v-else class="price-masked">
+                                                <el-tag size="small" type="info" effect="plain">
+                                                    {{ scope.row.priceFilled ? '经理已填写' : '待经理填写' }}
+                                                </el-tag>
+                                            </div>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column label="金额单位">
+                                    <el-table-column label="金额单位" width="120">
                                         <template #default="scope">
-                                            <el-select
-                                                size="small"
-                                                v-model="this.orderCurrencyUnit"
-                                                @change="updateCurrencyUnit(scope.row)"
-                                                :disabled="editOrderInfoDisabled"
-                                                placeholder="选择"
-                                            >
-                                                <el-option label="RMB" value="RMB"></el-option>
-                                                <el-option label="USD" value="USD"></el-option>
-                                                <el-option label="EUR" value="EUR"></el-option>
-                                                <el-option label="GBP" value="GBP"></el-option>
-                                                <el-option label="SGD" value="SGD"></el-option>
-                                            </el-select>
+                                            <template v-if="canViewPrice">
+                                                <el-select
+                                                    size="small"
+                                                    v-model="this.orderCurrencyUnit"
+                                                    @change="updateCurrencyUnit(scope.row)"
+                                                    :disabled="!canEditPrice"
+                                                    placeholder="选择"
+                                                >
+                                                    <el-option label="RMB" value="RMB"></el-option>
+                                                    <el-option label="USD" value="USD"></el-option>
+                                                    <el-option label="EUR" value="EUR"></el-option>
+                                                    <el-option label="GBP" value="GBP"></el-option>
+                                                    <el-option label="SGD" value="SGD"></el-option>
+                                                </el-select>
+                                            </template>
+                                            <div v-else class="price-masked">***</div>
                                         </template>
                                     </el-table-column>
-                                    <el-table-column prop="shoeTypeBatchData.totalPrice" label="总金额" />
+                                    <el-table-column label="总金额" prop="shoeTypeBatchData.totalPrice">
+                                        <template #default="scope">
+                                            <span v-if="canViewPrice">{{ scope.row.shoeTypeBatchData.totalPrice }}</span>
+                                            <span v-else>
+                                                {{ scope.row.priceFilled ? '已填写' : '待填写' }}
+                                            </span>
+                                        </template>
+                                    </el-table-column>
                                 </el-table>
                             </template>
                         </el-table-column>
@@ -240,6 +257,12 @@ export default {
         },
         userIsManager() {
             return this.role == 4
+        },
+        canViewPrice() {
+            return this.userIsManager
+        },
+        canEditPrice() {
+            return this.canViewPrice && !this.editOrderInfoDisabled
         },
         orderClerkEditable() {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 0
@@ -413,7 +436,9 @@ export default {
             })
 
             this.submitCustomerColorForm()
-            this.submitPriceForm()
+            if (this.canEditPrice) {
+                await this.submitPriceForm()
+            }
             // this.submitCustomerColorForm()
             this.editOrderInfoDisabled = true
         },
@@ -443,6 +468,9 @@ export default {
             }
         },
         async submitPriceForm() {
+            if (!this.canEditPrice) {
+                return
+            }
             console.log(this.orderShoeTypeIdToCurrencyType)
             const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateprice`, {
                 unitPriceForm: this.orderShoeTypeIdToUnitPrice,
@@ -528,13 +556,13 @@ export default {
         },
         sendOrderNext() {
             if (this.orderData.wrapRequirementUploadStatus === '已上传包装文件') {
-                const value = [...Object.values(this.orderShoeTypeIdToUnitPrice)]
-                const unit = [...Object.values(this.currencyTypeAccessMapping)]
-                if (value.includes(0)) {
-                    ElMessage.error('请检查订单中的金额数据，不允许值为0')
+                const priceValues = Object.values(this.orderShoeTypeIdToUnitPrice || {})
+                const currencyValues = Object.values(this.orderShoeTypeIdToCurrencyType || {})
+                if (!priceValues.length || priceValues.some((price) => Number(price) <= 0)) {
+                    ElMessage.error('请检查订单中的金额数据，不允许为空或为0')
                     return
                 }
-                if (unit.includes(true)) {
+                if (currencyValues.some((currency) => !currency)) {
                     ElMessage.error('请检查订单中的金额单位，不允许单位为空')
                     return
                 }
@@ -544,14 +572,17 @@ export default {
                     type: 'warning'
                 })
                     .then(async () => {
-                        const result = await axios.post(`${this.$apiBaseUrl}/ordercreate/sendnext`, {
-                            orderId: this.orderDBId,
-                            staffId: this.staffId
-                        })
-                        if (result.status === 200) {
-                            ElMessage.success('下发成功,正在重新加载数据')
-                        } else {
-                            ElMessage.error('下发失败')
+                        try {
+                            const result = await axios.post(`${this.$apiBaseUrl}/ordercreate/sendnext`, {
+                                orderId: this.orderDBId,
+                                staffId: this.staffId
+                            })
+                            if (result.status === 200) {
+                                ElMessage.success('下发成功,正在重新加载数据')
+                            }
+                        } catch (error) {
+                            const message = error?.response?.data?.error || '下发失败'
+                            ElMessage.error(message)
                         }
                     })
                     .then(async () => {
@@ -568,11 +599,17 @@ export default {
             // row.batchQuantityMapping = row.orderShoeTypeBatchInfo.map((batchInfo) => { return batchInfo.packagingInfoId:batchInfo.unitQuantityInPair})Id})
         },
         updateValue(row) {
+            if (!this.canEditPrice) {
+                return
+            }
             let result = row.shoeTypeBatchData.unitPrice * row.shoeTypeBatchData.totalAmount
             row.shoeTypeBatchData.totalPrice = parseFloat(result.toFixed(2))
             this.orderShoeTypeIdToUnitPrice[row.orderShoeTypeId] = row.shoeTypeBatchData.unitPrice
         },
         updateCurrencyUnit(row) {
+            if (!this.canEditPrice) {
+                return
+            }
             this.orderData.orderShoeAllData.forEach((orderShoe) =>
                 orderShoe.orderShoeTypes.forEach((orderShoeType) => {
                     this.orderShoeTypeIdToCurrencyType[orderShoeType.orderShoeTypeId] = this.orderCurrencyUnit
@@ -798,6 +835,14 @@ export default {
 }
 .ps-topbar :deep(.ps__thumb-x) {
     opacity: 1 !important;
+}
+
+.price-masked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #909399;
+    min-height: 32px;
 }
 
 .child-ps :deep(.el-table__body-wrapper .el-scrollbar__wrap) {
