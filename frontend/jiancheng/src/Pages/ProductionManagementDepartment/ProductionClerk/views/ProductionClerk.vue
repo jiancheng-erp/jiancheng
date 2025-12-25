@@ -24,6 +24,9 @@
             <el-menu-item index="3" @click="handleMenuClick(3)">
               <span>组号名字管理</span>
             </el-menu-item>
+            <el-menu-item index="5" @click="handleMenuClick(5)">
+              <span>业务生产订单下载</span>
+            </el-menu-item>
             <el-menu-item index="4" @click="handleMenuClick(4)">
               <span>个人信息</span>
             </el-menu-item>
@@ -47,6 +50,7 @@
   import QuantityReportOverview from '../components/QuantityReportOverview.vue'
   import ProductionLinesManagement from '../components/ProductionLinesManagement.vue'
   import PersonalInfo from '@/components/PersonalInfo.vue'
+  import BusinessOrderDownload from '../components/BusinessOrderDownload.vue'
   import { UserFilled } from '@element-plus/icons-vue'
   import { ref } from 'vue'
   import axios from 'axios'
@@ -58,7 +62,8 @@
       QuantityReportOverview,
       OrderProgress,
       ProductionLinesManagement,
-      PersonalInfo
+      PersonalInfo,
+      BusinessOrderDownload
     },
     data() {
       return {
@@ -90,6 +95,9 @@
             break
           case 4:
             this.currentComponent = 'PersonalInfo'
+            break
+          case 5:
+            this.currentComponent = 'BusinessOrderDownload'
             break
         }
       },

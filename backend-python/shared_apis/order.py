@@ -72,6 +72,28 @@ CRAFT_SHEET_ORDER_SHOE_STATUS = 9
 TECH_DEPARTMENT_MANAGER = 5
 
 
+def _locate_packaging_doc(order_rid: str):
+    if not order_rid:
+        return None
+    base_dirs = [
+        os.path.join(FILE_STORAGE_PATH, "业务部文件", order_rid),
+        os.path.join(FILE_STORAGE_PATH, order_rid),  # legacy fallback
+    ]
+    candidates = ["包装资料.xlsx", "包装资料.xls", "包装资料.pdf"]
+    for base_dir in base_dirs:
+        if not os.path.exists(base_dir):
+            continue
+        for name in candidates:
+            candidate_path = os.path.join(base_dir, name)
+            if os.path.exists(candidate_path):
+                return {
+                    "path": candidate_path,
+                    "file_name": name,
+                    "ext": os.path.splitext(candidate_path)[1].lower(),
+                }
+    return None
+
+
 @order_bp.route("/ordershoe/getordershoebyorder", methods=["GET"])
 def get_order_shoe_by_order():
     order_id = request.args.get("orderid")
@@ -121,7 +143,7 @@ def get_dev_orders_for_doc():
             .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
             .filter(OrderShoeStatus.current_status == status_val)
             .filter(OrderShoeStatus.revert_info.is_(None))
-            .order_by(Order.start_date.asc())
+            .order_by(Order.start_date.desc())
             .all()
         )
     else:
@@ -146,7 +168,7 @@ def get_dev_orders_for_doc():
             .filter(Order.order_paper_production_instruction_status == "0")
             .filter(OrderShoeStatus.revert_info.is_(None))
             .filter(Shoe.shoe_department_id == shoe_department)
-            .order_by(Order.start_date.asc())
+            .order_by(Order.start_date.desc())
             .all()
         )
 
@@ -216,7 +238,7 @@ def get_dev_orders():
             .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
             .filter(OrderShoeStatus.current_status == status_val)
             .filter(OrderShoeStatus.revert_info.is_(None))
-            .order_by(Order.start_date.asc())
+            .order_by(Order.start_date.desc())
             .all()
         )
     else:
@@ -239,7 +261,7 @@ def get_dev_orders():
             .filter(OrderShoeStatus.current_status == status_val)
             .filter(OrderShoeStatus.revert_info.is_(None))
             .filter(Shoe.shoe_department_id == shoe_department)
-            .order_by(Order.start_date.asc())
+            .order_by(Order.start_date.desc())
             .all()
         )
 
@@ -289,7 +311,7 @@ def get_orders_by_status():
         .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
         .filter(OrderShoeStatus.current_status == status_val)
         .filter(OrderShoeStatus.revert_info.is_(None))
-        .order_by(Order.start_date.asc())
+        .order_by(Order.start_date.desc())
         .all()
     )
     pending_orders, in_progress_orders = [], []
@@ -1704,6 +1726,8 @@ def export_order():
 def export_production_order():
     output_type = request.args.get("outputType", type=int)
     order_ids = request.args.get("orderIds").split(",")
+    include_price = request.args.get("includePrice", default=1, type=int)
+    include_price = bool(include_price)
     response = (
         db.session.query(
             Order,
@@ -1820,16 +1844,47 @@ def export_production_order():
         new_file_name = f"导出配码生产订单_{timestamp}.xlsx"
         send_name = f"导出配码生产订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码生产订单", new_file_name)
-        generate_production_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+        generate_production_excel_file(
+            template_path,
+            new_file_path,
+            order_shoe_mapping,
+            meta_data,
+            include_price=include_price,
+        )
     else:
         timestamp = str(time.time())
         new_file_name = f"导出数量生产订单_{timestamp}.xlsx"
         send_name = f"导出数量生产订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量生产订单", new_file_name)
         generate_production_amount_excel_file(
-            template_path, new_file_path, order_shoe_mapping, meta_data
+            template_path,
+            new_file_path,
+            order_shoe_mapping,
+            meta_data,
+            include_price=include_price,
         )
     return send_file(new_file_path, as_attachment=True, download_name=send_name)
+
+
+@order_bp.route("/order/downloadpackagingdoc", methods=["GET"])
+def download_packaging_doc():
+    order_id = request.args.get("orderId", type=int)
+    if not order_id:
+        return jsonify({"message": "orderId is required"}), 400
+
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"message": "order not found"}), 404
+
+    packaging_doc = _locate_packaging_doc(order_entity.order_rid)
+    if not packaging_doc:
+        return jsonify({"message": "包装资料不存在"}), 404
+
+    return send_file(
+        packaging_doc["path"],
+        as_attachment=True,
+        download_name=packaging_doc.get("file_name", os.path.basename(packaging_doc["path"]))
+    )
 
 
 @order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
