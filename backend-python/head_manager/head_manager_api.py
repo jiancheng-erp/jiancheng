@@ -898,7 +898,15 @@ def confirm_production_order():
             "YangShuYao",
             context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
         )
+        message2 = "订单已由总经理确认，可以下载生产订单/包装资料信息，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
+        send_configurable_message(
+            "head_confirm_production_download",
+            message2,
+            "SunHaoZheng",
+            context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        )
         db.session.commit()
+        
         return jsonify({"msg": "Production order confirmed."})
     else:
         return jsonify({"msg": "Error Order Status"}), 400

@@ -1,5 +1,4 @@
 import shutil
-from importlib_metadata import metadata
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.drawing.image import Image
@@ -7,14 +6,21 @@ from constants import SHOESIZERANGE
 from file_locations import IMAGE_UPLOAD_PATH
 import os
 from collections import defaultdict
-from openpyxl.drawing.image import Image
 from openpyxl.utils import units
 from openpyxl.styles import Font
 from logger import logger
 
 merge_ranges = []
 
-def add_totals_section(ws, data_start_row: int, data_end_row: int, currency_type: str, size_start_col_letter: str = "G", size_names=None):
+def add_totals_section(
+    ws,
+    data_start_row: int,
+    data_end_row: int,
+    currency_type: str,
+    size_start_col_letter: str = "G",
+    size_names=None,
+    include_price: bool = True,
+):
     """
     在数据区下方插入合计行：件数、双数、金额
     - 件数：count 列（每行的包装件数）
@@ -59,19 +65,20 @@ def add_totals_section(ws, data_start_row: int, data_end_row: int, currency_type
     ws[f"{pairs_col_letter}{totals_row}"] = f"=SUM({pairs_col_letter}{data_start_row}:{pairs_col_letter}{data_end_row})"
     ws[f"{pairs_col_letter}{totals_row}"].font = Font(bold=True)
 
-    # 金额合计
-    ws[f"{amount_col_letter}{totals_row}"] = f"=SUM({amount_col_letter}{data_start_row}:{amount_col_letter}{data_end_row})"
-    ws[f"{amount_col_letter}{totals_row}"].number_format = get_currency_format(currency_type or "")
-    ws[f"{amount_col_letter}{totals_row}"].font = Font(bold=True)
+    if include_price:
+        ws[f"{amount_col_letter}{totals_row}"] = f"=SUM({amount_col_letter}{data_start_row}:{amount_col_letter}{data_end_row})"
+        ws[f"{amount_col_letter}{totals_row}"].number_format = get_currency_format(currency_type or "")
+        ws[f"{amount_col_letter}{totals_row}"].font = Font(bold=True)
+    else:
+        ws[f"{amount_col_letter}{totals_row}"] = ""
 
     # 让合计行更显眼：行高、（可选）边框你也可以按需加
     ws.row_dimensions[totals_row].height = 22
-    
-def is_empty_row(ws, row_idx: int) -> bool:
-    """判断整行是否为空（无任何值）"""
-    if row_idx > ws.max_row:
-        return True
-    for cell in ws[row_idx]:
+
+
+def is_empty_row(ws, row_index: int) -> bool:
+    """Return True when every cell in the given row is blank or None."""
+    for cell in ws[row_index]:
         if cell.value not in (None, ""):
             return False
     return True
@@ -214,6 +221,15 @@ def ensure_min_width(ws, col_letters, min_width: float):
         # 某些模板列宽可能是 None，这里统一保障下限
         if cur is None or cur < min_width:
             ws.column_dimensions[letter].width = float(min_width)
+
+
+def remove_price_amount_columns(ws, cols):
+    """删除价格与金额两列，包含表头与数据。"""
+    amount_idx = column_index_from_string(cols["amount_letter"])
+    price_idx = column_index_from_string(cols["price_letter"])
+    # 先删金额列，避免影响价格列索引
+    ws.delete_cols(amount_idx, 1)
+    ws.delete_cols(price_idx, 1)
 
 
 def get_currency_format(currency_type):
@@ -452,7 +468,7 @@ def fix_header_merges_after_size_columns(ws, size_start_col_letter="G", size_nam
         cell = ws[f"{col_letter}4"]
         cell.font = cell.font.copy(bold=True)
         
-def insert_series_data(wb: Workbook, series_data, col, row):
+def insert_series_data(wb: Workbook, series_data, col, row, include_price: bool = True):
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     NORMAL_ROW_HEIGHT = 20
@@ -541,16 +557,19 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         currency_format = get_currency_format(metadata.get("currencyType", ""))
 
-                        # S 列：价格
-                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_price.value = unit_price
-                        cell_price.number_format = currency_format
-                        col_idx += 1
+                        if include_price:
+                            cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_price.value = unit_price
+                            cell_price.number_format = currency_format
+                            col_idx += 1
 
-                        # T 列：金额
-                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_amount.value = unit_price * total_quantity * count
-                        cell_amount.number_format = currency_format
+                            cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_amount.value = unit_price * total_quantity * count
+                            cell_amount.number_format = currency_format
+                        else:
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            col_idx += 1
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
 
                         row += 1
 
@@ -600,7 +619,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
         ws[f"B{shoe_start}"] = shoe_rid
         return row - 1
                 
-def insert_series_data_amount(wb: Workbook, series_data, col, row):
+def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price: bool = True):
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     NORMAL_ROW_HEIGHT = 20
@@ -689,16 +708,19 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         currency_format = get_currency_format(metadata.get("currencyType", ""))
 
-                        # S 列：价格
-                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_price.value = unit_price
-                        cell_price.number_format = currency_format
-                        col_idx += 1
+                        if include_price:
+                            cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_price.value = unit_price
+                            cell_price.number_format = currency_format
+                            col_idx += 1
 
-                        # T 列：金额
-                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_amount.value = unit_price * total_quantity * count
-                        cell_amount.number_format = currency_format
+                            cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_amount.value = unit_price * total_quantity * count
+                            cell_amount.number_format = currency_format
+                        else:
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            col_idx += 1
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
 
                         row += 1
 
@@ -757,13 +779,19 @@ def save_workbook(wb, new_file_path):
 
 
 # Main function to generate the Excel file
-def generate_production_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_production_excel_file(
+    template_path,
+    new_file_path,
+    order_data: dict,
+    metadata: dict,
+    include_price: bool = True,
+):
     logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    data_end_row = insert_series_data(wb, order_data, "A", 6)
+    data_end_row = insert_series_data(wb, order_data, "A", 6, include_price=include_price)
     data_start_row = 6
     trim_trailing_blank_after_data(ws, data_end_row)
 
@@ -782,9 +810,12 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
         data_end_row=data_end_row,
         currency_type=order_data[next(iter(order_data))].get("currencyType", ""),  # 若你的 currencyType 在 metadata，也可以用 metadata.get("currencyType")
         size_start_col_letter="G",
-        size_names=metadata["sizeNames"]
+        size_names=metadata["sizeNames"],
+        include_price=include_price,
     )
     cols = get_dynamic_columns(metadata["sizeNames"], "G")
+    if not include_price:
+        remove_price_amount_columns(ws, cols)
     apply_remark_wrap_and_row_height(ws, cols["remark_letter"], data_start_row, data_end_row)
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
@@ -802,8 +833,9 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     ws["Q3"] = q3_value
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
-    ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)  # 建议至少 14
-    ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
+    if include_price:
+        ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)
+    ensure_min_width(ws, [cols["remark_letter"]], 18)  # 备注列稍宽些（可按需改）
     adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
     #reset_print_area(ws)
@@ -811,13 +843,19 @@ def generate_production_excel_file(template_path, new_file_path, order_data: dic
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
     
-def generate_production_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_production_amount_excel_file(
+    template_path,
+    new_file_path,
+    order_data: dict,
+    metadata: dict,
+    include_price: bool = True,
+):
     logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    data_end_row = insert_series_data_amount(wb, order_data, "A", 6)
+    data_end_row = insert_series_data_amount(wb, order_data, "A", 6, include_price=include_price)
     data_start_row = 6
     trim_trailing_blank_after_data(ws, data_end_row)
     # insert shoe size name
@@ -835,9 +873,12 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
         data_end_row=data_end_row,
         currency_type=order_data[next(iter(order_data))].get("currencyType", ""),
         size_start_col_letter="G",
-        size_names=metadata["sizeNames"]
+        size_names=metadata["sizeNames"],
+        include_price=include_price,
     )
     cols = get_dynamic_columns(metadata["sizeNames"], "G")
+    if not include_price:
+        remove_price_amount_columns(ws, cols)
     apply_remark_wrap_and_row_height(ws, cols["remark_letter"], data_start_row, data_end_row)
     remark_col_idx = find_remark_column(ws, header_row=4)
     if remark_col_idx:
@@ -855,8 +896,9 @@ def generate_production_amount_excel_file(template_path, new_file_path, order_da
     ws["Q3"] = q3_value
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
-    ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)  # 建议至少 14
-    ensure_min_width(ws, [cols["remark_letter"]], 18)                        # 备注列稍宽些（可按需改）
+    if include_price:
+        ensure_min_width(ws, [cols["price_letter"], cols["amount_letter"]], 14)
+    ensure_min_width(ws, [cols["remark_letter"]], 18)  # 备注列稍宽些（可按需改）
     adjust_title_merge(ws, title_row=1, start_col_letter="A")
     adjust_title_merge(ws, title_row=1, start_col_letter="A")  # 调整标题合并范围
     #reset_print_area(ws)
