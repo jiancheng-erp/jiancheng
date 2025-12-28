@@ -77,6 +77,13 @@
             <el-table-column prop="batchName" label="配码名称" width="120" />
             <el-table-column prop="packagingInfoName" label="包装方案" width="120" />
             <el-table-column prop="currentStock" label="当前库存(双)" width="120" />
+            <el-table-column label="入库状态" width="120">
+              <template #default="{ row }">
+                <el-tag :type="row.inboundFinished ? 'success' : 'warning'">
+                  {{ row.inboundFinished ? '已完成入库' : '未完成入库' }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="cartonCount" label="申请箱数" width="100" />
             <el-table-column prop="pairsPerCarton" label="每箱双数" width="100" />
             <el-table-column prop="totalPairs" label="申请双数" width="100" />
@@ -163,6 +170,13 @@
         <el-table-column prop="batchName" label="配码名称" width="120" />
         <el-table-column prop="packagingInfoName" label="包装方案" width="120" />
         <el-table-column prop="currentStock" label="当前库存(双)" width="120" />
+        <el-table-column label="入库状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.inboundFinished ? 'success' : 'warning'">
+              {{ row.inboundFinished ? '已完成入库' : '未完成入库' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="cartonCount" label="预计箱数" width="100" />
         <el-table-column prop="totalPairs" label="预计出库(双)" width="120" />
         <el-table-column label="实际箱数" width="160">
@@ -305,7 +319,10 @@ export default {
         params: { applyId: row.applyId }
       })
       const { details } = res.data || {}
-      row.details = details || []
+      row.details = (details || []).map((item) => ({
+        ...item,
+        inboundFinished: item.inboundFinished === 1 || item.finishedStatus === 1
+      }))
       row.detailLoaded = true
       return row.details
     },
@@ -317,6 +334,23 @@ export default {
       const details = row.detailLoaded ? row.details : await this.loadDetail(row)
       if (!details || !details.length) {
         ElMessage.error('该申请单没有明细，无法出库')
+        return
+      }
+      const notInboundFinished = details.filter((item) => !item.inboundFinished)
+      if (notInboundFinished.length) {
+        const hint = notInboundFinished
+          .slice(0, 3)
+          .map((item) => {
+            const shoe = item.shoeRId || ''
+            const color = item.colorName ? `-${item.colorName}` : ''
+            return `${shoe}${color}` || '未知明细'
+          })
+          .join(', ')
+        ElMessage.warning(
+          hint
+            ? `存在未完成入库的明细（${hint}），请入库完成后再出库`
+            : '存在未完成入库的明细，请入库完成后再出库'
+        )
         return
       }
       this.executeDetails = details.map((item) => ({
@@ -345,6 +379,11 @@ export default {
       }
       if (!this.executeForm.picker) {
         ElMessage.error('请填写拣货人')
+        return
+      }
+      const unfinishedDetail = this.executeDetails.find((item) => !item.inboundFinished)
+      if (unfinishedDetail) {
+        ElMessage.error('仍有未完成入库的明细，暂无法出库')
         return
       }
 

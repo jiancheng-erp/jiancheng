@@ -497,6 +497,7 @@ export default {
 
             // 业务：默认只看“未发起审核”订单
             if (this.role == 4 || this.role == 21) {
+                this.storageStatusNum = this.FINISHED_STORAGE_STATUS_ENUM.ALL
                 this.auditStatusNum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM.PRODUCT_OUTBOUND_AUDIT_NOT_INIT
             }
             // 仓库：默认看“入库完成 + 出库审核通过”订单
@@ -579,9 +580,8 @@ export default {
                 return
             }
             for (const row of this.selectedRows) {
-                // 2. 仓库状态：必须是“已完成入库”
-                if (row.storageStatusNum !== this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_INBOUND_FINISHED) {
-                    ElMessage.error(`订单 ${row.orderRId} 未完成入库/已出库完成，无法出库`)
+                if (row.storageStatusNum === this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED) {
+                    ElMessage.error(`订单 ${row.orderRId} 已完成出库，无法再次申请`)
                     return
                 }
             }
@@ -641,10 +641,14 @@ export default {
                         }
 
                         const batchStock = Number(bi.batchAvailableAmount || 0)
+                        const totalOrderPairs = Number(bi.totalAmount || 0)
                         let defaultCartons = 0
-                        if (pairsPerCarton > 0 && batchStock > 0) {
+                        if (pairsPerCarton > 0 && totalOrderPairs > 0) {
+                            defaultCartons = totalOrderPairs / pairsPerCarton
+                        } else if (pairsPerCarton > 0 && batchStock > 0) {
                             defaultCartons = batchStock / pairsPerCarton
                         }
+                        const defaultPairs = totalOrderPairs > 0 ? totalOrderPairs : defaultCartons * pairsPerCarton
 
                         this.businessForm.items.push({
                             // 关键：明细里带上自己对应的订单
@@ -666,7 +670,7 @@ export default {
                             batchStock,
                             pairsPerCarton,
                             applyCartons: defaultCartons,
-                            applyPairs: defaultCartons * pairsPerCarton,
+                            applyPairs: defaultPairs,
 
                             remark: ''
                         })
@@ -796,6 +800,13 @@ export default {
                     ElMessage.error('存在未审批通过的订单，无法出库')
                     return
                 }
+            }
+            const unfinishedInbound = this.selectedRows.filter(
+                (row) => row.storageStatusNum !== this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_INBOUND_FINISHED
+            )
+            if (unfinishedInbound.length > 0) {
+                ElMessage.error('存在未完成入库的订单，成品仓需等入库完成后才能出库')
+                return
             }
             this.currentOperation = 1
             this.groupSelectedRowsForWarehouse()
