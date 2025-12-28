@@ -22,7 +22,10 @@ from general_document.finished_warehouse_excel import (
     build_finished_outbound_excel,
     build_finished_inout_excel,
 )
-from general_document.shoe_outbound_list import generate_finished_outbound_excel
+from general_document.shoe_outbound_list import (
+    generate_finished_outbound_apply_excel,
+    generate_finished_outbound_excel,
+)
 from shared_apis.utility_func import normalize_category_by_batch_type
 from shared_apis.utility_func import normalize_currency
 import os
@@ -1220,6 +1223,20 @@ def get_finished_outbound_records():
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     count_result = query.distinct().count()
     response = query.distinct().limit(number).offset((page - 1) * number).all()
+
+    outbound_ids = [row[5] for row in response]
+    apply_map = {}
+    if outbound_ids:
+        apply_rows = (
+            db.session.query(
+                ShoeOutboundApply.outbound_record_id, ShoeOutboundApply.apply_id
+            )
+            .filter(ShoeOutboundApply.outbound_record_id.in_(outbound_ids))
+            .all()
+        )
+        for outbound_record_id, apply_id in apply_rows:
+            apply_map.setdefault(outbound_record_id, []).append(apply_id)
+
     result = []
 
     for row in response:
@@ -1234,6 +1251,7 @@ def get_finished_outbound_records():
             outbound_datetime,
             record_detail,
         ) = row
+        apply_ids = apply_map.get(outbound_id, [])
         obj = {
             "orderId": order.order_id,
             "orderRId": order.order_rid,
@@ -1247,6 +1265,8 @@ def get_finished_outbound_records():
             "timestamp": format_datetime(outbound_datetime),
             "detailAmount": record_detail.outbound_amount,
             "customerBrand": customer.customer_brand,
+            "applyIds": apply_ids,
+            "applyId": apply_ids[0] if len(apply_ids) == 1 else None,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -2299,6 +2319,39 @@ def download_finished_outbound_record_by_batch_id():
     )
 
 
+@finished_storage_bp.route(
+    "/warehouse/downloadfinishedoutboundapply", methods=["POST"]
+)
+def download_finished_outbound_apply():
+    data = request.get_json(silent=True) or {}
+    apply_ids = data.get("applyIds")
+
+    if not apply_ids:
+        return jsonify({"error": "缺少参数：applyIds"}), 400
+
+    template_path = os.path.join(FILE_STORAGE_PATH, "出货清单模板.xlsx")
+
+    try:
+        excel_io, filename = generate_finished_outbound_apply_excel(
+            template_path=template_path,
+            apply_ids=apply_ids,
+        )
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 500
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception:
+        current_app.logger.exception("导出出库申请失败")
+        return jsonify({"error": "导出出库申请失败"}), 500
+
+    return send_file(
+        excel_io,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 # ============================================================
 # 出库申请（ShoeOutboundApply）相关接口
 # ============================================================
@@ -2666,6 +2719,8 @@ def get_outbound_apply_detail():
                     order_shoe.customer_product_name if order_shoe else None
                 ),
                 "currentStock": storage.finished_amount if storage else None,
+                "finishedStatus": storage.finished_status if storage else None,
+                "inboundFinished": 1 if (storage and storage.finished_status == 1) else 0,
                 "batchName": batch_info.name if batch_info else None,
                 "packagingInfoName": pkg.packaging_info_name if pkg else None,
             }
