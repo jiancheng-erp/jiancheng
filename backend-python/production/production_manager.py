@@ -1,5 +1,7 @@
 import traceback
+from collections import defaultdict
 from datetime import datetime, timedelta, date
+from decimal import Decimal
 from api_utility import (
     format_date,
     format_line_group,
@@ -15,13 +17,58 @@ from models import *
 from sqlalchemy import func, or_, cast, Integer, and_, select, asc, desc, case
 from sqlalchemy.dialects.mysql import insert
 from general_document.batch_info import generate_excel_file
+from general_document.production_instruction_export import (
+    generate_production_instruction_order_excel_file,
+)
 from shared_apis.batch_info_type import get_order_batch_type_helper
+from file_locations import IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH, FILE_STORAGE_PATH
 import os
 from login.login import current_user_info
 from logger import logger
 
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
+
+STAGE_DEFINITIONS = [
+    {
+        "key": "cutting",
+        "label": "裁断",
+        "team": 0,
+        "line_attr": "cutting_line_group",
+        "start_attr": "cutting_start_date",
+        "end_attr": "cutting_end_date",
+        "total_attr": "cutting_amount",
+    },
+    {
+        "key": "preSewing",
+        "label": "针车预备",
+        "team": 1,
+        "line_attr": "pre_sewing_line_group",
+        "start_attr": "pre_sewing_start_date",
+        "end_attr": "pre_sewing_end_date",
+        "total_attr": "pre_sewing_amount",
+    },
+    {
+        "key": "sewing",
+        "label": "针车",
+        "team": 1,
+        "line_attr": "sewing_line_group",
+        "start_attr": "sewing_start_date",
+        "end_attr": "sewing_end_date",
+        "total_attr": "sewing_amount",
+    },
+    {
+        "key": "molding",
+        "label": "成型",
+        "team": 2,
+        "line_attr": "molding_line_group",
+        "start_attr": "molding_start_date",
+        "end_attr": "molding_end_date",
+        "total_attr": "molding_amount",
+    },
+]
+
+STAGE_DEF_MAP = {stage["key"]: stage for stage in STAGE_DEFINITIONS}
 
 
 def get_order_info_helper(order_id, order_shoe_id):
@@ -939,6 +986,722 @@ def get_order_shoes_production_amount():
     return jsonify(result)
 
 
+@production_manager_bp.route("/production/instruction/orders", methods=["GET"])
+def get_instruction_order_overview():
+    order_rid = request.args.get("orderRid", default=None, type=str)
+    start_date_str = request.args.get("startDate")
+    end_date_str = request.args.get("endDate")
+    base_query = (
+        db.session.query(
+            Order,
+            Customer,
+            OrderShoe,
+            OrderShoeType,
+            ShoeType,
+            Shoe,
+            Color,
+            OrderShoeProductionInfo,
+            OrderStatus.order_current_status,
+            OrderStatusReference.order_status_name,
+        )
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .outerjoin(
+            OrderShoeProductionInfo,
+            OrderShoeProductionInfo.order_shoe_id == OrderShoe.order_shoe_id,
+        )
+        .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .outerjoin(
+            OrderStatusReference,
+            OrderStatus.order_current_status
+            == OrderStatusReference.order_status_id,
+        )
+        .order_by(Order.order_rid.asc())
+    )
+
+    if order_rid:
+        base_query = base_query.filter(Order.order_rid.like(f"%{order_rid}%"))
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            base_query = base_query.filter(Order.start_date >= start_date)
+        except ValueError:
+            pass
+
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            base_query = base_query.filter(Order.start_date <= end_date)
+        except ValueError:
+            pass
+
+    entities = base_query.all()
+    if not entities:
+        return jsonify([])
+
+    order_shoe_type_ids = set()
+    order_shoe_ids = set()
+    for entity in entities:
+        (
+            _order,
+            _customer,
+            order_shoe,
+            order_shoe_type,
+            *_,
+        ) = entity
+        order_shoe_type_ids.add(order_shoe_type.order_shoe_type_id)
+        order_shoe_ids.add(order_shoe.order_shoe_id)
+    production_amount_map = defaultdict(dict)
+    if order_shoe_type_ids:
+        amount_entities = (
+            db.session.query(OrderShoeProductionAmount)
+            .filter(
+                OrderShoeProductionAmount.order_shoe_type_id.in_(order_shoe_type_ids)
+            )
+            .all()
+        )
+        for amount in amount_entities:
+            production_amount_map[amount.order_shoe_type_id][
+                amount.production_team
+            ] = amount
+
+    production_instruction_map = {}
+    if order_shoe_ids:
+        instruction_rows = (
+            db.session.query(ProductionInstruction)
+            .filter(ProductionInstruction.order_shoe_id.in_(order_shoe_ids))
+            .all()
+        )
+        for instruction in instruction_rows:
+            production_instruction_map[instruction.order_shoe_id] = instruction
+
+    craft_sheet_map = {}
+    if order_shoe_ids:
+        craft_rows = (
+            db.session.query(CraftSheet)
+            .filter(CraftSheet.order_shoe_id.in_(order_shoe_ids))
+            .all()
+        )
+        for craft in craft_rows:
+            craft_sheet_map[craft.order_shoe_id] = {
+                "productionRequirement": craft.production_remark,
+                "postProcessing": craft.post_processing_comment,
+                "cuttingRequirement": craft.cutting_special_process,
+                "sewingRequirement": craft.sewing_special_process,
+                "moldingRequirement": craft.molding_special_process,
+            }
+
+    material_detail_map = defaultdict(dict)
+    if order_shoe_type_ids:
+        material_rows = (
+            db.session.query(
+                ProductionInstructionItem,
+                Material,
+                Supplier,
+            )
+            .join(Material, Material.material_id == ProductionInstructionItem.material_id)
+            .outerjoin(Supplier, Supplier.supplier_id == Material.material_supplier)
+            .filter(ProductionInstructionItem.order_shoe_type_id.in_(order_shoe_type_ids))
+            .all()
+        )
+        for item, material, supplier in material_rows:
+            entry = material_detail_map[item.order_shoe_type_id]
+            supplier_name = supplier.supplier_name if supplier else None
+            if material.material_name == "大底" and "outsole" not in entry:
+                entry["outsole"] = {
+                    "supplierName": supplier_name,
+                    "materialModel": item.material_model,
+                    "materialName": material.material_name,
+                    "materialSpecification": item.material_specification,
+                }
+            elif material.material_name == "中底" and "midsole" not in entry:
+                entry["midsole"] = {
+                    "supplierName": supplier_name,
+                    "materialModel": item.material_model,
+                    "materialName": material.material_name,
+                    "materialSpecification": item.material_specification,
+                }
+            if item.material_type == "H":
+                if material.material_name == "烫底":
+                    entry["hotsoleCraft"] = item.pre_craft_name
+                else:
+                    if "hotsoleSupplier" not in entry:
+                        entry["hotsoleSupplier"] = supplier_name
+                    if "hotsoleModel" not in entry:
+                        entry["hotsoleModel"] = item.material_model
+
+    batch_amounts_map = {}
+    packaging_info_ids = set()
+    if order_shoe_type_ids:
+        batch_query = db.session.query(OrderShoeBatchInfo.order_shoe_type_id)
+        for size in SHOESIZERANGE:
+            column = getattr(OrderShoeBatchInfo, f"size_{size}_amount")
+            batch_query = batch_query.add_columns(
+                func.sum(column).label(f"size_{size}_amount")
+            )
+        batch_query = batch_query.add_columns(
+            func.max(OrderShoeBatchInfo.packaging_info_id).label("packaging_info_id")
+        )
+        batch_rows = (
+            batch_query
+            .filter(OrderShoeBatchInfo.order_shoe_type_id.in_(order_shoe_type_ids))
+            .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+            .all()
+        )
+        for row in batch_rows:
+            order_shoe_type_id = row[0]
+            size_totals = {}
+            for idx, size in enumerate(SHOESIZERANGE):
+                value = row[idx + 1]
+                size_totals[str(size)] = int(value or 0)
+            packaging_info_id = row[len(SHOESIZERANGE) + 1]
+            if packaging_info_id:
+                packaging_info_ids.add(packaging_info_id)
+            batch_amounts_map[order_shoe_type_id] = {
+                "sizeAmounts": size_totals,
+                "packagingInfoId": packaging_info_id,
+            }
+
+    packaging_to_batch_type = {}
+    if packaging_info_ids:
+        packaging_rows = (
+            db.session.query(PackagingInfo)
+            .filter(PackagingInfo.packaging_info_id.in_(packaging_info_ids))
+            .all()
+        )
+        for pkg in packaging_rows:
+            packaging_to_batch_type[pkg.packaging_info_id] = pkg.batch_info_type_id
+
+    order_batch_type_map = {
+        order.order_id: order.batch_info_type_id for order, *_ in entities if order.batch_info_type_id
+    }
+    batch_type_ids = {
+        batch_id
+        for batch_id in packaging_to_batch_type.values()
+        if batch_id is not None
+    }
+    batch_type_ids.update(
+        batch_id for batch_id in order_batch_type_map.values() if batch_id is not None
+    )
+
+    batch_type_label_map = {}
+    if batch_type_ids:
+        batch_type_rows = (
+            db.session.query(BatchInfoType)
+            .filter(BatchInfoType.batch_info_type_id.in_(batch_type_ids))
+            .all()
+        )
+        for batch_type in batch_type_rows:
+            labels = {}
+            for size in SHOESIZERANGE:
+                label_value = getattr(batch_type, f"size_{size}_name", None)
+                if label_value:
+                    labels[str(size)] = label_value
+            batch_type_label_map[batch_type.batch_info_type_id] = labels
+
+    default_labels = {str(size): str(size) for size in SHOESIZERANGE}
+
+    def format_date_safe(value):
+        if not value:
+            return None
+        return value.strftime("%Y-%m-%d")
+
+    def build_size_labels(batch_type_id):
+        label_map = batch_type_label_map.get(batch_type_id) or default_labels
+        return [
+            {"code": str(size), "label": label_map.get(str(size), str(size))}
+            for size in SHOESIZERANGE
+            if label_map.get(str(size), str(size))
+        ]
+
+    def build_size_amounts(team_record, stage_total, fallback_amounts):
+        amounts = {str(size): 0 for size in SHOESIZERANGE}
+        base_total = 0
+        if team_record:
+            for size in SHOESIZERANGE:
+                value = getattr(team_record, f"size_{size}_production_amount", 0) or 0
+                amounts[str(size)] = int(value)
+                base_total += int(value)
+            if not base_total and team_record.total_production_amount:
+                base_total = int(team_record.total_production_amount or 0)
+        elif fallback_amounts:
+            for code, amount in fallback_amounts.items():
+                amounts[code] = int(amount or 0)
+            base_total = sum(amounts.values())
+
+        stage_total = int(stage_total or 0)
+        if stage_total and base_total:
+            ratio = stage_total / base_total if base_total else 0
+            for code in amounts:
+                amounts[code] = round(amounts[code] * ratio)
+            base_total = stage_total
+        elif stage_total and not base_total:
+            base_total = stage_total
+        elif not stage_total:
+            stage_total = base_total
+
+        has_data = any(value > 0 for value in amounts.values())
+        return {
+            "sizeAmounts": amounts,
+            "total": stage_total or 0,
+            "hasData": has_data,
+        }
+
+    def build_full_path(base, relative_path):
+        if not base or not relative_path:
+            return None
+        normalized_base = base.rstrip("/\\")
+        normalized_relative = relative_path.lstrip("/\\")
+        if not normalized_relative:
+            return normalized_base
+        if not normalized_base:
+            return normalized_relative
+        return f"{normalized_base}/{normalized_relative}"
+
+    def combine_supplier_and_model(supplier_name, material_model, material_spec=None):
+        parts = [part for part in [supplier_name, material_model, material_spec] if part]
+        return " ".join(parts) if parts else None
+
+    def build_materials_payload(order_shoe_id, order_shoe_type_id, shoe_type_entity):
+        payload = {}
+        instruction = production_instruction_map.get(order_shoe_id)
+        if instruction and instruction.last_type:
+            payload["lastType"] = instruction.last_type
+
+        detail_entry = material_detail_map.get(order_shoe_type_id, {})
+        outsole_entry = detail_entry.get("outsole")
+        if outsole_entry:
+            payload["outsole"] = {
+                **outsole_entry,
+                "displayText": combine_supplier_and_model(
+                    outsole_entry.get("supplierName"),
+                    outsole_entry.get("materialModel"),
+                    outsole_entry.get("materialSpecification"),
+                ),
+            }
+
+        midsole_entry = detail_entry.get("midsole")
+        if midsole_entry:
+            payload["midsole"] = {
+                **midsole_entry,
+                "displayText": combine_supplier_and_model(
+                    midsole_entry.get("supplierName"),
+                    midsole_entry.get("materialModel"),
+                    midsole_entry.get("materialSpecification"),
+                ),
+            }
+
+        hotsole_supplier = detail_entry.get("hotsoleSupplier")
+        hotsole_model = detail_entry.get("hotsoleModel")
+        hotsole_craft = detail_entry.get("hotsoleCraft")
+        if hotsole_supplier or hotsole_model or hotsole_craft:
+            supplier_model = combine_supplier_and_model(hotsole_supplier, hotsole_model)
+            display_text_parts = [part for part in [supplier_model, hotsole_craft] if part]
+            payload["hotsole"] = {
+                "supplierName": hotsole_supplier,
+                "materialModel": hotsole_model,
+                "preCraftName": hotsole_craft,
+                "displayText": " · ".join(display_text_parts) if display_text_parts else None,
+            }
+
+        shoe_image_relative = (
+            shoe_type_entity.shoe_image_url if shoe_type_entity else None
+        )
+        if shoe_image_relative:
+            payload["shoeImage"] = {
+                "relative": shoe_image_relative,
+                "source": build_full_path(IMAGE_UPLOAD_PATH, shoe_image_relative),
+                "public": build_full_path(IMAGE_STORAGE_PATH, shoe_image_relative),
+            }
+
+        return payload or None
+
+    stage_defs = STAGE_DEFINITIONS
+
+    result = []
+    for (
+        order,
+        customer,
+        order_shoe,
+        order_shoe_type,
+        shoe_type,
+        shoe,
+        color,
+        production_info,
+        order_status_val,
+        order_status_name,
+    ) in entities:
+        type_id = order_shoe_type.order_shoe_type_id
+        batch_meta = batch_amounts_map.get(type_id)
+        fallback_size_amounts = (
+            batch_meta["sizeAmounts"] if batch_meta else {str(size): 0 for size in SHOESIZERANGE}
+        )
+        packaging_info_id = batch_meta["packagingInfoId"] if batch_meta else None
+        batch_type_id = packaging_to_batch_type.get(packaging_info_id) or order_batch_type_map.get(
+            order.order_id
+        )
+        size_labels = build_size_labels(batch_type_id)
+        size_label_map = {item["code"]: item["label"] for item in size_labels}
+        production_records = production_amount_map.get(type_id, {})
+        materials_payload = build_materials_payload(
+            order_shoe.order_shoe_id,
+            type_id,
+            shoe_type,
+        )
+        craft_payload = craft_sheet_map.get(order_shoe.order_shoe_id)
+
+        for stage in stage_defs:
+            team_record = production_records.get(stage["team"])
+            stage_total = getattr(order_shoe_type, stage["total_attr"], 0)
+            size_payload = build_size_amounts(team_record, stage_total, fallback_size_amounts)
+            stage_obj = {
+                "orderId": order.order_id,
+                "orderRid": order.order_rid,
+                "customerName": customer.customer_name,
+                "customerBrand": customer.customer_brand,
+                "orderStartDate": format_date_safe(order.start_date),
+                "orderEndDate": format_date_safe(order.end_date),
+                "orderStatus": order_status_name,
+                "orderStatusVal": order_status_val,
+                "orderShoeId": order_shoe.order_shoe_id,
+                "orderShoeTypeId": type_id,
+                "colorName": order_shoe_type.customer_color_name
+                or color.color_name,
+                "customerProductName": order_shoe.customer_product_name,
+                "shoeRid": shoe.shoe_rid,
+                "stageKey": stage["key"],
+                "stageLabel": stage["label"],
+                "lineGroup": getattr(production_info, stage["line_attr"], None)
+                if production_info
+                else None,
+                "startDate": format_date_safe(
+                    getattr(production_info, stage["start_attr"], None) if production_info else None
+                ),
+                "endDate": format_date_safe(
+                    getattr(production_info, stage["end_attr"], None) if production_info else None
+                ),
+                "productionTeam": stage["team"],
+                "scheduledPairs": size_payload["total"],
+                "scheduled": bool(team_record),
+                "sizeAmounts": size_payload["sizeAmounts"],
+                "sizeLabelMap": size_label_map,
+            }
+            if not stage_obj["scheduled"]:
+                stage_obj["unscheduledReason"] = "未排产"
+            if materials_payload:
+                stage_obj["materials"] = materials_payload
+            if craft_payload:
+                stage_obj["craftRequirements"] = craft_payload
+            result.append(stage_obj)
+
+    return jsonify(result)
+
+
+def _combine_material_text(supplier_name, material_model, specification=None):
+    parts = [part for part in [supplier_name, material_model, specification] if part]
+    return " ".join(parts) if parts else None
+
+
+def _build_instruction_material_payload(order_shoe_id, order_shoe_type_id):
+    payload = {}
+    instruction = (
+        db.session.query(ProductionInstruction)
+        .filter(ProductionInstruction.order_shoe_id == order_shoe_id)
+        .first()
+    )
+    if instruction and instruction.last_type:
+        payload["lastType"] = instruction.last_type
+
+    detail_entry = {}
+    material_rows = (
+        db.session.query(ProductionInstructionItem, Material, Supplier)
+        .join(Material, Material.material_id == ProductionInstructionItem.material_id)
+        .outerjoin(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .filter(ProductionInstructionItem.order_shoe_type_id == order_shoe_type_id)
+        .all()
+    )
+    for item, material, supplier in material_rows:
+        supplier_name = supplier.supplier_name if supplier else None
+        if material.material_name == "大底" and "outsole" not in detail_entry:
+            detail_entry["outsole"] = {
+                "supplierName": supplier_name,
+                "materialModel": item.material_model,
+                "materialName": material.material_name,
+                "materialSpecification": item.material_specification,
+            }
+        elif material.material_name == "中底" and "midsole" not in detail_entry:
+            detail_entry["midsole"] = {
+                "supplierName": supplier_name,
+                "materialModel": item.material_model,
+                "materialName": material.material_name,
+                "materialSpecification": item.material_specification,
+            }
+        if item.material_type == "H":
+            if material.material_name == "烫底":
+                detail_entry["hotsoleCraft"] = item.pre_craft_name
+            else:
+                detail_entry.setdefault("hotsoleSupplier", supplier_name)
+                detail_entry.setdefault("hotsoleModel", item.material_model)
+
+    if detail_entry.get("outsole"):
+        entry = detail_entry["outsole"]
+        payload["outsole"] = {
+            **entry,
+            "displayText": _combine_material_text(
+                entry.get("supplierName"), entry.get("materialModel"), entry.get("materialSpecification")
+            ),
+        }
+    if detail_entry.get("midsole"):
+        entry = detail_entry["midsole"]
+        payload["midsole"] = {
+            **entry,
+            "displayText": _combine_material_text(
+                entry.get("supplierName"), entry.get("materialModel"), entry.get("materialSpecification")
+            ),
+        }
+    hotsole_supplier = detail_entry.get("hotsoleSupplier")
+    hotsole_model = detail_entry.get("hotsoleModel")
+    hotsole_craft = detail_entry.get("hotsoleCraft")
+    if hotsole_supplier or hotsole_model or hotsole_craft:
+        supplier_model = _combine_material_text(hotsole_supplier, hotsole_model)
+        display_text_parts = [part for part in [supplier_model, hotsole_craft] if part]
+        payload["hotsole"] = {
+            "supplierName": hotsole_supplier,
+            "materialModel": hotsole_model,
+            "preCraftName": hotsole_craft,
+            "displayText": " · ".join(display_text_parts) if display_text_parts else None,
+        }
+
+    return payload or None
+
+
+def _build_instruction_craft_payload(order_shoe_id):
+    craft_sheet = (
+        db.session.query(CraftSheet)
+        .filter(CraftSheet.order_shoe_id == order_shoe_id)
+        .first()
+    )
+    if not craft_sheet:
+        return None
+    return {
+        "productionRequirement": craft_sheet.production_remark,
+        "postProcessing": craft_sheet.post_processing_comment,
+        "cuttingRequirement": craft_sheet.cutting_special_process,
+        "sewingRequirement": craft_sheet.sewing_special_process,
+        "moldingRequirement": craft_sheet.molding_special_process,
+    }
+
+
+def _normalize_batch_quantity(value):
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value) if not isinstance(value, Decimal) else float(value)
+    except (TypeError, ValueError):
+        return None
+    return int(number) if number.is_integer() else number
+
+
+def _build_batch_packaging_entries(order_shoe_type_id):
+    batch_rows = (
+        db.session.query(OrderShoeBatchInfo, PackagingInfo)
+        .outerjoin(PackagingInfo, PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id)
+        .filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
+        .order_by(OrderShoeBatchInfo.order_shoe_batch_info_id.asc())
+        .all()
+    )
+    entries = []
+    for batch, packaging in batch_rows:
+        size_amounts = {}
+        batch_total = 0
+        for size in SHOESIZERANGE:
+            amount = getattr(batch, f"size_{size}_amount", 0) or 0
+            amount = int(amount)
+            size_amounts[str(size)] = amount
+            batch_total += amount
+        total_amount = int(batch.total_amount or batch_total or 0)
+        entries.append(
+            {
+                "packagingInfoName": batch.name
+                or (packaging.packaging_info_name if packaging else None)
+                or "配码",
+                "packagingInfoLocale": packaging.packaging_info_locale if packaging else None,
+                "count": _normalize_batch_quantity(batch.packaging_info_quantity),
+                "totalQuantityRatio": total_amount,
+                "totalProductionAmount": total_amount,
+                "sizeProductionAmounts": size_amounts,
+            }
+        )
+    return entries
+
+
+@production_manager_bp.route(
+    "/production/instruction/orders/download", methods=["POST"]
+)
+def download_instruction_order_file():
+    data = request.get_json() or {}
+    order_shoe_type_id = data.get("orderShoeTypeId")
+    stage_key = data.get("stageKey")
+    if not order_shoe_type_id or not stage_key:
+        return jsonify({"message": "缺少必要参数"}), 400
+
+    stage_def = STAGE_DEF_MAP.get(stage_key)
+    if not stage_def:
+        return jsonify({"message": "未知的生产阶段"}), 400
+
+    entity = (
+        db.session.query(
+            Order,
+            Customer,
+            OrderShoe,
+            Shoe,
+            OrderShoeType,
+            ShoeType,
+            Color,
+        )
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
+        .first()
+    )
+    if not entity:
+        return jsonify({"message": "未找到对应的订单颜色"}), 404
+
+    (
+        order,
+        customer,
+        order_shoe,
+        shoe,
+        order_shoe_type,
+        shoe_type,
+        color,
+    ) = entity
+
+    production_record = (
+        db.session.query(OrderShoeProductionAmount)
+        .filter(
+            OrderShoeProductionAmount.order_shoe_type_id == order_shoe_type_id,
+            OrderShoeProductionAmount.production_team == stage_def["team"],
+        )
+        .first()
+    )
+    if not production_record:
+        return jsonify({"message": "该阶段尚未录入生产数量"}), 400
+
+    size_amounts = {}
+    total_size_amount = 0
+    for size in SHOESIZERANGE:
+        value = getattr(production_record, f"size_{size}_production_amount", 0) or 0
+        value = int(value)
+        size_amounts[str(size)] = value
+        total_size_amount += value
+
+    total_production = int(production_record.total_production_amount or total_size_amount)
+    if total_production <= 0:
+        return jsonify({"message": "该阶段没有可用的生产数量"}), 400
+
+    batch_type = None
+    batch_type_id = order.batch_info_type_id
+    if not batch_type_id:
+        batch_type_row = (
+            db.session.query(PackagingInfo.batch_info_type_id)
+            .join(
+                OrderShoeBatchInfo,
+                PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
+            )
+            .filter(OrderShoeBatchInfo.order_shoe_type_id == order_shoe_type_id)
+            .first()
+        )
+        if batch_type_row:
+            batch_type_id = batch_type_row[0]
+    if batch_type_id:
+        batch_type = (
+            db.session.query(BatchInfoType)
+            .filter(BatchInfoType.batch_info_type_id == batch_type_id)
+            .first()
+        )
+
+    size_names = []
+    for size in SHOESIZERANGE:
+        label = getattr(batch_type, f"size_{size}_name", None) if batch_type else None
+        size_names.append(label or str(size))
+
+    stage_label = stage_def["label"]
+    packaging_entry = {
+        "packagingInfoName": f"{stage_label}生产数量",
+        "packagingInfoLocale": stage_label,
+        "count": 1,
+        "totalQuantityRatio": total_production,
+        "totalProductionAmount": total_production,
+        "sizeProductionAmounts": size_amounts,
+    }
+
+    packaging_entries = _build_batch_packaging_entries(order_shoe_type_id)
+    if not packaging_entries:
+        packaging_entries = [packaging_entry]
+
+    order_data = {
+        order_shoe.order_shoe_id: {
+            "orderRId": order.order_rid,
+            "customerName": customer.customer_name,
+            "customerProductName": order_shoe.customer_product_name,
+            "shoeRId": shoe.shoe_rid,
+            "shoes": [
+                {
+                    "color": color.color_name,
+                    "colorName": order_shoe_type.customer_color_name,
+                    "imgUrl": shoe_type.shoe_image_url,
+                    "packagingInfo": packaging_entries,
+                }
+            ],
+            "remark": (order_shoe.business_technical_remark or "")
+            + (order_shoe.business_material_remark or ""),
+            "orderStartDate": format_date(order.start_date) if order.start_date else None,
+            "orderEndDate": format_date(order.end_date) if order.end_date else None,
+            "orderCId": order.order_cid,
+            "title": f"健诚集团{customer.customer_name}{customer.customer_brand}生产指令单",
+        }
+    }
+
+    metadata = {"sizeNames": size_names}
+
+    instruction_payload = {
+        "instructionDate": data.get("instructionDate"),
+        "materials": _build_instruction_material_payload(
+            order_shoe.order_shoe_id, order_shoe_type_id
+        ),
+        "craftRequirements": _build_instruction_craft_payload(order_shoe.order_shoe_id),
+        "shoeBoxSpecification": data.get("shoeBoxSpecification"),
+        "outerCartonSpecification": data.get("outerCartonSpecification"),
+        "printingProcess": data.get("printingProcess"),
+    }
+
+    template_path = os.path.join(FILE_STORAGE_PATH, "生产订单模板.xlsx")
+    output_dir = os.path.join(FILE_STORAGE_PATH, "生产管理部文件", "生产指令单")
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    new_file_name = f"生产指令单_{order.order_rid}_{stage_label}_{timestamp}.xlsx"
+    new_file_path = os.path.join(output_dir, new_file_name)
+
+    generate_production_instruction_order_excel_file(
+        template_path,
+        new_file_path,
+        order_data,
+        metadata,
+        instruction_payload=instruction_payload,
+    )
+
+    send_name = new_file_name
+    return send_file(new_file_path, as_attachment=True, download_name=send_name)
 @production_manager_bp.route("/production/getordershoebatchinfo", methods=["GET"])
 def get_order_shoe_batch_info():
     order_shoe_id = request.args.get("orderShoeId")
