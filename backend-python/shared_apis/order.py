@@ -3,7 +3,7 @@ import constants
 import time
 from app_config import db
 from flask import Blueprint, jsonify, request, send_file, current_app
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
 import math
@@ -58,6 +58,9 @@ DEV_DEPARTMENT_2 = 14
 DEV_DEPARTMENT_3 = 15
 # 开发五部部门码
 DEV_DEPARTMENT_5 = 16
+
+COLOR_CARD_PENDING = "0"
+COLOR_CARD_CONFIRMED = "1"
 
 
 # 面料计算，一次bom填写
@@ -289,6 +292,209 @@ def get_dev_orders():
     logger.debug("Time Taken is ")
     logger.debug(t_e - t_s)
     return result
+
+
+@order_bp.route("/order/colorcard/orders", methods=["GET"])
+def list_color_card_orders():
+    character, staff, department = current_user_info()
+    if character.character_id != DEV_DEPARTMENT_MANAGER:
+        return jsonify({"message": "仅开发部可操作"}), 403
+
+    shoe_department = department.department_name
+    status_filter = request.args.get("status")
+    keyword = (request.args.get("keyword") or "").strip()
+
+    try:
+        page = int(request.args.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        page_size = int(request.args.get("pageSize", 20))
+    except (TypeError, ValueError):
+        page_size = 20
+    page = page if page > 0 else 1
+    page_size = max(1, min(page_size, 100))
+    offset = (page - 1) * page_size
+
+    query = (
+        db.session.query(
+            Order.order_id,
+            Order.order_rid,
+            Customer.customer_name,
+            func.group_concat(func.distinct(Shoe.shoe_rid)).label("shoe_rids"),
+            Order.start_date,
+            Order.end_date,
+            Order.color_card_confirm_status,
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+        .filter(Shoe.shoe_department_id == shoe_department)
+        .group_by(
+            Order.order_id,
+            Order.order_rid,
+            Customer.customer_name,
+            Order.start_date,
+            Order.end_date,
+            Order.color_card_confirm_status,
+        )
+    )
+
+    if status_filter in (COLOR_CARD_PENDING, COLOR_CARD_CONFIRMED):
+        query = query.filter(Order.color_card_confirm_status == status_filter)
+
+    if keyword:
+        like_pattern = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Order.order_rid.like(like_pattern),
+                Customer.customer_name.like(like_pattern),
+                Shoe.shoe_rid.like(like_pattern),
+            )
+        )
+
+    query = query.order_by(Order.start_date.desc())
+    base_query = query.order_by(None)
+    total = (
+        db.session.query(func.count())
+        .select_from(base_query.subquery())
+        .scalar()
+        or 0
+    )
+
+    rows = (
+        base_query.order_by(Order.start_date.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+    payload = []
+    for row in rows:
+        payload.append(
+            {
+                "orderId": row.order_id,
+                "orderRid": row.order_rid,
+                "customerName": row.customer_name,
+                "shoeRids": row.shoe_rids.split(",") if row.shoe_rids else [],
+                "createTime": row.start_date.strftime("%Y-%m-%d") if row.start_date else None,
+                "deadlineTime": row.end_date.strftime("%Y-%m-%d") if row.end_date else None,
+                "colorCardStatus": row.color_card_confirm_status,
+            }
+        )
+
+    return jsonify(
+        {
+            "orders": payload,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+        }
+    )
+
+
+@order_bp.route("/order/colorcard/confirm", methods=["POST"])
+def confirm_color_card():
+    character, staff, department = current_user_info()
+    if character.character_id != DEV_DEPARTMENT_MANAGER:
+        return jsonify({"message": "仅开发部可操作"}), 403
+
+    data = request.get_json() or {}
+    order_id = data.get("orderId")
+    if not order_id:
+        return jsonify({"message": "缺少订单ID"}), 400
+
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"message": "订单不存在"}), 404
+
+    ownership = (
+        db.session.query(Order.order_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(Order.order_id == order_id)
+        .filter(Shoe.shoe_department_id == department.department_name)
+        .first()
+    )
+    if not ownership:
+        return jsonify({"message": "无权确认该订单"}), 403
+
+    if order_entity.color_card_confirm_status == COLOR_CARD_CONFIRMED:
+        return jsonify({"message": "色卡已确认"})
+
+    order_entity.color_card_confirm_status = COLOR_CARD_CONFIRMED
+    db.session.commit()
+    return jsonify({"message": "色卡确认完成"})
+
+
+@order_bp.route("/order/colorcard/batch-confirm", methods=["POST"])
+def batch_confirm_color_card():
+    character, staff, department = current_user_info()
+    if character.character_id != DEV_DEPARTMENT_MANAGER:
+        return jsonify({"message": "仅开发部可操作"}), 403
+
+    data = request.get_json() or {}
+    order_ids = data.get("orderIds")
+    if not isinstance(order_ids, list) or not order_ids:
+        return jsonify({"message": "请提供订单ID列表"}), 400
+
+    try:
+        normalized_ids = {int(order_id) for order_id in order_ids}
+    except (TypeError, ValueError):
+        return jsonify({"message": "存在无效的订单ID"}), 400
+
+    if not normalized_ids:
+        return jsonify({"message": "订单ID列表为空"}), 400
+
+    ownership_rows = (
+        db.session.query(Order.order_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(Order.order_id.in_(normalized_ids))
+        .filter(Shoe.shoe_department_id == department.department_name)
+        .distinct()
+        .all()
+    )
+
+    owned_ids = {row.order_id for row in ownership_rows}
+    unauthorized_ids = list(normalized_ids - owned_ids)
+
+    if not owned_ids:
+        return jsonify({"message": "所选订单无可操作权限"}), 403
+
+    orders = (
+        db.session.query(Order)
+        .filter(Order.order_id.in_(owned_ids))
+        .all()
+    )
+
+    updated = 0
+    already_confirmed = []
+    for order in orders:
+        if order.color_card_confirm_status == COLOR_CARD_CONFIRMED:
+            already_confirmed.append(order.order_id)
+            continue
+        order.color_card_confirm_status = COLOR_CARD_CONFIRMED
+        updated += 1
+
+    if updated:
+        db.session.commit()
+
+    message_parts = [f"成功确认 {updated} 单"]
+    if already_confirmed:
+        message_parts.append(f"{len(already_confirmed)} 单已确认，跳过")
+    if unauthorized_ids:
+        message_parts.append(f"{len(unauthorized_ids)} 单无权限")
+
+    return jsonify(
+        {
+            "message": "，".join(message_parts),
+            "updated": updated,
+            "alreadyConfirmed": already_confirmed,
+            "unauthorized": unauthorized_ids,
+        }
+    )
 
 
 @order_bp.route("/order/getprodordershoebystatus", methods=["GET"])
