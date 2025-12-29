@@ -22,6 +22,9 @@
           <el-menu-item index="2" @click="handleMenuClick(2)">
             <span>投产指令单创建</span>
           </el-menu-item>
+          <el-menu-item index="9" @click="handleMenuClick(9)">
+            <span>色卡确认</span>
+          </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
             <span>退回任务列表</span>
           </el-menu-item>
@@ -62,6 +65,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import Dashboard from '../components/DevelopmentManagerDashboard.vue'
 import ProductionOrderCreate from '../components/ProductionOrderCreate.vue'
+import ColorCardConfirmation from '../components/ColorCardConfirmation.vue'
 import ShoeManagement from '@/components/ShoeTypeManagement.vue'
 import OrderSearch from '../components/OrderSearch.vue'
 import MaterialManagement from '../components/MaterialManagementView.vue'
@@ -77,6 +81,7 @@ export default {
         AllHeader,
         Dashboard,
         ProductionOrderCreate,
+        ColorCardConfirmation,
         ShoeManagement,
         OrderSearch,
         MaterialManagement,
@@ -111,6 +116,9 @@ export default {
                 case 2:
                     this.currentComponent = 'ProductionOrderCreate'
                     break
+                case 9:
+                  this.currentComponent = 'ColorCardConfirmation'
+                  break
                 case 3:
                     this.currentComponent = 'ShoeManagement'
                     break

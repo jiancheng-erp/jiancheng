@@ -425,6 +425,7 @@ class Order(db.Model):
     order_paper_color_document_status = db.Column(
         db.String(1), nullable=False, default="0"
     )
+    color_card_confirm_status = db.Column(db.String(1), nullable=False, default="0")
     is_paid = db.Column(db.SmallInteger, nullable=False, default=0)
     order_actual_end_date = db.Column(db.Date, nullable=True)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
