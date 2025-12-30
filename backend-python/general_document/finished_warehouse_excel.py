@@ -821,14 +821,14 @@ def build_finished_inout_summary_by_model_excel(
     center_cols = {4, 5, 7, 9, 10}
     row_idx = header_row + 1
     for row in rows:
-        inventory_name = row.get("shoeRid") or "-"
-        color = row.get("color") or ""
-        if color:
-            inventory_name = f"{inventory_name}-{color}"
+        # 前端需求：存货名称显示男女鞋分类；客户货号可留空
+        inventory_name = row.get("category") or ""
+        inventory_name = inventory_name or "-"
+        customer_item_no = ""
         values = [
             inventory_name,
             row.get("shoeRid") or "-",
-            row.get("category") or "-",
+            customer_item_no,
             int(row.get("openingQty") or 0),
             int(row.get("inQty") or 0),
             _format_amount_map(row.get("inAmountByCurrency")),
