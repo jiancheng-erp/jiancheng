@@ -37,6 +37,7 @@
                 </el-form-item>
                 <el-form-item label="鞋类型">
                     <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                        <el-option label="全部" value="" />
                         <el-option label="男鞋" value="男鞋" />
                         <el-option label="女鞋" value="女鞋" />
                         <el-option label="童鞋" value="童鞋" />
@@ -53,6 +54,7 @@
                 <el-form-item>
                     <el-button type="primary" @click="refresh">查询</el-button>
                     <el-button @click="reset">重置</el-button>
+                    <el-button type="success" :loading="exportLoading" @click="exportExcel">导出Excel</el-button>
                 </el-form-item>
             </el-form>
         </el-card>
@@ -89,12 +91,18 @@
             </el-col>
             <el-col :xs="24" :sm="8">
                 <el-card shadow="never" class="stats-card net" :class="{ 'net-neg': stat.netQty < 0 }">
-                    <div class="stats-title">净值</div>
+                    <div class="stats-title">库存</div>
                     <div class="stats-line">
-                        数量 <b :class="{ pos: stat.netQty >= 0, neg: stat.netQty < 0 }">{{ fmtNumber(stat.netQty) }}</b>
+                        期初 <b>{{ fmtNumber(stat.openingQty) }}</b>
                     </div>
                     <div class="stats-line">
-                        金额
+                        结存 <b>{{ fmtNumber(stat.closingQty) }}</b>
+                    </div>
+                    <div class="stats-line">
+                        净变动 <b :class="{ pos: stat.netQty >= 0, neg: stat.netQty < 0 }">{{ fmtNumber(stat.netQty) }}</b>
+                    </div>
+                    <div class="stats-line">
+                        净金额
                         <span class="tag-list">
                             <el-tag v-for="(val, cur) in stat.netAmountByCurrency" :key="'net-' + cur" size="small" :type="val > 0 ? 'success' : val < 0 ? 'danger' : 'info'" effect="dark">
                                 {{ cur }} {{ fmtMoney(val) }}
@@ -112,11 +120,21 @@
             <el-table-column v-if="filters.groupBy === 'model_color'" prop="color" label="颜色" width="160" show-overflow-tooltip />
             <el-table-column prop="designer" label="设计师" show-overflow-tooltip />
             <el-table-column prop="adjuster" label="调版师" show-overflow-tooltip />
+            <el-table-column prop="openingQty" label="期初数量" width="120">
+                <template #default="{ row }">
+                    {{ fmtNumber(row.openingQty) }}
+                </template>
+            </el-table-column>
             <el-table-column prop="inQty" label="入库数量" width="120" />
             <el-table-column prop="outQty" label="出库数量" width="120" />
-            <el-table-column prop="netQty" label="净数量" width="120">
+            <el-table-column prop="netQty" label="净变动" width="120">
                 <template #default="{ row }">
                     <span :class="{ pos: row.netQty >= 0, neg: row.netQty < 0 }">{{ fmtNumber(row.netQty) }}</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="closingQty" label="结存数量" width="120">
+                <template #default="{ row }">
+                    {{ fmtNumber(row.closingQty) }}
                 </template>
             </el-table-column>
             <el-table-column prop="unitPrice" label="单价" width="120">
@@ -160,6 +178,20 @@
 
 <script>
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
+
+const createEmptyStat = () => ({
+    openingQty: 0,
+    closingQty: 0,
+    inQty: 0,
+    outQty: 0,
+    netQty: 0,
+    inAmountByCurrency: {},
+    outAmountByCurrency: {},
+    netAmountByCurrency: {},
+    openingAmountByCurrency: {},
+    closingAmountByCurrency: {}
+})
 
 export default {
     name: 'FinishedStorageSummaryByModel',
@@ -180,37 +212,96 @@ export default {
                 category: '' // ← 新增：男鞋/女鞋/童鞋/其它（空=全部）
             },
             rows: [],
-            stat: { inQty: 0, outQty: 0, netQty: 0, inAmountByCurrency: {}, outAmountByCurrency: {}, netAmountByCurrency: {} },
+            stat: createEmptyStat(),
             page: { total: 0, currentPage: 1, pageSize: 20 },
-            loading: false
+            loading: false,
+            exportLoading: false
         }
     },
     mounted() {
         this.fetchData()
     },
     methods: {
+        buildQueryParams(includePaging = true) {
+            const params = {
+                mode: this.filters.mode,
+                groupBy: this.filters.groupBy
+            }
+            if (this.filters.mode === 'month') {
+                params.month = this.filters.month
+            } else {
+                params.year = this.filters.year
+            }
+            if (includePaging) {
+                params.page = this.page.currentPage
+                params.pageSize = this.page.pageSize
+            }
+            if (this.filters.direction) {
+                params.direction = this.filters.direction
+            }
+            if (this.filters.keyword?.trim()) {
+                params.keyword = this.filters.keyword.trim()
+            }
+            if (this.filters.shoeRid?.trim()) {
+                params.shoeRid = this.filters.shoeRid.trim()
+            }
+            if (this.filters.color?.trim()) {
+                params.color = this.filters.color.trim()
+            }
+            if (this.filters.category) {
+                params.category = this.filters.category
+            }
+            return params
+        },
         async fetchData() {
             this.loading = true
             try {
-                const p = {
-                    page: this.page.currentPage,
-                    pageSize: this.page.pageSize,
-                    mode: this.filters.mode,
-                    ...(this.filters.mode === 'month' ? { month: this.filters.month } : { year: this.filters.year }),
-                    ...(this.filters.direction ? { direction: this.filters.direction } : {}),
-                    ...(this.filters.keyword?.trim() ? { keyword: this.filters.keyword.trim() } : {}),
-                    ...(this.filters.shoeRid?.trim() ? { shoeRid: this.filters.shoeRid.trim() } : {}),
-                    ...(this.filters.color?.trim() ? { color: this.filters.color.trim() } : {}),
-                    ...(this.filters.category ? { category: this.filters.category } : {}), // ← 新增
-                    groupBy: this.filters.groupBy
-                }
+                const p = this.buildQueryParams(true)
                 const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getshoeinoutboundsummarybymodel`, { params: p })
                 const data = resp?.data || {}
                 this.rows = Array.isArray(data.list) ? data.list : []
                 this.page.total = Number(data.total || 0)
-                this.stat = data.stat || this.stat
+                this.stat = { ...createEmptyStat(), ...(data.stat || {}) }
             } finally {
                 this.loading = false
+            }
+        },
+        async exportExcel() {
+            if (this.exportLoading) {
+                return
+            }
+            this.exportLoading = true
+            try {
+                const params = this.buildQueryParams(false)
+                const res = await axios.get(
+                    `${this.$apiBaseUrl}/warehouse/export/shoeinoutsummarybymodel`,
+                    { params, responseType: 'blob' }
+                )
+                let filename = '成品仓库存出入库明细.xlsx'
+                const disposition = res.headers['content-disposition'] || res.headers['Content-Disposition']
+                if (disposition) {
+                    const match = disposition.match(/filename\*=UTF-8''(.+)|filename="?([^";]+)"?/)
+                    if (match) {
+                        filename = decodeURIComponent(match[1] || match[2])
+                    }
+                }
+                const blob = new Blob([res.data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                URL.revokeObjectURL(link.href)
+                document.body.removeChild(link)
+                ElMessage.success('导出成功')
+            } catch (error) {
+                console.error(error)
+                const message = error?.response?.data?.message || '导出失败'
+                ElMessage.error(message)
+            } finally {
+                this.exportLoading = false
             }
         },
         refresh() {
