@@ -75,6 +75,7 @@ def _apply_common_filters(q, f):
 
 
 def _filters_summary(filters: dict) -> str:
+    filters = filters or {}
     parts = []
     if filters.get("start_date") or filters.get("end_date"):
         parts.append(
@@ -88,14 +89,43 @@ def _filters_summary(filters: dict) -> str:
         parts.append(f"订单号: {filters['order_rid']}")
     if filters.get("order_cid"):
         parts.append(f"客户订单号: {filters['order_cid']}")
-    if filters.get("shoe_rid"):
-        parts.append(f"工厂型号: {filters['shoe_rid']}")
+    shoe_rid_val = filters.get("shoe_rid") or filters.get("shoeRid")
+    if shoe_rid_val:
+        parts.append(f"工厂型号: {shoe_rid_val}")
     if filters.get("customer_name"):
         parts.append(f"客户名称: {filters['customer_name']}")
     if filters.get("customer_brand"):
         parts.append(f"客户商标: {filters['customer_brand']}")
     if filters.get("customer_product_name"):
         parts.append(f"客户鞋型: {filters['customer_product_name']}")
+
+    mode_val = (filters.get("mode") or "").lower()
+    if mode_val == "month" and filters.get("month"):
+        parts.append(f"月份: {filters['month']}")
+    elif mode_val == "year" and filters.get("year"):
+        parts.append(f"年份: {filters['year']}")
+
+    direction = (filters.get("direction") or filters.get("Direction") or "").upper()
+    if direction == "IN":
+        parts.append("方向: 仅入库")
+    elif direction == "OUT":
+        parts.append("方向: 仅出库")
+
+    keyword = filters.get("keyword")
+    if keyword:
+        parts.append(f"业务单号: {keyword}")
+
+    color_kw = filters.get("color")
+    if color_kw:
+        parts.append(f"颜色: {color_kw}")
+
+    category_kw = filters.get("category")
+    if category_kw:
+        parts.append(f"类别: {category_kw}")
+
+    group_by = (filters.get("groupBy") or "model").lower()
+    parts.append("分组: 型号+颜色" if group_by == "model_color" else "分组: 型号")
+
     return " | ".join(parts) if parts else "（无筛选条件）"
 
 
@@ -734,4 +764,105 @@ def build_finished_inout_excel(filters: dict):
     wb.save(bio)
     bio.seek(0)
     filename = f"成品出入库合并_自产_{_now_tag()}.xlsx"
+    return bio, filename
+
+def _format_amount_map(amount_map: dict | None) -> str:
+    if not amount_map:
+        return ""
+    parts = []
+    for currency in sorted(amount_map.keys()):
+        raw_val = amount_map[currency]
+        try:
+            dec_val = Decimal(str(raw_val))
+        except Exception:
+            dec_val = Decimal(0)
+        parts.append(f"{currency} {dec_val.quantize(Decimal('0.00'))}")
+    return " / ".join(parts)
+
+
+def _format_unit_price(value) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, Decimal):
+        dec_val = value
+    else:
+        try:
+            dec_val = Decimal(str(value))
+        except Exception:
+            dec_val = Decimal(0)
+    return float(dec_val.quantize(Decimal("0.00")))
+
+
+def build_finished_inout_summary_by_model_excel(
+    rows: list[dict], stat: dict, filters: dict
+):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成品仓库存出入库明细"
+
+    header = [
+        "存货名称",
+        "型号",
+        "客户货号",
+        "期初数量",
+        "本期入库",
+        "金额",
+        "本期出库",
+        "金额",
+        "结存数量",
+        "单价",
+        "结存金额",
+    ]
+
+    widths: list[int] = []
+    header_row = _write_title_filters(ws, "成品仓库存出入库明细", len(header), filters)
+    _write_header(ws, header_row, header, widths)
+
+    center_cols = {4, 5, 7, 9, 10}
+    row_idx = header_row + 1
+    for row in rows:
+        inventory_name = row.get("shoeRid") or "-"
+        color = row.get("color") or ""
+        if color:
+            inventory_name = f"{inventory_name}-{color}"
+        values = [
+            inventory_name,
+            row.get("shoeRid") or "-",
+            row.get("category") or "-",
+            int(row.get("openingQty") or 0),
+            int(row.get("inQty") or 0),
+            _format_amount_map(row.get("inAmountByCurrency")),
+            int(row.get("outQty") or 0),
+            _format_amount_map(row.get("outAmountByCurrency")),
+            int(row.get("closingQty") or 0),
+            _format_unit_price(row.get("unitPrice")),
+            _format_amount_map(row.get("closingAmountByCurrency")),
+        ]
+        _write_data_row(ws, row_idx, values, widths, center_cols=center_cols)
+        row_idx += 1
+
+    summary_row = [
+        "合计",
+        "",
+        "",
+        int(stat.get("openingQty", 0)),
+        int(stat.get("inQty", 0)),
+        _format_amount_map(stat.get("inAmountByCurrency")),
+        int(stat.get("outQty", 0)),
+        _format_amount_map(stat.get("outAmountByCurrency")),
+        int(stat.get("closingQty", 0)),
+        "",
+        _format_amount_map(stat.get("closingAmountByCurrency")),
+    ]
+    _write_data_row(ws, row_idx, summary_row, widths, center_cols=center_cols)
+    ws.cell(row=row_idx, column=1).font = HEAD_FONT
+
+    data_start_row = header_row + 1
+    ws.freeze_panes = ws[f"A{data_start_row}"]
+    _apply_widths(ws, widths)
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    filename = f"成品仓库存出入库明细_{_now_tag()}.xlsx"
     return bio, filename
