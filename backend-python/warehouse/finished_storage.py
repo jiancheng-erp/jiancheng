@@ -2828,6 +2828,7 @@ def get_outbound_apply_detail():
     ) in detail_rows:
         detail_list.append(
             {
+                "customerName": customer.customer_name if customer else None,
                 "applyDetailId": d.apply_detail_id,
                 "finishedShoeStorageId": d.finished_shoe_storage_id,
                 "orderShoeTypeId": d.order_shoe_type_id,

@@ -165,7 +165,9 @@
         class="mb-2"
         max-height="320px"
       >
+        <el-table-column prop="customerName" label="客户名称" width="120" />
         <el-table-column prop="shoeRId" label="工厂型号" width="140" />
+        <el-table-column prop="customerProductName" label="客户鞋号" />
         <el-table-column prop="colorName" label="颜色" width="80" />
         <el-table-column prop="batchName" label="配码名称" width="120" />
         <el-table-column prop="packagingInfoName" label="包装方案" width="120" />
