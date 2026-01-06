@@ -566,6 +566,7 @@ export default {
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getproductoverview`, { params })
             const outboundFinishedValue = outboundFinishedStatus
+            let result = response.data.result || []
             if (this.isBusinessRole && outboundFinishedValue != null) {
                 result = result.filter((row) => row.storageStatusNum !== outboundFinishedValue)
             }
