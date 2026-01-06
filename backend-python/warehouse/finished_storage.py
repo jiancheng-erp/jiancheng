@@ -32,6 +32,7 @@ from shared_apis.utility_func import normalize_currency
 import os
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
+BUSINESS_CHARACTER_IDS = {4, 21}
 
 
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
@@ -258,6 +259,9 @@ def get_finished_in_out_overview():
 
 @finished_storage_bp.route("/warehouse/getproductoverview", methods=["GET"])
 def get_product_overview():
+    character, _, _ = current_user_info()
+    character_id = getattr(character, "character_id", None)
+    hide_outbound_finished = character_id in BUSINESS_CHARACTER_IDS
     page = request.args.get("page", type=int, default=1)
     number = request.args.get("pageSize", type=int, default=20)
     order_rid = request.args.get("orderRId")
@@ -466,6 +470,12 @@ def get_product_overview():
     ):
         query = query.filter(
             finished_amount_subquery.c.finished_actual_amount
+            < finished_amount_subquery.c.finished_estimated_amount
+        )
+
+    if hide_outbound_finished:
+        query = query.filter(
+            outbounded_amount_subquery.c.outbounded_amount
             < finished_amount_subquery.c.finished_estimated_amount
         )
 
