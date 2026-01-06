@@ -21,8 +21,8 @@
         </el-col>
         <el-col :span="12">
             <span>仓库状态筛选：</span>
-            <el-radio-group v-model="storageStatusNum" @change="getTableData">
-                <el-radio-button v-for="option in storageStatusOptions" :key="option.value" :label="option.value">
+            <el-radio-group v-model="storageStatusNum" @change="handleStorageStatusChange">
+                <el-radio-button v-for="option in storageStatusOptionsForRole" :key="option.value" :label="option.value">
                     {{ option.label }}
                 </el-radio-button>
             </el-radio-group>
@@ -465,6 +465,19 @@ export default {
             }
             return this.currentQuantityRow.shoesOutboundTable.filter((row) => row.predictQuantity > 0)
         },
+        isBusinessRole() {
+            return this.role == 4 || this.role == 21
+        },
+        storageStatusOptionsForRole() {
+            if (!Array.isArray(this.storageStatusOptions)) {
+                return []
+            }
+            const outboundFinishedValue = this.FINISHED_STORAGE_STATUS_ENUM?.PRODUCT_OUTBOUND_FINISHED
+            if (!this.isBusinessRole || outboundFinishedValue == null) {
+                return this.storageStatusOptions
+            }
+            return this.storageStatusOptions.filter((opt) => opt.value !== outboundFinishedValue)
+        },
         // 业务明细分页后的数据
         businessPagedItems() {
             const start = (this.businessCurrentPage - 1) * this.businessPageSize
@@ -535,6 +548,12 @@ export default {
 
         // ====== 后端查询 ======
         async getTableData() {
+            const outboundFinishedStatus =
+                this.FINISHED_STORAGE_STATUS_ENUM && this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED
+            const shouldIgnoreAuditFilter =
+                outboundFinishedStatus != null && this.storageStatusNum === outboundFinishedStatus
+            const auditStatusEnum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM || {}
+            const effectiveAuditStatusNum = shouldIgnoreAuditFilter ? auditStatusEnum.ALL : this.auditStatusNum
             const params = {
                 page: this.currentPage,
                 pageSize: this.pageSize,
@@ -542,12 +561,31 @@ export default {
                 orderCId: this.orderCIdSearch,
                 customerName: this.customerNameSearch,
                 customerBrand: this.customerBrandSearch,
-                auditStatusNum: this.auditStatusNum,
+                auditStatusNum: effectiveAuditStatusNum,
                 storageStatusNum: this.storageStatusNum
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/getproductoverview`, { params })
-            this.tableData = response.data.result || []
+            const outboundFinishedValue = outboundFinishedStatus
+            let result = response.data.result || []
+            if (this.isBusinessRole && outboundFinishedValue != null) {
+                result = result.filter((row) => row.storageStatusNum !== outboundFinishedValue)
+            }
+            this.tableData = result
             this.totalRows = response.data.total || 0
+        },
+
+        handleStorageStatusChange() {
+            const outboundFinishedStatus =
+                this.FINISHED_STORAGE_STATUS_ENUM && this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED
+            const auditStatusEnum = this.PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM || {}
+            if (
+                outboundFinishedStatus != null &&
+                this.storageStatusNum === outboundFinishedStatus &&
+                auditStatusEnum.ALL !== undefined
+            ) {
+                this.auditStatusNum = auditStatusEnum.ALL
+            }
+            this.getTableData()
         },
 
         // ====== 前置校验（目前仓库用） ======
