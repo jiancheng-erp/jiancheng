@@ -27,22 +27,24 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         inbound_amount = data.get("inboundAmount", 0)
         item_total_price = data.get("itemTotalPrice", 0)
         order_rid = data.get("orderRid", "")
+        shoe_rid = data.get("shoeRid", "")
         remark = data.get("remark", "")
         
         # Fill the cells
         sheet[f"A{index}"] = str(inbound_rid)
         sheet[f"B{index}"] = str(order_rid)
-        sheet[f"C{index}"] = str(inbound_datetime)
-        sheet[f"D{index}"] = supplier_name
-        sheet[f"E{index}"] = material_name
-        sheet[f"F{index}"] = material_model
-        sheet[f"G{index}"] = material_specification
-        sheet[f"H{index}"] = material_storage_color
-        sheet[f"I{index}"] = unit_price
-        sheet[f"J{index}"] = material_unit
-        sheet[f"K{index}"] = str(inbound_amount)
-        sheet[f"L{index}"] = str(item_total_price)
-        sheet[f"M{index}"] = remark
+        sheet[f"C{index}"] = str(shoe_rid)
+        sheet[f"D{index}"] = str(inbound_datetime)
+        sheet[f"E{index}"] = supplier_name
+        sheet[f"F{index}"] = material_name
+        sheet[f"G{index}"] = material_model
+        sheet[f"H{index}"] = material_specification
+        sheet[f"I{index}"] = material_storage_color
+        sheet[f"J{index}"] = unit_price
+        sheet[f"K{index}"] = material_unit
+        sheet[f"L{index}"] = str(inbound_amount)
+        sheet[f"M{index}"] = str(item_total_price)
+        sheet[f"N{index}"] = remark
 
     # Save the modified file
     workbook.save(save_path)

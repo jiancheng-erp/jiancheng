@@ -427,7 +427,7 @@ def _get_warehouse_inbound_record_query(data: dict, all_records=False):
         # ------- 4) 再用 id 列表拉全量需要的列（避免对大元组 distinct）-------
         query = (
             db.session.query(
-                InboundRecord, InboundRecordDetail, Material, Supplier, SPUMaterial, Order.order_rid, MaterialStorage
+                InboundRecord, InboundRecordDetail, Material, Supplier, SPUMaterial, Order.order_rid, Shoe.shoe_rid, MaterialStorage
             )
             .join(Supplier, InboundRecord.supplier_id == Supplier.supplier_id)
             .join(InboundRecordDetail, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
@@ -435,6 +435,8 @@ def _get_warehouse_inbound_record_query(data: dict, all_records=False):
             .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
             .join(Material, SPUMaterial.material_id == Material.material_id)
             .outerjoin(Order, InboundRecordDetail.order_id == Order.order_id)  # 仅在确实需要时保留外连接
+            .outerjoin(OrderShoe, Order.order_id == OrderShoe.order_id)
+            .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
             .filter(InboundRecordDetail.id.in_(page_ids))
             .order_by(InboundRecord.inbound_datetime.desc(), InboundRecordDetail.id.desc())
             # 这里通常不再需要 distinct()，因为已收敛到本页的 id 集合
@@ -442,7 +444,7 @@ def _get_warehouse_inbound_record_query(data: dict, all_records=False):
         response_entities = query.all()
     warehouse_id_mapping = {entity.material_warehouse_id: entity.material_warehouse_name for entity in db.session.query(MaterialWarehouse).all()}
     inbound_records = []
-    for inbound_record, inbound_record_detail,material, supplier, spu, order_rid, material_storage in response_entities:
+    for inbound_record, inbound_record_detail,material, supplier, spu, order_rid, shoe_rid, material_storage in response_entities:
         res = db_obj_to_res(inbound_record, InboundRecord,attr_name_list=type_to_attr_mapping["InboundRecord"])
         res = db_obj_to_res(inbound_record_detail, InboundRecordDetail,attr_name_list=type_to_attr_mapping['InboundRecordDetail'],initial_res=res)
         res = db_obj_to_res(supplier, Supplier,attr_name_list=type_to_attr_mapping['Supplier'],initial_res=res)
@@ -452,6 +454,7 @@ def _get_warehouse_inbound_record_query(data: dict, all_records=False):
         res[to_camel('approval_status')] = accounting_audit_status_converter(inbound_record.approval_status)
         res[to_camel('material_warehouse')] = warehouse_id_mapping[inbound_record.warehouse_id] if inbound_record.warehouse_id in warehouse_id_mapping.keys() else ''
         res[to_camel('order_rid')] = order_rid
+        res[to_camel('shoe_rid')] = shoe_rid
         res[to_camel('actual_inbound_unit')] = material_storage.actual_inbound_unit
         res[to_camel('unit_price')] = normalize_decimal(res[to_camel('unit_price')])
         res[to_camel('inbound_amount')] = normalize_decimal(res[to_camel('inbound_amount')])
