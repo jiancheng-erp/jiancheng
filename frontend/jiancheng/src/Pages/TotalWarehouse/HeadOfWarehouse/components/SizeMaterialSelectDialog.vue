@@ -3,6 +3,8 @@
         <div v-if="selectionPage == 0">
             <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号" style="width: 300px; margin-bottom: 10px;" clearable
                 @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
+            <el-input v-model="localSearchParams.shoeRIdSearch" placeholder="搜索工厂鞋型号" style="width: 300px; margin-bottom: 10px;" clearable
+                @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
             <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称" style="width: 300px; margin-bottom: 10px;"
                 clearable @change="fetchSizeMaterialData" @clear="fetchSizeMaterialData"></el-input>
             <el-input v-model="localSearchParams.materialModelSearch" placeholder="搜索材料型号" style="width: 300px; margin-bottom: 10px;"
@@ -187,6 +189,7 @@ export default {
             downSelected: [],
             localSearchParams: {
                 orderRIdSearch: null,
+                shoeRIdSearch: null,
                 materialNameSearch: null,
                 materialModelSearch: null,
                 materialSpecificationSearch: null,
@@ -246,6 +249,7 @@ export default {
         async fetchSizeMaterialData() {
             const params = {
                 "orderRId": this.localSearchParams.orderRIdSearch,
+                "shoeRId": this.localSearchParams.shoeRIdSearch,
                 "materialName": this.localSearchParams.materialNameSearch,
                 "materialSpec": this.localSearchParams.materialSpecificationSearch,
                 "materialModel": this.localSearchParams.materialModelSearch,
