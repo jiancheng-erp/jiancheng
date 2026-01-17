@@ -333,6 +333,7 @@ def get_materials():
         "material_color": request.args.get("materialColor", ""),
         "supplier": request.args.get("supplier", ""),
         "order_rid": request.args.get("orderRId", ""),
+        "shoe_rid": request.args.get("shoeRId", ""),
     }
     material_filter_map = {
         "material_name": Material.material_name,
@@ -341,6 +342,7 @@ def get_materials():
         "material_color": PurchaseOrderItem.color,
         "supplier": Supplier.supplier_name,
         "order_rid": Order.order_rid,
+        "shoe_rid": Shoe.shoe_rid,
     }
     query = (
         db.session.query(

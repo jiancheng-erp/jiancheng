@@ -4,6 +4,9 @@
             <el-input v-model="localSearchParams.orderRIdSearch" placeholder="搜索订单号"
                 style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
                 @clear="fetchMaterialData"></el-input>
+            <el-input v-model="localSearchParams.shoeRIdSearch" placeholder="搜索工厂鞋型号"
+                style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
+                @clear="fetchMaterialData"></el-input>
             <el-input v-model="localSearchParams.materialNameSearch" placeholder="搜索材料名称"
                 style="width: 300px; margin-bottom: 10px;" clearable @change="fetchMaterialData"
                 @clear="fetchMaterialData"></el-input>
@@ -180,6 +183,7 @@ export default {
             searchedMaterials: [],
             localSearchParams: {
                 orderRIdSearch: null,
+                shoeRIdSearch: null,
                 materialNameSearch: null,
                 materialModelSearch: null,
                 materialSpecificationSearch: null,
@@ -232,6 +236,7 @@ export default {
         async fetchMaterialData() {
             const params = {
                 "orderRId": this.localSearchParams.orderRIdSearch,
+                "shoeRId": this.localSearchParams.shoeRIdSearch,
                 "materialName": this.localSearchParams.materialNameSearch,
                 "materialSpec": this.localSearchParams.materialSpecificationSearch,
                 "materialModel": this.localSearchParams.materialModelSearch,
