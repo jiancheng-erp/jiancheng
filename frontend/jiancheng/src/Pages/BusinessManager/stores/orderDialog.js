@@ -4,6 +4,7 @@ export const useOrderDialogStore = defineStore('orderDialog', {
     state: () => ({
         addShoeDialogVis: false,
         addShoeTypeDialogVis: false,
+        addColorDialogVis: false,
         addBatchInfoDialogVis: false,
         newOrderTemplateVis: false,
         addCustomerBatchDialogVisible: false,
@@ -25,6 +26,14 @@ export const useOrderDialogStore = defineStore('orderDialog', {
             shoeTypeColors: '',
             colorId: '',
             displayRid: ''
+        }
+        ,
+        addColorForm: {
+            shoeId: '',
+            shoeRid: '',
+            shoeTypeColors: [],
+            // when set, should be a reference to the orderShoeTypes row being edited
+            editTargetRow: null
         }
     }),
     actions: {
@@ -87,6 +96,23 @@ export const useOrderDialogStore = defineStore('orderDialog', {
             this.shoeColorForm.shoeId = shoeId
             this.shoeColorForm.shoeTypeColors = shoeTypeColors
             this.addShoeTypeDialogVis = true
+        },
+        openAddColorDialog({ shoeRid, shoeId, shoeTypeColors }) {
+            this.addColorForm.shoeRid = shoeRid
+            this.addColorForm.shoeId = shoeId
+            this.addColorForm.shoeTypeColors = shoeTypeColors || []
+            this.addColorDialogVis = true
+        },
+        closeAddColorDialog() {
+            this.addColorDialogVis = false
+        },
+        resetAddColorForm() {
+            this.addColorForm = {
+                shoeId: '',
+                shoeRid: '',
+                shoeTypeColors: [],
+                editTargetRow: null
+            }
         },
         closeAddShoeTypeDialog() {
             this.addShoeTypeDialogVis = false

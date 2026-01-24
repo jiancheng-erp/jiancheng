@@ -5,47 +5,26 @@
     <el-row :gutter="10" style="margin-top: 20px">
         <el-col :span="4" :offset="0">
             <el-button size="default" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
-            <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button>
-            <el-select
-                v-model="orderStore.selectedOrderStatus"
-                placeholder="请选择订单类型"
-                size="default"
-                :disabled="role === '21'"
-                @change="handleOrderStatusChange"
-                style="width: 200px; width: 150px"
-            >
+            <!-- <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button> -->
+            <el-select v-model="orderStore.selectedOrderStatus" placeholder="请选择订单类型" size="default"
+                :disabled="role === '21'" @change="handleOrderStatusChange" style="width: 200px; width: 150px">
                 <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
             </el-select>
         </el-col>
-        <el-col :span="4" :offset="1"
-            ><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        <el-col :span="4" :offset="1"><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
 
-        <el-col :span="4"
-            ><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        <el-col :span="4"><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-        <el-col :span="4"
-            ><el-input
-                v-model="orderStore.orderCustomerNameFilter"
-                placeholder="客户名称筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="orderStore.filterDisplayOrder"
-            ></el-input>
+        <el-col :span="4"><el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
         <el-col :span="4">
-            <el-date-picker
-                v-model="orderStore.orderStartDateFilter"
-                type="daterange"
-                unlink-panels
-                range-separator="至"
-                start-placeholder="订单开始日期起"
-                end-placeholder="订单开始日期终"
-                :shortcuts="shortcuts"
-                size="default"
-                @change="orderStore.filterDisplayOrder"
-            />
+            <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至"
+                start-placeholder="订单开始日期起" end-placeholder="订单开始日期终" :shortcuts="shortcuts" size="default"
+                @change="orderStore.filterDisplayOrder" />
         </el-col>
     </el-row>
     <el-row :gutter="10" style="margin-top: 20px">
@@ -57,41 +36,21 @@
             </el-radio-group>
         </el-col>
         <el-col :span="4">
-            <el-input
-                v-model="orderStore.customerProductNameFilter"
-                placeholder="客户型号筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="orderStore.filterDisplayOrder"
-            ></el-input>
+            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
         <el-col :span="4">
-            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-        <el-col :span="4"
-            ><el-input
-                v-model="orderStore.orderCustomerBrandFilter"
-                placeholder="客户商标筛选"
-                size="default"
-                :suffix-icon="'el-icon-search'"
-                clearable
-                @input="orderStore.filterDisplayOrder"
-            ></el-input>
+        <el-col :span="4"><el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
 
         <el-col :span="4">
-            <el-date-picker
-                v-model="orderStore.orderEndDateFilter"
-                type="daterange"
-                unlink-panels
-                range-separator="至"
-                start-placeholder="订单结束日期起"
-                end-placeholder="订单结束日期终"
-                :shortcuts="shortcuts"
-                size="default"
-                @change="orderStore.filterDisplayOrder"
-            />
+            <el-date-picker v-model="orderStore.orderEndDateFilter" type="daterange" unlink-panels range-separator="至"
+                start-placeholder="订单结束日期起" end-placeholder="订单结束日期终" :shortcuts="shortcuts" size="default"
+                @change="orderStore.filterDisplayOrder" />
         </el-col>
     </el-row>
     <el-row :gutter="20">
@@ -103,7 +62,8 @@
         </el-col> -->
     </el-row>
     <el-row :gutter="20">
-        <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick" style="height: 60vh">
+        <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
+            style="height: 60vh">
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderSalesman" label="创建业务员" />
             <el-table-column prop="orderSupervisor" label="审核" />
@@ -118,179 +78,168 @@
             <el-table-column label="操作" width="200">
                 <template #default="scope">
                     <el-button-group>
-                        <el-button type="primary" size="default" @click="openOrderDetail(scope.row.orderDbId)">查看订单详情</el-button>
-                        <el-button v-if="scope.row.orderStatusVal < 9 && this.userRole == 4" type="danger" size="default" @click="deleteOrder(scope.row)">删除订单</el-button>
+                        <el-button type="primary" size="default"
+                            @click="openOrderDetail(scope.row.orderDbId)">查看订单详情</el-button>
+                        <el-button v-if="scope.row.orderStatusVal < 9 && this.userRole == 4" type="danger"
+                            size="default" @click="deleteOrder(scope.row)">删除订单</el-button>
                     </el-button-group>
                 </template>
             </el-table-column>
         </el-table>
-        <el-pagination
-            :current-page="orderStore.currentPage"
-            :page-size="orderStore.pageSize"
-            :total="orderStore.totalItems"
-            @current-change="orderStore.handlePageChange"
-            layout="total,prev,pager,next,jumper"
-            style="margin-top: 20px"
-        ></el-pagination>
+        <el-pagination :current-page="orderStore.currentPage" :page-size="orderStore.pageSize"
+            :total="orderStore.totalItems" @current-change="orderStore.handlePageChange"
+            layout="total,prev,pager,next,jumper" style="margin-top: 20px"></el-pagination>
     </el-row>
 
-    <el-dialog title="创建订单鞋型填写" v-model="dialogStore.orderCreationInfoVis" width="100%" fullscreen :close-on-click-modal="false">
+    <el-dialog title="创建订单鞋型填写" v-model="dialogStore.orderCreationInfoVis" width="100%" fullscreen
+        :close-on-click-modal="false">
         <el-form ref="orderCreationForm" :model="newOrderForm" label-width="120px" :inline="false" size="default">
-            <el-form-item
-                label="请输入订单号"
-                prop="orderRId"
-                :rules="[
-                    {
-                        required: true,
-                        message: '订单号不能为空',
-                        trigger: ['blur', 'change']
-                    },
-                    {
-                        validator: validateOrderRid,
-                        trigger: ['blur', 'change']
-                    }
-                ]"
-            >
+            <el-form-item>
+                <el-button type="primary" @click="showOrderTemplates">选择订单模板</el-button>
+                <!-- <el-button type="warning" style="margin-left:8px" @click="injectTemplateTestData">注入模板测试数据</el-button> -->
+            </el-form-item>
+            <el-form-item label="请输入订单号" prop="orderRId" :rules="[
+                {
+                    required: true,
+                    message: '订单号不能为空',
+                    trigger: ['blur', 'change']
+                },
+                {
+                    validator: validateOrderRid,
+                    trigger: ['blur', 'change']
+                }
+            ]">
                 <el-input @change="checkOrderRidExists" v-model="newOrderForm.orderRId"></el-input>
             </el-form-item>
             <el-form-item label="客户订单号">
                 <el-input v-model="newOrderForm.orderCid"></el-input>
             </el-form-item>
-            <el-form-item
-                label="请选择客户"
-                prop="customerName"
-                :rules="[
-                    {
-                        required: true,
-                        message: '客户不能为空',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
-                <el-select v-model="newOrderForm.customerName" filterable placeholder="请选择客户" @change="updateCustomerBrand">
-                    <el-option v-for="item in this.customerNameList" :key="item" :label="item" :value="item"></el-option>
+            <el-form-item label="请选择客户" prop="customerName" :rules="[
+                {
+                    required: true,
+                    message: '客户不能为空',
+                    trigger: ['blur']
+                }
+            ]">
+                <el-select v-model="newOrderForm.customerName" filterable placeholder="请选择客户"
+                    @change="updateCustomerBrand">
+                    <el-option v-for="item in this.customerNameList" :key="item" :label="item"
+                        :value="item"></el-option>
                 </el-select>
             </el-form-item>
-            <el-form-item
-                label="请选择客户商标"
-                prop="customerBrand"
-                :rules="[
-                    {
-                        required: true,
-                        message: '客户商标不能为空',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
-                <el-select v-model="newOrderForm.customerBrand" filterable placeholder="请选择商标" @change="updateCustomerId">
-                    <el-option v-for="item in this.customerBrandList" :key="item" :label="item" :value="item"></el-option>
+            <el-form-item label="请选择客户商标" prop="customerBrand" :rules="[
+                {
+                    required: true,
+                    message: '客户商标不能为空',
+                    trigger: ['blur']
+                }
+            ]">
+                <el-select v-model="newOrderForm.customerBrand" filterable placeholder="请选择商标"
+                    @change="updateCustomerId">
+                    <el-option v-for="item in this.customerBrandList" :key="item" :label="item"
+                        :value="item"></el-option>
                 </el-select>
             </el-form-item>
-            <el-form-item
-                label="请选择配码种类"
-                prop="batchInfoTypeName"
-                :rules="[
-                    {
-                        required: true,
-                        message: '请选择配码种类',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
-                <el-select v-model="newOrderForm.batchInfoTypeName" filterable placeholder="请选择种类" @change="updateBatchType">
-                    <el-option v-for="item in this.batchTypes" :key="item.batchInfoTypeId" :label="item.batchInfoTypeName" :value="item.batchInfoTypeName"> </el-option>
+            <el-form-item label="请选择配码种类" prop="batchInfoTypeName" :rules="[
+                {
+                    required: true,
+                    message: '请选择配码种类',
+                    trigger: ['blur']
+                }
+            ]">
+                <el-select v-model="newOrderForm.batchInfoTypeName" filterable placeholder="请选择种类"
+                    @change="updateBatchType">
+                    <el-option v-for="item in this.batchTypes" :key="item.batchInfoTypeId"
+                        :label="item.batchInfoTypeName" :value="item.batchInfoTypeName"> </el-option>
                 </el-select>
             </el-form-item>
-            <el-form-item
-                label="订单开始日期"
-                ref="startdatepicker"
-                prop="orderStartDate"
-                :rules="[
-                    {
-                        required: true,
-                        message: '请选择订单开始日期',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
-                <el-date-picker v-model="newOrderForm.orderStartDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"></el-date-picker>
+            <el-form-item label="订单开始日期" ref="startdatepicker" prop="orderStartDate" :rules="[
+                {
+                    required: true,
+                    message: '请选择订单开始日期',
+                    trigger: ['blur']
+                }
+            ]">
+                <el-date-picker v-model="newOrderForm.orderStartDate" type="date" placeholder="选择日期"
+                    value-format="YYYY-MM-DD"></el-date-picker>
             </el-form-item>
-            <el-form-item
-                label="订单结束日期"
-                prop="orderEndDate"
-                :rules="[
-                    {
-                        required: true,
-                        message: '请选择订单结束日期',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
-                <el-date-picker v-model="newOrderForm.orderEndDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"></el-date-picker>
+            <el-form-item label="订单结束日期" prop="orderEndDate" :rules="[
+                {
+                    required: true,
+                    message: '请选择订单结束日期',
+                    trigger: ['blur']
+                }
+            ]">
+                <el-date-picker v-model="newOrderForm.orderEndDate" type="date" placeholder="选择日期"
+                    value-format="YYYY-MM-DD"></el-date-picker>
             </el-form-item>
-            <el-form-item
-                label="业务员"
-                prop="salesman"
-                :rules="[
-                    {
-                        required: true,
-                        message: '请选择业务员',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
+            <el-form-item label="业务员" prop="salesman" :rules="[
+                {
+                    required: true,
+                    message: '请选择业务员',
+                    trigger: ['blur']
+                }
+            ]">
                 <el-input v-model="newOrderForm.salesman" disabled></el-input>
             </el-form-item>
 
-            <el-form-item
-                label="选择审批经理"
-                prop="supervisorId"
-                :rules="[
-                    {
-                        required: true,
-                        message: '内容不能为空',
-                        trigger: ['blur']
-                    }
-                ]"
-            >
+            <el-form-item label="选择审批经理" prop="supervisorId" :rules="[
+                {
+                    required: true,
+                    message: '内容不能为空',
+                    trigger: ['blur']
+                }
+            ]">
                 <el-select v-model="newOrderForm.supervisorId" filterable placeholder="请选择下发经理">
-                    <el-option v-for="item in this.departmentNameList" :key="item.staffId" :label="item.staffName" :value="item.staffId"></el-option>
+                    <el-option v-for="item in this.departmentNameList" :key="item.staffId" :label="item.staffName"
+                        :value="item.staffId"></el-option>
                 </el-select>
             </el-form-item>
 
             <el-row :gutter="20">
                 <el-col :span="4" :offset="0" style="white-space: nowrap">
                     请选择鞋型号：
-                    <el-input v-model="shoeRidFilter" placeholder="鞋型号搜索" size="default" :suffix-icon="'el-icon-search'" @change="getAllShoes()" @clear="getAllShoes()" clearable> </el-input>
+                    <el-input v-model="shoeRidFilter" placeholder="鞋型号搜索" size="default" :suffix-icon="'el-icon-search'"
+                        @change="getAllShoes()" @clear="getAllShoes()" clearable> </el-input>
                 </el-col>
                 <el-col :span="4" :offset="2">
-                    <el-input v-model="customerNameFilter" placeholder="客户型号搜索" size="default" :suffix-icon="'el-icon-search'" @change="getAllShoes()" @clear="getAllShoes()" clearable>
+                    <el-input v-model="customerNameFilter" placeholder="客户型号搜索" size="default"
+                        :suffix-icon="'el-icon-search'" @change="getAllShoes()" @clear="getAllShoes()" clearable>
                     </el-input>
                 </el-col>
                 <el-col :span="2" :offset="2">
                     <el-button type="primary" size="default" @click="openAddShoeDialog"> 添加新鞋型 </el-button>
                 </el-col>
             </el-row>
+            <el-row style="margin-top:10px; margin-bottom:10px">
+                <el-col :span="24">
+                    <div v-if="newOrderForm.orderShoeTypes && newOrderForm.orderShoeTypes.length">
+                        <span style="font-weight:600; margin-right:8px">已选择鞋型：</span>
+                        <el-tag v-for="item in newOrderForm.orderShoeTypes" :key="item.shoeTypeId || item.shoeRid" closable @close="removeSelectedShoe(item)" style="margin-right:6px">
+                            {{ item.shoeRid }} <span v-if="item.colorName"> - {{ item.colorName }}</span>
+                        </el-tag>
+                    </div>
+                </el-col>
+            </el-row>
+
             <el-table :data="shoeTableData" style="width: 100%" stripe border height="500" row-key="shoeId">
                 <el-table-column type="expand">
                     <template #default="props">
-                        <el-table
-                            :data="props.row.shoeTypeData"
-                            border
-                            row-key="shoeTypeId"
+                        <el-table :data="props.row.shoeTypeData" border row-key="shoeTypeId"
                             @selection-change="(selection) => handleSelectionShoeType(selection, props.row.shoeId)"
-                            ref="shoeSelectionTable"
-                        >
+                            ref="shoeSelectionTable">
                             <el-table-column size="small" type="selection" align="center"> </el-table-column>
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px" />
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
-                                    <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px" :key="scope.row.shoeImageUrl" />
+                                    <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px"
+                                        :key="scope.row.shoeImageUrl" />
                                 </template>
                             </el-table-column>
                             <el-table-column label="操作">
                                 <template #default="scope">
-                                    <el-button type="primary" @click="openReUploadImageDialog(scope.row)">重新上传鞋图</el-button>
+                                    <el-button type="primary"
+                                        @click="openReUploadImageDialog(scope.row)">重新上传鞋图</el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
@@ -299,18 +248,14 @@
                 <el-table-column prop="shoeRid" label="鞋型编号"></el-table-column>
                 <el-table-column>
                     <template #default="scope">
-                        <el-button type="primary" size="default" @click="openAddShoeTypeDialog(scope.row)">添加鞋款</el-button>
+                        <el-button type="primary" size="default"
+                            @click="openAddShoeTypeDialog(scope.row)">添加鞋款</el-button>
                     </template>
                 </el-table-column>
             </el-table>
-            <el-pagination
-                :current-page="currentOrderCreatePage"
-                :page-size="orderCreatePageSize"
-                :total="shoeTotalItems"
-                @current-change="handleOrderCreatePageChange"
-                layout="total, prev, pager, next, jumper"
-                style="margin-top: 20px"
-            ></el-pagination>
+            <el-pagination :current-page="currentOrderCreatePage" :page-size="orderCreatePageSize"
+                :total="shoeTotalItems" @current-change="handleOrderCreatePageChange"
+                layout="total, prev, pager, next, jumper" style="margin-top: 20px"></el-pagination>
         </el-form>
 
         <template #footer>
@@ -322,33 +267,38 @@
 
     <AddShoeDialog :color-options="colorOptions" @submit="addNewShoe" />
     <AddShoeTypeDialog :color-options="colorOptions" @submit="addShoeTypes" />
-    <el-dialog title="创建订单详情填写" v-model="dialogStore.orderCreationSecondInfoVis" width="100%" fullscreen :close-on-click-modal="false">
+    <AddColorDialog v-model:visible="dialogStore.addColorDialogVis" :shoe-id="dialogStore.addColorForm.shoeId"
+        :shoe-rid="dialogStore.addColorForm.shoeRid" :shoe-type-colors="dialogStore.addColorForm.shoeTypeColors"
+        :color-options="colorOptions" @submit="handleAddColorDialogSubmit" />
+    <el-dialog title="创建订单详情填写" v-model="dialogStore.orderCreationSecondInfoVis" width="90%" fullscreen
+        :close-on-click-modal="false" :show-close="true" custom-class="create-order-detail-dialog"
+        :close-on-press-escape="true">
         <el-row :gutter="20">
             <el-col :span="24" :offset="0">
                 <el-descriptions title="" :column="2" border>
-                    <el-descriptions-item label="订单号" align="center">{{ this.newOrderForm.orderRId }}</el-descriptions-item>
-                    <el-descriptions-item label="客户订单号" align="center">{{ this.newOrderForm.orderCid }}</el-descriptions-item>
+                    <el-descriptions-item label="订单号" align="center">{{ this.newOrderForm.orderRId
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="客户订单号" align="center">{{ this.newOrderForm.orderCid
+                    }}</el-descriptions-item>
                 </el-descriptions>
                 <el-descriptions title="" :column="2" border>
-                    <el-descriptions-item label="客户名称" align="center">{{ this.newOrderForm.customerName }}</el-descriptions-item>
-                    <el-descriptions-item label="客户商标" align="center">{{ this.newOrderForm.customerBrand }}</el-descriptions-item>
+                    <el-descriptions-item label="客户名称" align="center">{{ this.newOrderForm.customerName
+                    }}</el-descriptions-item>
+                    <el-descriptions-item label="客户商标" align="center">{{ this.newOrderForm.customerBrand
+                    }}</el-descriptions-item>
                 </el-descriptions>
+                <div style="margin-top:8px">
+                    <el-button type="success" @click="openAddColorDialog">
+                        添加颜色
+                    </el-button>
+                </div>
             </el-col>
         </el-row>
-        <el-table
-            class="order-shoe-create-table"
-            :data="this.newOrderForm.orderShoeTypes"
-            border
-            stripe
-            height="900"
-            :row-key="
-                (row) => {
-                    return row.shoeTypeId
-                }
-            "
-            :row-class-name="'persistent-shadow-row'"
-            :default-expand-all="true"
-        >
+        <el-table class="order-shoe-create-table" :data="this.newOrderForm.orderShoeTypes" border stripe
+            style="max-height: 75vh; overflow-y: auto" :row-key="(row) => {
+                return row.shoeTypeId
+            }
+                " :row-class-name="'persistent-shadow-row'" :default-expand-all="true">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.orderShoeTypeBatchInfo" border>
@@ -356,19 +306,19 @@
                         <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
                         <el-table-column
                             v-for="col in Object.keys(this.attrMapping).filter((key) => this.curBatchType[key] != null)"
-                            :label="this.curBatchType[col]"
-                            :prop="this.attrMapping[col]"
-                        ></el-table-column>
+                            :label="this.curBatchType[col]" :prop="this.attrMapping[col]"></el-table-column>
                         <el-table-column prop="totalQuantityRatio" label="比例和" />
                         <el-table-column label="单位数量">
                             <template #default="scope">
-                                <el-input size="small" v-model="props.row.quantityMapping[scope.row.packagingInfoId]" @change="updateAmountMapping(props.row, scope.row)" controls-position="right">
+                                <el-input size="small" v-model="props.row.quantityMapping[scope.row.packagingInfoId]"
+                                    @change="updateAmountMapping(props.row, scope.row)" controls-position="right">
                                 </el-input>
                             </template>
                         </el-table-column>
                         <el-table-column label="总数量">
                             <template #default="scope">
-                                <el-input size="small" v-model="props.row.amountMapping[scope.row.packagingInfoId]" controls-position="right" :disabled="true"> </el-input>
+                                <el-input size="small" v-model="props.row.amountMapping[scope.row.packagingInfoId]"
+                                    controls-position="right" :disabled="true"> </el-input>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -383,8 +333,14 @@
             </el-table-column>
             <el-table-column>
                 <template #default="scope">
-                    <el-button type="primary" size="default" @click="openAddBatchInfoDialog(scope.row)">编辑鞋型配码</el-button>
-                    <el-button type="primary" size="default" @click="openLoadBatchTemplateDialog(scope.row)">加载配码模板</el-button>
+                    <el-button type="primary" size="default"
+                        @click="openAddBatchInfoDialog(scope.row)">编辑鞋型配码</el-button>
+                    <el-button type="warning" size="default" style="margin-left:8px"
+                        @click="openAddColorDialog(scope.row)">更改颜色</el-button>
+                    <el-button type="primary" size="default"
+                        @click="openLoadBatchTemplateDialog(scope.row)">加载配码模板</el-button>
+                    <el-button type="danger" size="default" @click="removeShoeType(scope.row)"
+                        style="margin-left:8px">删除</el-button>
                 </template>
             </el-table-column>
             <el-table-column label="添加客户鞋型编号">
@@ -407,50 +363,25 @@
         </template>
     </el-dialog>
 
-    <AddBatchInfoDialog
-        ref="batchInfoDialog"
-        v-model:batchNameFilter="batchNameFilter"
-        :new-order-form="newOrderForm"
-        :customer-display-batch-data="customerDisplayBatchData"
-        :attr-mapping="attrMapping"
-        :cur-batch-type="curBatchType"
-        @selection-change="handleSelectionBatchData"
-        @close="closeAddBatchInfoDialog"
-        @open-add-customer-batch="openAddCustomerBatchDialog"
-        @open-save-template="openSaveBatchTemplateDialog"
-        @save-batch="addShoeTypeBatchInfo"
-        @filter-with-selection="filterBatchDataWithSelection"
-    />
-    <TemplateSelectDialog
-        v-model:templateFilter="templateFilter"
-        :template-display-data="templateDisplayData"
-        @filter="filterTemplateOptions"
-        @create-from-template="openCreateOrderDialogFromTemplate"
-    />
-    <AddCustomerBatchDialog
-        v-model:batchForm="batchForm"
-        :attr-mapping="attrMapping"
-        :cur-batch-type="curBatchType"
-        @close="dialogStore.closeCustomerBatchDialog()"
-        @submit="submitAddCustomerBatchForm"
-    />
-    <ReUploadImageDialog ref="reUploadImageDialog" :image-url="imageUrl" @file-change="onFileChange" @close="dialogStore.closeReUploadImageDialog()" @upload="uploadCroppedImage" />
-    <CustomerBatchTemplateDialog
-        :batch-template-display-data="batchTemplateDisplayData"
-        :attr-mapping="attrMapping"
-        :cur-batch-type="curBatchType"
-        @selection-change="handleSelectionBatchTemplate"
-        @delete-template="deleteBatchTemplateDialog"
-        @confirm-load="confirmLoadBatchTemplate"
-        @close="dialogStore.closeBatchTemplateDialog()"
-    />
-    <CustomerBatchTemplateSaveDialog
-        v-model:batchTemplateForm="batchTemplateForm"
-        :attr-mapping="attrMapping"
-        :cur-batch-type="curBatchType"
-        @close="dialogStore.closeBatchTemplateSaveDialog()"
-        @save="saveBatchTemplate"
-    />
+    <AddBatchInfoDialog ref="batchInfoDialog" v-model:batchNameFilter="batchNameFilter" :new-order-form="newOrderForm"
+        :customer-display-batch-data="customerDisplayBatchData" :attr-mapping="attrMapping"
+        :cur-batch-type="curBatchType" @selection-change="handleSelectionBatchData" @close="closeAddBatchInfoDialog"
+        @open-add-customer-batch="openAddCustomerBatchDialog" @open-add-color="openAddColorDialog"
+        @open-save-template="openSaveBatchTemplateDialog" @save-batch="addShoeTypeBatchInfo"
+        @filter-with-selection="filterBatchDataWithSelection" />
+    <TemplateSelectDialog v-model:templateFilter="templateFilter" :template-display-data="templateDisplayData"
+        @filter="filterTemplateOptions" @create-from-template="openCreateOrderDialogFromTemplate"
+        @delete-template="deleteOrderTemplate" @edit-template="editOrderTemplate" />
+    <AddCustomerBatchDialog v-model:batchForm="batchForm" :attr-mapping="attrMapping" :cur-batch-type="curBatchType"
+        @close="dialogStore.closeCustomerBatchDialog()" @submit="submitAddCustomerBatchForm" />
+    <ReUploadImageDialog ref="reUploadImageDialog" :image-url="imageUrl" @file-change="onFileChange"
+        @close="dialogStore.closeReUploadImageDialog()" @upload="uploadCroppedImage" />
+    <CustomerBatchTemplateDialog :batch-template-display-data="batchTemplateDisplayData" :attr-mapping="attrMapping"
+        :cur-batch-type="curBatchType" @selection-change="handleSelectionBatchTemplate"
+        @delete-template="deleteBatchTemplateDialog" @confirm-load="confirmLoadBatchTemplate"
+        @close="dialogStore.closeBatchTemplateDialog()" />
+    <CustomerBatchTemplateSaveDialog v-model:batchTemplateForm="batchTemplateForm" :attr-mapping="attrMapping"
+        :cur-batch-type="curBatchType" @close="dialogStore.closeBatchTemplateSaveDialog()" @save="saveBatchTemplate" />
 </template>
 
 <script>
@@ -464,6 +395,7 @@ import { useOrderManagementStore } from '@/Pages/BusinessManager/stores/orderMan
 import AddShoeDialog from './orderDialogs/AddShoeDialog.vue'
 import AddShoeTypeDialog from './orderDialogs/AddShoeTypeDialog.vue'
 import AddBatchInfoDialog from './orderDialogs/AddBatchInfoDialog.vue'
+import AddColorDialog from './orderDialogs/AddColorDialog.vue'
 import TemplateSelectDialog from './orderDialogs/TemplateSelectDialog.vue'
 import AddCustomerBatchDialog from './orderDialogs/AddCustomerBatchDialog.vue'
 import ReUploadImageDialog from './orderDialogs/ReUploadImageDialog.vue'
@@ -474,6 +406,7 @@ export default {
     components: {
         AddShoeDialog,
         AddShoeTypeDialog,
+        AddColorDialog,
         AddBatchInfoDialog,
         TemplateSelectDialog,
         AddCustomerBatchDialog,
@@ -574,6 +507,8 @@ export default {
                 customerShoeColorName: {},
                 //新参数 应该为被下发经理用户的staff_id
                 supervisorId: '',
+                sourceOrderRid: null,
+                sourceOrderId: null,
                 flag: false
             },
             batchForm: {
@@ -709,14 +644,14 @@ export default {
             })
         },
         reselectSelected(ref, selected, displaydataentity, id) {
+            console.log('reselectSelected called', { selected, id, displayLen: displaydataentity?.length })
             this.$nextTick(() => {
                 selected.forEach((item) => {
-                    ref.toggleRowSelection(
-                        displaydataentity.find((row) => {
-                            return row[id] == item[id]
-                        }),
-                        true
-                    )
+                    const foundRow = displaydataentity.find((row) => {
+                        return row[id] == item[id]
+                    })
+                    if (!foundRow) console.warn('reselectSelected: no matching display row for', item[id], 'id field', id)
+                    ref.toggleRowSelection(foundRow, true)
                 })
             })
         },
@@ -747,6 +682,11 @@ export default {
         },
         openCreateOrderDialogFromTemplate(row) {
             console.log(row)
+            // If this row is a saved order template, load full template
+            if (row.orderTemplateId) {
+                this.loadOrderTemplateAndOpen(row.orderTemplateId)
+                return
+            }
             this.newOrderForm.batchInfoTypeId = row.batchInfoTypeId
             this.newOrderForm.batchInfoTypeName = row.batchInfoTypeName
             this.newOrderForm.customerId = row.customerId
@@ -756,6 +696,338 @@ export default {
             this.openCreateOrderDialog()
             this.templateFilter = ''
             this.dialogStore.closeTemplateDialog()
+        },
+
+        async loadOrderTemplateAndOpen(orderTemplateId) {
+            try {
+                const resp = await axios.get(`${this.$apiBaseUrl}/ordercreate/getordertemplate`, {
+                    params: { orderTemplateId }
+                })
+                const tpl = resp.data.orderTemplate || {}
+                const orderData = tpl.orderData || {}
+                // backend may expose the template's source order id either inside orderData or at the top level
+                const sourceOrderIdFromResp = resp.data && resp.data.sourceOrderId ? resp.data.sourceOrderId : null
+                const orderShoeData = tpl.orderShoeData || []
+
+                // Populate basic fields
+                this.newOrderForm.orderRId = ''
+                this.newOrderForm.orderCid = ''
+                this.newOrderForm.customerName = orderData.customerName || ''
+                this.newOrderForm.customerBrand = orderData.customerBrand || ''
+                this.newOrderForm.customerId = orderData.customerId || null
+                this.newOrderForm.batchInfoTypeId = orderData.batchInfoTypeId || ''
+                this.newOrderForm.batchInfoTypeName = orderData.batchInfoTypeName || ''
+                // ensure batch type metadata and available batches are loaded so UI can auto-select
+                if (!this.batchTypes || this.batchTypes.length === 0) {
+                    try {
+                        await this.getAllBatchTypes()
+                    } catch (e) {
+                        console.error('getAllBatchTypes failed', e)
+                    }
+                }
+                this.updateBatchType()
+                try {
+                    if (this.newOrderForm.customerId) {
+                        await this.getCustomerBatchInfo(this.newOrderForm.customerId)
+                    }
+                } catch (e) {
+                    console.error('getCustomerBatchInfo failed', e)
+                }
+                this.newOrderForm.orderStartDate = ''
+                this.newOrderForm.orderEndDate = ''
+                this.newOrderForm.supervisorId = ''
+                this.newOrderForm.salesman = this.userName
+                this.newOrderForm.salesmanId = this.staffId
+                // preserve source order identifiers when loading from a template
+                this.newOrderForm.sourceOrderRid = orderData.sourceOrderRid || orderData.sourceOrderId || orderData.orderRid || null
+                this.newOrderForm.sourceOrderId = orderData.sourceOrderId || orderData.sourceOrderRid || sourceOrderIdFromResp || null
+
+                // Fill shoe types and allow editing (copy template data into orderShoeTypes)
+                this.newOrderForm.orderShoeTypes = orderShoeData.map((s) => {
+                    // normalize to expected orderShoeTypes shape used by creation UI
+                    const item = Object.assign({}, s)
+                    // ensure identifiers
+                    item.shoeTypeId = item.shoeTypeId || item.shoeTypeId || item.shoeRid || item.shoeRid
+                    item.shoeRid = item.shoeRid || item.orderShoeRid || item.shoeRid
+                    item.shoeImageUrl = item.shoeImageUrl || item.shoeImageUrl || (item.shoeTypeImgUrl && item.shoeTypeImgUrl) || ''
+
+                    // batch info: prefer orderShoeTypeBatchInfo or shoeTypeBatchInfoList
+                    item.orderShoeTypeBatchInfo = item.orderShoeTypeBatchInfo || item.shoeTypeBatchInfoList || item.orderShoeTypeBatchInfo || []
+
+                    // initialize mappings
+                    item.quantityMapping = item.quantityMapping || {}
+                    item.amountMapping = item.amountMapping || {}
+                    if (Array.isArray(item.orderShoeTypeBatchInfo)) {
+                        item.orderShoeTypeBatchInfo.forEach((batch) => {
+                            const pid = batch.packagingInfoId
+                            if (!pid) return
+                            if (item.quantityMapping[pid] === undefined) {
+                                // try to pick up defaults from template batch info
+                                if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) {
+                                    item.quantityMapping[pid] = Number(batch.unitPerRatio) || 0
+                                } else if (item.defaultQuantityMapping && item.defaultQuantityMapping[pid] !== undefined) {
+                                    item.quantityMapping[pid] = Number(item.defaultQuantityMapping[pid]) || 0
+                                } else {
+                                    item.quantityMapping[pid] = 0
+                                }
+                            }
+                            // compute amount mapping based on ratio
+                            const ratio = batch.totalQuantityRatio || batch.totalQuantityRatio === 0 ? Number(batch.totalQuantityRatio) : 1
+                            item.amountMapping[pid] = Number(item.quantityMapping[pid] || 0) * (ratio || 1)
+                        })
+                    }
+
+                    // customer-provided fields
+                    item.customerColorName = item.customerColorName || item.customerColor || ''
+                    item.customerShoeName = item.customerShoeName || ''
+
+                    // business remarks (may come from OrderShoe DB fields)
+                    item.businessMaterialRemark = item.businessMaterialRemark || item.business_material_remark || ''
+                    item.businessTechnicalRemark = item.businessTechnicalRemark || item.business_technical_remark || ''
+
+                    // normalize color display fields used by create UI
+                    // prefer explicit colorName, fall back to various possible keys
+                    item.colorName = item.colorName || item.shoeTypeColorName || item.shoeColorName || item.color || ''
+                    // normalize shoeTypeColors to an array of simple values if template provides objects
+                    if (!item.shoeTypeColors) {
+                        if (item.shoeTypeColorList && Array.isArray(item.shoeTypeColorList)) {
+                            item.shoeTypeColors = item.shoeTypeColorList.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
+                        } else if (item.colors && Array.isArray(item.colors)) {
+                            item.shoeTypeColors = item.colors.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
+                        } else {
+                            item.shoeTypeColors = item.shoeTypeColors || []
+                        }
+                    } else {
+                        // if shoeTypeColors provided as objects, map to values
+                        if (Array.isArray(item.shoeTypeColors) && item.shoeTypeColors.length && typeof item.shoeTypeColors[0] === 'object') {
+                            item.shoeTypeColors = item.shoeTypeColors.map((c) => c.value || c.colorId || c.colorName || '')
+                        }
+                    }
+
+                    return item
+                })
+
+                // Map stored batch entries to the customer's batch objects so selection is shown in UI
+                if (Array.isArray(this.newOrderForm.orderShoeTypes) && Array.isArray(this.customerDisplayBatchData)) {
+                    console.log('mapping template batches to customerDisplayBatchData', { shoeTypesLen: this.newOrderForm.orderShoeTypes.length, batchDataLen: this.customerDisplayBatchData.length })
+                    this.newOrderForm.orderShoeTypes.forEach((item) => {
+                        if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
+                        const mapped = []
+                        item.orderShoeTypeBatchInfo.forEach((batch) => {
+                            const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
+                            if (pid == null) {
+                                console.warn('template batch missing packaging id', batch)
+                                return
+                            }
+                            const found = this.customerDisplayBatchData.find((d) => String(d.packagingInfoId) === String(pid))
+                            if (found) mapped.push(found)
+                            else {
+                                console.warn('no matching customer batch found for pid', pid, 'batch:', batch)
+                                mapped.push(batch) // fallback to stored object
+                            }
+                        })
+                        item.orderShoeTypeBatchInfo = mapped
+                    })
+                }
+
+                // Recompute and normalize quantityMapping/amountMapping using the mapped batch objects
+                this.newOrderForm.orderShoeTypes.forEach((item) => {
+                    item.quantityMapping = item.quantityMapping || {}
+                    item.amountMapping = item.amountMapping || {}
+                    if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
+                    item.orderShoeTypeBatchInfo.forEach((batch) => {
+                        const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
+                        if (pid == null) return
+                        // prefer existing numeric key, else string key
+                        let q = item.quantityMapping[pid]
+                        if (q === undefined) q = item.quantityMapping[String(pid)]
+                        if (q === undefined) {
+                            if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) q = Number(batch.unitPerRatio) || 0
+                            else if (item.defaultQuantityMapping && (item.defaultQuantityMapping[pid] !== undefined || item.defaultQuantityMapping[String(pid)] !== undefined)) {
+                                q = Number(item.defaultQuantityMapping[pid] || item.defaultQuantityMapping[String(pid)]) || 0
+                            } else {
+                                q = 0
+                            }
+                        }
+                        // store both string and numeric keys to be resilient
+                        item.quantityMapping[pid] = q
+                        item.quantityMapping[String(pid)] = q
+                        const ratio = (batch.totalQuantityRatio !== undefined && batch.totalQuantityRatio !== null) ? Number(batch.totalQuantityRatio) : 1
+                        item.amountMapping[pid] = Number(q || 0) * (ratio || 1)
+                        item.amountMapping[String(pid)] = item.amountMapping[pid]
+                    })
+                })
+
+                // reset helper maps and set flag so next-step is allowed
+                this.newOrderForm.customerShoeName = {}
+                this.newOrderForm.customerShoeColorName = {}
+                this.newOrderForm.flag = true
+                this.openCreateOrderDialog()
+                // If template didn't include shoes, inform user and scroll to shoe selection area
+                this.$nextTick(() => {
+                    if (!this.newOrderForm.orderShoeTypes || this.newOrderForm.orderShoeTypes.length === 0) {
+                        ElMessage.info('模板未包含鞋型，请在下方选择鞋型或点击 添加新鞋型')
+                        // try to scroll to shoe table
+                        const el = document.querySelector('.order-shoe-create-table') || document.querySelector('.el-table')
+                        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
+                })
+                this.dialogStore.closeTemplateDialog()
+            } catch (err) {
+                console.error('loadOrderTemplateAndOpen error', err)
+                ElMessage.error('加载模板失败')
+            }
+        },
+
+        async showOrderTemplates() {
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/getordertemplates`)
+                this.templateData = response.data
+                this.templateDisplayData = this.templateData
+                this.dialogStore.openTemplateDialog()
+            } catch (error) {
+                console.error('Error fetching order templates:', error)
+                ElMessage.error('加载订单模板失败')
+            }
+        },
+        injectTemplateTestData() {
+            console.log('injectTemplateTestData invoked')
+            ElMessage.info('开始注入模板测试数据')
+            try {
+                // Test template JSON provided by user (compact true)
+                const tpl = {
+                    meta: { customerId: 48, customerName: '15', customerBrand: 'TUOTUO', batchInfoTypeId: null, batchInfoTypeName: 'EU女' },
+                    shoes: [
+                        { shoeId: 719, colorId: 1, shoeRid: '5E1392', colorName: null, shoeTypeId: 1547, quantityMapping: { '602': 80.0 }, customerShoeName: '26-03', packagingInfoIds: [602], customerColorName: 'NEGRO' },
+                        { shoeId: 719, colorId: 3, shoeRid: '5E1392', colorName: null, shoeTypeId: 1548, quantityMapping: { '602': 40.0 }, customerShoeName: '26-03', packagingInfoIds: [602], customerColorName: 'MARRON' }
+                    ],
+                    compact: true,
+                    packagingInfos: [
+                        { size34Ratio: 1, size35Ratio: 1, size36Ratio: 2, size37Ratio: 2, size38Ratio: 1, size39Ratio: 1, size40Ratio: 0, size41Ratio: 0, size42Ratio: 0, size43Ratio: 0, size44Ratio: 0, size45Ratio: 0, size46Ratio: 0, packagingInfoId: 602, packagingInfoName: '35-40/112211', totalQuantityRatio: 8 }
+                    ]
+                }
+
+                // populate customer / batch metadata
+                this.newOrderForm.customerName = tpl.meta.customerName
+                this.newOrderForm.customerBrand = tpl.meta.customerBrand
+                this.newOrderForm.customerId = tpl.meta.customerId
+                this.newOrderForm.batchInfoTypeName = tpl.meta.batchInfoTypeName || ''
+                this.updateBatchType()
+
+                // set customerDisplayBatchData from packagingInfos
+                this.customerDisplayBatchData = tpl.packagingInfos.map((p) => ({
+                    packagingInfoId: p.packagingInfoId,
+                    packagingInfoName: p.packagingInfoName || p.packagingInfoName || p.packagingInfoName,
+                    size34Ratio: p.size34Ratio,
+                    size35Ratio: p.size35Ratio,
+                    size36Ratio: p.size36Ratio,
+                    size37Ratio: p.size37Ratio,
+                    size38Ratio: p.size38Ratio,
+                    size39Ratio: p.size39Ratio,
+                    size40Ratio: p.size40Ratio,
+                    size41Ratio: p.size41Ratio,
+                    size42Ratio: p.size42Ratio,
+                    size43Ratio: p.size43Ratio,
+                    size44Ratio: p.size44Ratio,
+                    size45Ratio: p.size45Ratio,
+                    size46Ratio: p.size46Ratio,
+                    totalQuantityRatio: p.totalQuantityRatio,
+                    packagingInfoLocale: this.newOrderForm.batchInfoTypeName
+                }))
+
+                // map shoes into orderShoeTypes shape
+                this.newOrderForm.orderShoeTypes = tpl.shoes.map((s) => {
+                    const orderShoe = {
+                        shoeRid: s.shoeRid,
+                        shoeId: s.shoeId,
+                        shoeTypeId: s.shoeTypeId,
+                        colorId: s.colorId,
+                        colorName: s.colorName || s.customerColorName || '',
+                        customerShoeName: s.customerShoeName || '',
+                        customerColorName: s.customerColorName || '',
+                        quantityMapping: {},
+                        amountMapping: {}
+                    }
+                    // attach batch info objects by matching packagingInfoIds
+                    orderShoe.orderShoeTypeBatchInfo = (s.packagingInfoIds || []).map((pid) => {
+                        const found = this.customerDisplayBatchData.find((d) => String(d.packagingInfoId) === String(pid))
+                        return found || { packagingInfoId: pid }
+                    })
+
+                    // populate quantityMapping from template
+                    Object.keys(s.quantityMapping || {}).forEach((k) => {
+                        orderShoe.quantityMapping[k] = s.quantityMapping[k]
+                        orderShoe.quantityMapping[String(k)] = s.quantityMapping[k]
+                    })
+
+                    // compute amountMapping using totalQuantityRatio from batch info
+                    orderShoe.orderShoeTypeBatchInfo.forEach((batch) => {
+                        const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
+                        const ratio = Number(batch.totalQuantityRatio || 1)
+                        const q = orderShoe.quantityMapping[pid] !== undefined ? orderShoe.quantityMapping[pid] : orderShoe.quantityMapping[String(pid)] || 0
+                        orderShoe.amountMapping[pid] = Number(q || 0) * ratio
+                        orderShoe.amountMapping[String(pid)] = orderShoe.amountMapping[pid]
+                    })
+
+                    return orderShoe
+                })
+
+                this.newOrderForm.flag = true
+                this.openCreateOrderDialog()
+                console.log('injection complete', { orderShoeTypes: this.newOrderForm.orderShoeTypes, customerDisplayBatchData: this.customerDisplayBatchData })
+                ElMessage.success('模板测试数据注入完成（查看控制台）')
+            } catch (e) {
+                console.error('injectTemplateTestData failed', e)
+                ElMessage.error('注入失败，请查看控制台')
+            }
+        },
+
+        async deleteOrderTemplate(row) {
+            const id = row.orderTemplateId
+            if (!id) {
+                ElMessage.error('非整单模板，不支持此删除接口')
+                return
+            }
+            this.$confirm(`确认删除模板 "${row.templateName}"?`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                try {
+                    const resp = await axios.post(`${this.$apiBaseUrl}/ordercreate/deleteordertemplate`, { orderTemplateId: id })
+                    if (resp.status === 200) {
+                        ElMessage.success('模板删除成功')
+                        await this.showOrderTemplates()
+                    }
+                } catch (err) {
+                    console.error(err)
+                    ElMessage.error('模板删除失败')
+                }
+            })
+        },
+
+        async editOrderTemplate(row) {
+            const id = row.orderTemplateId
+            if (!id) {
+                ElMessage.error('仅支持整单模板重命名')
+                return
+            }
+            const { value: name } = await this.$prompt('请输入新的模板名称', '重命名模板', {
+                inputValue: row.templateName || '',
+                confirmButtonText: '确定',
+                cancelButtonText: '取消'
+            }).catch(() => ({ value: null }))
+            if (!name) return
+            try {
+                const resp = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordertemplate`, { orderTemplateId: id, templateName: name })
+                if (resp.status === 200) {
+                    ElMessage.success('模板重命名成功')
+                    await this.showOrderTemplates()
+                }
+            } catch (err) {
+                console.error(err)
+                ElMessage.error('模板重命名失败')
+            }
         },
         openCreateOrderDialog() {
             this.orderRidDuplicated = false
@@ -794,22 +1066,583 @@ export default {
                 this.submitDocType = 1
             }
         },
-        openAddBatchInfoDialog(row) {
+        async openAddBatchInfoDialog(row) {
             this.curShoeTypeId = row.shoeTypeId
             this.dialogStore.openAddBatchInfoDialog()
             const idField = 'packagingInfoId'
-            this.reselectSelected(this.$refs.batchInfoDialog.batchTable, row.orderShoeTypeBatchInfo, this.customerDisplayBatchData, idField)
+
+            // wait for child dialog and its internal table ref to be available
+            const getTableRef = () => {
+                try {
+                    const child = this.$refs.batchInfoDialog
+                    if (!child) return null
+                    // exposed ref object
+                    const exposedRef = child.batchTable
+                    if (exposedRef) {
+                        // if it's a ref object (Composition API), unwrap .value
+                        if (exposedRef.value && typeof exposedRef.value.toggleRowSelection === 'function') return exposedRef.value
+                        if (typeof exposedRef.toggleRowSelection === 'function') return exposedRef
+                    }
+                    // fallback to child's $refs
+                    if (child.$refs && child.$refs.batchTable && typeof child.$refs.batchTable.toggleRowSelection === 'function') return child.$refs.batchTable
+                } catch (e) {
+                    // ignore
+                }
+                return null
+            }
+
+            let tableRef = null
+            for (let i = 0; i < 10; i++) {
+                tableRef = getTableRef()
+                if (tableRef) break
+                // wait 50ms and retry
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise((r) => setTimeout(r, 50))
+            }
+
+            if (!tableRef) {
+                console.warn('openAddBatchInfoDialog: unable to find batchTable ref on batchInfoDialog after retries')
+                return
+            }
+
+            // use canonical row from newOrderForm to avoid shallow/copy issues
+            const canonicalRow = (this.newOrderForm.orderShoeTypes || []).find((r) => r.shoeTypeId == row.shoeTypeId) || row
+            // log row batch info for debugging
+            console.log('openAddBatchInfoDialog row data for selection (canonical)', { shoeTypeId: canonicalRow.shoeTypeId, orderShoeTypeBatchInfo: canonicalRow.orderShoeTypeBatchInfo, quantityMapping: canonicalRow.quantityMapping, packagingInfoIds: canonicalRow.packagingInfoIds })
+
+            // derive packaging ids from multiple possible sources to maximize chance of matching
+            const pidSet = new Set()
+            try {
+                if (Array.isArray(canonicalRow.orderShoeTypeBatchInfo) && canonicalRow.orderShoeTypeBatchInfo.length) {
+                    canonicalRow.orderShoeTypeBatchInfo.forEach((b) => {
+                        const v = b.packagingInfoId || b.packaging_info_id || b.id || b.packagingId
+                        if (v != null) pidSet.add(String(v))
+                    })
+                }
+                // packagingInfoIds array
+                if (Array.isArray(canonicalRow.packagingInfoIds) && canonicalRow.packagingInfoIds.length) {
+                    canonicalRow.packagingInfoIds.forEach((v) => pidSet.add(String(v)))
+                }
+                // quantityMapping keys
+                if (canonicalRow.quantityMapping && typeof canonicalRow.quantityMapping === 'object') {
+                    Object.keys(canonicalRow.quantityMapping).forEach((k) => pidSet.add(String(k)))
+                }
+                // amountMapping keys
+                if (canonicalRow.amountMapping && typeof canonicalRow.amountMapping === 'object') {
+                    Object.keys(canonicalRow.amountMapping).forEach((k) => pidSet.add(String(k)))
+                }
+                // defaultQuantityMapping
+                if (canonicalRow.defaultQuantityMapping && typeof canonicalRow.defaultQuantityMapping === 'object') {
+                    Object.keys(canonicalRow.defaultQuantityMapping).forEach((k) => pidSet.add(String(k)))
+                }
+            } catch (e) {
+                console.error('error computing pidSet for selection', e)
+            }
+
+            const pids = Array.from(pidSet)
+            console.log('openAddBatchInfoDialog: derived packaging ids for selection', pids)
+            const selectedForReselect = pids.map((k) => ({ packagingInfoId: isNaN(Number(k)) ? k : Number(k) }))
+
+            this.reselectSelected(tableRef, selectedForReselect || [], this.customerDisplayBatchData, idField)
         },
         openAddShoeDialog() {
             this.dialogStore.openAddShoeDialog()
         },
         openAddShoeTypeDialog(row) {
-            this.shoeIdToAdd = row.shoeRid
+            let target = row
+            if (!target) {
+                // prefer the currently selected shoe type in selection table
+                if (this.selectedShoeList && this.selectedShoeList.length > 0) target = this.selectedShoeList[0]
+                else if (this.newOrderForm.orderShoeTypes && this.newOrderForm.orderShoeTypes.length === 1) target = this.newOrderForm.orderShoeTypes[0]
+            }
+            if (!target) {
+                ElMessage.error('请先选择一个鞋款（在左侧鞋型列表中选择或展开鞋型并勾选）')
+                return
+            }
+            this.shoeIdToAdd = target.shoeRid || target.shoeRid
+            const shoeTypeColors = Array.isArray(target.shoeTypeColors) ? target.shoeTypeColors.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.color_name || c.colorName : c)) : []
             this.dialogStore.openAddShoeTypeDialog({
-                shoeRid: row.shoeRid,
-                shoeId: row.shoeId,
-                shoeTypeColors: row.shoeTypeColors.map((color) => color.value)
+                shoeRid: target.shoeRid,
+                shoeId: target.shoeId || target.shoeId,
+                shoeTypeColors: shoeTypeColors
             })
+        },
+        openAddColorDialog(row) {
+            // 订单里现有的鞋型列表（第二步表格的数据）
+            const list = Array.isArray(this.newOrderForm.orderShoeTypes)
+                ? this.newOrderForm.orderShoeTypes
+                : []
+
+            // 1）一个都没有，才提示
+            if (list.length === 0) {
+                ElMessage.error('当前订单还没有鞋型，请先在第一步选择鞋型')
+                return
+            }
+
+            let target = null
+
+            // 2）只有一个鞋型：完全自动使用这一行，不需要任何点击
+            if (list.length === 1) {
+                target = list[0]
+            } else {
+                // 3）有多个鞋型时的兜底规则：
+
+                // 3.1 如果你以后在表格里加了 row-click 记录当前行，就用这个（可选）
+                if (this.currentOrderShoeTypeRow) {
+                    target = this.currentOrderShoeTypeRow
+                } else {
+                    // 3.2 如果虽然有多条，但其实只有一个鞋型编号（同一双鞋不同颜色），也自动用第一个
+                    const uniqueRid = [...new Set(list.map(i => i.shoeRid))]
+                    if (uniqueRid.length === 1) {
+                        target = list[0]
+                    } else {
+                        // 3.3 真正多鞋型、又没点击时，才让你点行
+                        ElMessage.error('当前存在多个鞋型号，请在“订单详情填写”列表中点击选择一个鞋型再添加颜色')
+                        return
+                    }
+                }
+            }
+
+            const shoeTypeColorsRaw = Array.isArray(target.shoeTypeColors) ? target.shoeTypeColors : []
+            const shoeTypeColorIds = shoeTypeColorsRaw.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.color_name || c.colorName : c))
+
+            // compute already-added color ids for this shoeRid in the create form
+            const alreadyAdded = (this.newOrderForm.orderShoeTypes || [])
+                .filter((r) => r.shoeRid == target.shoeRid)
+                .map((r) => r.colorId || r.color_id || r.color || r.colorName)
+            const alreadyAddedStr = alreadyAdded.map((x) => String(x))
+
+            // map to option objects using global colorOptions (loaded during mount)
+            const availableOptions = (shoeTypeColorIds || []).reduce((acc, id) => {
+                if (id == null) return acc
+                if (alreadyAddedStr.includes(String(id))) return acc
+                const found = (this.colorOptions || []).find((c) => String(c.value) === String(id) || String(c.label) === String(id))
+                acc.push(found || { value: id, label: String(id) })
+                return acc
+            }, [])
+
+            console.log('openAddColorDialog target =', target, 'availableOptions:', availableOptions)
+
+            // set dialog store form values then open
+            // If called with a row, treat as edit and remember target row reference
+            if (row) {
+                this.dialogStore.addColorForm.editTargetRow = row
+            } else {
+                this.dialogStore.addColorForm.editTargetRow = null
+            }
+            this.dialogStore.addColorForm.shoeRid = target.shoeRid
+            this.dialogStore.addColorForm.shoeId = target.shoeId || target.shoeId
+            this.dialogStore.addColorForm.shoeTypeColors = availableOptions
+            this.dialogStore.openAddColorDialog({ shoeRid: target.shoeRid, shoeId: target.shoeId || target.shoeId, shoeTypeColors: availableOptions })
+            this.dialogStore.addColorDialogVis = true
+            console.log('addColorDialogVis =', this.dialogStore.addColorDialogVis)
+        },
+
+        removeSelectedShoe(item) {
+            const id = item.shoeTypeId || item.shoeRid
+            const idx = (this.newOrderForm.orderShoeTypes || []).findIndex((r) => ((r.shoeTypeId || r.shoeRid) == id))
+            if (idx >= 0) {
+                this.newOrderForm.orderShoeTypes.splice(idx, 1)
+            }
+        },
+
+
+
+
+
+        async handleAddColorDialogSubmit(payload) {
+            try {
+                console.debug('handleAddColorDialogSubmit start', { payload, addColorForm: this.dialogStore.addColorForm })
+                const colorIds = Array.isArray(payload.colorIds) ? payload.colorIds : []
+                if (colorIds.length === 0) {
+                    ElMessage.info('未选择颜色')
+                    return
+                }
+                const shoeId = this.dialogStore.addColorForm.shoeId
+                if (!shoeId) {
+                    ElMessage.error('未找到目标鞋款')
+                    return
+                }
+                // Find master shoe record
+                const masterShoe = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId))
+                console.debug('handleAddColorDialogSubmit masterShoe', masterShoe)
+
+                // Compute colors already present in the create-order form for this shoeRid
+                const alreadyInOrder = (this.newOrderForm.orderShoeTypes || []).filter((r) => String(r.shoeRid) === String(masterShoe?.shoeRid)).map((r) => String(r.colorId || r.color_id || r.color || r.colorName))
+
+                // Determine which selected colors exist on master and which need server add
+                let masterColorIds = []
+                if (masterShoe && Array.isArray(masterShoe.shoeTypeData) && masterShoe.shoeTypeData.length) {
+                    masterColorIds = masterShoe.shoeTypeData.map((t) => String(t.colorId || t.color_id || t.value || t.color || t.colorName || t.label))
+                } else if (this.dialogStore?.addColorForm?.shoeTypeColors && Array.isArray(this.dialogStore.addColorForm.shoeTypeColors)) {
+                    // fallback: use the shoeTypeColors already passed into the dialog (may be option objects)
+                    masterColorIds = this.dialogStore.addColorForm.shoeTypeColors.map((c) => (typeof c === 'object' ? String(c.value || c.colorId || c.color_id || c.label) : String(c)))
+                }
+
+                // If we couldn't find master shoe locally, refresh shoe table and retry to avoid constructing invalid shoeTypeIds
+                if (!masterShoe) {
+                    console.debug('masterShoe not found locally; refreshing shoeTableData')
+                    try {
+                        await this.getAllShoes()
+                        // recompute masterShoe and masterColorIds after refresh
+                        const refreshed = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId))
+                        if (refreshed) {
+                            console.debug('found masterShoe after refresh', refreshed)
+                            masterShoe = refreshed
+                            if (Array.isArray(masterShoe.shoeTypeData)) {
+                                masterColorIds = masterShoe.shoeTypeData.map((t) => String(t.colorId || t.color_id || t.value || t.color || t.colorName || t.label))
+                            }
+                        } else {
+                            console.warn('masterShoe still not found after refresh')
+                        }
+                    } catch (e) {
+                        console.warn('failed to refresh shoeTableData', e)
+                    }
+                }
+
+                // If dialog was opened to edit a specific existing row, handle single-selection edit here
+                const editTarget = this.dialogStore?.addColorForm?.editTargetRow || null
+                if (editTarget) {
+                    // require single selection when editing
+                    if (colorIds.length !== 1) {
+                        ElMessage.error('编辑颜色时请选择且仅选择一个颜色')
+                        return
+                    }
+                    const selectedCid = String(colorIds[0])
+                    const currentCid = String(editTarget.colorId || editTarget.color_id || editTarget.color || '')
+                    if (selectedCid === currentCid) {
+                        ElMessage.info('颜色未改变')
+                        this.dialogStore.closeAddColorDialog()
+                        this.dialogStore.resetAddColorForm()
+                        return
+                    }
+
+                    // If selected color exists on master, apply directly
+                    if (masterColorIds.includes(selectedCid)) {
+                        let foundType = null
+                        if (masterShoe && Array.isArray(masterShoe.shoeTypeData)) {
+                            foundType = masterShoe.shoeTypeData.find((t) => {
+                                const tvals = [t.colorId, t.color_id, t.value, t.colorName, t.label].map((v) => String(v))
+                                return tvals.includes(selectedCid) || String(t.colorName || t.label) === selectedCid
+                            })
+                        }
+                        if (foundType) {
+                            const newRow = Object.assign({}, editTarget, {
+                                shoeTypeId: foundType.shoeTypeId || foundType.id || null,
+                                colorId: foundType.colorId || foundType.color_id || selectedCid,
+                                colorName: foundType.colorName || foundType.label || ''
+                            })
+                            const idx = this.newOrderForm.orderShoeTypes.findIndex((r) => r === editTarget)
+                            if (idx !== -1) this.newOrderForm.orderShoeTypes.splice(idx, 1, newRow)
+                            else this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes.map((r) => (r === editTarget ? newRow : r))
+                        } else {
+                            const gf = (this.colorOptions || []).find((c) => String(c.value) === selectedCid || String(c.label) === selectedCid)
+                            const newRow = Object.assign({}, editTarget, {
+                                shoeTypeId: null,
+                                colorId: selectedCid,
+                                colorName: gf ? gf.label : ''
+                            })
+                            const idx = this.newOrderForm.orderShoeTypes.findIndex((r) => r === editTarget)
+                            if (idx !== -1) this.newOrderForm.orderShoeTypes.splice(idx, 1, newRow)
+                            else this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes.map((r) => (r === editTarget ? newRow : r))
+                        }
+                        this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                        this.newOrderForm.flag = true
+                        this.dialogStore.closeAddColorDialog()
+                        this.dialogStore.resetAddColorForm()
+                        ElMessage.success('颜色修改成功')
+                        return
+                    }
+
+                    // Otherwise, create color on server then update row
+                    const payloadToServerEdit = { shoeId: shoeId, colorId: [selectedCid], shoeTypeColors: [selectedCid] }
+                    const resp = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, payloadToServerEdit)
+                    console.debug('addshoetype (edit) response', resp && resp.data)
+                    if (resp && resp.status === 200) {
+                        const created = resp.data && resp.data.created ? resp.data.created : []
+                        const c = created.find((x) => String(x.colorId) === selectedCid) || created[0]
+                        if (c) {
+                            // try to get color name from local colorOptions first
+                            let colorLabel = ''
+                            const foundColor = (this.colorOptions || []).find((co) => String(co.value) === String(c.colorId) || String(co.label) === String(c.colorId))
+                            if (foundColor) colorLabel = foundColor.label
+                            else {
+                                try {
+                                    const clrResp = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
+                                    this.colorOptions = clrResp.data || this.colorOptions
+                                    const f2 = (this.colorOptions || []).find((co) => String(co.value) === String(c.colorId) || String(co.label) === String(c.colorId))
+                                    if (f2) colorLabel = f2.label
+                                } catch (e) {
+                                    console.warn('failed to refresh colorOptions', e)
+                                }
+                            }
+                            const newRow = Object.assign({}, editTarget, {
+                                    shoeTypeId: c.shoeTypeId || null,
+                                    colorId: c.colorId,
+                                    colorName: colorLabel || ''
+                                })
+                            const idx = this.newOrderForm.orderShoeTypes.findIndex((r) => r === editTarget)
+                            if (idx !== -1) this.newOrderForm.orderShoeTypes.splice(idx, 1, newRow)
+                            else this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes.map((r) => (r === editTarget ? newRow : r))
+                            // try to remap names/ids from refreshed master and populate colorName
+                            try {
+                                await this.getAllShoes()
+                                console.debug('shoeTableData after refresh', this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(editTarget.shoeRid)))
+                                await this.remapOrderShoeTypesShoeTypeIds()
+                                // attempt to fill colorName for the updated row
+                                const updatedIdx = this.newOrderForm.orderShoeTypes.findIndex((r) => String(r.colorId) === String(c.colorId) && (String(r.shoeRid) === String(c.shoeRid) || String(r.shoeId) === String(c.shoeId) || String(r.shoeId) === String(shoeId)))
+                                if (updatedIdx !== -1) {
+                                    const row = this.newOrderForm.orderShoeTypes[updatedIdx]
+                                    const master = this.shoeTableData.find((s) => String(s.shoeRid) === String(row.shoeRid) || String(s.shoeId) === String(row.shoeId))
+                                    if (master && Array.isArray(master.shoeTypeData)) {
+                                        const match = master.shoeTypeData.find((t) => String(t.colorId || t.color_id || t.value) === String(row.colorId) || String(t.shoeTypeId || t.id) === String(row.shoeTypeId))
+                                        if (match) {
+                                            const newRow2 = Object.assign({}, row, { colorName: match.colorName || match.label || '' })
+                                            this.newOrderForm.orderShoeTypes.splice(updatedIdx, 1, newRow2)
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('remap after edit addshoetype failed', e)
+                            }
+                        }
+                        this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                        this.newOrderForm.flag = true
+                        this.dialogStore.closeAddColorDialog()
+                        this.dialogStore.resetAddColorForm()
+                        ElMessage.success('颜色修改成功')
+                        return
+                    } else {
+                        ElMessage.error('修改颜色失败')
+                        return
+                    }
+                }
+
+                const toAddToOrder = []
+                const toCreateOnServer = []
+
+                colorIds.forEach((cid) => {
+                    const sCid = String(cid)
+                    if (alreadyInOrder.includes(sCid)) return // skip duplicates in order
+                    if (masterColorIds.includes(sCid)) {
+                        toAddToOrder.push(sCid)
+                    } else {
+                        toCreateOnServer.push(sCid)
+                    }
+                })
+
+                console.debug('handleAddColorDialogSubmit computed', { alreadyInOrder, masterColorIds, toAddToOrder, toCreateOnServer })
+
+                // First, add any existing master colors into the order form immediately
+                if (masterShoe && Array.isArray(masterShoe.shoeTypeData) && toAddToOrder.length) {
+                    const beforeLen = (this.newOrderForm.orderShoeTypes || []).length
+                    toAddToOrder.forEach((sCid) => {
+                        const foundType = masterShoe.shoeTypeData.find((t) => String(t.colorId || t.color_id || t.value || t.color || t.colorName || t.label) === String(sCid) || String(t.colorName || t.label) === String(sCid))
+                        const newRow = {}
+                        if (foundType) {
+                            Object.assign(newRow, foundType)
+                            newRow.shoeRid = masterShoe.shoeRid
+                            newRow.shoeId = masterShoe.shoeId
+                            newRow.shoeTypeId = foundType.shoeTypeId || foundType.id || null
+                            newRow.colorId = foundType.colorId || foundType.color_id || sCid
+                            newRow.colorName = foundType.colorName || foundType.label || ''
+                        } else {
+                            newRow.shoeRid = masterShoe.shoeRid
+                            newRow.shoeId = masterShoe.shoeId
+                            newRow.shoeTypeId = null
+                            newRow.colorId = sCid
+                            newRow.colorName = ''
+                        }
+                        newRow.customerShoeName = ''
+                        newRow.customerColorName = ''
+                        newRow.quantityMapping = {}
+                        newRow.amountMapping = {}
+                        newRow.orderShoeTypeBatchInfo = []
+                        this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes || []
+                        this.newOrderForm.orderShoeTypes.push(newRow)
+                    })
+                    // force vue reactivity refresh
+                    this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                    await this.$nextTick()
+                    const afterLen = (this.newOrderForm.orderShoeTypes || []).length
+                    console.debug('orderShoeTypes refreshed after adding existing master colors', { beforeLen, afterLen })
+                }
+
+                // If masterShoe not available locally, construct rows from dialogStore or global colorOptions
+                else if ((!masterShoe || !Array.isArray(masterShoe.shoeTypeData) || masterShoe.shoeTypeData.length === 0) && toAddToOrder.length) {
+                    const fallbackRid = this.dialogStore?.addColorForm?.shoeRid || this.dialogStore?.addColorForm?.shoeId || ''
+                    const fallbackShoeId = this.dialogStore?.addColorForm?.shoeId || ''
+                    const shoeTypeColorsFallback = Array.isArray(this.dialogStore?.addColorForm?.shoeTypeColors) ? this.dialogStore.addColorForm.shoeTypeColors : []
+                    const beforeLen = (this.newOrderForm.orderShoeTypes || []).length
+                    toAddToOrder.forEach((sCid) => {
+                        const newRow = {}
+                        let foundOpt = null
+                        if (shoeTypeColorsFallback && shoeTypeColorsFallback.length) {
+                            foundOpt = shoeTypeColorsFallback.find((c) => String((c && (c.value || c.colorId || c.color_id)) || c) === String(sCid) || String((c && (c.label || c.colorName)) || '') === String(sCid))
+                        }
+                        if (foundOpt) {
+                            newRow.shoeRid = fallbackRid
+                            newRow.shoeId = fallbackShoeId
+                            newRow.shoeTypeId = foundOpt.shoeTypeId || foundOpt.id || null
+                            newRow.colorId = foundOpt.value || foundOpt.colorId || foundOpt.color_id || sCid
+                            newRow.colorName = foundOpt.label || foundOpt.colorName || ''
+                        } else {
+                            const foundGlobal = (this.colorOptions || []).find((c) => String(c.value) === String(sCid) || String(c.label) === String(sCid))
+                            newRow.shoeRid = fallbackRid
+                            newRow.shoeId = fallbackShoeId
+                            newRow.shoeTypeId = null
+                            newRow.colorId = sCid
+                            newRow.colorName = foundGlobal ? foundGlobal.label : ''
+                        }
+                        newRow.customerShoeName = ''
+                        newRow.customerColorName = ''
+                        newRow.quantityMapping = {}
+                        newRow.amountMapping = {}
+                        newRow.orderShoeTypeBatchInfo = []
+                        this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes || []
+                        this.newOrderForm.orderShoeTypes.push(newRow)
+                    })
+                    this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                    await this.$nextTick()
+                    const afterLen = (this.newOrderForm.orderShoeTypes || []).length
+                    console.debug('orderShoeTypes refreshed after adding fallback colors', { beforeLen, afterLen })
+                }
+
+                // If nothing needs server creation, we're done (skip API)
+                if (toCreateOnServer.length === 0) {
+                    if (toAddToOrder.length === 0) ElMessage.info('选中颜色已存在，不会重复添加')
+                    else ElMessage.success('颜色添加成功')
+                    this.newOrderForm.flag = true
+                    this.dialogStore.closeAddColorDialog()
+                    this.dialogStore.resetAddColorForm()
+                    return
+                }
+
+                // Otherwise, create missing colors on server then merge results into order form
+                const payloadToServer = { shoeId: shoeId, colorId: toCreateOnServer, shoeTypeColors: toCreateOnServer }
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, payloadToServer)
+                console.debug('addshoetype response', response && response.data)
+                if (response.status === 200) {
+                    ElMessage.success('颜色添加成功')
+                    // Backend may return created shoe-type records (created: [{shoeTypeId,colorId,shoeId},...])
+                    const created = response.data && response.data.created ? response.data.created : []
+                    if (created.length) {
+                        // merge created items into newOrderForm immediately
+                        this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes || []
+                        created.forEach((c) => {
+                            // determine shoeRid from master table or dialogStore
+                            const shoeRid = c.shoeRid || this.dialogStore.addColorForm.shoeRid || ''
+                            const shoeIdFromC = c.shoeId || this.dialogStore.addColorForm.shoeId || shoeId
+                            // skip duplicates
+                            const exists = this.newOrderForm.orderShoeTypes.some((r) => String(r.colorId || r.color_id) === String(c.colorId) && String(r.shoeRid) === String(shoeRid))
+                            if (exists) return
+                            // try to find master shoe type metadata
+                            const refreshedMaster = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeIdFromC) || String(s.shoeRid) === String(shoeRid))
+                            let foundType = null
+                            if (refreshedMaster && Array.isArray(refreshedMaster.shoeTypeData)) {
+                                foundType = refreshedMaster.shoeTypeData.find((t) => String(t.colorId || t.color_id || t.value) === String(c.colorId))
+                            }
+                            const newRow = {}
+                            if (foundType) {
+                                Object.assign(newRow, foundType)
+                                newRow.shoeRid = refreshedMaster.shoeRid
+                                newRow.shoeId = refreshedMaster.shoeId
+                                newRow.shoeTypeId = foundType.shoeTypeId || foundType.id || c.shoeTypeId || null
+                                newRow.colorId = foundType.colorId || foundType.color_id || c.colorId
+                                newRow.colorName = foundType.colorName || foundType.label || ''
+                            } else {
+                                newRow.shoeRid = shoeRid
+                                newRow.shoeId = shoeIdFromC
+                                newRow.shoeTypeId = c.shoeTypeId || null
+                                newRow.colorId = c.colorId
+                                newRow.colorName = ''
+                            }
+                            newRow.customerShoeName = ''
+                            newRow.customerColorName = ''
+                            newRow.quantityMapping = {}
+                            newRow.amountMapping = {}
+                            newRow.orderShoeTypeBatchInfo = []
+                            this.newOrderForm.orderShoeTypes.push(newRow)
+                        })
+                        // remap any remaining nulls
+                        await this.remapOrderShoeTypesShoeTypeIds()
+                        // If some created entries still lack shoeTypeId, try a targeted refresh+match
+                        const missing = created.filter((c) => !c.shoeTypeId)
+                        if (missing.length) {
+                            console.debug('created entries missing shoeTypeId, refreshing master list to find IDs', missing)
+                            try {
+                                await this.getAllShoes()
+                                // for each missing created entry, try to find the corresponding shoeType in master data
+                                missing.forEach((c) => {
+                                    const shoeRid = c.shoeRid || this.dialogStore.addColorForm.shoeRid || ''
+                                    const shoeIdFromC = c.shoeId || this.dialogStore.addColorForm.shoeId || shoeId
+                                    const master = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeIdFromC) || String(s.shoeRid) === String(shoeRid))
+                                    if (!master || !Array.isArray(master.shoeTypeData)) return
+                                    const match = master.shoeTypeData.find((t) => String(t.colorId || t.color_id || t.value) === String(c.colorId) || String(t.colorName || t.label) === String(c.colorId))
+                                    if (match) {
+                                        // assign found id into any newOrderForm rows matching this shoe and color
+                                        this.newOrderForm.orderShoeTypes.forEach((row) => {
+                                            if ((String(row.colorId) === String(c.colorId) || String(row.colorName) === String(c.colorId) || String(row.colorName) === String(match.colorName)) && (String(row.shoeId) === String(master.shoeId) || String(row.shoeRid) === String(master.shoeRid))) {
+                                                row.shoeTypeId = match.shoeTypeId || match.id
+                                            }
+                                        })
+                                    }
+                                })
+                                // force refresh
+                                        this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                                        await this.$nextTick()
+                                        // don't call getshoetype during add; mapping will be attempted at submit time
+                            } catch (e) {
+                                console.warn('targeted remap after addshoetype failed', e)
+                            }
+                        }
+                        this.newOrderForm.flag = true
+                    } else {
+                        // fallback: refresh master shoe list and remap
+                        await this.getAllShoes()
+                        await this.remapOrderShoeTypesShoeTypeIds()
+                    }
+                    this.dialogStore.closeAddColorDialog()
+                    this.dialogStore.resetAddColorForm()
+                } else {
+                    ElMessage.error('添加颜色失败')
+                }
+            } catch (e) {
+                console.error('handleAddColorDialogSubmit failed', e)
+                ElMessage.error('添加颜色失败')
+            }
+        },
+
+        // Ensure each entry in newOrderForm.orderShoeTypes has a numeric shoeTypeId when possible
+        async remapOrderShoeTypesShoeTypeIds() {
+            try {
+                if (!Array.isArray(this.newOrderForm.orderShoeTypes) || !Array.isArray(this.shoeTableData)) return
+                // ensure we have fresh shoeTableData
+                try {
+                    await this.getAllShoes()
+                } catch (e) {
+                    console.warn('remapOrderShoeTypesShoeTypeIds: getAllShoes failed', e)
+                }
+                this.newOrderForm.orderShoeTypes.forEach((item) => {
+                    const needsRemap = !item.shoeTypeId || (typeof item.shoeTypeId === 'string' && item.shoeTypeId.includes('_'))
+                    if (!needsRemap) return
+                    const master = this.shoeTableData.find((s) => String(s.shoeRid) === String(item.shoeRid) || String(s.shoeId) === String(item.shoeId))
+                    if (!master || !Array.isArray(master.shoeTypeData)) return
+                    const match = master.shoeTypeData.find((t) => {
+                        const tVals = [t.colorId, t.color_id, t.value, t.colorName, t.label].map((v) => String(v))
+                        const itemVals = [item.colorId, item.color_id, item.color, item.colorName, item.customerColorName].map((v) => String(v))
+                        return tVals.some((tv) => itemVals.includes(tv)) || String(t.colorName || t.label) === String(item.colorName || item.customerColorName)
+                    })
+                    if (match) {
+                        item.shoeTypeId = match.shoeTypeId || match.id
+                    }
+                })
+                // force refresh
+                this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                await this.$nextTick()
+            } catch (e) {
+                console.warn('remapOrderShoeTypesShoeTypeIds failed', e)
+            }
         },
         addNewShoe() {
             this.$confirm('确认添加新鞋型？', '提示', {
@@ -837,7 +1670,27 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(async () => {
-                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, this.dialogStore.shoeColorForm)
+                // Prevent adding duplicate colors for the same shoe type: filter out colors that already exist
+                const chosen = Array.isArray(this.dialogStore.shoeColorForm.shoeTypeColors) ? this.dialogStore.shoeColorForm.shoeTypeColors : []
+                const shoeId = this.dialogStore.shoeColorForm.shoeId
+                let existing = []
+                try {
+                    const shoe = this.shoeTableData.find((s) => s.shoeId == shoeId)
+                    if (shoe && Array.isArray(shoe.shoeTypeData)) {
+                        existing = shoe.shoeTypeData.map((t) => t.colorId || t.color_id || t.colorId)
+                    }
+                } catch (e) {
+                    console.warn('addShoeTypes: failed to compute existing colors', e)
+                }
+                const existingStr = existing.map((x) => String(x))
+                const toAdd = chosen.filter((c) => !existingStr.includes(String(c)))
+                if (toAdd.length === 0) {
+                    ElMessage.info('选中颜色已存在，不会重复添加')
+                    this.dialogStore.closeAddShoeTypeDialog()
+                    return
+                }
+                const payload = Object.assign({}, this.dialogStore.shoeColorForm, { colorId: toAdd, shoeTypeColors: toAdd })
+                const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, payload)
                 if (response.status === 200) {
                     this.$message({
                         type: 'success',
@@ -847,6 +1700,17 @@ export default {
                     this.dialogStore.resetShoeColorForm()
                     await this.getAllShoes()
                 }
+            })
+        },
+        removeShoeType(row) {
+            this.$confirm(`确认删除鞋型 ${row.shoeRid || row.shoeTypeId} 吗？`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes.filter((r) => r !== row)
+                // if no shoe types left, clear flag
+                if (this.newOrderForm.orderShoeTypes.length === 0) this.newOrderForm.flag = false
             })
         },
         openAddCustomerBatchDialog() {
@@ -934,7 +1798,22 @@ export default {
                 ElMessage.error('未选择订单结束日期，不允许创建订单')
                 return
             }
-            if (this.newOrderForm.orderShoeTypes.length === 0) {
+            // If user did not explicitly select a shoe type but there's exactly one available,
+            // auto-select it to simplify single-shoe workflows.
+            if (!this.newOrderForm.orderShoeTypes || this.newOrderForm.orderShoeTypes.length === 0) {
+                try {
+                    if (Array.isArray(this.shoeTableData) && this.shoeTableData.length === 1) {
+                        const shoe = this.shoeTableData[0]
+                        if (Array.isArray(shoe.shoeTypeData) && shoe.shoeTypeData.length === 1) {
+                            this.newOrderForm.orderShoeTypes = [Object.assign({}, shoe.shoeTypeData[0], { shoeRid: shoe.shoeRid })]
+                        }
+                    }
+                } catch (e) {
+                    console.warn('auto-select single shoeType failed', e)
+                }
+            }
+
+            if (!this.newOrderForm.orderShoeTypes || this.newOrderForm.orderShoeTypes.length === 0) {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
@@ -944,13 +1823,26 @@ export default {
             }
             this.dialogStore.closeOrderCreationDialog()
             this.dialogStore.openOrderDetailDialog()
-            this.newOrderForm.orderShoeTypes.forEach((item) => {
-                item.orderShoeTypeBatchInfo = []
-                item.quantityMapping = {}
-                item.amountMapping = {}
-                item.customerColorName = ''
-                this.newOrderForm.customerShoeName[item.shoeRid] = ''
-            })
+            // If the form was populated from a template (`flag === true`), preserve existing
+            // `orderShoeTypeBatchInfo`, `quantityMapping`, and `amountMapping` so template selections
+            // are not overwritten when progressing to the second step. Otherwise clear them.
+            if (!this.newOrderForm.flag) {
+                this.newOrderForm.orderShoeTypes.forEach((item) => {
+                    item.orderShoeTypeBatchInfo = []
+                    item.quantityMapping = {}
+                    item.amountMapping = {}
+                    item.customerColorName = ''
+                    this.newOrderForm.customerShoeName[item.shoeRid] = ''
+                })
+            } else {
+                // ensure mappings exist for template-loaded rows
+                this.newOrderForm.orderShoeTypes.forEach((item) => {
+                    item.quantityMapping = item.quantityMapping || {}
+                    item.amountMapping = item.amountMapping || {}
+                    item.orderShoeTypeBatchInfo = item.orderShoeTypeBatchInfo || []
+                    this.newOrderForm.customerShoeName[item.shoeRid] = item.customerShoeName || ''
+                })
+            }
             this.getCustomerBatchInfo(this.newOrderForm.customerId)
         },
         updateAmountMapping(out_row, inner_row) {
@@ -1360,6 +2252,60 @@ export default {
                                     background: 'rgba(0, 0, 0, 0.7)'
                                 })
                                 loadingInstance.close()
+                                // Ensure shoeTypeId values are valid before submit
+                                try {
+                                    await this.getAllShoes()
+                                } catch (e) {
+                                    console.warn('submitNewOrder: getAllShoes failed', e)
+                                }
+                                let missingMappings = []
+                                if (Array.isArray(this.newOrderForm.orderShoeTypes)) {
+                                    this.newOrderForm.orderShoeTypes.forEach((item) => {
+                                        const needsRemap = !item.shoeTypeId || (typeof item.shoeTypeId === 'string' && item.shoeTypeId.includes('_'))
+                                        if (needsRemap) missingMappings.push(item)
+                                    })
+                                }
+
+                                // Try to resolve missing mappings by querying backend by shoeId+colorId
+                                if (missingMappings.length) {
+                                    await Promise.all(missingMappings.map(async (item) => {
+                                        const qShoeId = item.shoeId || item.shoeRid || this.dialogStore.addColorForm.shoeId
+                                        const qColorId = item.colorId || item.color_id || item.colorName || item.color || item.customerColorName
+                                        if (!qShoeId || qColorId == null) return
+                                        try {
+                                            console.debug('submitNewOrder: calling getshoetype for', { qShoeId, qColorId })
+                                            const resp = await axios.get(`${this.$apiBaseUrl}/shoemanage/getshoetype`, { params: { shoeId: qShoeId, colorId: qColorId } })
+                                            console.debug('submitNewOrder: getshoetype resp', resp && resp.data)
+                                            if (resp && resp.data && (resp.data.shoeTypeId || resp.data.shoeTypeId === 0)) {
+                                                item.shoeTypeId = resp.data.shoeTypeId
+                                            }
+                                        } catch (e) {
+                                            console.warn('submitNewOrder: getshoetype failed for', { qShoeId, qColorId }, e)
+                                        }
+                                    }))
+                                    // recompute missingMappings after attempts
+                                    missingMappings = []
+                                    this.newOrderForm.orderShoeTypes.forEach((item) => {
+                                        const needsRemap = !item.shoeTypeId || (typeof item.shoeTypeId === 'string' && item.shoeTypeId.includes('_'))
+                                        if (needsRemap) missingMappings.push(item)
+                                    })
+                                }
+
+                                if (missingMappings.length) {
+                                    // Attempt to make missingMappings serializable for logging (strip proxies)
+                                    let serializable = []
+                                    try {
+                                        serializable = missingMappings.map((m) => JSON.parse(JSON.stringify(m)))
+                                    } catch (e) {
+                                        serializable = missingMappings.map((m) => ({ shoeRid: m.shoeRid || m.shoeId || null, colorId: m.colorId || m.color_id || null, colorName: m.colorName || m.customerColorName || null }))
+                                    }
+                                    console.error('submitNewOrder: missing shoeTypeId mappings for items (serializable):', serializable)
+                                    // show user-friendly list of failing rows
+                                    const summary = serializable.map((s) => `${s.shoeRid || s.shoeId || ''} / ${s.colorName || s.colorId || ''}`).join(', ')
+                                    ElMessage.error(`部分鞋型/颜色未映射：${summary}。请刷新鞋款列表并确认颜色已添加后重试`)
+                                    return
+                                }
+
                                 const res = await axios.post(`${this.$apiBaseUrl}/ordercreate/createneworder`, {
                                     orderInfo: this.newOrderForm
                                 })
@@ -1383,7 +2329,9 @@ export default {
                                     batchInfoQuantity: [],
                                     customerShoeName: {},
                                     flag: false,
-                                    salesmanId: ''
+                                    salesmanId: '',
+                                    sourceOrderRid: null,
+                                    sourceOrderId: null
                                 }
                                 this.orderRidDuplicated = false
                                 this.getAllOrders()

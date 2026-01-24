@@ -96,6 +96,7 @@ def add_shoe_type():
     color_ids = request.json.get("colorId")
     shoe_id = request.json.get("shoeId")
     existing_color = []
+    created = []
     for color_id in color_ids:
         shoe_type_existing = (
             db.session.query(ShoeType)
@@ -109,12 +110,22 @@ def add_shoe_type():
             shoe_type_entity.color_id = color_id
             shoe_type_entity.shoe_id = shoe_id
             db.session.add(shoe_type_entity)
+            # flush to obtain shoe_type_id before commit
+            db.session.flush()
+            try:
+                db.session.refresh(shoe_type_entity)
+            except Exception:
+                pass
+            # attempt to include shoeRid from Shoe
+            shoe_obj = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
+            shoe_rid = shoe_obj.shoe_rid if shoe_obj else None
+            created.append({"shoeTypeId": getattr(shoe_type_entity, 'shoe_type_id', None), "colorId": color_id, "shoeId": shoe_id, "shoeRid": shoe_rid})
     if len(existing_color) == len(color_ids):
         return jsonify({"message": "all color exists already"}), 400
     else:
         db.session.commit()
         existing_color_str = ''.join(existing_color)
-        return jsonify({"message": "shoe type added except " + existing_color_str}), 200
+        return jsonify({"message": "shoe type added except " + existing_color_str, "created": created}), 200
 
 
 @shoe_manage_bp.route("/shoemanage/deleteshoetype", methods=["POST"])
@@ -320,4 +331,30 @@ def delete_shoe():
         db.session.delete(existing_shoe)
         db.session.commit()
         return jsonify({"message": "delete shoe OK"}), 200
+
+
+@shoe_manage_bp.route("/shoemanage/getshoetype", methods=["GET"])
+def get_shoe_type():
+    """Return shoe_type_id for given shoeId and colorId.
+
+    Query params: shoeId, colorId
+    Returns: { "shoeTypeId": <int or null> }
+    """
+    shoe_id = request.args.get('shoeId')
+    color_id = request.args.get('colorId')
+    if shoe_id is None or color_id is None:
+        return jsonify({"error": "missing shoeId or colorId"}), 400
+    try:
+        entity = (
+            db.session.query(ShoeType)
+            .filter(ShoeType.shoe_id == shoe_id, ShoeType.color_id == color_id)
+            .first()
+        )
+        if entity:
+            return jsonify({"shoeTypeId": getattr(entity, 'shoe_type_id', None)}), 200
+        else:
+            return jsonify({"shoeTypeId": None}), 200
+    except Exception as e:
+        logger.exception('get_shoe_type failed')
+        return jsonify({"error": str(e)}), 500
 
