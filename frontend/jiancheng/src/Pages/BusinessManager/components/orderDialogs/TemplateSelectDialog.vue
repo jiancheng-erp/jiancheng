@@ -1,14 +1,22 @@
 <template>
-    <el-dialog title="选择模板" v-model="dialogStore.newOrderTemplateVis" width="50%">
-        <el-input v-model="templateSearch" @input="$emit('filter')"> search </el-input>
-        <el-table :data="templateDisplayData">
+    <el-dialog title="选择模板" v-model="dialogStore.newOrderTemplateVis" width="60%">
+        <el-input v-model="templateSearch" @input="$emit('filter')" placeholder="搜索模板或客户"></el-input>
+        <el-table :data="templateDisplayData" style="margin-top:8px">
+            <el-table-column prop="templateName" label="模板名称"></el-table-column>
+            <el-table-column prop="templateDescription" label="说明"></el-table-column>
             <el-table-column prop="customerName" label="客户名称"></el-table-column>
             <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
-            <el-table-column prop="batchInfoTypeName" label="配码名称"></el-table-column>
+            <el-table-column label="类型">
+                <template #default="scope">
+                    <span>{{ scope.row.orderTemplateId ? '整单模板' : (scope.row.batchInfoTemplateId ? '配码模板' : '未知') }}</span>
+                </template>
+            </el-table-column>
 
-            <el-table-column>
+            <el-table-column label="操作" width="260">
                 <template #default="scope">
                     <el-button type="primary" @click="$emit('create-from-template', scope.row)">模板创建订单</el-button>
+                    <el-button type="warning" @click="$emit('edit-template', scope.row)" style="margin-left:8px">重命名</el-button>
+                    <el-button type="danger" @click="$emit('delete-template', scope.row)" style="margin-left:8px">删除</el-button>
                 </template>
             </el-table-column>
         </el-table>

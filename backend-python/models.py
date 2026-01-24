@@ -1965,6 +1965,22 @@ class MakeInventoryRecord(db.Model):
     excel_reupload_status = db.Column(db.SmallInteger, nullable=False, default=0)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+
+class OrderTemplate(db.Model):
+    __tablename__ = "order_template"
+    order_template_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    template_name = db.Column(db.String(80), nullable=False)
+    template_description = db.Column(db.String(500), nullable=True)
+    creator_staff_id = db.Column(db.String(50), nullable=True)
+    customer_id = db.Column(db.Integer, nullable=True)
+    customer_brand = db.Column(db.String(100), nullable=True)
+    # Optional source order id: if this template was created from an existing order,
+    # store the original `order_id` so we can copy packaging/files when instantiating.
+    source_order_id = db.Column(db.BigInteger, nullable=True)
+    order_template_json = db.Column(db.JSON, nullable=False)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
     
     # models.py (示例，仅供参考)
 class WarehouseMissingPurchaseRecord(db.Model):

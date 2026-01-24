@@ -40,6 +40,7 @@
                                 <el-button v-if="this.userIsManager && this.orderManagerEditable" type="warning" @click="sendOrderPrevious" :disabled="this.role == 21 ? true : false">
                                     退回
                                 </el-button>
+                                <el-button v-if="allowSaveTemplate" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
@@ -232,6 +233,24 @@
             </span>
         </template>
     </el-dialog>
+
+    <el-dialog title="保存为模板" v-model="saveTemplateDialogVis" width="40%">
+        <el-form label-position="top">
+            <el-form-item label="模板名称">
+                <el-input v-model="saveTemplateName" placeholder="请输入模板名称"></el-input>
+            </el-form-item>
+            <el-form-item label="模板说明（可选）">
+                <el-input type="textarea" :rows="3" v-model="saveTemplateDescription"></el-input>
+            </el-form-item>
+        </el-form>
+
+        <template #footer>
+            <span>
+                <el-button @click="saveTemplateDialogVis = false">取消</el-button>
+                <el-button type="primary" :loading="savingTemplate" @click="saveOrderTemplate">保存</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -276,6 +295,11 @@ export default {
         allowEditInfo() {
             return (this.orderClerkEditable || this.userIsManager) && this.orderEditable
         },
+        allowSaveTemplate() {
+            // allow saving template for new orders and for already issued orders
+            // permit if user is manager or order clerk editable or order is not strictly uneditable
+            return this.userIsManager || this.orderClerkEditable || this.orderCurStatus != 6
+        },
         readyPending() {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
@@ -311,6 +335,11 @@ export default {
             priceChangeNotAllowed: false,
             unitChangeNotAllowed: false,
             editOrderInfoDisabled: true,
+            // save template dialog state
+            saveTemplateDialogVis: false,
+            saveTemplateName: '',
+            saveTemplateDescription: '',
+            savingTemplate: false,
             remarkForm: {
                 orderShoeId: '',
                 technicalRemark: '',
@@ -671,6 +700,42 @@ export default {
 
         handleDialogClose() {
             console.log('TODO handle dialog close in OrderManagement.Vue')
+        },
+        openSaveTemplateDialog() {
+            this.saveTemplateName = ''
+            this.saveTemplateDescription = ''
+            this.saveTemplateDialogVis = true
+        },
+        async saveOrderTemplate() {
+            if (!this.saveTemplateName || this.saveTemplateName.trim() === '') {
+                ElMessage.error('请填写模板名称')
+                return
+            }
+            this.savingTemplate = true
+            const payload = {
+                templateName: this.saveTemplateName,
+                templateDescription: this.saveTemplateDescription || '',
+                orderRid: this.orderData.orderRid,
+                orderId: this.orderDBId,
+                orderData: this.orderData,
+                orderShoeData: this.orderShoeData,
+                staffId: this.staffId
+            }
+            try {
+                const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/saveordertemplate`, payload)
+                if (response.status === 200) {
+                    ElMessage.success('模板保存成功')
+                    this.saveTemplateDialogVis = false
+                } else {
+                    ElMessage.error('模板保存失败')
+                }
+            } catch (err) {
+                console.error('saveOrderTemplate error', err)
+                const msg = err?.response?.data?.error || '模板保存失败'
+                ElMessage.error(msg)
+            } finally {
+                this.savingTemplate = false
+            }
         },
         getFirstChildWrap() {
             const host = this.$refs.psWrapper
