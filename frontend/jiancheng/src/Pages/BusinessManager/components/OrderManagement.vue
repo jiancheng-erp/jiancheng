@@ -296,7 +296,7 @@
         </el-row>
         <el-table class="order-shoe-create-table" :data="this.newOrderForm.orderShoeTypes" border stripe
             style="max-height: 75vh; overflow-y: auto" :row-key="(row) => {
-                return row.shoeTypeId
+                return row.shoeTypeId || `${row.shoeRid || row.shoeId}-${row.colorId || row.color_id || row.colorName || row.customerColorName || ''}`
             }
                 " :row-class-name="'persistent-shadow-row'" :default-expand-all="true">
             <el-table-column type="expand">
@@ -1163,7 +1163,7 @@ export default {
             const shoeTypeColors = Array.isArray(target.shoeTypeColors) ? target.shoeTypeColors.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.color_name || c.colorName : c)) : []
             this.dialogStore.openAddShoeTypeDialog({
                 shoeRid: target.shoeRid,
-                shoeId: target.shoeId || target.shoeId,
+                shoeId: target.shoeId || target.shoeRid,
                 shoeTypeColors: shoeTypeColors
             })
         },
@@ -1224,16 +1224,14 @@ export default {
             console.log('openAddColorDialog target =', target, 'availableOptions:', availableOptions)
 
             // set dialog store form values then open
-            // If called with a row, treat as edit and remember target row reference
-            if (row) {
-                this.dialogStore.addColorForm.editTargetRow = row
-            } else {
-                this.dialogStore.addColorForm.editTargetRow = null
-            }
+            // If called with a real row, treat as edit; ignore click event payloads
+            const isRow = row && (row.shoeRid || row.shoeId || row.shoeTypeId)
+            this.dialogStore.addColorForm.editTargetRow = isRow ? row : null
+            const resolvedShoeId = target.shoeId || target.shoeRid
             this.dialogStore.addColorForm.shoeRid = target.shoeRid
-            this.dialogStore.addColorForm.shoeId = target.shoeId || target.shoeId
+            this.dialogStore.addColorForm.shoeId = resolvedShoeId
             this.dialogStore.addColorForm.shoeTypeColors = availableOptions
-            this.dialogStore.openAddColorDialog({ shoeRid: target.shoeRid, shoeId: target.shoeId || target.shoeId, shoeTypeColors: availableOptions })
+            this.dialogStore.openAddColorDialog({ shoeRid: target.shoeRid, shoeId: resolvedShoeId, shoeTypeColors: availableOptions })
             this.dialogStore.addColorDialogVis = true
             console.log('addColorDialogVis =', this.dialogStore.addColorDialogVis)
         },
@@ -1258,13 +1256,14 @@ export default {
                     ElMessage.info('未选择颜色')
                     return
                 }
-                const shoeId = this.dialogStore.addColorForm.shoeId
+                const shoeId = this.dialogStore.addColorForm.shoeId || this.dialogStore.addColorForm.shoeRid
+                const shoeRid = this.dialogStore.addColorForm.shoeRid || ''
                 if (!shoeId) {
                     ElMessage.error('未找到目标鞋款')
                     return
                 }
                 // Find master shoe record
-                const masterShoe = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId))
+                let masterShoe = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId) || (shoeRid && String(s.shoeRid) === String(shoeRid)))
                 console.debug('handleAddColorDialogSubmit masterShoe', masterShoe)
 
                 // Compute colors already present in the create-order form for this shoeRid
@@ -1285,7 +1284,7 @@ export default {
                     try {
                         await this.getAllShoes()
                         // recompute masterShoe and masterColorIds after refresh
-                        const refreshed = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId))
+                        const refreshed = this.shoeTableData.find((s) => String(s.shoeId) === String(shoeId) || String(s.shoeRid) === String(shoeId) || (shoeRid && String(s.shoeRid) === String(shoeRid)))
                         if (refreshed) {
                             console.debug('found masterShoe after refresh', refreshed)
                             masterShoe = refreshed
@@ -1294,6 +1293,21 @@ export default {
                             }
                         } else {
                             console.warn('masterShoe still not found after refresh')
+                            if (shoeRid) {
+                                try {
+                                    const fetched = await this.fetchShoeByRid(shoeRid)
+                                    if (fetched) {
+                                        masterShoe = fetched
+                                        if (Array.isArray(masterShoe.shoeTypeData)) {
+                                            masterColorIds = masterShoe.shoeTypeData.map((t) => String(t.colorId || t.color_id || t.value || t.color || t.colorName || t.label))
+                                        }
+                                        const exists = this.shoeTableData.some((s) => String(s.shoeId) === String(masterShoe.shoeId) || String(s.shoeRid) === String(masterShoe.shoeRid))
+                                        if (!exists) this.shoeTableData.push(masterShoe)
+                                    }
+                                } catch (e) {
+                                    console.warn('fetchShoeByRid failed', e)
+                                }
+                            }
                         }
                     } catch (e) {
                         console.warn('failed to refresh shoeTableData', e)
@@ -1301,7 +1315,8 @@ export default {
                 }
 
                 // If dialog was opened to edit a specific existing row, handle single-selection edit here
-                const editTarget = this.dialogStore?.addColorForm?.editTargetRow || null
+                const maybeEditTarget = this.dialogStore?.addColorForm?.editTargetRow || null
+                const editTarget = maybeEditTarget && (maybeEditTarget.shoeRid || maybeEditTarget.shoeId || maybeEditTarget.shoeTypeId) ? maybeEditTarget : null
                 if (editTarget) {
                     // require single selection when editing
                     if (colorIds.length !== 1) {
@@ -1518,8 +1533,54 @@ export default {
                     return
                 }
 
+                // Optimistic UI: add rows immediately so the table updates before服务器响应
+                const pendingRows = []
+                const pendingKeyPrefix = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+                // refresh colorOptions so we have latest labels for newly created colors
+                try {
+                    await this.refreshColorOptions()
+                } catch (e) {
+                    console.warn('refreshColorOptions before optimistic add failed', e)
+                }
+
+                toCreateOnServer.forEach((sCid, idx) => {
+                    const numericCid = isNaN(Number(sCid)) ? sCid : Number(sCid)
+                    const exists = (this.newOrderForm.orderShoeTypes || []).some(
+                        (r) =>
+                            String(r.colorId || r.color_id) === String(numericCid) &&
+                            String(r.shoeRid || r.shoeId) === String(this.dialogStore.addColorForm.shoeRid || shoeId)
+                    )
+                    if (exists) return
+                    const foundGlobal = (this.colorOptions || []).find(
+                        (c) => String(c.value) === String(numericCid) || String(c.label) === String(numericCid)
+                    )
+                    const pendingRow = {
+                        shoeRid: this.dialogStore.addColorForm.shoeRid || '',
+                        shoeId: shoeId,
+                        shoeTypeId: `${pendingKeyPrefix}_${idx}`,
+                        colorId: numericCid,
+                        colorName: foundGlobal ? foundGlobal.label : String(numericCid),
+                        customerShoeName: '',
+                        customerColorName: '',
+                        quantityMapping: {},
+                        amountMapping: {},
+                        orderShoeTypeBatchInfo: [],
+                        __pendingCreateColorId: numericCid
+                    }
+                    pendingRows.push(pendingRow)
+                })
+                if (pendingRows.length) {
+                    this.newOrderForm.orderShoeTypes = this.newOrderForm.orderShoeTypes || []
+                    this.newOrderForm.orderShoeTypes.push(...pendingRows)
+                    this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                }
+
                 // Otherwise, create missing colors on server then merge results into order form
-                const payloadToServer = { shoeId: shoeId, colorId: toCreateOnServer, shoeTypeColors: toCreateOnServer }
+                const payloadToServer = {
+                    shoeId: Number(shoeId),
+                    colorId: toCreateOnServer.map((c) => (isNaN(Number(c)) ? c : Number(c))),
+                    shoeTypeColors: toCreateOnServer.map((c) => (isNaN(Number(c)) ? c : Number(c)))
+                }
                 const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoetype`, payloadToServer)
                 console.debug('addshoetype response', response && response.data)
                 if (response.status === 200) {
@@ -1564,6 +1625,30 @@ export default {
                             newRow.orderShoeTypeBatchInfo = []
                             this.newOrderForm.orderShoeTypes.push(newRow)
                         })
+                        // reconcile any optimistic rows with server-created ids
+                        created.forEach((c) => {
+                            const idx = this.newOrderForm.orderShoeTypes.findIndex(
+                                (r) =>
+                                    String(r.__pendingCreateColorId) === String(c.colorId) &&
+                                    (String(r.shoeId) === String(c.shoeId || shoeId) ||
+                                        String(r.shoeRid) === String(c.shoeRid || this.dialogStore.addColorForm.shoeRid))
+                            )
+                            if (idx !== -1) {
+                                const row = this.newOrderForm.orderShoeTypes[idx]
+                                const foundGlobal = (this.colorOptions || []).find(
+                                    (co) => String(co.value) === String(c.colorId) || String(co.label) === String(c.colorId)
+                                )
+                                this.newOrderForm.orderShoeTypes.splice(
+                                    idx,
+                                    1,
+                                    Object.assign({}, row, {
+                                        shoeTypeId: c.shoeTypeId || row.shoeTypeId,
+                                        colorId: c.colorId || row.colorId,
+                                        colorName: row.colorName || (foundGlobal ? foundGlobal.label : '')
+                                    })
+                                )
+                            }
+                        })
                         // remap any remaining nulls
                         await this.remapOrderShoeTypesShoeTypeIds()
                         // If some created entries still lack shoeTypeId, try a targeted refresh+match
@@ -1605,10 +1690,28 @@ export default {
                     this.dialogStore.closeAddColorDialog()
                     this.dialogStore.resetAddColorForm()
                 } else {
+                    // rollback optimistic rows if server failed
+                    try {
+                        if (typeof pendingRows !== 'undefined' && pendingRows.length) {
+                            this.newOrderForm.orderShoeTypes = (this.newOrderForm.orderShoeTypes || []).filter((r) => !r.__pendingCreateColorId)
+                            this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                        }
+                    } catch (rollbackErr) {
+                        console.warn('rollback pending rows failed', rollbackErr)
+                    }
                     ElMessage.error('添加颜色失败')
                 }
             } catch (e) {
                 console.error('handleAddColorDialogSubmit failed', e)
+                // rollback optimistic rows if request threw
+                try {
+                    if (typeof pendingRows !== 'undefined' && pendingRows.length) {
+                        this.newOrderForm.orderShoeTypes = (this.newOrderForm.orderShoeTypes || []).filter((r) => !r.__pendingCreateColorId)
+                        this.newOrderForm.orderShoeTypes = [...this.newOrderForm.orderShoeTypes]
+                    }
+                } catch (rollbackErr) {
+                    console.warn('rollback pending rows failed', rollbackErr)
+                }
                 ElMessage.error('添加颜色失败')
             }
         },
@@ -1994,6 +2097,25 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, { params })
             this.shoeTableData = response.data.shoeTable
             this.shoeTotalItems = response.data.total
+        },
+        async refreshColorOptions() {
+            try {
+                const resp = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
+                this.colorOptions = resp.data
+            } catch (e) {
+                console.warn('refreshColorOptions failed', e)
+            }
+        },
+        async fetchShoeByRid(shoeRid) {
+            if (!shoeRid) return null
+            const params = {
+                page: 1,
+                pageSize: 1,
+                shoerid: shoeRid,
+                available: 1
+            }
+            const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, { params })
+            return Array.isArray(response.data?.shoeTable) ? response.data.shoeTable[0] : null
         },
         async getOrderDocInfo(orderRid) {
             const response = await axios.get(`${this.$apiBaseUrl}/order/getorderdocinfo`, {
