@@ -22,6 +22,7 @@ def send_message_to_production(app):
             .join(
                 OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id
             )
+            .filter(Order.order_type == "N")
             .filter(OrderStatus.order_current_status >= 9)
             .filter(OrderShoeStatus.current_status >= 17)
             .order_by(Order.order_rid)

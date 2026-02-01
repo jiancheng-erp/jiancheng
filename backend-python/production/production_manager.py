@@ -387,6 +387,7 @@ def get_all_order_production_progress():
         .join(
             order_shoe_info, order_shoe_info.c.order_shoe_id == OrderShoe.order_shoe_id
         )
+        .filter(Order.order_type == "N")
         .filter(
             and_(
                 OrderShoeProductionInfo.cutting_start_date.isnot(None),

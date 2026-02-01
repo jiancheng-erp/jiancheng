@@ -16,6 +16,17 @@ order_import_bp = Blueprint("order_import_bp", __name__)
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
+ORDER_TYPE_NORMAL = "N"
+ORDER_TYPE_FORECAST = "F"
+
+
+def normalize_order_type(value):
+    if not value:
+        return ORDER_TYPE_NORMAL
+    normalized = str(value).strip().upper()
+    if normalized in {"F", "FORECAST", "PRE", "预报", "预报单"}:
+        return ORDER_TYPE_FORECAST
+    return ORDER_TYPE_NORMAL
 
 
 def allowed_file(filename):
@@ -120,6 +131,7 @@ def confirm_import_order():
     order_deadline = order_info["orderEndDate"]
     order_status = order_info["status"]
     order_salesman = order_info["salesman"]
+    order_type = normalize_order_type(order_info.get("orderType"))
 
     try:
         df = pd.read_excel(os.path.join(FILE_STORAGE_PATH, file_name), header=1)
@@ -152,6 +164,7 @@ def confirm_import_order():
             customer_id=customer_id,
             start_date=order_date,
             end_date=order_deadline,
+            order_type=order_type,
             salesman=order_salesman,
             production_list_upload_status="0",
             amount_list_upload_status="1",

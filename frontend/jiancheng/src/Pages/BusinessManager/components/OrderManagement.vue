@@ -14,12 +14,11 @@
         <el-col :span="4" :offset="1"><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default"
                 :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-
         <el-col :span="4"><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
         <el-col :span="4"><el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
         <el-col :span="4">
             <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至"
@@ -65,6 +64,13 @@
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
             style="height: 60vh">
             <el-table-column prop="orderRid" label="订单号" sortable />
+            <el-table-column label="订单类型" width="120">
+                <template #default="scope">
+                    <el-tag :type="scope.row.orderType === 'F' ? 'warning' : 'success'">
+                        {{ formatOrderType(scope.row.orderType) }}
+                    </el-tag>
+                </template>
+            </el-table-column>
             <el-table-column prop="orderSalesman" label="创建业务员" />
             <el-table-column prop="orderSupervisor" label="审核" />
             <el-table-column prop="orderCid" label="客户订单号" />
@@ -151,6 +157,18 @@
                     @change="updateBatchType">
                     <el-option v-for="item in this.batchTypes" :key="item.batchInfoTypeId"
                         :label="item.batchInfoTypeName" :value="item.batchInfoTypeName"> </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="订单类型" prop="orderType" :rules="[
+                {
+                    required: true,
+                    message: '请选择订单类型',
+                    trigger: ['blur', 'change']
+                }
+            ]">
+                <el-select v-model="newOrderForm.orderType" placeholder="请选择订单类型">
+                    <el-option label="普通单" value="N"></el-option>
+                    <el-option label="预报单" value="F"></el-option>
                 </el-select>
             </el-form-item>
             <el-form-item label="订单开始日期" ref="startdatepicker" prop="orderStartDate" :rules="[
@@ -497,6 +515,7 @@ export default {
                 orderStartDate: '',
                 orderEndDate: '',
                 status: '',
+                orderType: 'N',
                 //显示名字用 建议改为salesmanName
                 salesman: '',
                 //新参数, 应该为当前用户的staff_id
@@ -606,6 +625,9 @@ export default {
         // this.getTemplate()
     },
     methods: {
+        formatOrderType(orderType) {
+            return orderType === 'F' ? '预报单' : '普通单'
+        },
         async getAllColors() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
             this.colorOptions = response.data
@@ -2446,6 +2468,7 @@ export default {
                                     orderStartDate: '',
                                     orderEndDate: '',
                                     status: '',
+                                    orderType: 'N',
                                     salesman: '',
                                     orderShoeTypes: [],
                                     batchInfoQuantity: [],
