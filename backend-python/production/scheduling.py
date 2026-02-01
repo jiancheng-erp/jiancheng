@@ -14,11 +14,24 @@ from logger import logger
 production_scheduling_bp = Blueprint("production_scheduling_bp", __name__)
 
 
+def _get_order_type_by_order_shoe(order_shoe_id):
+    result = (
+        db.session.query(Order.order_type)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
+        .first()
+    )
+    return result[0] if result else None
+
+
 @production_scheduling_bp.route(
     "/production/productionmanager/getordershoescheduleinfo", methods=["GET"]
 )
 def get_order_shoe_schedule_info():
     order_shoe_id = request.args.get("orderShoeId")
+    order_type = _get_order_type_by_order_shoe(order_shoe_id)
+    if order_type == "F":
+        return jsonify({"message": "预报单不可排期"}), 400
     response = (
         db.session.query(
             OrderShoeProductionInfo,
@@ -54,6 +67,9 @@ def is_valid_date(date_string):
 )
 def edit_production_schedule():
     data = request.get_json()
+    order_type = _get_order_type_by_order_shoe(data.get("orderShoeId"))
+    if order_type == "F":
+        return jsonify({"message": "预报单不可排期"}), 400
     entity = OrderShoeProductionInfo.query.filter(
         OrderShoeProductionInfo.order_shoe_id == data["orderShoeId"]
     ).first()
@@ -97,6 +113,11 @@ def edit_production_schedule():
 )
 def save_multiple_schedules():
     data = request.get_json()
+
+    for item in data:
+        order_type = _get_order_type_by_order_shoe(item.get("orderShoeId"))
+        if order_type == "F":
+            return jsonify({"message": "预报单不可排期"}), 400
 
     order_shoe_ids = [item["orderShoeId"] for item in data]
 
@@ -174,6 +195,9 @@ def start_production():
     for item in data:
         order_id = item["orderId"]
         order_shoe_id = item["orderShoeId"]
+        order_type = _get_order_type_by_order_shoe(order_shoe_id)
+        if order_type == "F":
+            return jsonify({"message": "预报单不可排期"}), 400
         # check if order shoe status is 17
         order_shoe_status = (
             db.session.query(OrderShoeStatus)
@@ -455,6 +479,7 @@ def get_order_scheduling_progress():
         )
         .join(OrderStatus, OrderStatus.order_id == Order.order_id)
         .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(Order.order_type == "N")
         .filter(OrderStatus.order_current_status >= IN_PRODUCTION_ORDER_NUMBER)
         .filter(OrderShoeStatus.current_status >= 17)
         .order_by(Order.order_rid)

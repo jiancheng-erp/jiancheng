@@ -403,6 +403,7 @@ class Order(db.Model):
     order_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     order_rid = db.Column(db.String(40), nullable=False, unique=True)
     order_cid = db.Column(db.String(40), nullable=True, unique=True)
+    order_type = db.Column(db.String(1), nullable=False, server_default=db.text("'N'"))
     batch_info_type_id = db.Column(db.Integer, nullable=True)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)

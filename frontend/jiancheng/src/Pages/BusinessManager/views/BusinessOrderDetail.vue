@@ -12,6 +12,11 @@
                             <el-descriptions-item label="客户订单" align="center">
                                 <el-input style="width: 200px" v-model="orderData.orderCid" :disabled="editOrderInfoDisabled"> </el-input>
                             </el-descriptions-item>
+                            <el-descriptions-item label="订单类型" align="center">
+                                <el-tag :type="orderData.orderType === 'F' ? 'warning' : 'success'">
+                                    {{ formatOrderType(orderData.orderType) }}
+                                </el-tag>
+                            </el-descriptions-item>
                             <el-descriptions-item label="客户信息" align="center">{{ orderData.customerInfo }}</el-descriptions-item>
                             <el-descriptions-item label="订单周期" align="center">{{ orderData.dateInfo }}</el-descriptions-item>
                         </el-descriptions>
@@ -33,6 +38,10 @@
                                 <el-button v-if="allowEditInfo" @click="toggleEditInfo" type="warning"> 修改信息 </el-button>
 
                                 <el-button v-if="allowEditInfo" @click="submitOrderInfo" type="primary"> 提交信息 </el-button>
+
+                                <el-button v-if="userIsManager && canConvertOrderType" @click="convertOrderToNormal" type="danger">
+                                    转为普通单
+                                </el-button>
 
                                 <el-button v-if="orderClerkEditable" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
                                 <el-button v-if="this.userIsManager && this.readyPending" type="warning" @click="sendOrderNext" :disabled="this.role == 21 ? true : false"> 下发 </el-button>
@@ -303,6 +312,9 @@ export default {
         readyPending() {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
+        canConvertOrderType() {
+            return this.orderData.orderType === 'F' && Number(this.orderCurStatus) >= 7
+        },
         // allowChangeUnitPrice: function(row)
         // {
         //     return this.unitPriceAccessMapping[row.orderShoeTypeId]
@@ -417,6 +429,26 @@ export default {
         this.topPs = null
     },
     methods: {
+        formatOrderType(orderType) {
+            return orderType === 'F' ? '预报单' : '普通单'
+        },
+        async convertOrderToNormal() {
+            try {
+                const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordertype`, {
+                    orderId: this.orderDBId,
+                    orderType: 'N'
+                })
+                if (response.status === 200) {
+                    ElMessage.success('已转为普通单')
+                    this.getOrderInfo()
+                } else {
+                    ElMessage.error('转换失败')
+                }
+            } catch (error) {
+                console.error('convertOrderToNormal error:', error)
+                ElMessage.error('转换失败')
+            }
+        },
         getUniqueImageUrl(imageUrl) {
             return `${imageUrl}?timestamp=${new Date().getTime()}`
         },

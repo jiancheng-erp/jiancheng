@@ -32,6 +32,17 @@ department_name = "业务部"
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
 BUSINESS_MANAGER_ROLE = 4
+ORDER_TYPE_NORMAL = "N"
+ORDER_TYPE_FORECAST = "F"
+
+
+def normalize_order_type(value):
+    if not value:
+        return ORDER_TYPE_NORMAL
+    normalized = str(value).strip().upper()
+    if normalized in {"F", "FORECAST", "PRE", "预报", "预报单"}:
+        return ORDER_TYPE_FORECAST
+    return ORDER_TYPE_NORMAL
 
 
 def allowed_file(filename):
@@ -57,6 +68,7 @@ def create_new_order():
     order_salesman_id = order_info["salesmanId"]
     order_shoe_type_list = order_info["orderShoeTypes"]
     customer_shoe_names = order_info["customerShoeName"]
+    order_type = normalize_order_type(order_info.get("orderType"))
     rid_exist_order = Order.query.filter_by(order_rid=order_rid).first()
     if rid_exist_order:
         logger.debug("order rid exists, must be unique")
@@ -65,6 +77,7 @@ def create_new_order():
     new_order = Order(
         order_rid=order_rid,
         order_cid=order_cid,
+        order_type=order_type,
         batch_info_type_id=batch_info_type_id,
         customer_id=customer_id,
         start_date=order_start_date,
@@ -462,6 +475,34 @@ def order_rid_update():
         return jsonify({"msg": "update OK"}), 200
     else:
         return jsonify({"error": "order not found"}), 404
+
+
+@order_create_bp.route("/ordercreate/updateordertype", methods=["POST"])
+def order_type_update():
+    order_id = request.json.get("orderId")
+    order_type_raw = request.json.get("orderType")
+    if not order_id:
+        return jsonify({"message": "orderId is required"}), 400
+    normalized_type = normalize_order_type(order_type_raw)
+    if normalized_type != ORDER_TYPE_NORMAL:
+        return jsonify({"message": "only conversion to normal order is allowed"}), 400
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"message": "order not found"}), 404
+    if order_entity.order_type == ORDER_TYPE_NORMAL:
+        return jsonify({"message": "order already normal"}), 200
+    status_entity = (
+        db.session.query(OrderStatus)
+        .filter(OrderStatus.order_id == order_id)
+        .first()
+    )
+    if not status_entity:
+        return jsonify({"message": "order status not found"}), 404
+    if status_entity.order_current_status < 7:
+        return jsonify({"message": "order not approved by general manager"}), 400
+    order_entity.order_type = ORDER_TYPE_NORMAL
+    db.session.commit()
+    return jsonify({"message": "order type updated successfully"}), 200
 
 
 @order_create_bp.route("/ordercreate/updateordershoecustomername", methods=["POST"])

@@ -271,6 +271,15 @@ class EventProcessor:
         resultValue = [entity.current_status_value for entity in queryResult]
         return resultStatus, resultValue
 
+    def dbQueryOrderTypeByOrderShoe(self, order_shoe_id):
+        result = (
+            db.session.query(Order.order_type)
+            .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+            .filter(OrderShoe.order_shoe_id == order_shoe_id)
+            .first()
+        )
+        return result[0] if result else None
+
     def dbQueryOrderStatus(self, orderId):
         queryResult = (
             db.session.query(OrderStatus)
@@ -321,6 +330,7 @@ class EventProcessor:
         curStat, curVal = self.dbQueryOrderShoeStatus(orderShoeId)
         modifiedStatus = operation.operation_modified_status
         modifiedValue = operation.operation_modified_value
+        order_type = self.dbQueryOrderTypeByOrderShoe(orderShoeId)
         logger.debug("current order_shoe_id is " + str(orderShoeId))
         logger.debug("current status is " + str(curStat) + " with value " + str(curVal))
         logger.debug(
@@ -343,6 +353,9 @@ class EventProcessor:
                     curStat, curVal, operation, event.event_order_shoe_id
                 )
                 logger.debug("the next status is " + str(nextStatus))
+                if order_type == "F" and any(status_id > 17 for status_id in nextStatus):
+                    logger.debug("forecast order cannot move into production statuses")
+                    return False
                 result = self.dbSetOrderShoeStatus(
                     event, operation, next_status=nextStatus
                 )
