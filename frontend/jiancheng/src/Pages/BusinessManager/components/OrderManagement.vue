@@ -452,6 +452,7 @@ export default {
             customerBatchData: [],
             customerDisplayBatchData: [],
             selectedShoeList: [],
+            selectedShoeByShoeId: {},
             // orderStatusList: [],
             currentBatch: [],
             expandedRowKeys: [],
@@ -1968,15 +1969,27 @@ export default {
                     this.newOrderForm.customerShoeName[item.shoeRid] = item.customerShoeName || ''
                 })
             }
+            console.log('newOrderForm at step 2:', this.newOrderForm)
             this.getCustomerBatchInfo(this.newOrderForm.customerId)
         },
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
         handleSelectionShoeType(selection, shoeId) {
-            // only allow one shoe to be selected
-            this.selectedShoeList = [...selection.map((item) => ({ ...item, shoeId }))]
-            this.newOrderForm.orderShoeTypes = [...selection.map((item) => ({ ...item, shoeId }))]
+            // Preserve selections across expand/collapse and table re-renders by keying per shoeId.
+            const normalized = Array.isArray(selection) ? selection.map((item) => ({ ...item, shoeId })) : []
+            this.selectedShoeList = [...normalized]
+
+            if (!this.selectedShoeByShoeId) this.selectedShoeByShoeId = {}
+            const existing = Array.isArray(this.selectedShoeByShoeId[shoeId]) ? this.selectedShoeByShoeId[shoeId] : []
+
+            // Ignore transient empty emissions that occur during re-render/expand updates.
+            if (normalized.length === 0 && existing.length > 0) return
+
+            this.selectedShoeByShoeId[shoeId] = normalized
+
+            const merged = Object.values(this.selectedShoeByShoeId).flat()
+            this.newOrderForm.orderShoeTypes = [...merged]
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
@@ -2072,6 +2085,7 @@ export default {
             //     return row.shoeTypeId == this.curShoeTypeId
             // }).
             this.newOrderForm.flag = true
+            console.log(this.newOrderForm)
             this.dialogStore.closeAddBatchInfoDialog()
         },
         expandOpen(row, expand) {
@@ -2363,6 +2377,7 @@ export default {
                 })
         },
         async submitNewOrder() {
+            console.log('submitNewOrder called', this.newOrderForm)
             if (this.newOrderForm.flag === false) {
                 ElMessage.error('请添加鞋型配码')
                 return
@@ -2449,6 +2464,7 @@ export default {
                                     ElMessage.error(`部分鞋型/颜色未映射：${summary}。请刷新鞋款列表并确认颜色已添加后重试`)
                                     return
                                 }
+                                console.log('final newOrderForm before submit:', this.newOrderForm)
 
                                 const res = await axios.post(`${this.$apiBaseUrl}/ordercreate/createneworder`, {
                                     orderInfo: this.newOrderForm
