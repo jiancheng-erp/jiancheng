@@ -245,8 +245,9 @@
                     <template #default="props">
                         <el-table :data="props.row.shoeTypeData" border row-key="shoeTypeId"
                             @selection-change="(selection) => handleSelectionShoeType(selection, props.row.shoeId)"
-                            ref="shoeSelectionTable">
-                            <el-table-column size="small" type="selection" align="center"> </el-table-column>
+                            :ref="(el) => registerShoeSelectionTable(el, props.row.shoeId)">
+                            <el-table-column size="small" type="selection" align="center"
+                                :selectable="(row) => isShoeTypeSelectable(row, props.row.shoeId)"> </el-table-column>
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px" />
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
@@ -453,6 +454,9 @@ export default {
             customerDisplayBatchData: [],
             selectedShoeList: [],
             selectedShoeByShoeId: {},
+            selectedShoeMasterId: null,
+            shoeSelectionTableRefs: {},
+            isSyncingShoeSelection: false,
             // orderStatusList: [],
             currentBatch: [],
             expandedRowKeys: [],
@@ -1057,6 +1061,7 @@ export default {
             this.newOrderForm.orderStartDate = this.formatDateToYYYYMMDD(new Date())
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
+            this.syncSelectedShoeStateFromOrderForm()
             this.dialogStore.openOrderCreationDialog()
         },
         async showTemplate() {
@@ -1265,6 +1270,7 @@ export default {
             if (idx >= 0) {
                 this.newOrderForm.orderShoeTypes.splice(idx, 1)
             }
+            this.syncSelectedShoeStateFromOrderForm()
         },
 
 
@@ -1943,6 +1949,11 @@ export default {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
+            const selectedShoeIds = [...new Set((this.newOrderForm.orderShoeTypes || []).map((item) => String(item.shoeId || item.shoeRid || '')))].filter((v) => v)
+            if (selectedShoeIds.length > 1) {
+                ElMessage.error('只允许选择一个鞋型，但可以选择多个颜色')
+                return
+            }
             if (this.newOrderForm.supervisorId === '') {
                 ElMessage.error('未选择下发经理，不允许创建订单')
                 return
@@ -1975,21 +1986,104 @@ export default {
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
+        syncSelectedShoeStateFromOrderForm() {
+            const list = Array.isArray(this.newOrderForm.orderShoeTypes) ? this.newOrderForm.orderShoeTypes : []
+            if (list.length === 0) {
+                this.selectedShoeByShoeId = {}
+                this.selectedShoeList = []
+                this.selectedShoeMasterId = null
+                this.applyShoeSelectionToTables()
+                return
+            }
+
+            const grouped = {}
+            list.forEach((row) => {
+                const key = String(row.shoeId || row.shoeRid || '')
+                if (!key) return
+                if (!grouped[key]) grouped[key] = []
+                grouped[key].push(row)
+            })
+
+            const keys = Object.keys(grouped)
+            this.selectedShoeByShoeId = grouped
+            this.selectedShoeMasterId = keys.length ? keys[0] : null
+            this.selectedShoeList = this.selectedShoeMasterId ? [...(grouped[this.selectedShoeMasterId] || [])] : []
+            this.applyShoeSelectionToTables()
+        },
+        registerShoeSelectionTable(el, shoeId) {
+            if (!shoeId) return
+            if (el) this.shoeSelectionTableRefs[shoeId] = el
+            else delete this.shoeSelectionTableRefs[shoeId]
+        },
+        applyShoeSelectionToTables() {
+            this.$nextTick(() => {
+                this.isSyncingShoeSelection = true
+                const refs = this.shoeSelectionTableRefs || {}
+                Object.keys(refs).forEach((sid) => {
+                    const table = refs[sid]
+                    if (!table) return
+                    if (typeof table.clearSelection === 'function') table.clearSelection()
+                    const desired = Array.isArray(this.selectedShoeByShoeId[sid]) ? this.selectedShoeByShoeId[sid] : []
+                    if (!desired.length) return
+                    const data = table.data || (table.store && table.store.states && (table.store.states.data?.value || table.store.states.data)) || []
+                    desired.forEach((sel) => {
+                        const row = data.find((r) => {
+                            const rId = r.shoeTypeId || r.id
+                            const sId = sel.shoeTypeId || sel.id
+                            if (rId != null && sId != null && String(rId) === String(sId)) return true
+                            const rColor = r.colorId || r.color_id || r.value || r.colorName || r.label
+                            const sColor = sel.colorId || sel.color_id || sel.value || sel.colorName || sel.label
+                            return rColor != null && sColor != null && String(rColor) === String(sColor)
+                        })
+                        if (row && typeof table.toggleRowSelection === 'function') table.toggleRowSelection(row, true)
+                    })
+                })
+                this.isSyncingShoeSelection = false
+            })
+        },
+        clearOtherShoeSelections(activeShoeId) {
+            this.$nextTick(() => {
+                this.isSyncingShoeSelection = true
+                const refs = this.shoeSelectionTableRefs || {}
+                Object.keys(refs).forEach((sid) => {
+                    if (String(sid) === String(activeShoeId)) return
+                    const table = refs[sid]
+                    if (table && typeof table.clearSelection === 'function') table.clearSelection()
+                })
+                this.isSyncingShoeSelection = false
+            })
+        },
+        isShoeTypeSelectable(row, shoeId) {
+            return true
+        },
         handleSelectionShoeType(selection, shoeId) {
+            if (this.isSyncingShoeSelection) return
             // Preserve selections across expand/collapse and table re-renders by keying per shoeId.
             const normalized = Array.isArray(selection) ? selection.map((item) => ({ ...item, shoeId })) : []
-            this.selectedShoeList = [...normalized]
-
             if (!this.selectedShoeByShoeId) this.selectedShoeByShoeId = {}
             const existing = Array.isArray(this.selectedShoeByShoeId[shoeId]) ? this.selectedShoeByShoeId[shoeId] : []
 
             // Ignore transient empty emissions that occur during re-render/expand updates.
             if (normalized.length === 0 && existing.length > 0) return
 
+            if (normalized.length > 0) {
+                if (this.selectedShoeMasterId && String(this.selectedShoeMasterId) !== String(shoeId)) {
+                    this.selectedShoeByShoeId = {}
+                    this.selectedShoeList = []
+                    this.clearOtherShoeSelections(shoeId)
+                }
+                this.selectedShoeMasterId = shoeId
+            }
+
             this.selectedShoeByShoeId[shoeId] = normalized
+            this.selectedShoeList = [...normalized]
 
             const merged = Object.values(this.selectedShoeByShoeId).flat()
             this.newOrderForm.orderShoeTypes = [...merged]
+
+            if (merged.length === 0) {
+                this.selectedShoeMasterId = null
+            }
         },
         handleSelectionBatchData(selection) {
             this.currentBatch = selection
