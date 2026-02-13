@@ -211,7 +211,7 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
                         (
                             and_(
                                 InboundRecord.approval_status == 1,
-                                InboundRecord.inbound_type == 0,
+                                InboundRecord.inbound_type.in_([0, 3]),
                                 InboundRecord.approval_datetime >= start_dt,
                                 InboundRecord.approval_datetime < end_dt,
                             ),
@@ -564,7 +564,7 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
         .where(
             InboundRecord.display == 1,
             InboundRecord.approval_status == 1,
-            InboundRecord.inbound_type == 0,
+            InboundRecord.inbound_type.in_([0, 3]),
             InboundRecord.inbound_datetime < price_end_dt,
             InboundRecordDetail.material_storage_id.in_(msids_page),
         )
@@ -602,7 +602,7 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
         .where(
             InboundRecord.display == 1,
             InboundRecord.approval_status == 1,
-            InboundRecord.inbound_type == 0,
+            InboundRecord.inbound_type.in_([0, 3]),
             InboundRecord.inbound_datetime < price_end_dt,
             InboundRecordDetail.material_storage_id.in_(msids_page),
         )

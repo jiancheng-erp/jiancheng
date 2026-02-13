@@ -96,6 +96,7 @@ def get_all_material_info():
     page = request.args.get("page", type=int)
     number = request.args.get("pageSize", type=int)
     is_non_order_material = request.args.get("isNonOrderMaterial", default=0, type=int)
+    admin_inbound_only = request.args.get("adminInboundOnly", default=0, type=int)
     filters = {
         "material_name": request.args.get("materialName", ""),
         "material_spec": request.args.get("materialSpec", ""),
@@ -169,6 +170,25 @@ def get_all_material_info():
         query1 = query1.filter(Material.material_type_id == material_type_id)
 
     if is_non_order_material == 1:
+        query1 = query1.filter(
+            MaterialStorage.order_id.is_(None), MaterialStorage.order_shoe_id.is_(None)
+        )
+    if admin_inbound_only == 1:
+        admin_inbound_exists = (
+            db.session.query(InboundRecordDetail.material_storage_id)
+            .join(
+                InboundRecord,
+                InboundRecord.inbound_record_id
+                == InboundRecordDetail.inbound_record_id,
+            )
+            .filter(
+                InboundRecord.display == 1,
+                InboundRecord.inbound_type == 3,
+                InboundRecordDetail.material_storage_id
+                == MaterialStorage.material_storage_id,
+            )
+        )
+        query1 = query1.filter(admin_inbound_exists.exists())
         query1 = query1.filter(
             MaterialStorage.order_id.is_(None), MaterialStorage.order_shoe_id.is_(None)
         )
@@ -674,12 +694,12 @@ def _handle_supplier_obj(supplier_name: str):
     return supplier_obj
 
 
-def _handle_purchase_inbound(data, next_group_id):
+def _handle_purchase_inbound(data, next_group_id, inbound_type=0):
     timestamp = data["currentDateTime"]
     formatted_timestamp = (
         timestamp.replace("-", "").replace(" ", "").replace("T", "").replace(":", "")
     )
-    inbound_rid = "IR" + formatted_timestamp + "T0"
+    inbound_rid = "IR" + formatted_timestamp + "T" + str(inbound_type)
     supplier_name = data.get("supplierName", None)
     warehouse_id = data.get("warehouseId", None)
     supplier_id = data.get("supplierId")
@@ -694,7 +714,7 @@ def _handle_purchase_inbound(data, next_group_id):
     # create inbound record
     inbound_record = InboundRecord(
         inbound_datetime=timestamp,
-        inbound_type=0,
+        inbound_type=inbound_type,
         inbound_rid=inbound_rid,
         inbound_batch_id=next_group_id,
         supplier_id=supplier_id,
@@ -859,9 +879,10 @@ def create_inbound_record(data):
         .material_warehouse_name
     )
 
-    # 2) you’ll need supplier_id in data for purchase flow
-    if data.get("inboundType", 0) == 0:
-        supplier = data.get("supplierName")
+    # 2) you’ll need supplier_id in data for purchase flow (including administrative inbound)
+    if data.get("inboundType", 0) in [0, 3]:
+        supplier = data.get("supplierName") or DEFAULT_SUPPLIER
+        data["supplierName"] = supplier
         supplier_obj = _handle_supplier_obj(supplier)
         data["supplierId"] = supplier_obj.supplier_id
 
@@ -906,7 +927,9 @@ def create_inbound_record(data):
     # 5) dispatch
     itype = data.get("inboundType", 0)
     if itype == 0:
-        record = _handle_purchase_inbound(data, 0)
+        record = _handle_purchase_inbound(data, 0, 0)
+    elif itype == 3:
+        record = _handle_purchase_inbound(data, 0, 3)
     elif itype == 1:
         record = _handle_production_remain_inbound(data, 0)
     else:
@@ -1113,6 +1136,39 @@ def _handle_composite_outbound(data):
     return outbound_record
 
 
+def _ensure_admin_outbound_materials(items: list[dict]):
+    for item in items:
+        storage_id = item.get("materialStorageId", None)
+        if not storage_id:
+            abort(Response(json.dumps({"message": "行政出库必须选择库存材料"}), 400))
+        admin_inbound_exists = (
+            db.session.query(InboundRecordDetail.material_storage_id)
+            .join(
+                InboundRecord,
+                InboundRecord.inbound_record_id
+                == InboundRecordDetail.inbound_record_id,
+            )
+            .filter(
+                InboundRecord.display == 1,
+                InboundRecord.inbound_type == 3,
+                InboundRecordDetail.material_storage_id == storage_id,
+            )
+            .first()
+        )
+        if not admin_inbound_exists:
+            abort(Response(json.dumps({"message": "仅允许行政入库材料出库"}), 400))
+
+
+def _handle_admin_outbound(data):
+    items = data.get("items", [])
+    _ensure_admin_outbound_materials(items)
+    data["supplierId"] = None
+    data["outsourceInfoId"] = None
+    outbound_record = _create_outbound_record(data, 1)
+    _create_outbound_record_details(items, outbound_record)
+    return outbound_record
+
+
 def _outbound_material_helper(data, staff_id=None):
     outbound_type = data.get("outboundType", 0)
     # 工厂使用
@@ -1130,6 +1186,9 @@ def _outbound_material_helper(data, staff_id=None):
     # 材料退回
     elif outbound_type == 4:
         record = _handle_reject_material_outbound(data)
+    # 行政出库
+    elif outbound_type == 6:
+        record = _handle_admin_outbound(data)
     else:
         error_message = json.dumps({"message": "无效的出库类型"})
         abort(Response(error_message, 400))
@@ -1550,8 +1609,10 @@ def get_material_outbound_records():
                 destination = department.department_name
         elif outbound_record.outbound_type == 2:
             destination = outsource_factory.factory_name
-        elif outbound_record.outbound_type == 3 or outbound_record.outbound_type == 4:
+        elif outbound_record.outbound_type in [3, 4]:
             destination = supplier.supplier_name
+        elif outbound_record.outbound_type == 6:
+            destination = None
         outbound_type = OUTBOUND_TYPE_MAPPING.get(
             outbound_record.outbound_type, "生产出库"
         )
@@ -1676,6 +1737,8 @@ def get_inbound_records_for_material():
             inbound_purpose = "生产剩余"
         elif record.inbound_type == 2:
             inbound_purpose = "复合入库"
+        elif record.inbound_type == 3:
+            inbound_purpose = "行政入库"
         else:
             inbound_purpose = "盘库入库"
         obj = {
@@ -1730,6 +1793,8 @@ def get_outbound_records_for_material():
             outbound_destination = supplier.supplier_name if supplier else None
         elif outbound_record.outbound_type == 5:
             outbound_purpose = "盘库出库"
+        elif outbound_record.outbound_type == 6:
+            outbound_purpose = "行政出库"
         else:
             outbound_purpose = "生产使用"
             outbound_destination = department.department_name if department else None

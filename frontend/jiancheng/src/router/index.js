@@ -24,6 +24,7 @@ import WarehouseClerk from '@/Pages/TotalWarehouse/WarehouseClerk/views/Warehous
 import Administrator from '@/Pages/Administrator/views/Administrator.vue'
 import LaborCostReportClerk from '@/Pages/ProductionManagementDepartment/LaborCostReportClerk/views/LaborCostReportClerk.vue'
 import ProductionBoard from '@/Pages/ProductionBoard/ProductionBoard.vue'
+import AdministrativeManager from '@/Pages/AdministrativeManager/views/AdministrativeManager.vue'
 
 //引入子路由
 import LogisticsRoutes from '../Pages/LogisticsControlDepartment/LogisticsControlManager/routers/logistics'
@@ -197,6 +198,15 @@ const router = createRouter({
       meta:{
         requiresAuth: true,
         role: 7
+      }
+    },
+    {
+      path :'/administrativemanager',
+      name : 'administrativemanager',
+      component: AdministrativeManager,
+      meta:{
+        requiresAuth: true,
+        role: 15
       }
     },
     {
