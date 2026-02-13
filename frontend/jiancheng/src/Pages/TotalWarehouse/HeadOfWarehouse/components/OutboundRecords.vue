@@ -24,6 +24,7 @@
                 <el-option label="复合出库" :value="3"></el-option>
                 <el-option label="材料退回" :value="4"></el-option>
                 <el-option label="盘库出库" :value="5"></el-option>
+                <el-option label="行政出库" :value="6"></el-option>
             </el-select>
             <el-select v-if="loadReject == false" v-model="statusSearch" @change="getOutboundRecordsTable"
                 @clear="getOutboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">

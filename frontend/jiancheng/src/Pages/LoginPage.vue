@@ -94,6 +94,7 @@ const handleSubmit = () => {
         else if (r === 11) window.location.href = 'fabriccutting'
         else if (r === 12) window.location.href = 'sewingmachine'
         else if (r === 13) window.location.href = 'molding'
+        else if (r === 15) window.location.href = 'administrativemanager'
         else if (r === 17) window.location.href = 'technicalclerk'
         else if (r === 18) window.location.href = 'usagecalculation'
         else if (r === 19) window.location.href = 'semifinishedwarehouse'

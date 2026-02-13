@@ -270,6 +270,8 @@ export default {
                 return '生产剩余'
             } else if (type == 2) {
                 return '复合入库'
+            } else if (type == 3) {
+                return '行政入库'
             } else {
                 return '未知'
             }

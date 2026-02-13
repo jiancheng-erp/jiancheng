@@ -211,6 +211,7 @@ export default {
             isSizeRecordDialogVisible: false,
             isMaterialDialogVisible: false,
             searchForm: {
+                adminInboundOnly: 0,
                 isNonOrderMaterial: 0,
                 orderRIdSearch: '',
                 shoeRIdSearch: '',
@@ -439,6 +440,7 @@ export default {
                 "purchaseOrderRId": this.searchForm.totalPurchaseOrderRIdSearch,
                 "warehouseName": this.searchForm.warehouseNameSearch,
                 "isNonOrderMaterial": this.searchForm.isNonOrderMaterial,
+                "adminInboundOnly": this.searchForm.adminInboundOnly,
                 "showAllMaterials": this.searchForm.showAllMaterials ? "true" : "false",
             }
             const response = await axios.get(`${this.$apiBaseUrl}/warehouse/warehousemanager/getallmaterialinfo`, { params })

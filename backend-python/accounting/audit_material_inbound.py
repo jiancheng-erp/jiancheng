@@ -46,7 +46,7 @@ def update_average_price(storage_id_list):
             InboundRecordDetail.inbound_record_id == InboundRecord.inbound_record_id,
         )
         .filter(
-            InboundRecord.inbound_type == 0, # 0:采购入库
+            InboundRecord.inbound_type.in_([0, 3]), # 0:采购入库, 3:行政入库
             InboundRecord.display == 1,
             InboundRecord.approval_status == 1,
             InboundRecordDetail.material_storage_id.in_(storage_id_list),
