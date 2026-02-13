@@ -18,7 +18,7 @@
         <el-col>
             <el-form :inline="true" :model="outboundForm" :rules="rules" ref="outboundForm">
                 <el-form-item prop="outboundType" label="出库类型">
-                    <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType">
+                    <el-select v-model="outboundForm.outboundType" filterable clearable @change="handleOutboundType" :disabled="lockOutboundType">
                         <el-option v-for="item in outboundOptions" :key="item.value" :value="item.value"
                             :label="item.label"></el-option>
                     </el-select>
@@ -69,7 +69,7 @@
                         </el-select>
                     </template>
                 </vxe-column>
-                <vxe-column field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
+                <vxe-column v-if="!hideOrderFields" field="orderRId" title="生产订单号" :edit-render="{ autoFocus: true }" width="150">
                     <template #edit="scope">
                         <el-select v-model="scope.row.orderRId" @change="handleOrderRIdSelect(scope.row, $event)"
                             :disabled="scope.row.locked" filterable clearable>
@@ -78,7 +78,7 @@
                         </el-select>
                     </template>
                 </vxe-column>
-                <vxe-column field="shoeRId" title="工厂鞋型" width="150"></vxe-column>
+                <vxe-column v-if="!hideOrderFields" field="shoeRId" title="工厂鞋型" width="150"></vxe-column>
                 <vxe-column title="材料名称" field="materialName" width="150" :edit-render="{ autoFocus: true }">
                     <template #default="{ row }">
                         <span>{{ row.materialName }}</span>
@@ -151,7 +151,7 @@
         </el-col>
     </el-row>
 
-    <el-dialog title="搜索材料" v-model="isMaterialSelectDialogVis" fullscreen destroy-on-close @close="handleCloseDialog">
+        <el-dialog title="搜索材料" v-model="isMaterialSelectDialogVis" fullscreen destroy-on-close @close="handleCloseDialog">
         <MaterialStorage :readonly="false" ref="materialStorageRef" :input-search-params="searchParams" />
         <template #footer>
             <el-button type="primary" @click="confirmUpdateData">确认选择</el-button>
@@ -206,8 +206,8 @@
                                         <th width="180">规格</th>
                                         <th width="80">颜色</th>
                                         <th width="55">单位</th>
-                                        <th width="100">订单号</th>
-                                        <th width="100">工厂鞋型</th>
+                                        <th v-if="!hideOrderFields" width="100">订单号</th>
+                                        <th v-if="!hideOrderFields" width="100">工厂鞋型</th>
                                         <th width="90">数量</th>
                                         <th width="90">单价</th>
                                         <th width="100">金额</th>
@@ -220,8 +220,8 @@
                                     <td>{{ item.materialSpecification }}</td>
                                     <td>{{ item.materialColor }}</td>
                                     <td>{{ item.actualInboundUnit }}</td>
-                                    <td>{{ item.orderRId }}</td>
-                                    <td>{{ item.shoeRId }}</td>
+                                    <td v-if="!hideOrderFields">{{ item.orderRId }}</td>
+                                    <td v-if="!hideOrderFields">{{ item.shoeRId }}</td>
                                     <td>{{ item.outboundQuantity }}</td>
                                     <td>{{ item.unitPrice }}</td>
                                     <td>{{ item.itemTotalPrice }}</td>
@@ -301,6 +301,24 @@ import SizeMaterialSelectDialog from './SizeMaterialSelectDialog.vue';
 import XEUtils from 'xe-utils'
 import MaterialStorage from './MaterialStorage.vue';
 export default {
+    props: {
+        fixedOutboundType: {
+            type: Number,
+            default: null
+        },
+        lockOutboundType: {
+            type: Boolean,
+            default: false
+        },
+        adminOutboundOnly: {
+            type: Boolean,
+            default: false
+        },
+        hideOrderFields: {
+            type: Boolean,
+            default: false
+        }
+    },
     components: {
         MaterialSearchDialog,
         MaterialSelectDialog,
@@ -369,6 +387,7 @@ export default {
                 { label: '外包出库', value: 2 },
                 // { label: '复合出库', value: 3 }, # 暂时取消复合出库
                 { label: '材料退回', value: 4 },
+                { label: '行政出库', value: 6 },
             ],
             previewData: [],
             materialNameOptions: [],
@@ -396,6 +415,9 @@ export default {
         this.getUnitOptions();
         this.getActiveOrderShoes();
         this.loadLocalStorageData()
+        if (this.fixedOutboundType !== null && this.fixedOutboundType !== undefined) {
+            this.outboundForm.outboundType = this.fixedOutboundType
+        }
     },
     watch: {
         outboundForm: {
@@ -474,6 +496,8 @@ export default {
                     return '材料退回';
                 case 5:
                     return '盘库出库';
+                case 6:
+                    return '行政出库';
                 default:
                     return '工厂使用';
             }
@@ -638,6 +662,10 @@ export default {
                 this.rules.departmentId = [{ required: true, message: '此项为必填项', trigger: 'change' }]
                 this.rules.supplierName = []
             }
+            else if (value == 6) {
+                this.rules.departmentId = []
+                this.rules.supplierName = []
+            }
             else {
                 this.rules.departmentId = []
                 this.rules.supplierName = [
@@ -716,12 +744,16 @@ export default {
         async fetchMaterialData() {
             const params = {
                 "warehouseNameSearch": this.currentKeyDownRow.warehouseName,
-                "orderRIdSearch": this.currentKeyDownRow.orderRId,
+                "orderRIdSearch": this.hideOrderFields ? null : this.currentKeyDownRow.orderRId,
                 "materialNameSearch": this.currentKeyDownRow.materialName,
                 "materialSpecSearch": this.currentKeyDownRow.materialSpecification,
                 "materialModelSearch": this.currentKeyDownRow.materialModel,
                 "materialColorSearch": this.currentKeyDownRow.materialColor,
                 "supplierNameSearch": this.outboundForm.supplierName,
+            }
+            if (this.adminOutboundOnly) {
+                params.adminInboundOnly = 1
+                params.isNonOrderMaterial = 1
             }
             this.searchParams = params; // Update search parameters
         },
@@ -739,6 +771,10 @@ export default {
                 let row = this.materialTableData[i]
                 for (let j = 0; j < row.shoeSizeTableData.length; j++) {
                     row[`amount${j}`] = row.shoeSizeTableData[j].outboundQuantity
+                }
+                if (this.hideOrderFields) {
+                    row.orderRId = null
+                    row.shoeRId = null
                 }
             }
             const params = {
