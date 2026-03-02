@@ -352,7 +352,7 @@
                     <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px"></el-image>
                 </template>
             </el-table-column>
-            <el-table-column>
+            <el-table-column width="500" label="操作">
                 <template #default="scope">
                     <el-button type="primary" size="default"
                         @click="openAddBatchInfoDialog(scope.row)">编辑鞋型配码</el-button>
