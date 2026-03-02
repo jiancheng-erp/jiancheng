@@ -49,13 +49,20 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def resolve_order_storage_dir_name(order_id, order_rid):
+    rid = (order_rid or "").strip()
+    if rid:
+        return rid
+    return f"_NO_RID_{order_id}"
+
+
 @order_create_bp.route("/ordercreate/createneworder", methods=["POST"])
 def create_new_order():
     time_s = time.time()
     order_info = request.json.get("orderInfo")
     if not order_info:
         return jsonify({"error": "invalid request"}), 400
-    order_rid = order_info["orderRId"]
+    order_rid = (order_info.get("orderRId") or "").strip()
     order_cid = order_info["orderCid"]
     batch_info_type_id = order_info["batchInfoTypeId"]
     customer_id = order_info["customerId"]
@@ -69,7 +76,7 @@ def create_new_order():
     order_shoe_type_list = order_info["orderShoeTypes"]
     customer_shoe_names = order_info["customerShoeName"]
     order_type = normalize_order_type(order_info.get("orderType"))
-    rid_exist_order = Order.query.filter_by(order_rid=order_rid).first()
+    rid_exist_order = Order.query.filter_by(order_rid=order_rid).first() if order_rid else None
     if rid_exist_order:
         logger.debug("order rid exists, must be unique")
         return jsonify({"message": "订单号或客户订单号已经存在 单号不可重复"}), 400
@@ -93,7 +100,7 @@ def create_new_order():
     ### os mkdir
     # os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
 
-    new_order_id = Order.query.filter_by(order_rid=order_rid).first().order_id
+    new_order_id = new_order.order_id
     new_order_status = OrderStatus(
         order_id=new_order_id,
         order_current_status=order_status,
@@ -228,8 +235,11 @@ def create_new_order():
         db.session.add_all(batch_info_entity_array)
     logger.debug("order added to DB")
     db.session.commit()
-    os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid))
-    os.mkdir(os.path.join(FILE_STORAGE_PATH, order_rid, shoe_id_to_rid[shoe_id]))
+    order_storage_dir_name = resolve_order_storage_dir_name(new_order_id, order_rid)
+    order_storage_path = os.path.join(FILE_STORAGE_PATH, order_storage_dir_name)
+    os.makedirs(order_storage_path, exist_ok=True)
+    for shoe_rid in set(shoe_id_to_rid.values()):
+        os.makedirs(os.path.join(order_storage_path, shoe_rid), exist_ok=True)
 
     # If the request indicates this order is created from a template/source order,
     # copy packaging/related files from the source order directory into the new order folder.
@@ -243,9 +253,18 @@ def create_new_order():
                 src_ent = db.session.query(Order).filter(Order.order_id == source_id).first()
                 if src_ent:
                     source_rid = src_ent.order_rid
-        if source_rid:
-            src_path = os.path.join(FILE_STORAGE_PATH, str(source_rid))
-            dst_path = os.path.join(FILE_STORAGE_PATH, str(order_rid))
+            source_order_entity = None
+            if source_id:
+                source_order_entity = db.session.query(Order).filter(Order.order_id == source_id).first()
+            if not source_order_entity and source_rid is not None:
+                source_order_entity = db.session.query(Order).filter(Order.order_rid == source_rid).first()
+        if source_rid or source_order_entity:
+            src_dir_name = resolve_order_storage_dir_name(
+                source_order_entity.order_id if source_order_entity else "unknown",
+                source_order_entity.order_rid if source_order_entity else source_rid,
+            )
+            src_path = os.path.join(FILE_STORAGE_PATH, str(src_dir_name))
+            dst_path = order_storage_path
             if os.path.exists(src_path):
                 # copy contents from src_path into dst_path, merge existing
                 for name in os.listdir(src_path):
@@ -467,11 +486,36 @@ def order_cid_update():
 @order_create_bp.route("/ordercreate/updateorderrid", methods=["POST"])
 def order_rid_update():
     order_id = request.json.get("orderId")
-    order_new_rid = request.json.get("orderNewRid")
+    order_new_rid = (request.json.get("orderNewRid") or "").strip()
     order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
     if order_entity:
+        existing_entity = db.session.query(Order).filter(Order.order_rid == order_new_rid).first()
+        if existing_entity and existing_entity.order_id != order_id:
+            return jsonify({"error": "订单号已存在"}), 400
+
+        old_dir_name = resolve_order_storage_dir_name(order_entity.order_id, order_entity.order_rid)
         order_entity.order_rid = order_new_rid
         db.session.commit()
+
+        new_dir_name = resolve_order_storage_dir_name(order_entity.order_id, order_entity.order_rid)
+        old_dir_path = os.path.join(FILE_STORAGE_PATH, old_dir_name)
+        new_dir_path = os.path.join(FILE_STORAGE_PATH, new_dir_name)
+        try:
+            if old_dir_name != new_dir_name and os.path.exists(old_dir_path):
+                if os.path.exists(new_dir_path):
+                    for name in os.listdir(old_dir_path):
+                        src = os.path.join(old_dir_path, name)
+                        dst = os.path.join(new_dir_path, name)
+                        if os.path.isdir(src):
+                            shutil.copytree(src, dst, dirs_exist_ok=True)
+                        else:
+                            shutil.copy2(src, dst)
+                else:
+                    os.rename(old_dir_path, new_dir_path)
+            os.makedirs(new_dir_path, exist_ok=True)
+        except Exception:
+            logger.exception("failed to migrate order storage dir for order_id=%s", order_id)
+
         return jsonify({"msg": "update OK"}), 200
     else:
         return jsonify({"error": "order not found"}), 404

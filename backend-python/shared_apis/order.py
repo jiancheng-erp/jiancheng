@@ -1143,6 +1143,8 @@ def get_display_orders_manager():
             "orderEndDate": formatted_end_date,
             "orderStatus": order_status_message,
             "orderStatusVal": order_status.order_current_status if order_status else None,
+            "orderStatusValue": order_status.order_status_value if order_status else None,
+            "wrapRequirementUploaded": order.production_list_upload_status == PACKAGING_SPECS_UPLOADED,
             "orderSalesman": id_to_name.get(order.salesman_id, ""),
             "orderSupervisor": id_to_name.get(order.supervisor_id, ""),
         })
@@ -1220,6 +1222,8 @@ def get_all_orders():
                 "orderEndDate": formatted_end_date,
                 "orderStatus": order_status_message,
                 "orderStatusVal": order_status.order_current_status,
+                "orderStatusValue": order_status.order_status_value if order_status else None,
+                "wrapRequirementUploaded": order.production_list_upload_status == PACKAGING_SPECS_UPLOADED,
                 "orderPackagingStatus": order.packaging_status,
                 "orderLastStatus": order.last_status,
                 "orderCuttingModelStatus": order.cutting_model_status,
