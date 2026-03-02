@@ -98,14 +98,14 @@ export const useOrderManagementStore = defineStore('orderManagement', {
         },
         filterOrderByShoeRId() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.shoeRId.toLowerCase().includes(this.shoeRIdSearch.toLowerCase())
+                const filterMatch = String(task.shoeRId || '').toLowerCase().includes(String(this.shoeRIdSearch || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCustomerProductName() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerProductName.toLowerCase().includes(this.customerProductNameFilter.toLowerCase())
+                const filterMatch = String(task.customerProductName || '').toLowerCase().includes(String(this.customerProductNameFilter || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
@@ -158,28 +158,28 @@ export const useOrderManagementStore = defineStore('orderManagement', {
         },
         filterByCustomerName() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerName.toLowerCase().includes(this.orderCustomerNameFilter.toLowerCase())
+                const filterMatch = String(task.customerName || '').toLowerCase().includes(String(this.orderCustomerNameFilter || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCustomerBrand() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.customerBrand.toLowerCase().includes(this.orderCustomerBrandFilter.toLowerCase())
+                const filterMatch = String(task.customerBrand || '').toLowerCase().includes(String(this.orderCustomerBrandFilter || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByCid() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.orderCid.toLowerCase().includes(this.orderCidFilter.toLowerCase())
+                const filterMatch = String(task.orderCid || '').toLowerCase().includes(String(this.orderCidFilter || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData
         },
         filterByRid() {
             this.filterData = this.displayData.filter((task) => {
-                const filterMatch = task.orderRid.toLowerCase().includes(this.orderRidFilter.toLowerCase())
+                const filterMatch = String(task.orderRid || '').toLowerCase().includes(String(this.orderRidFilter || '').toLowerCase())
                 return filterMatch
             })
             this.displayData = this.filterData

@@ -2,67 +2,64 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单管理</el-col>
     </el-row>
-    <el-row :gutter="10" style="margin-top: 20px">
-        <el-col :span="4" :offset="0">
-            <el-button size="default" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
-            <!-- <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button> -->
-            <el-select v-model="orderStore.selectedOrderStatus" placeholder="请选择订单类型" size="default"
-                :disabled="role === '21'" @change="handleOrderStatusChange" style="width: 200px; width: 150px">
-                <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
-            </el-select>
-        </el-col>
-        <el-col :span="4" :offset="1"><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="4"><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default"
-            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="4"><el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default"
-            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="4">
-            <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至"
-                start-placeholder="订单开始日期起" end-placeholder="订单开始日期终" :shortcuts="shortcuts" size="default"
-                @change="orderStore.filterDisplayOrder" />
-        </el-col>
-    </el-row>
-    <el-row :gutter="10" style="margin-top: 20px">
-        <el-col :span="5" :offset="0">
-            <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.switchRadio(orderStore.radio)">
-                <el-radio-button label="全部订单" value="all" />
-                <el-radio-button label="已下发订单" value="已下发" />
-                <el-radio-button label="未下发订单" value="未下发" />
-            </el-radio-group>
-        </el-col>
-        <el-col :span="4">
-            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="4">
-            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="4"><el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default"
-                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-
-        <el-col :span="4">
-            <el-date-picker v-model="orderStore.orderEndDateFilter" type="daterange" unlink-panels range-separator="至"
-                start-placeholder="订单结束日期起" end-placeholder="订单结束日期终" :shortcuts="shortcuts" size="default"
-                @change="orderStore.filterDisplayOrder" />
+    <el-row :gutter="12" class="toolbar-row">
+        <el-col :span="24">
+            <div class="toolbar-wrap">
+                <el-button type="primary" @click="openCreateOrderDialog">创建订单</el-button>
+                <el-select
+                    v-model="orderStore.selectedOrderStatus"
+                    placeholder="请选择订单类型"
+                    size="default"
+                    :disabled="role === '21'"
+                    @change="handleOrderStatusChange"
+                    class="toolbar-status-select"
+                >
+                    <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
+                </el-select>
+                <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.switchRadio(orderStore.radio)">
+                    <el-radio-button label="全部订单" value="all" />
+                    <el-radio-button label="已下发订单" value="已下发" />
+                    <el-radio-button label="未下发订单" value="未下发" />
+                </el-radio-group>
+                <div class="toolbar-right" v-if="Number(userRole) === 4">
+                    <el-button type="warning" @click="openBatchFillOrderRidDialog">批量添加订单号</el-button>
+                    <el-button type="primary" @click="openBatchSendDialog">批量下发</el-button>
+                </div>
+            </div>
         </el-col>
     </el-row>
-    <el-row :gutter="20">
-        <!-- <el-col :span="4">
-            <el-radio-group v-model="sortRadio" size="small" @change="switchSortLogic(sortRadio)">
-                <el-radio-button label="升序排列" value="asc" />
-                <el-radio-button label="降序排列" value="desc" />
-            </el-radio-group>
-        </el-col> -->
+    <el-row :gutter="12" class="filter-row">
+        <el-col :span="6">
+            <el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="12" class="filter-row">
+        <el-col :span="6">
+            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="6">
+            <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至" start-placeholder="订单开始日期起" end-placeholder="订单开始日期终" :shortcuts="shortcuts" size="default" @change="orderStore.filterDisplayOrder" />
+        </el-col>
+        <el-col :span="6">
+            <el-date-picker v-model="orderStore.orderEndDateFilter" type="daterange" unlink-panels range-separator="至" start-placeholder="订单结束日期起" end-placeholder="订单结束日期终" :shortcuts="shortcuts" size="default" @change="orderStore.filterDisplayOrder" />
+        </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
-            style="height: 60vh">
+            style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
+            <el-table-column type="selection" width="55" :selectable="isBatchOperableRow" />
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column label="订单类型" width="120">
                 <template #default="scope">
@@ -106,18 +103,18 @@
             </el-form-item>
             <el-form-item label="请输入订单号" prop="orderRId" :rules="[
                 {
-                    required: true,
-                    message: '订单号不能为空',
-                    trigger: ['blur', 'change']
-                },
-                {
                     validator: validateOrderRid,
                     trigger: ['blur', 'change']
                 }
             ]">
                 <el-input @change="checkOrderRidExists" v-model="newOrderForm.orderRId"></el-input>
             </el-form-item>
-            <el-form-item label="客户订单号">
+            <el-form-item label="客户订单号" prop="orderCid" :rules="[
+                {
+                    validator: validateOrderCidWhenOrderRidEmpty,
+                    trigger: ['blur', 'change']
+                }
+            ]">
                 <el-input v-model="newOrderForm.orderCid"></el-input>
             </el-form-item>
             <el-form-item label="请选择客户" prop="customerName" :rules="[
@@ -340,6 +337,11 @@
                                     controls-position="right" :disabled="true"> </el-input>
                             </template>
                         </el-table-column>
+                        <el-table-column label="操作" width="90">
+                            <template #default="scope">
+                                <el-button type="danger" size="small" @click="removeBatchInfoRow(props.row, scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
                     </el-table>
                 </template>
             </el-table-column>
@@ -401,6 +403,101 @@
         @close="dialogStore.closeBatchTemplateDialog()" />
     <CustomerBatchTemplateSaveDialog v-model:batchTemplateForm="batchTemplateForm" :attr-mapping="attrMapping"
         :cur-batch-type="curBatchType" @close="dialogStore.closeBatchTemplateSaveDialog()" @save="saveBatchTemplate" />
+
+    <el-dialog title="批量添加订单号" v-model="batchOrderRidDialogVis" width="65%">
+        <el-form label-position="top">
+            <el-form-item label="搜索">
+                <el-row :gutter="8" class="batch-filter-row">
+                    <el-col :span="5">
+                        <el-input v-model="batchFillFilters.orderRid" placeholder="订单号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchFillFilters.orderCid" placeholder="客户订单号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchFillFilters.customerName" placeholder="客户名" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchFillFilters.customerProductName" placeholder="客户型号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="4">
+                        <el-input v-model="batchFillFilters.shoeRId" placeholder="工厂型号" clearable></el-input>
+                    </el-col>
+                </el-row>
+            </el-form-item>
+            <el-form-item label="可处理订单">
+                <el-table :data="batchFillFilteredRows" border height="320" row-key="orderDbId" @selection-change="handleBatchFillDialogSelectionChange">
+                    <el-table-column type="selection" width="55" />
+                    <el-table-column label="订单号" min-width="180">
+                        <template #default="scope">
+                            <el-input
+                                v-model="scope.row.manualOrderRid"
+                                placeholder="请输入订单号"
+                                :class="{ 'rid-error': isManualOrderRidError(scope.row) }"
+                                @input="handleManualOrderRidInput(scope.row)"
+                            ></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="orderCid" label="客户订单号" width="160" />
+                    <el-table-column prop="customerName" label="客户名" width="140" />
+                    <el-table-column prop="customerProductName" label="客户型号" width="140" />
+                    <el-table-column prop="shoeRId" label="工厂型号" width="140" />
+                </el-table>
+            </el-form-item>
+            <el-form-item label="已选订单数量">
+                <el-text>{{ batchFillSelectedRows.length }}</el-text>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span>
+                <el-button @click="batchOrderRidDialogVis = false">取消</el-button>
+                <el-button type="primary" @click="confirmBatchFillOrderRid">确定</el-button>
+            </span>
+        </template>
+    </el-dialog>
+
+    <el-dialog title="批量下发确认" v-model="batchSendDialogVis" width="60%">
+        <el-form label-position="top">
+            <el-form-item label="搜索">
+                <el-row :gutter="8" class="batch-filter-row">
+                    <el-col :span="5">
+                        <el-input v-model="batchSendFilters.orderRid" placeholder="订单号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchSendFilters.orderCid" placeholder="客户订单号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchSendFilters.customerName" placeholder="客户名" clearable></el-input>
+                    </el-col>
+                    <el-col :span="5">
+                        <el-input v-model="batchSendFilters.customerProductName" placeholder="客户型号" clearable></el-input>
+                    </el-col>
+                    <el-col :span="4">
+                        <el-input v-model="batchSendFilters.shoeRId" placeholder="工厂型号" clearable></el-input>
+                    </el-col>
+                </el-row>
+            </el-form-item>
+            <el-form-item label="可处理订单">
+                <el-table :data="batchSendFilteredRows" border height="320" row-key="orderDbId" @selection-change="handleBatchSendDialogSelectionChange">
+                    <el-table-column type="selection" width="55" />
+                    <el-table-column prop="orderRid" label="订单号" width="140" />
+                    <el-table-column prop="orderCid" label="客户订单号" width="160" />
+                    <el-table-column prop="customerName" label="客户名" width="140" />
+                    <el-table-column prop="customerProductName" label="客户型号" width="140" />
+                    <el-table-column prop="shoeRId" label="工厂型号" width="140" />
+                </el-table>
+            </el-form-item>
+            <el-form-item label="已选可下发订单数">
+                <el-text>{{ batchSendSelectedRows.length }}</el-text>
+            </el-form-item>
+        </el-form>
+        <template #footer>
+            <span>
+                <el-button @click="batchSendDialogVis = false">取消</el-button>
+                <el-button type="primary" :disabled="batchSendSelectedRows.length === 0" @click="confirmBatchSendOrders">确认下发</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -601,7 +698,29 @@ export default {
             currentShoeColorId: 0,
             currentImageRow: {},
             imageUrl: '',
-            selectedBatchTemplate: {}
+            selectedBatchTemplate: {},
+            selectedDispatchRows: [],
+            batchOrderRidDialogVis: false,
+            batchSendDialogVis: false,
+            batchFillCandidateRows: [],
+            batchFillSelectedRows: [],
+            batchSendCandidateRows: [],
+            batchSendSelectedRows: [],
+            batchFillDbDuplicateRids: [],
+            batchFillFilters: {
+                orderRid: '',
+                orderCid: '',
+                customerName: '',
+                customerProductName: '',
+                shoeRId: ''
+            },
+            batchSendFilters: {
+                orderRid: '',
+                orderCid: '',
+                customerName: '',
+                customerProductName: '',
+                shoeRId: ''
+            }
         }
     },
     computed: {
@@ -615,6 +734,21 @@ export default {
         },
         computeTotal(row) {
             console.log(row)
+        },
+        batchFillFilteredRows() {
+            return (this.batchFillCandidateRows || []).filter((row) => this.batchRowMatchesFilters(row, this.batchFillFilters))
+        },
+        batchSendFilteredRows() {
+            return (this.batchSendCandidateRows || []).filter((row) => this.batchRowMatchesFilters(row, this.batchSendFilters))
+        },
+        batchFillLocalDuplicateRids() {
+            const ridCountMap = {}
+            ;(this.batchFillCandidateRows || []).forEach((row) => {
+                const rid = String(row?.manualOrderRid || '').trim()
+                if (!rid) return
+                ridCountMap[rid] = (ridCountMap[rid] || 0) + 1
+            })
+            return Object.keys(ridCountMap).filter((rid) => ridCountMap[rid] > 1)
         }
     },
     mounted() {
@@ -630,6 +764,30 @@ export default {
         // this.getTemplate()
     },
     methods: {
+        batchRowMatchesFilters(row, filters) {
+            const toText = (value) => String(value || '').toLowerCase()
+            const matchField = (rowValue, filterValue) => {
+                const keyword = toText(filterValue).trim()
+                if (!keyword) return true
+                return toText(rowValue).includes(keyword)
+            }
+
+            return matchField(row?.orderRid, filters?.orderRid)
+                && matchField(row?.orderCid, filters?.orderCid)
+                && matchField(row?.customerName, filters?.customerName)
+                && matchField(row?.customerProductName, filters?.customerProductName)
+                && matchField(row?.shoeRId, filters?.shoeRId)
+        },
+        isManualOrderRidError(row) {
+            const rid = String(row?.manualOrderRid || '').trim()
+            if (!rid) return false
+            return this.batchFillLocalDuplicateRids.includes(rid) || this.batchFillDbDuplicateRids.includes(rid)
+        },
+        handleManualOrderRidInput(row) {
+            const rid = String(row?.manualOrderRid || '').trim()
+            if (!rid) return
+            this.batchFillDbDuplicateRids = (this.batchFillDbDuplicateRids || []).filter((item) => item !== rid)
+        },
         formatOrderType(orderType) {
             return orderType === 'F' ? '预报单' : '普通单'
         },
@@ -1895,8 +2053,7 @@ export default {
             this.$refs.batchInfoDialog.batchTable?.clearSelection()
         },
         async orderCreationSecondStep() {
-            if (this.newOrderForm.orderRId === '') {
-                ElMessage.error('未输入订单号，不允许创建订单')
+            if (!(await this.validateOrderIdentifiers())) {
                 return
             }
             const ridValidation = await this.validateOrderRidField()
@@ -1985,6 +2142,30 @@ export default {
         },
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
+        },
+        removeBatchInfoRow(orderShoeRow, batchRow) {
+            if (!orderShoeRow || !Array.isArray(orderShoeRow.orderShoeTypeBatchInfo) || !batchRow) {
+                return
+            }
+
+            const batchId = batchRow.packagingInfoId ?? batchRow.packaging_info_id
+            orderShoeRow.orderShoeTypeBatchInfo = orderShoeRow.orderShoeTypeBatchInfo.filter((item) => {
+                const itemId = item.packagingInfoId ?? item.packaging_info_id
+                return String(itemId) !== String(batchId)
+            })
+
+            if (orderShoeRow.quantityMapping && batchId !== undefined && batchId !== null) {
+                delete orderShoeRow.quantityMapping[batchId]
+                delete orderShoeRow.quantityMapping[String(batchId)]
+            }
+            if (orderShoeRow.amountMapping && batchId !== undefined && batchId !== null) {
+                delete orderShoeRow.amountMapping[batchId]
+                delete orderShoeRow.amountMapping[String(batchId)]
+            }
+
+            this.newOrderForm.flag = (this.newOrderForm.orderShoeTypes || []).some((item) => {
+                return Array.isArray(item.orderShoeTypeBatchInfo) && item.orderShoeTypeBatchInfo.length > 0
+            })
         },
         syncSelectedShoeStateFromOrderForm() {
             const list = Array.isArray(this.newOrderForm.orderShoeTypes) ? this.newOrderForm.orderShoeTypes : []
@@ -2476,6 +2657,9 @@ export default {
                 ElMessage.error('请添加鞋型配码')
                 return
             }
+            if (!(await this.validateOrderIdentifiers())) {
+                return
+            }
             const ridValidation = await this.validateOrderRidField()
             if (!ridValidation.valid) {
                 if (ridValidation.message) {
@@ -2663,6 +2847,25 @@ export default {
                 callback(new Error('订单号校验失败，请稍后重试'))
             }
         },
+        validateOrderCidWhenOrderRidEmpty(rule, value, callback) {
+            const orderRid = (this.newOrderForm.orderRId || '').trim()
+            const orderCid = (value || '').trim()
+            if (!orderRid && !orderCid) {
+                callback(new Error('订单号为空时客户订单号不能为空'))
+                return
+            }
+            callback()
+        },
+        async validateOrderIdentifiers() {
+            const orderCidValidation = await this.validateOrderCidField()
+            if (!orderCidValidation.valid) {
+                if (orderCidValidation.message) {
+                    ElMessage.error(orderCidValidation.message)
+                }
+                return false
+            }
+            return true
+        },
         async validateOrderRidField() {
             if (!this.$refs.orderCreationForm) {
                 return { valid: false, message: '' }
@@ -2676,9 +2879,223 @@ export default {
                 })
             })
         },
+        async validateOrderCidField() {
+            if (!this.$refs.orderCreationForm) {
+                return { valid: false, message: '' }
+            }
+            return new Promise((resolve) => {
+                this.$refs.orderCreationForm.validateField('orderCid', (errorMessage) => {
+                    const message = typeof errorMessage === 'string' ? errorMessage : errorMessage?.message || ''
+                    const noError =
+                        !errorMessage || (Array.isArray(errorMessage) && errorMessage.length === 0) || errorMessage === true
+                    resolve({ valid: noError, message })
+                })
+            })
+        },
         async checkOrderRidExists() {
             const result = await this.validateOrderRidField()
+            await this.validateOrderCidField()
             return result.valid
+        },
+        isBatchOperableRow(row) {
+            const statusText = String(row?.orderStatus || '')
+            const statusCurrentOk = Number(row?.orderStatusVal) === 6
+            const statusValueOk = row?.orderStatusValue !== undefined && row?.orderStatusValue !== null
+                ? Number(row?.orderStatusValue) === 1
+                : statusText.includes('待经理审核下发')
+            const wrapUploadedOk = row?.wrapRequirementUploaded !== undefined && row?.wrapRequirementUploaded !== null
+                ? row?.wrapRequirementUploaded === true
+                : !statusText.includes('包装材料待上传')
+
+            return Number(this.userRole) === 4
+                && statusCurrentOk
+                && statusValueOk
+                && wrapUploadedOk
+        },
+        isBatchFillOrderRidCandidate(row) {
+            return Number(this.userRole) === 4 && !(row?.orderRid || '').trim()
+        },
+        isDispatchableRow(row) {
+            return this.isBatchOperableRow(row) && !!(row?.orderRid || '').trim()
+        },
+        handleDispatchSelectionChange(selection) {
+            this.selectedDispatchRows = (selection || []).filter((row) => this.isBatchOperableRow(row))
+        },
+        handleBatchFillDialogSelectionChange(selection) {
+            this.batchFillSelectedRows = selection || []
+        },
+        handleBatchSendDialogSelectionChange(selection) {
+            this.batchSendSelectedRows = selection || []
+        },
+        openBatchFillOrderRidDialog() {
+            const allRows = this.orderStore?.displayData || []
+            this.batchFillCandidateRows = allRows
+                .filter((row) => this.isBatchFillOrderRidCandidate(row))
+                .map((row) => ({
+                    ...row,
+                    manualOrderRid: ''
+                }))
+            this.batchFillSelectedRows = []
+            this.batchFillFilters = {
+                orderRid: '',
+                orderCid: '',
+                customerName: '',
+                customerProductName: '',
+                shoeRId: ''
+            }
+            this.batchFillDbDuplicateRids = []
+            if (!this.batchFillCandidateRows.length) {
+                ElMessage.warning('当前无可批量添加订单号的订单')
+                return
+            }
+            this.batchOrderRidDialogVis = true
+        },
+        async checkOrderRidUnique(pendingRid) {
+            if (!pendingRid) return true
+            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
+                params: {
+                    pendingRid
+                }
+            })
+            return response?.data?.exists !== true
+        },
+        async confirmBatchFillOrderRid() {
+            const targetRows = this.batchFillSelectedRows
+            if (!targetRows.length) {
+                ElMessage.warning('请先在对话框中选择订单')
+                return
+            }
+
+            const manualRidList = targetRows.map((row) => (row.manualOrderRid || '').trim())
+            if (manualRidList.some((rid) => !rid)) {
+                ElMessage.error('请为每个已选订单填写订单号')
+                return
+            }
+            if (new Set(manualRidList).size !== manualRidList.length) {
+                ElMessage.error('已填写的订单号存在重复，请检查')
+                return
+            }
+
+            const duplicateRids = []
+            this.batchFillDbDuplicateRids = []
+            for (const rid of manualRidList) {
+                try {
+                    const unique = await this.checkOrderRidUnique(rid)
+                    if (!unique) {
+                        duplicateRids.push(rid)
+                    }
+                } catch (error) {
+                    console.error('checkOrderRidUnique in batch failed', error)
+                    ElMessage.error('订单号校验失败，请稍后重试')
+                    return
+                }
+            }
+            if (duplicateRids.length) {
+                this.batchFillDbDuplicateRids = [...new Set(duplicateRids)]
+                ElMessage.error(`订单号已存在：${duplicateRids.join('，')}`)
+                return
+            }
+
+            let successCount = 0
+            let duplicateCount = 0
+            const duplicateDuringSave = []
+            for (let i = 0; i < targetRows.length; i++) {
+                const row = targetRows[i]
+                const rid = manualRidList[i]
+                try {
+                    const stillUnique = await this.checkOrderRidUnique(rid)
+                    if (!stillUnique) {
+                        duplicateCount += 1
+                        duplicateDuringSave.push(rid)
+                        continue
+                    }
+                    const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateorderrid`, {
+                        orderId: row.orderDbId,
+                        orderNewRid: rid
+                    })
+                    if (response.status === 200) {
+                        successCount += 1
+                    } else {
+                        const msg = response?.data?.message || response?.data?.result || ''
+                        if (msg.includes('重复') || msg.includes('存在')) {
+                            duplicateCount += 1
+                            duplicateDuringSave.push(rid)
+                        }
+                    }
+                } catch (error) {
+                    console.error('batch updateorderrid failed', error)
+                    const msg = error?.response?.data?.message || error?.response?.data?.result || ''
+                    if (msg.includes('重复') || msg.includes('存在')) {
+                        duplicateCount += 1
+                        duplicateDuringSave.push(rid)
+                    }
+                }
+            }
+
+            this.batchOrderRidDialogVis = false
+            if (successCount > 0 && duplicateCount === 0) {
+                ElMessage.success(`批量添加订单号完成，成功 ${successCount} 条`)
+                await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
+            } else if (successCount > 0 && duplicateCount > 0) {
+                const duplicateText = [...new Set(duplicateDuringSave)].join('，')
+                ElMessage.warning(`批量添加订单号完成：成功 ${successCount} 条，重复 ${duplicateCount} 条（${duplicateText}）`)
+                await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
+            } else {
+                if (duplicateCount > 0) {
+                    const duplicateText = [...new Set(duplicateDuringSave)].join('，')
+                    ElMessage.error(`批量添加失败：存在重复订单号（${duplicateText}）`)
+                } else {
+                    ElMessage.error('批量添加订单号失败')
+                }
+            }
+        },
+        openBatchSendDialog() {
+            const allRows = this.orderStore?.displayData || []
+            this.batchSendCandidateRows = allRows.filter((row) => this.isDispatchableRow(row))
+            this.batchSendSelectedRows = []
+            this.batchSendFilters = {
+                orderRid: '',
+                orderCid: '',
+                customerName: '',
+                customerProductName: '',
+                shoeRId: ''
+            }
+            if (!this.batchSendCandidateRows.length) {
+                ElMessage.error('当前无可下发订单')
+                return
+            }
+            this.batchSendDialogVis = true
+        },
+        async confirmBatchSendOrders() {
+            if (!this.batchSendSelectedRows.length) {
+                ElMessage.warning('请先在对话框中选择订单')
+                return
+            }
+            let successCount = 0
+            let failedCount = 0
+            for (const row of this.batchSendSelectedRows) {
+                try {
+                    const result = await axios.post(`${this.$apiBaseUrl}/ordercreate/sendnext`, {
+                        orderId: row.orderDbId,
+                        staffId: this.staffId
+                    })
+                    if (result.status === 200) {
+                        successCount += 1
+                    } else {
+                        failedCount += 1
+                    }
+                } catch (error) {
+                    failedCount += 1
+                }
+            }
+
+            this.batchSendDialogVis = false
+            if (failedCount === 0) {
+                ElMessage.success(`批量下发成功，共 ${successCount} 条`)
+            } else {
+                ElMessage.warning(`批量下发完成：成功 ${successCount} 条，失败 ${failedCount} 条`)
+            }
+            await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
         },
         async handleOrderStatusChange(value) {
             let response
@@ -2705,6 +3122,28 @@ export default {
 
                 this.orderStore.radio = 'all'
                 this.sortRadio = 'asc'
+                this.selectedDispatchRows = []
+                this.batchOrderRidDialogVis = false
+                this.batchSendDialogVis = false
+                this.batchFillCandidateRows = []
+                this.batchFillSelectedRows = []
+                this.batchSendCandidateRows = []
+                this.batchSendSelectedRows = []
+                this.batchFillDbDuplicateRids = []
+                this.batchFillFilters = {
+                    orderRid: '',
+                    orderCid: '',
+                    customerName: '',
+                    customerProductName: '',
+                    shoeRId: ''
+                }
+                this.batchSendFilters = {
+                    orderRid: '',
+                    orderCid: '',
+                    customerName: '',
+                    customerProductName: '',
+                    shoeRId: ''
+                }
             }
         },
         openReUploadImageDialog(row) {
@@ -2946,6 +3385,46 @@ export default {
 </script>
 
 <style scoped>
+.toolbar-row {
+    margin-top: 20px;
+}
+
+.toolbar-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.toolbar-status-select {
+    width: 180px;
+}
+
+.toolbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-row {
+    margin-top: 12px;
+}
+
+.filter-row :deep(.el-input),
+.filter-row :deep(.el-select),
+.filter-row :deep(.el-date-editor) {
+    width: 100%;
+}
+
+.batch-filter-row :deep(.el-input) {
+    width: 100%;
+}
+
+:deep(.rid-error .el-input__wrapper) {
+    box-shadow: 0 0 0 1px var(--el-color-danger) inset !important;
+}
+
 /* Clean base style */
 ::v-deep(.persistent-shadow-row > td) {
     border-top: 5px solid #dcdfe6;
