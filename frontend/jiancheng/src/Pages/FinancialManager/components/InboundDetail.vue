@@ -172,12 +172,35 @@ interface WarehouseEntity {
 let warehouseOptions = ref([])
 const inboundRecordTypes = ref([])
 
+function normalizeInboundTypeValue(value) {
+    if (value === null || value === undefined || value === '') return null
+    const n = Number(value)
+    return Number.isNaN(n) ? null : n
+}
+
+function getEffectiveInboundTypeFilter() {
+    const selected = Array.isArray(inboundTypeFilter.value) ? inboundTypeFilter.value : []
+    const normalizedSelected = selected
+        .map((item) => normalizeInboundTypeValue(item))
+        .filter((item) => item !== null && item !== 3)
+    if (normalizedSelected.length > 0) {
+        return normalizedSelected
+    }
+    const fromOptions = (inboundRecordTypes.value || [])
+        .map((item) => normalizeInboundTypeValue(item?.value))
+        .filter((item) => item !== null && item !== 3)
+    if (fromOptions.length > 0) {
+        return fromOptions
+    }
+    return [0, 1, 2]
+}
+
 
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
 
 onMounted(async () => {
     getWarehouseInfo()
-    getInboundRecordType()
+    await getInboundRecordType()
     await getSelectableColumns()
     selectAllColumns()
     updateInboundDisplayRecord()
@@ -186,7 +209,7 @@ onMounted(async () => {
 
 async function getInboundRecordType() {
     const res = await axios.get($api_baseUrl + `/accounting/getinboundrecordtype`)
-    inboundRecordTypes.value = res.data.result
+    inboundRecordTypes.value = (res.data.result || []).filter((item) => normalizeInboundTypeValue(item?.value) !== 3)
 }
 
 function deselectAllColumns() {
@@ -237,7 +260,7 @@ function getCurrentPageInfo() {
         'materialColorFilter': materialColorFilter.value,
         'orderRidFilter': orderRidFilter.value,
         'statusFilter':statusFilter.value,
-        'inboundTypeFilter': inboundTypeFilter.value
+        'inboundTypeFilter': getEffectiveInboundTypeFilter()
     }
 }
 function pageSizeChange(newSize) {

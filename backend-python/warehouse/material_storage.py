@@ -1224,6 +1224,7 @@ def get_material_inbound_records():
     supplier_name = request.args.get("supplierName")
     warehouse_name = request.args.get("warehouseName")
     status = request.args.get("status", type=int)
+    inbound_type = request.args.get("inboundType", type=int)
 
     query1 = (
         db.session.query(InboundRecord, MaterialWarehouse, Supplier)
@@ -1255,6 +1256,8 @@ def get_material_inbound_records():
         query1 = query1.filter(
             MaterialWarehouse.material_warehouse_name.ilike(f"%{warehouse_name}%")
         )
+    if inbound_type is not None:
+        query1 = query1.filter(InboundRecord.inbound_type == inbound_type)
 
     query1 = query1.order_by(desc(InboundRecord.inbound_datetime))
     count_result = query1.distinct().count()
