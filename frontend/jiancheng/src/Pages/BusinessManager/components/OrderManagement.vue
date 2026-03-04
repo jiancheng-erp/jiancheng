@@ -5,7 +5,8 @@
     <el-row :gutter="12" class="toolbar-row">
         <el-col :span="24">
             <div class="toolbar-wrap">
-                <el-button type="primary" @click="openCreateOrderDialog">创建订单</el-button>
+                <el-button v-if="!isForecastEntry" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
+                <el-button v-else type="warning" @click="openCreateForecastOrderDialog">创建预报单</el-button>
                 <el-select
                     v-model="orderStore.selectedOrderStatus"
                     placeholder="请选择订单类型"
@@ -519,6 +520,12 @@ import CustomerBatchTemplateDialog from './orderDialogs/CustomerBatchTemplateDia
 import CustomerBatchTemplateSaveDialog from './orderDialogs/CustomerBatchTemplateSaveDialog.vue'
 
 export default {
+    props: {
+        entryMode: {
+            type: String,
+            default: 'order'
+        }
+    },
     components: {
         AddShoeDialog,
         AddShoeTypeDialog,
@@ -724,6 +731,9 @@ export default {
         }
     },
     computed: {
+        isForecastEntry() {
+            return this.entryMode === 'forecast'
+        },
         allowDeleteOrder(row) {
             return this.userRole == 4
         },
@@ -764,6 +774,13 @@ export default {
         // this.getTemplate()
     },
     methods: {
+        applyEntryModeOrders(rows) {
+            const sourceRows = Array.isArray(rows) ? rows : []
+            if (this.isForecastEntry) {
+                return sourceRows.filter((row) => row?.orderType === 'F')
+            }
+            return sourceRows.filter((row) => row?.orderType !== 'F')
+        },
         batchRowMatchesFilters(row, filters) {
             const toText = (value) => String(value || '').toLowerCase()
             const matchField = (rowValue, filterValue) => {
@@ -1008,7 +1025,9 @@ export default {
                             if (found) mapped.push(found)
                             else {
                                 console.warn('no matching customer batch found for pid', pid, 'batch:', batch)
-                                mapped.push(batch) // fallback to stored object
+                                const resolvedFallback = this.resolveBatchInfoById(pid)
+                                if (resolvedFallback) mapped.push(resolvedFallback)
+                                else mapped.push(batch) // fallback to stored object
                             }
                         })
                         item.orderShoeTypeBatchInfo = mapped
@@ -1216,11 +1235,16 @@ export default {
         },
         openCreateOrderDialog() {
             this.orderRidDuplicated = false
+            this.newOrderForm.orderType = 'N'
             this.newOrderForm.orderStartDate = this.formatDateToYYYYMMDD(new Date())
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
             this.syncSelectedShoeStateFromOrderForm()
             this.dialogStore.openOrderCreationDialog()
+        },
+        openCreateForecastOrderDialog() {
+            this.openCreateOrderDialog()
+            this.newOrderForm.orderType = 'F'
         },
         async showTemplate() {
             const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {
@@ -2270,14 +2294,40 @@ export default {
             this.currentBatch = selection
             // console.log(this.currentBatch)
         },
+        resolveBatchInfoById(packagingInfoId) {
+            if (packagingInfoId === undefined || packagingInfoId === null) return null
+            const targetId = String(packagingInfoId)
+            const sourceList = [
+                ...(Array.isArray(this.customerDisplayBatchData) ? this.customerDisplayBatchData : []),
+                ...(Array.isArray(this.customerBatchData) ? this.customerBatchData : [])
+            ]
+            return sourceList.find((item) => String(item?.packagingInfoId) === targetId) || null
+        },
+        normalizeBatchSelection(batchList) {
+            if (!Array.isArray(batchList)) return []
+            return batchList
+                .map((batch) => {
+                    const packagingInfoId = batch?.packagingInfoId ?? batch?.packaging_info_id ?? batch?.id ?? batch?.packagingId
+                    if (packagingInfoId === undefined || packagingInfoId === null) return null
+                    const resolved = this.resolveBatchInfoById(packagingInfoId)
+                    if (resolved) return resolved
+                    return {
+                        ...batch,
+                        packagingInfoId: isNaN(Number(packagingInfoId)) ? packagingInfoId : Number(packagingInfoId)
+                    }
+                })
+                .filter(Boolean)
+        },
         async getCustomerBatchInfo(customerId) {
             const response = await axios.get(`${this.$apiBaseUrl}/customer/getcustomerbatchinfo`, {
                 params: {
                     customerid: customerId
                 }
             })
-            this.customerBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
-            this.customerDisplayBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
+            const batchInfoType = (response.data || []).find((batch) => String(batch.batchInfoTypeId) === String(this.newOrderForm.batchInfoTypeId))
+            const batchInfoList = Array.isArray(batchInfoType?.batchInfoList) ? batchInfoType.batchInfoList : []
+            this.customerBatchData = batchInfoList
+            this.customerDisplayBatchData = batchInfoList
         },
         async getAllCutomers() {
             const response = await axios.get(`${this.$apiBaseUrl}/customer/getcustomerdetails`)
@@ -2325,19 +2375,22 @@ export default {
             }
             this.$nextTick(() => {
                 selectedBatch.forEach((item) => {
-                    this.$refs.batchInfoSelectionTable.toggleRowSelection(
-                        this.customerDisplayBatchData.find((row) => {
-                            return row.packagingInfoId == item.packagingInfoId
-                        }),
-                        true
-                    )
+                    const child = this.$refs.batchInfoDialog
+                    const tableRef = child?.batchTable?.value || child?.batchTable || child?.$refs?.batchTable
+                    const matchedRow = this.customerDisplayBatchData.find((row) => {
+                        return String(row.packagingInfoId) === String(item.packagingInfoId)
+                    })
+                    if (tableRef && matchedRow && typeof tableRef.toggleRowSelection === 'function') {
+                        tableRef.toggleRowSelection(matchedRow, true)
+                    }
                 })
             })
         },
         addShoeTypeBatchInfo() {
+            const selectedBatch = this.normalizeBatchSelection(this.currentBatch)
             this.newOrderForm.orderShoeTypes.find((row) => {
                 return row.shoeTypeId == this.curShoeTypeId
-            }).orderShoeTypeBatchInfo = this.currentBatch
+            }).orderShoeTypeBatchInfo = selectedBatch
 
             const curQuantityMapping = this.newOrderForm.orderShoeTypes.find((row) => {
                 return row.shoeTypeId == this.curShoeTypeId
@@ -2346,7 +2399,7 @@ export default {
                 return row.shoeTypeId == this.curShoeTypeId
             }).amountMapping
 
-            this.currentBatch.forEach((batch) => {
+            selectedBatch.forEach((batch) => {
                 {
                     curQuantityMapping[batch.packagingInfoId] = 0
                     curAmountMapping[batch.packagingInfoId] = 0
@@ -2379,10 +2432,10 @@ export default {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     currentStaffId: staffId
                 })
-                this.orderStore.setOrders(response.data)
+                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
             } else if (this.role == 4) {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-                this.orderStore.setOrders(response.data)
+                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
             }
         },
         // async getAllOrderStatus() {
@@ -2804,21 +2857,21 @@ export default {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                         currentStaffId: this.staffId
                     })
-                    this.orderStore.setOrders(response.data)
+                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
                 } else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-                    this.orderStore.setOrders(response.data)
+                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
                 }
             } else if (value === 'desc') {
                 if (!this.buttonFlag) {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                         currentStaffId: this.staffId
                     })
-                    this.orderStore.setOrders(response.data)
+                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
                     console.log(this.orderStore.unfilteredData)
                 } else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`)
-                    this.orderStore.setOrders(response.data)
+                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
                 }
             }
         },
@@ -3075,7 +3128,10 @@ export default {
             let failedCount = 0
             for (const row of this.batchSendSelectedRows) {
                 try {
-                    const result = await axios.post(`${this.$apiBaseUrl}/ordercreate/sendnext`, {
+                    const endpoint = row?.orderType === 'F'
+                        ? '/ordercreate/sendnextsplitforecast'
+                        : '/ordercreate/sendnext'
+                    const result = await axios.post(`${this.$apiBaseUrl}${endpoint}`, {
                         orderId: row.orderDbId,
                         staffId: this.staffId
                     })
@@ -3118,7 +3174,7 @@ export default {
             }
 
             if (response && response.data) {
-                this.orderStore.setOrders(response.data)
+                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
 
                 this.orderStore.radio = 'all'
                 this.sortRadio = 'asc'
