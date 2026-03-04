@@ -439,6 +439,44 @@ class Order(db.Model):
         return "Order"
 
 
+class ForecastSheet(db.Model):
+    __tablename__ = "forecast_sheet"
+
+    forecast_sheet_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    forecast_rid = db.Column(db.String(40), nullable=False, unique=True)
+    forecast_cid = db.Column(db.String(40), nullable=True)
+    customer_id = db.Column(db.Integer, nullable=False)
+    batch_info_type_id = db.Column(db.Integer, nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    salesman_id = db.Column(db.Integer, nullable=False)
+    supervisor_id = db.Column(db.Integer, nullable=False)
+    currency_type = db.Column(db.String(8), nullable=False, default="RMB")
+    status = db.Column(db.SmallInteger, nullable=False, default=0)
+    created_order_ids = db.Column("created_order_rids", db.Text, nullable=True)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+
+class ForecastSheetItem(db.Model):
+    __tablename__ = "forecast_sheet_item"
+
+    forecast_sheet_item_id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    forecast_sheet_id = db.Column(db.BigInteger, nullable=False)
+    shoe_type_id = db.Column(db.BigInteger, nullable=False)
+    shoe_rid = db.Column(db.String(40), nullable=True)
+    color_name = db.Column(db.String(40), nullable=True)
+    customer_shoe_name = db.Column(db.String(80), nullable=True)
+    customer_color_name = db.Column(db.String(80), nullable=True)
+    packaging_info_id = db.Column(db.BigInteger, nullable=False)
+    packaging_info_name = db.Column(db.String(80), nullable=True)
+    unit_price = db.Column(db.DECIMAL(13, 4), nullable=False, default=0.0000)
+    total_pairs = db.Column(db.Integer, nullable=False, default=0)
+    sort_index = db.Column(db.Integer, nullable=False, default=0)
+    create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
+    update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
+
+
 class OrderShoeStatus(db.Model):
     __tablename__ = "order_shoe_status"
     order_shoe_status_id = db.Column(

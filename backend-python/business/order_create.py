@@ -56,6 +56,40 @@ def resolve_order_storage_dir_name(order_id, order_rid):
     return f"_NO_RID_{order_id}"
 
 
+def _truncate_with_suffix(base_value: str, suffix: str, max_len: int = 40) -> str:
+    value = (base_value or "").strip()
+    if len(value) + len(suffix) <= max_len:
+        return f"{value}{suffix}"
+    trimmed = value[: max_len - len(suffix)]
+    return f"{trimmed}{suffix}"
+
+
+def _build_unique_split_order_rid(source_order_rid: str, split_index: int) -> str:
+    base_value = (source_order_rid or "").strip() or "FORECAST"
+    serial = 0
+    while True:
+        suffix = f"-S{split_index}" if serial == 0 else f"-S{split_index}-{serial}"
+        candidate = _truncate_with_suffix(base_value, suffix, 40)
+        existing = db.session.query(Order.order_id).filter(Order.order_rid == candidate).first()
+        if not existing:
+            return candidate
+        serial += 1
+
+
+def _build_unique_split_order_cid(source_order_cid: str, split_index: int):
+    base_value = (source_order_cid or "").strip()
+    if not base_value:
+        return None
+    serial = 0
+    while True:
+        suffix = f"-S{split_index}" if serial == 0 else f"-S{split_index}-{serial}"
+        candidate = _truncate_with_suffix(base_value, suffix, 40)
+        existing = db.session.query(Order.order_id).filter(Order.order_cid == candidate).first()
+        if not existing:
+            return candidate
+        serial += 1
+
+
 @order_create_bp.route("/ordercreate/createneworder", methods=["POST"])
 def create_new_order():
     time_s = time.time()
@@ -451,6 +485,251 @@ def order_next_step():
     )
     db.session.commit()
     return "Event Processed In Order Create API CALL", 200
+
+
+@order_create_bp.route("/ordercreate/sendnextsplitforecast", methods=["POST"])
+def order_next_step_split_forecast():
+    order_id = request.json.get("orderId")
+    staff_id = request.json.get("staffId")
+    if not order_id or not staff_id:
+        return jsonify({"error": "orderId and staffId are required"}), 400
+
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"error": "order not found"}), 404
+    if normalize_order_type(order_entity.order_type) != ORDER_TYPE_FORECAST:
+        return jsonify({"error": "only forecast order supports split dispatch"}), 400
+
+    order_status = db.session.query(OrderStatus).filter(OrderStatus.order_id == order_id).first()
+    if not order_status:
+        return jsonify({"error": "order status not found"}), 404
+    if order_status.order_current_status != 6 or order_status.order_status_value != 1:
+        return jsonify({"error": "forecast order is not in dispatchable status"}), 400
+    if str(order_entity.production_list_upload_status or "") != "2":
+        return jsonify({"error": "包装材料待上传，无法下发拆分"}), 400
+
+    order_shoe_entities = (
+        db.session.query(OrderShoe)
+        .filter(OrderShoe.order_id == order_id)
+        .order_by(OrderShoe.order_shoe_id.asc())
+        .all()
+    )
+    if not order_shoe_entities:
+        return jsonify({"error": "forecast order has no shoe items"}), 400
+
+    order_shoe_type_entities = (
+        db.session.query(OrderShoeType)
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .all()
+    )
+    missing_price = []
+    for entity_ost in order_shoe_type_entities:
+        unit_price = entity_ost.unit_price or 0
+        currency_type = entity_ost.currency_type
+        if float(unit_price) <= 0 or not currency_type:
+            missing_price.append(entity_ost.order_shoe_type_id)
+    if missing_price:
+        return jsonify({"error": "预报单存在未填写的鞋型价格，无法下发拆分"}), 400
+
+    parent_storage_dir_name = resolve_order_storage_dir_name(
+        order_entity.order_id, order_entity.order_rid
+    )
+    parent_storage_path = os.path.join(FILE_STORAGE_PATH, parent_storage_dir_name)
+
+    created_order_ids = []
+    created_order_rids = []
+
+    try:
+        for split_index, source_order_shoe in enumerate(order_shoe_entities, start=1):
+            new_order_rid = _build_unique_split_order_rid(order_entity.order_rid, split_index)
+            new_order_cid = _build_unique_split_order_cid(order_entity.order_cid, split_index)
+
+            new_order = Order(
+                order_rid=new_order_rid,
+                order_cid=new_order_cid,
+                order_type=ORDER_TYPE_NORMAL,
+                batch_info_type_id=order_entity.batch_info_type_id,
+                customer_id=order_entity.customer_id,
+                start_date=order_entity.start_date,
+                end_date=order_entity.end_date,
+                salesman_id=order_entity.salesman_id,
+                production_list_upload_status=order_entity.production_list_upload_status,
+                amount_list_upload_status=order_entity.amount_list_upload_status,
+                supervisor_id=order_entity.supervisor_id,
+            )
+            db.session.add(new_order)
+            db.session.flush()
+
+            new_order_status = OrderStatus(
+                order_id=new_order.order_id,
+                order_current_status=7,
+                order_status_value=0,
+            )
+            db.session.add(new_order_status)
+
+            source_prod_info = (
+                db.session.query(OrderShoeProductionInfo)
+                .filter(OrderShoeProductionInfo.order_shoe_id == source_order_shoe.order_shoe_id)
+                .first()
+            )
+
+            new_order_shoe = OrderShoe(
+                order_id=new_order.order_id,
+                shoe_id=source_order_shoe.shoe_id,
+                customer_product_name=source_order_shoe.customer_product_name,
+                production_order_upload_status=source_order_shoe.production_order_upload_status,
+                process_sheet_upload_status=source_order_shoe.process_sheet_upload_status,
+                adjust_staff=source_order_shoe.adjust_staff,
+                business_material_remark=source_order_shoe.business_material_remark,
+                business_technical_remark=source_order_shoe.business_technical_remark,
+            )
+            db.session.add(new_order_shoe)
+            db.session.flush()
+
+            new_order_shoe_status = OrderShoeStatus(
+                order_shoe_id=new_order_shoe.order_shoe_id,
+                current_status=0,
+                current_status_value=0,
+            )
+            db.session.add(new_order_shoe_status)
+
+            if source_prod_info:
+                new_order_shoe_production_info = OrderShoeProductionInfo(
+                    cutting_line_group=source_prod_info.cutting_line_group,
+                    pre_sewing_line_group=source_prod_info.pre_sewing_line_group,
+                    sewing_line_group=source_prod_info.sewing_line_group,
+                    molding_line_group=source_prod_info.molding_line_group,
+                    is_cutting_outsourced=source_prod_info.is_cutting_outsourced,
+                    is_sewing_outsourced=source_prod_info.is_sewing_outsourced,
+                    is_molding_outsourced=source_prod_info.is_molding_outsourced,
+                    cutting_start_date=source_prod_info.cutting_start_date,
+                    cutting_end_date=source_prod_info.cutting_end_date,
+                    sewing_start_date=source_prod_info.sewing_start_date,
+                    sewing_end_date=source_prod_info.sewing_end_date,
+                    molding_start_date=source_prod_info.molding_start_date,
+                    molding_end_date=source_prod_info.molding_end_date,
+                    pre_sewing_start_date=source_prod_info.pre_sewing_start_date,
+                    pre_sewing_end_date=source_prod_info.pre_sewing_end_date,
+                    is_material_arrived=source_prod_info.is_material_arrived,
+                    scheduling_status=source_prod_info.scheduling_status,
+                    order_shoe_id=new_order_shoe.order_shoe_id,
+                )
+            else:
+                new_order_shoe_production_info = OrderShoeProductionInfo(
+                    is_cutting_outsourced=0,
+                    is_sewing_outsourced=0,
+                    is_molding_outsourced=0,
+                    is_material_arrived=0,
+                    order_shoe_id=new_order_shoe.order_shoe_id,
+                )
+            db.session.add(new_order_shoe_production_info)
+
+            source_order_shoe_types = (
+                db.session.query(OrderShoeType)
+                .filter(OrderShoeType.order_shoe_id == source_order_shoe.order_shoe_id)
+                .all()
+            )
+            source_to_new_ost_mapping = {}
+            for source_ost in source_order_shoe_types:
+                new_ost = OrderShoeType(
+                    order_shoe_id=new_order_shoe.order_shoe_id,
+                    shoe_type_id=source_ost.shoe_type_id,
+                    customer_color_name=source_ost.customer_color_name,
+                    unit_price=source_ost.unit_price,
+                    currency_type=source_ost.currency_type,
+                )
+                db.session.add(new_ost)
+                db.session.flush()
+                source_to_new_ost_mapping[source_ost.order_shoe_type_id] = new_ost.order_shoe_type_id
+
+            source_batches = (
+                db.session.query(OrderShoeBatchInfo)
+                .filter(
+                    OrderShoeBatchInfo.order_shoe_type_id.in_(
+                        list(source_to_new_ost_mapping.keys())
+                    )
+                )
+                .all()
+            )
+            for source_batch in source_batches:
+                new_batch = OrderShoeBatchInfo(
+                    name=source_batch.name,
+                    total_amount=source_batch.total_amount,
+                    size_34_amount=source_batch.size_34_amount,
+                    size_35_amount=source_batch.size_35_amount,
+                    size_36_amount=source_batch.size_36_amount,
+                    size_37_amount=source_batch.size_37_amount,
+                    size_38_amount=source_batch.size_38_amount,
+                    size_39_amount=source_batch.size_39_amount,
+                    size_40_amount=source_batch.size_40_amount,
+                    size_41_amount=source_batch.size_41_amount,
+                    size_42_amount=source_batch.size_42_amount,
+                    size_43_amount=source_batch.size_43_amount,
+                    size_44_amount=source_batch.size_44_amount,
+                    size_45_amount=source_batch.size_45_amount,
+                    size_46_amount=source_batch.size_46_amount,
+                    packaging_info_id=source_batch.packaging_info_id,
+                    packaging_info_quantity=source_batch.packaging_info_quantity,
+                    order_shoe_type_id=source_to_new_ost_mapping[
+                        source_batch.order_shoe_type_id
+                    ],
+                    total_price=source_batch.total_price,
+                )
+                db.session.add(new_batch)
+
+            new_order_storage_dir_name = resolve_order_storage_dir_name(
+                new_order.order_id, new_order.order_rid
+            )
+            new_order_storage_path = os.path.join(FILE_STORAGE_PATH, new_order_storage_dir_name)
+            os.makedirs(new_order_storage_path, exist_ok=True)
+
+            if os.path.exists(parent_storage_path):
+                for name in os.listdir(parent_storage_path):
+                    source_path = os.path.join(parent_storage_path, name)
+                    target_path = os.path.join(new_order_storage_path, name)
+                    if os.path.isfile(source_path):
+                        try:
+                            shutil.copy2(source_path, target_path)
+                        except Exception:
+                            logger.exception(
+                                "copy parent file failed for forecast split: %s", source_path
+                            )
+
+            source_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == source_order_shoe.shoe_id).first()
+            if source_shoe and os.path.exists(parent_storage_path):
+                source_shoe_dir = os.path.join(parent_storage_path, source_shoe.shoe_rid)
+                target_shoe_dir = os.path.join(new_order_storage_path, source_shoe.shoe_rid)
+                if os.path.exists(source_shoe_dir):
+                    try:
+                        shutil.copytree(source_shoe_dir, target_shoe_dir, dirs_exist_ok=True)
+                    except Exception:
+                        logger.exception(
+                            "copy shoe dir failed for forecast split: %s", source_shoe_dir
+                        )
+
+            created_order_ids.append(new_order.order_id)
+            created_order_rids.append(new_order.order_rid)
+
+        order_status.order_current_status = 7
+        order_status.order_status_value = 0
+        db.session.commit()
+    except Exception as ex:
+        db.session.rollback()
+        logger.exception("forecast split dispatch failed, order_id=%s", order_id)
+        return jsonify({"error": f"forecast split dispatch failed: {str(ex)}"}), 500
+
+    return (
+        jsonify(
+            {
+                "message": "forecast order dispatched and split successfully",
+                "sourceOrderId": order_id,
+                "createdOrderIds": created_order_ids,
+                "createdOrderRids": created_order_rids,
+            }
+        ),
+        200,
+    )
 
 
 @order_create_bp.route("/ordercreate/updateremark", methods=["POST"])
