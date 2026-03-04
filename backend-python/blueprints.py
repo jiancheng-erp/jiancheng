@@ -13,6 +13,7 @@ from shared_apis.department import department_bp
 from usage_calculation.usage_calculation import usage_calculation_bp
 from business.order_import import order_import_bp
 from business.order_create import order_create_bp
+from business.forecast_sheet import forecast_sheet_bp
 #from business.order_export import order_export_bp
 from shared_apis.batch_info_type import batch_type_bp
 from shared_apis.customer import customer_bp
@@ -98,6 +99,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(outsource_factory_bp)
     app.register_blueprint(process_sheet_upload_bp)
     app.register_blueprint(order_create_bp)
+    app.register_blueprint(forecast_sheet_bp)
     app.register_blueprint(production_scheduling_bp)
     app.register_blueprint(outsource_bp)
     app.register_blueprint(production_status_nodes_bp)

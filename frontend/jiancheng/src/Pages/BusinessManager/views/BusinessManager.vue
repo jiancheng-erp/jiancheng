@@ -22,6 +22,9 @@
           <el-menu-item index="2" @click="handleMenuClick(2)">
             <span>订单管理</span>
           </el-menu-item>
+          <el-menu-item index="13" @click="handleMenuClick(13)">
+            <span>预报单管理</span>
+          </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
             <span>订单出库</span>
           </el-menu-item>
@@ -64,6 +67,7 @@
 import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import OrderManagement from '../components/OrderManagement.vue';
+import ForecastManagement from '../components/ForecastManagement.vue';
 import CustomerManagement from '../components/CustomerManagement.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import axios from 'axios'
@@ -77,6 +81,7 @@ export default {
     components: {
         AllHeader,
         OrderManagement,
+        ForecastManagement,
         CustomerManagement,
         ShoeTypeManagement,
         BatchInfoTypeManagement,
@@ -104,12 +109,16 @@ export default {
             this.userName = response.data.staffName + '-' + response.data.characterName
         },
         handleMenuClick(index) {
+            this.currentProps = {}
             switch (index) {
                 case 1:
                     this.currentComponent = 'Dashboard'
                     break
                 case 2:
                     this.currentComponent = 'OrderManagement'
+                    break
+                case 13:
+                    this.currentComponent = 'ForecastManagement'
                     break
                 case 3:
                     this.currentComponent = 'CustomerManagement'
