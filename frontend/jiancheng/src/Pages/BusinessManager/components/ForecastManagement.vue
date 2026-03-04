@@ -407,6 +407,7 @@
     v-model:batchNameFilter="batchNameFilter"
     :new-order-form="sheetBatchDialogForm"
     :customer-display-batch-data="customerDisplayBatchData"
+    :selected-batch-data="currentBatch"
     :attr-mapping="attrMapping"
     :cur-batch-type="curBatchType"
     @selection-change="handleSelectionBatchData"
@@ -615,6 +616,7 @@ export default {
       customerBatchData: [],
       customerDisplayBatchData: [],
       currentBatch: [],
+      isSyncingBatchSelection: false,
       batchNameFilter: '',
       curBatchType: {},
       editingForecastGroupKey: '',
@@ -1547,7 +1549,31 @@ export default {
       this.sheetItemsDialogVisible = true
     },
     handleSelectionBatchData(selection) {
-      this.currentBatch = selection || []
+      const incoming = Array.isArray(selection) ? selection : []
+      const current = Array.isArray(this.currentBatch) ? this.currentBatch : []
+      if (this.isSyncingBatchSelection && incoming.length === 0 && current.length > 0) {
+        return
+      }
+
+      const visibleIdSet = new Set((this.customerDisplayBatchData || []).map((row) => String(row?.packagingInfoId)))
+      const mergedMap = new Map()
+
+      current.forEach((item) => {
+        const id = item?.packagingInfoId
+        if (id === undefined || id === null) return
+        const key = String(id)
+        if (!visibleIdSet.has(key)) {
+          mergedMap.set(key, item)
+        }
+      })
+
+      incoming.forEach((item) => {
+        const id = item?.packagingInfoId
+        if (id === undefined || id === null) return
+        mergedMap.set(String(id), item)
+      })
+
+      this.currentBatch = Array.from(mergedMap.values())
     },
     reselectSelected(ref, selected, displayDataEntity, id) {
       this.$nextTick(() => {
@@ -1561,11 +1587,12 @@ export default {
     },
     filterBatchDataWithSelection() {
       const selectedBatch = this.currentBatch || []
+      this.isSyncingBatchSelection = true
       if (!this.batchNameFilter) {
-        this.customerDisplayBatchData = Array.from(new Set([...(selectedBatch || []).concat(this.customerBatchData || [])]))
+        this.customerDisplayBatchData = [...(this.customerBatchData || [])]
       } else {
         const filtered = (this.customerBatchData || []).filter((task) => String(task.packagingInfoName || '').includes(this.batchNameFilter))
-        this.customerDisplayBatchData = Array.from(new Set([...(selectedBatch || []).concat(filtered)]))
+        this.customerDisplayBatchData = [...filtered]
       }
       this.$nextTick(() => {
         const batchTable = this.$refs.forecastBatchInfoDialog?.batchTable?.value || this.$refs.forecastBatchInfoDialog?.batchTable
@@ -1576,6 +1603,7 @@ export default {
             batchTable.toggleRowSelection(found, true)
           }
         })
+        this.isSyncingBatchSelection = false
       })
     },
     openForecastBatchInfoDialog(item) {
@@ -1599,6 +1627,7 @@ export default {
           selected.push({ packagingInfoId: found.packagingInfoId })
         }
       })
+      this.currentBatch = selected
 
       this.$nextTick(() => {
         const batchTable = this.$refs.forecastBatchInfoDialog?.batchTable?.value || this.$refs.forecastBatchInfoDialog?.batchTable

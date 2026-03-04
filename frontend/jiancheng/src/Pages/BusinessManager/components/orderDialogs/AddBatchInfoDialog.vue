@@ -18,7 +18,23 @@
                 </el-descriptions>
             </el-col>
         </el-row>
-        <el-row :gutter="20">
+        <!-- <el-row :gutter="20" style="margin-top: 10px">
+            <el-col :span="24">
+                <el-text type="primary">已选择配码（{{ selectedBatchCount }}）</el-text>
+                <el-table :data="selectedBatchData" border stripe max-height="180" style="margin-top: 8px">
+                    <el-table-column prop="packagingInfoName" label="配码名称" min-width="180" />
+                    <el-table-column prop="packagingInfoLocale" label="配码地区" min-width="140" />
+                    <el-table-column prop="totalQuantityRatio" label="比例和" width="100" />
+                </el-table>
+            </el-col>
+        </el-row> -->
+
+        <el-row :gutter="20" style="margin-top: 10px">
+            <el-col :span="24">
+                <el-text type="primary">搜索结果（{{ searchResultCount }}）</el-text>
+            </el-col>
+        </el-row>
+        <el-row :gutter="20" style="margin-top: 8px">
             <el-table
                 :data="customerDisplayBatchData"
                 border
@@ -66,6 +82,10 @@ const props = defineProps({
         type: Array,
         default: () => []
     },
+    selectedBatchData: {
+        type: Array,
+        default: () => []
+    },
     attrMapping: {
         type: Object,
         default: () => ({})
@@ -93,6 +113,9 @@ const batchName = computed({
     get: () => props.batchNameFilter,
     set: (val) => emit('update:batchNameFilter', val)
 })
+
+const selectedBatchCount = computed(() => (Array.isArray(props.selectedBatchData) ? props.selectedBatchData.length : 0))
+const searchResultCount = computed(() => (Array.isArray(props.customerDisplayBatchData) ? props.customerDisplayBatchData.length : 0))
 
 defineExpose({
     batchTable

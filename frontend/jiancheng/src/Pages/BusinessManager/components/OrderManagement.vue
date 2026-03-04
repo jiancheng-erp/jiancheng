@@ -386,7 +386,7 @@
     </el-dialog>
 
     <AddBatchInfoDialog ref="batchInfoDialog" v-model:batchNameFilter="batchNameFilter" :new-order-form="newOrderForm"
-        :customer-display-batch-data="customerDisplayBatchData" :attr-mapping="attrMapping"
+        :customer-display-batch-data="customerDisplayBatchData" :selected-batch-data="currentBatch" :attr-mapping="attrMapping"
         :cur-batch-type="curBatchType" @selection-change="handleSelectionBatchData" @close="closeAddBatchInfoDialog"
         @open-add-customer-batch="openAddCustomerBatchDialog" @open-add-color="openAddColorDialog"
         @open-save-template="openSaveBatchTemplateDialog" @save-batch="addShoeTypeBatchInfo"
@@ -563,6 +563,7 @@ export default {
             isSyncingShoeSelection: false,
             // orderStatusList: [],
             currentBatch: [],
+            isSyncingBatchSelection: false,
             expandedRowKeys: [],
             previewOrderVis: false,
             orderInfoVis: false,
@@ -1317,6 +1318,7 @@ export default {
 
             // use canonical row from newOrderForm to avoid shallow/copy issues
             const canonicalRow = (this.newOrderForm.orderShoeTypes || []).find((r) => r.shoeTypeId == row.shoeTypeId) || row
+            this.currentBatch = this.normalizeBatchSelection(canonicalRow?.orderShoeTypeBatchInfo || [])
             // log row batch info for debugging
             console.log('openAddBatchInfoDialog row data for selection (canonical)', { shoeTypeId: canonicalRow.shoeTypeId, orderShoeTypeBatchInfo: canonicalRow.orderShoeTypeBatchInfo, quantityMapping: canonicalRow.quantityMapping, packagingInfoIds: canonicalRow.packagingInfoIds })
 
@@ -2291,8 +2293,31 @@ export default {
             }
         },
         handleSelectionBatchData(selection) {
-            this.currentBatch = selection
-            // console.log(this.currentBatch)
+            const incoming = this.normalizeBatchSelection(selection)
+            const current = this.normalizeBatchSelection(this.currentBatch)
+            if (this.isSyncingBatchSelection && incoming.length === 0 && current.length > 0) {
+                return
+            }
+
+            const visibleIdSet = new Set((this.customerDisplayBatchData || []).map((row) => String(row?.packagingInfoId)))
+            const mergedMap = new Map()
+
+            current.forEach((item) => {
+                const id = item?.packagingInfoId
+                if (id === undefined || id === null) return
+                const key = String(id)
+                if (!visibleIdSet.has(key)) {
+                    mergedMap.set(key, item)
+                }
+            })
+
+            incoming.forEach((item) => {
+                const id = item?.packagingInfoId
+                if (id === undefined || id === null) return
+                mergedMap.set(String(id), item)
+            })
+
+            this.currentBatch = Array.from(mergedMap.values())
         },
         resolveBatchInfoById(packagingInfoId) {
             if (packagingInfoId === undefined || packagingInfoId === null) return null
@@ -2363,15 +2388,16 @@ export default {
             }
         },
         filterBatchDataWithSelection() {
-            const selectedBatch = this.currentBatch
+            const selectedBatch = this.normalizeBatchSelection(this.currentBatch)
+            this.isSyncingBatchSelection = true
             if (!this.batchNameFilter) {
-                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerBatchData)]))
+                this.customerDisplayBatchData = [...(this.customerBatchData || [])]
             } else {
                 this.customerFilteredBatchData = this.customerBatchData.filter((task) => {
                     const filteredData = task.packagingInfoName.includes(this.batchNameFilter)
                     return filteredData
                 })
-                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerFilteredBatchData)]))
+                this.customerDisplayBatchData = [...(this.customerFilteredBatchData || [])]
             }
             this.$nextTick(() => {
                 selectedBatch.forEach((item) => {
@@ -2384,6 +2410,7 @@ export default {
                         tableRef.toggleRowSelection(matchedRow, true)
                     }
                 })
+                this.isSyncingBatchSelection = false
             })
         },
         addShoeTypeBatchInfo() {
