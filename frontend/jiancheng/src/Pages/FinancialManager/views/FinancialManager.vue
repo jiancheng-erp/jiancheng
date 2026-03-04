@@ -12,34 +12,37 @@
         </div>
 
         <el-menu :default-active="activeIndex" class="app-menu" :unique-opened="true">
-          <el-menu-item index="1" @click="handleMenuClick('FinancialWarehouseDetail','1')">
+          <el-menu-item index="1" @click="handleMenuClick('FinancialWarehouseDetail', '1')">
             <span>总仓出入库记录</span>
           </el-menu-item>
-          <el-menu-item index="2" @click="handleMenuClick('FinancialWarehouseInventory','2')">
+          <el-menu-item index="2" @click="handleMenuClick('FinancialWarehouseInventory', '2')">
             <span>库存</span>
           </el-menu-item>
-          <el-menu-item index="9" @click="handleMenuClick('InOutboundRecords','9')">
+          <el-menu-item index="12" @click="handleMenuClick('InOutboundRecordsForAdmin', '12')">
+            <span>行政入库审核</span>
+          </el-menu-item>
+          <el-menu-item index="9" @click="handleMenuClick('InOutboundRecords', '9')">
             <span>成品仓出入库记录</span>
-          </el-menu-item>          
-          <el-menu-item index="3" @click="handleMenuClick('FinancialRecievableDetail','3')">
+          </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick('FinancialRecievableDetail', '3')">
             <span>应收记录</span>
           </el-menu-item>
-          <el-menu-item index="4" @click="handleMenuClick('GeneralOrderSearchForWarehouse','4')">
+          <el-menu-item index="4" @click="handleMenuClick('GeneralOrderSearchForWarehouse', '4')">
             <span>订单查询</span>
           </el-menu-item>
-          <el-menu-item index="5" @click="handleMenuClick('SupplierManagementView','5')">
+          <el-menu-item index="5" @click="handleMenuClick('SupplierManagementView', '5')">
             <span>供应商管理</span>
           </el-menu-item>
-          <el-menu-item index="6" @click="handleMenuClick('MaterialManagementView','6')">
+          <el-menu-item index="6" @click="handleMenuClick('MaterialManagementView', '6')">
             <span>物料管理</span>
           </el-menu-item>
-          <el-menu-item index="7" @click="handleMenuClick('DevelopmentPerformanceManagement','7')">
+          <el-menu-item index="7" @click="handleMenuClick('DevelopmentPerformanceManagement', '7')">
             <span>开发绩效管理</span>
           </el-menu-item>
-          <el-menu-item index="8" @click="handleMenuClick('OrderSearch','8')">
+          <el-menu-item index="8" @click="handleMenuClick('OrderSearch', '8')">
             <span>BOM查询</span>
           </el-menu-item>
-          <el-menu-item index="10" @click="handleMenuClick('FinancialExchangeManagement','10')">
+          <el-menu-item index="10" @click="handleMenuClick('FinancialExchangeManagement', '10')">
             <span>汇率管理</span>
           </el-menu-item>
           <el-menu-item index="99" @click="logout">
@@ -49,7 +52,7 @@
       </el-aside>
 
       <el-main class="app-main">
-        <component :is="components[currentComponent]" />
+        <component :is="components[currentComponent]" v-bind="componentProps[currentComponent] || {}" />
       </el-main>
     </el-container>
   </el-container>
@@ -62,7 +65,7 @@ import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import useSetAxiosToken from '../hooks/useSetAxiosToken'
-
+import InOutboundRecordsForAdmin from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/InOutboundRecords.vue'
 import FinancialPayableDetail from '../components/FinancialPayableDetail.vue'
 import FinancialHistoryRecord from '../components/FinancialHistoryRecord.vue'
 import FinancialItemEntry from '../components/FinancialItemEntry.vue'
@@ -100,12 +103,19 @@ const components = {
   DevelopmentPerformanceManagement,
   OrderSearch,
   InOutboundRecords,
-  FinancialExchangeManagement
+  FinancialExchangeManagement,
+  InOutboundRecordsForAdmin
 }
 
 const userName = ref('财务部-主管')
 const activeIndex = ref('1')
 const currentComponent = ref('FinancialWarehouseDetail')
+const componentProps = {
+  InOutboundRecordsForAdmin: {
+    adminInboundOnly: true,
+    inboundTypeFilter: 3
+  }
+}
 
 const { setAxiosToken } = useSetAxiosToken()
 const $api_baseUrl = getCurrentInstance().appContext.config.globalProperties.$apiBaseUrl
@@ -140,8 +150,8 @@ async function logout() {
   --header-grad-b: #2193b0;
   --brand: #2193b0;
   --border-color: #e5e7eb;
-  --shadow-soft: 0 6px 16px rgba(0,0,0,.08);
-  --shadow: 0 10px 30px rgba(0,0,0,.12);
+  --shadow-soft: 0 6px 16px rgba(0, 0, 0, .08);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .12);
   --radius-lg: 12px;
   --radius-xl: 16px;
 }
@@ -167,10 +177,12 @@ async function logout() {
   box-shadow: var(--shadow-soft);
   transition: box-shadow .2s ease, transform .12s ease;
 }
+
 .userInfo:hover {
-  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .08);
   transform: translateY(-1px);
 }
+
 .userInfo em {
   margin-right: 8px !important;
   color: var(--brand) !important;
@@ -178,6 +190,7 @@ async function logout() {
   font-style: normal;
   font-weight: 600;
 }
+
 .userInfo em:hover {
   color: color-mix(in srgb, var(--brand) 85%, black) !important;
 }

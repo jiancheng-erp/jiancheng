@@ -206,6 +206,10 @@ export default {
         loadReject: {
             type: Boolean,
             default: false
+        },
+        inboundTypeFilter: {
+            type: Number,
+            default: null
         }
     },
     emits: ['update-selected-row'],
@@ -293,6 +297,9 @@ export default {
                     supplierName: this.supplierNameSearch,
                     warehouseName: this.warehouseNameSearch,
                     status: this.statusSearch
+                }
+                if (this.inboundTypeFilter !== null && this.inboundTypeFilter !== undefined) {
+                    params.inboundType = this.inboundTypeFilter
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialinboundrecords`, { params })
                 this.tableData = response.data.result
