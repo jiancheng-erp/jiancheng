@@ -89,6 +89,7 @@ def create_app(config_override=None):
         "/multiissue/downloadtotalpurchaseorder",
         "/logistics/downloadlastpurchaseorders",
         "/logistics/downloadpackagepurchaseorders",
+        "/forecastsheet/downloadexcel"
     ]
 
     @app.before_request
