@@ -11,7 +11,8 @@ from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from api_utility import format_date
 from decimal import Decimal
-from sqlalchemy import func
+from sqlalchemy import func, or_
+from login.login import current_user_info
 
 from app_config import db
 
@@ -32,6 +33,7 @@ department_name = "业务部"
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
 BUSINESS_MANAGER_ROLE = 4
+BUSINESS_CLERK_ROLE = 21
 ORDER_TYPE_NORMAL = "N"
 ORDER_TYPE_FORECAST = "F"
 
@@ -88,6 +90,157 @@ def _build_unique_split_order_cid(source_order_cid: str, split_index: int):
         if not existing:
             return candidate
         serial += 1
+
+
+def _normalize_ratio_value(value):
+    if value is None:
+        return 0
+    if isinstance(value, Decimal):
+        if value == value.to_integral_value():
+            return int(value)
+        return float(value)
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def _build_order_template_payload_from_order(order_id: int):
+    order_bundle = (
+        db.session.query(Order, Customer, BatchInfoType)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(BatchInfoType, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+        .filter(Order.order_id == order_id)
+        .first()
+    )
+    if not order_bundle:
+        return None
+
+    order_entity, customer_entity, batch_info_type = order_bundle
+    meta = {
+        "orderRid": order_entity.order_rid,
+        "orderCid": order_entity.order_cid,
+        "orderType": normalize_order_type(order_entity.order_type),
+        "customerId": customer_entity.customer_id,
+        "customerName": customer_entity.customer_name,
+        "customerBrand": customer_entity.customer_brand,
+        "batchInfoTypeId": batch_info_type.batch_info_type_id,
+        "batchInfoTypeName": batch_info_type.batch_info_type_name,
+        "sourceOrderRid": order_entity.order_rid,
+        "sourceOrderId": order_entity.order_id,
+    }
+
+    shoes = []
+    order_shoe_entities = (
+        db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(OrderShoe.order_id == order_entity.order_id)
+        .order_by(OrderShoe.order_shoe_id.asc())
+        .all()
+    )
+    shoe_id_to_colors = {}
+
+    for order_shoe_entity, shoe_entity in order_shoe_entities:
+        if shoe_entity.shoe_id not in shoe_id_to_colors:
+            color_rows = (
+                db.session.query(ShoeType, Color)
+                .join(Color, ShoeType.color_id == Color.color_id)
+                .filter(ShoeType.shoe_id == shoe_entity.shoe_id)
+                .all()
+            )
+            shoe_id_to_colors[shoe_entity.shoe_id] = [
+                {"label": color.color_name, "value": color.color_id}
+                for _, color in color_rows
+            ]
+
+        order_shoe_type_entities = (
+            db.session.query(OrderShoeType, ShoeType, Color)
+            .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+            .join(Color, ShoeType.color_id == Color.color_id)
+            .filter(OrderShoeType.order_shoe_id == order_shoe_entity.order_shoe_id)
+            .order_by(OrderShoeType.order_shoe_type_id.asc())
+            .all()
+        )
+
+        for order_shoe_type_entity, shoe_type_entity, color_entity in order_shoe_type_entities:
+            batch_entities = (
+                db.session.query(OrderShoeBatchInfo, PackagingInfo)
+                .join(
+                    PackagingInfo,
+                    OrderShoeBatchInfo.packaging_info_id == PackagingInfo.packaging_info_id,
+                )
+                .filter(
+                    OrderShoeBatchInfo.order_shoe_type_id
+                    == order_shoe_type_entity.order_shoe_type_id
+                )
+                .order_by(OrderShoeBatchInfo.order_shoe_batch_info_id.asc())
+                .all()
+            )
+
+            order_shoe_type_batch_info = []
+            quantity_mapping = {}
+            for batch_entity, packaging_info_entity in batch_entities:
+                total_ratio = _normalize_ratio_value(packaging_info_entity.total_quantity_ratio)
+                quantity_per_ratio = batch_entity.packaging_info_quantity
+                if quantity_per_ratio is None and total_ratio:
+                    quantity_per_ratio = Decimal(batch_entity.total_amount) / Decimal(total_ratio)
+
+                normalized_quantity = _normalize_ratio_value(quantity_per_ratio)
+                packaging_info_id = packaging_info_entity.packaging_info_id
+                quantity_mapping[str(packaging_info_id)] = normalized_quantity
+                order_shoe_type_batch_info.append(
+                    {
+                        "packagingInfoId": packaging_info_id,
+                        "packagingInfoName": packaging_info_entity.packaging_info_name,
+                        "packagingInfoLocale": packaging_info_entity.packaging_info_locale,
+                        "size34Ratio": _normalize_ratio_value(packaging_info_entity.size_34_ratio),
+                        "size35Ratio": _normalize_ratio_value(packaging_info_entity.size_35_ratio),
+                        "size36Ratio": _normalize_ratio_value(packaging_info_entity.size_36_ratio),
+                        "size37Ratio": _normalize_ratio_value(packaging_info_entity.size_37_ratio),
+                        "size38Ratio": _normalize_ratio_value(packaging_info_entity.size_38_ratio),
+                        "size39Ratio": _normalize_ratio_value(packaging_info_entity.size_39_ratio),
+                        "size40Ratio": _normalize_ratio_value(packaging_info_entity.size_40_ratio),
+                        "size41Ratio": _normalize_ratio_value(packaging_info_entity.size_41_ratio),
+                        "size42Ratio": _normalize_ratio_value(packaging_info_entity.size_42_ratio),
+                        "size43Ratio": _normalize_ratio_value(packaging_info_entity.size_43_ratio),
+                        "size44Ratio": _normalize_ratio_value(packaging_info_entity.size_44_ratio),
+                        "size45Ratio": _normalize_ratio_value(packaging_info_entity.size_45_ratio),
+                        "size46Ratio": _normalize_ratio_value(packaging_info_entity.size_46_ratio),
+                        "totalQuantityRatio": total_ratio,
+                    }
+                )
+
+            shoes.append(
+                {
+                    "shoeRid": shoe_entity.shoe_rid,
+                    "shoeId": shoe_entity.shoe_id,
+                    "shoeTypeId": order_shoe_type_entity.shoe_type_id,
+                    "shoeImageUrl": shoe_type_entity.shoe_image_url,
+                    "orderShoeTypeBatchInfo": order_shoe_type_batch_info,
+                    "quantityMapping": quantity_mapping,
+                    "customerShoeName": order_shoe_entity.customer_product_name or "",
+                    "customerColorName": order_shoe_type_entity.customer_color_name or color_entity.color_name or "",
+                    "colorId": color_entity.color_id,
+                    "colorName": color_entity.color_name,
+                    "businessMaterialRemark": order_shoe_entity.business_material_remark or "",
+                    "businessTechnicalRemark": order_shoe_entity.business_technical_remark or "",
+                    "shoeTypeColors": shoe_id_to_colors.get(shoe_entity.shoe_id, []),
+                }
+            )
+
+    return {
+        "templateName": order_entity.order_rid or order_entity.order_cid or f"历史订单-{order_entity.order_id}",
+        "templateDescription": "来自历史订单",
+        "orderTemplate": {"orderData": meta, "orderShoeData": shoes},
+        "sourceOrderId": order_entity.order_id,
+    }
+
+
+def _build_order_source_visibility_filter(current_user_role, staff_id):
+    if current_user_role == BUSINESS_MANAGER_ROLE:
+        return or_(Order.supervisor_id == staff_id, Order.salesman_id == staff_id)
+    if current_user_role == BUSINESS_CLERK_ROLE:
+        return Order.salesman_id == staff_id
+    return None
 
 
 @order_create_bp.route("/ordercreate/createneworder", methods=["POST"])
@@ -1459,6 +1612,122 @@ def get_order_template_by_id():
 
     # legacy: return stored json as-is
     return jsonify({"orderTemplateId": t.order_template_id, "templateName": t.template_name, "templateDescription": t.template_description, "orderTemplate": t.order_template_json, "sourceOrderId": getattr(t, 'source_order_id', None)}), 200
+
+
+@order_create_bp.route("/ordercreate/gethistoryordertemplate", methods=["GET"])
+def get_history_order_template():
+    order_id = request.args.get("orderId", type=int)
+    if not order_id:
+        return jsonify({"error": "orderId is required"}), 400
+
+    payload = _build_order_template_payload_from_order(order_id)
+    if not payload:
+        return jsonify({"error": "order not found"}), 404
+
+    payload["historyOrderId"] = order_id
+    return jsonify(payload), 200
+
+
+@order_create_bp.route("/ordercreate/getordersourcelist", methods=["GET"])
+def get_order_source_list():
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 10, type=int)
+    keyword = (request.args.get("keyword") or "").strip()
+
+    character, staff, _ = current_user_info()
+    if not character or not staff:
+        return jsonify({"error": "current user not found"}), 401
+
+    visibility_filter = _build_order_source_visibility_filter(character.character_id, staff.staff_id)
+    if visibility_filter is None:
+        return jsonify({"error": "invalid user role"}), 401
+
+    query = (
+        db.session.query(
+            Order.order_id.label("orderDbId"),
+            Order.order_rid.label("orderRid"),
+            Order.order_cid.label("orderCid"),
+            Order.order_type.label("orderType"),
+            Order.start_date.label("orderStartDate"),
+            Order.end_date.label("orderEndDate"),
+            Order.salesman_id.label("salesmanId"),
+            Order.supervisor_id.label("supervisorId"),
+            Customer.customer_name.label("customerName"),
+            Customer.customer_brand.label("customerBrand"),
+            func.group_concat(func.distinct(Shoe.shoe_rid)).label("shoeRId"),
+            func.group_concat(func.distinct(OrderShoe.customer_product_name)).label("customerProductName"),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .filter(visibility_filter)
+    )
+
+    if keyword:
+        like_keyword = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                Order.order_rid.like(like_keyword),
+                Order.order_cid.like(like_keyword),
+                Customer.customer_name.like(like_keyword),
+                Customer.customer_brand.like(like_keyword),
+                Shoe.shoe_rid.like(like_keyword),
+                OrderShoe.customer_product_name.like(like_keyword),
+            )
+        )
+
+    query = query.group_by(
+        Order.order_id,
+        Order.order_rid,
+        Order.order_cid,
+        Order.order_type,
+        Order.start_date,
+        Order.end_date,
+        Order.salesman_id,
+        Order.supervisor_id,
+        Customer.customer_name,
+        Customer.customer_brand,
+    )
+
+    total = db.session.query(func.count()).select_from(query.subquery()).scalar() or 0
+
+    paged_rows = (
+        query.order_by(Order.order_id.desc())
+        .offset(max(page - 1, 0) * page_size)
+        .limit(page_size)
+        .all()
+    )
+
+    staff_ids = set()
+    for row in paged_rows:
+        if row.salesmanId is not None:
+            staff_ids.add(row.salesmanId)
+        if row.supervisorId is not None:
+            staff_ids.add(row.supervisorId)
+
+    staff_entities = db.session.query(Staff).filter(Staff.staff_id.in_(list(staff_ids))).all() if staff_ids else []
+    staff_name_map = {entity.staff_id: entity.staff_name for entity in staff_entities}
+
+    result = []
+    for row in paged_rows:
+        result.append(
+            {
+                "orderDbId": row.orderDbId,
+                "orderRid": row.orderRid,
+                "orderCid": row.orderCid,
+                "orderType": row.orderType,
+                "customerName": row.customerName,
+                "customerBrand": row.customerBrand,
+                "customerProductName": row.customerProductName or "",
+                "shoeRId": row.shoeRId or "",
+                "orderStartDate": row.orderStartDate.strftime("%Y-%m-%d") if row.orderStartDate else "",
+                "orderEndDate": row.orderEndDate.strftime("%Y-%m-%d") if row.orderEndDate else "",
+                "orderSalesman": staff_name_map.get(row.salesmanId, ""),
+                "orderSupervisor": staff_name_map.get(row.supervisorId, ""),
+            }
+        )
+
+    return jsonify({"items": result, "total": total, "page": page, "pageSize": page_size}), 200
 
 
 @order_create_bp.route("/ordercreate/deleteordertemplate", methods=["POST"])
