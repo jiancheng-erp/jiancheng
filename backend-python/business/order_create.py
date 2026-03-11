@@ -11,7 +11,7 @@ from models import *
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
 from api_utility import format_date
 from decimal import Decimal
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, true
 from login.login import current_user_info
 
 from app_config import db
@@ -236,8 +236,8 @@ def _build_order_template_payload_from_order(order_id: int):
 
 
 def _build_order_source_visibility_filter(current_user_role, staff_id):
-    # if current_user_role == BUSINESS_MANAGER_ROLE:
-        # filter manager order template ?
+    if current_user_role == BUSINESS_MANAGER_ROLE:
+        return true()
     if current_user_role == BUSINESS_CLERK_ROLE:
         return Order.salesman_id == staff_id
     return None
