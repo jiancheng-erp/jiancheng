@@ -236,8 +236,8 @@ def _build_order_template_payload_from_order(order_id: int):
 
 
 def _build_order_source_visibility_filter(current_user_role, staff_id):
-    if current_user_role == BUSINESS_MANAGER_ROLE:
-        return or_(Order.supervisor_id == staff_id, Order.salesman_id == staff_id)
+    # if current_user_role == BUSINESS_MANAGER_ROLE:
+        # filter manager order template ?
     if current_user_role == BUSINESS_CLERK_ROLE:
         return Order.salesman_id == staff_id
     return None
