@@ -1,4 +1,5 @@
 from numpy import character
+from collections import Counter
 import constants
 import time
 from app_config import db
@@ -8,7 +9,7 @@ from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
 import math
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from event_processor import EventProcessor
 
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
@@ -45,6 +46,52 @@ ORDER_STATUS_CLERK_DISPLAY_MSG = {
 }
 # 技术部文员
 TECHNICAL_CLERK_ROLE = 15
+PRODUCTION_FLOW_ORDER_STATUS_NAME = "生产流程"
+ORDER_LINGER_TERMINAL_STATUS_NAMES = {
+    "发货量上传",
+    "全部发货确认",
+    "订单完成",
+}
+LINGER_IGNORED_SHOE_STATUS_NAMES = {
+    "裁断，批皮工价填报",
+    "针车及预备工序填报",
+    "成型工价填报",
+}
+LINGER_TERMINAL_SHOE_STATUS_NAMES = {
+    "一次采购入库",
+    "二次采购入库",
+    "二次BOM下发",
+    "二次BOM用量完成",
+    "二次BOM填写完成",
+}
+NON_LINGER_SHOE_STATUS_NAMES = LINGER_TERMINAL_SHOE_STATUS_NAMES | LINGER_IGNORED_SHOE_STATUS_NAMES
+
+
+def _format_datetime_or_na(value):
+    if not value:
+        return "N/A"
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _build_delay_text(delay_days):
+    if delay_days is None:
+        return "N/A"
+    return f"{delay_days}天"
+
+
+def _join_display_values(values):
+    cleaned_values = [value for value in values if value and value != "N/A"]
+    if not cleaned_values:
+        return "N/A"
+    return " | ".join(cleaned_values)
+
+
+def _is_linger_status_name(status_name):
+    return bool(status_name) and status_name not in NON_LINGER_SHOE_STATUS_NAMES
+
+
+def _is_linger_order_status_name(status_name):
+    return bool(status_name) and status_name not in ORDER_LINGER_TERMINAL_STATUS_NAMES
 
 # 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
@@ -1389,6 +1436,254 @@ def get_order_doc_info():
     return jsonify(result)
 
 
+@order_bp.route("/order/getordershoestatusoptions", methods=["GET"])
+def get_order_shoe_status_options():
+    order_entities = (
+        db.session.query(OrderStatusReference)
+        .filter(~OrderStatusReference.order_status_name.in_(ORDER_LINGER_TERMINAL_STATUS_NAMES))
+        .order_by(OrderStatusReference.order_status_id.asc())
+        .all()
+    )
+    shoe_entities = (
+        db.session.query(OrderShoeStatusReference)
+        .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
+        .order_by(OrderShoeStatusReference.status_id.asc())
+        .all()
+    )
+    result = [
+        {
+            "value": f"order:{entity.order_status_id}",
+            "label": f"订单阶段 / {entity.order_status_name}",
+            "stageType": "order",
+            "stageId": entity.order_status_id,
+        }
+        for entity in order_entities
+    ]
+    result.extend(
+        [
+            {
+                "value": f"shoe:{entity.status_id}",
+                "label": f"鞋型阶段 / {entity.status_name}",
+                "stageType": "shoe",
+                "stageId": entity.status_id,
+            }
+            for entity in shoe_entities
+        ]
+    )
+    return jsonify({"options": result})
+
+
+def _parse_linger_stage_value(linger_stage_value):
+    linger_stage_type = None
+    linger_stage_id = None
+    if linger_stage_value and ":" in linger_stage_value:
+        linger_stage_type, linger_stage_id_text = linger_stage_value.split(":", 1)
+        try:
+            linger_stage_id = int(linger_stage_id_text)
+        except ValueError:
+            linger_stage_type = None
+            linger_stage_id = None
+    return linger_stage_type, linger_stage_id
+
+
+def _build_linger_dashboard_records(linger_stage_value="", min_stay_days=0):
+    now = datetime.now()
+    linger_stage_type, linger_stage_id = _parse_linger_stage_value(linger_stage_value)
+    threshold_time = now - timedelta(days=min_stay_days) if min_stay_days and min_stay_days > 0 else None
+    records = []
+
+    include_order_records = linger_stage_type in (None, "order")
+    include_shoe_records = linger_stage_type in (None, "shoe")
+
+    if include_order_records:
+        order_query = (
+            db.session.query(
+                Order.order_id,
+                Order.order_rid,
+                Customer.customer_name,
+                OrderStatus.order_current_status,
+                OrderStatus.update_time,
+                OrderStatusReference.order_status_name,
+            )
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+            .join(
+                OrderStatusReference,
+                OrderStatus.order_current_status == OrderStatusReference.order_status_id,
+            )
+            .filter(OrderStatus.order_current_status != ORDER_IN_PROD_STATUS)
+            .filter(~OrderStatusReference.order_status_name.in_(ORDER_LINGER_TERMINAL_STATUS_NAMES))
+        )
+        if linger_stage_type == "order" and linger_stage_id is not None:
+            order_query = order_query.filter(OrderStatus.order_current_status == linger_stage_id)
+        if threshold_time is not None:
+            order_query = order_query.filter(OrderStatus.update_time <= threshold_time)
+
+        for order_id, order_rid, customer_name, order_status_id, update_time, status_name in order_query.all():
+            if not update_time or not _is_linger_order_status_name(status_name):
+                continue
+            delay_days = max(0, (now - update_time).days)
+            records.append({
+                "recordType": "order",
+                "recordKey": f"order:{order_id}",
+                "orderId": order_id,
+                "orderRid": order_rid,
+                "customerName": customer_name,
+                "shoeRid": "N/A",
+                "customerProductName": "N/A",
+                "lingerStage": status_name,
+                "lingerStageType": "订单阶段",
+                "lingerSince": _format_datetime_or_na(update_time),
+                "delayDays": delay_days,
+                "delayText": _build_delay_text(delay_days),
+                "orderStatusId": order_status_id,
+                "shoeStatusId": None,
+            })
+
+    order_ids_for_display = {
+        record["orderId"]
+        for record in records
+        if record.get("orderId") is not None
+    }
+    if order_ids_for_display:
+        order_shoe_rows = (
+            db.session.query(
+                OrderShoe.order_id,
+                Shoe.shoe_rid,
+                OrderShoe.customer_product_name,
+            )
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .filter(OrderShoe.order_id.in_(order_ids_for_display))
+            .all()
+        )
+        order_display_map = {}
+        for order_id, shoe_rid, customer_product_name in order_shoe_rows:
+            display_obj = order_display_map.setdefault(
+                order_id,
+                {"shoeRids": [], "customerProductNames": []},
+            )
+            if shoe_rid and shoe_rid not in display_obj["shoeRids"]:
+                display_obj["shoeRids"].append(shoe_rid)
+            if (
+                customer_product_name
+                and customer_product_name not in display_obj["customerProductNames"]
+            ):
+                display_obj["customerProductNames"].append(customer_product_name)
+
+        for record in records:
+            display_obj = order_display_map.get(record.get("orderId"))
+            if not display_obj:
+                continue
+            joined_shoe_rids = _join_display_values(display_obj["shoeRids"])
+            joined_customer_products = _join_display_values(
+                display_obj["customerProductNames"]
+            )
+            if joined_shoe_rids != "N/A":
+                record["shoeRid"] = joined_shoe_rids
+            if joined_customer_products != "N/A":
+                record["customerProductName"] = joined_customer_products
+
+    if include_shoe_records:
+        shoe_query = (
+            db.session.query(
+                Order.order_id,
+                Order.order_rid,
+                Customer.customer_name,
+                OrderShoe.order_shoe_id,
+                Shoe.shoe_rid,
+                OrderShoe.customer_product_name,
+                OrderShoeStatus.current_status,
+                OrderShoeStatusReference.status_name,
+                OrderShoeStatus.update_time,
+            )
+            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+            .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeStatusReference,
+                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
+            )
+            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
+            .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
+            .order_by(OrderShoe.order_shoe_id.asc(), OrderShoeStatus.update_time.desc())
+        )
+        if linger_stage_type == "shoe" and linger_stage_id is not None:
+            shoe_query = shoe_query.filter(OrderShoeStatus.current_status == linger_stage_id)
+        if threshold_time is not None:
+            shoe_query = shoe_query.filter(OrderShoeStatus.update_time <= threshold_time)
+
+        for row in shoe_query.all():
+            (
+                order_id,
+                order_rid,
+                customer_name,
+                order_shoe_id,
+                shoe_rid,
+                customer_product_name,
+                shoe_status_id,
+                status_name,
+                update_time,
+            ) = row
+            if not update_time or not _is_linger_status_name(status_name):
+                continue
+            delay_days = max(0, (now - update_time).days)
+            records.append({
+                "recordType": "shoe",
+                "recordKey": f"shoe:{order_shoe_id}:{shoe_status_id}",
+                "orderId": order_id,
+                "orderRid": order_rid,
+                "customerName": customer_name,
+                "shoeRid": shoe_rid,
+                "customerProductName": customer_product_name,
+                "lingerStage": status_name,
+                "lingerStageType": "鞋型阶段",
+                "lingerSince": _format_datetime_or_na(update_time),
+                "delayDays": delay_days,
+                "delayText": _build_delay_text(delay_days),
+                "orderStatusId": ORDER_IN_PROD_STATUS,
+                "shoeStatusId": shoe_status_id,
+            })
+
+    records.sort(key=lambda item: (-item["delayDays"], item["orderRid"], item["shoeRid"]))
+    return records
+
+
+@order_bp.route("/order/getlingerdashboard", methods=["GET"])
+def get_linger_dashboard():
+    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
+    min_stay_days = request.args.get("minStayDays", 0, type=int)
+    records = _build_linger_dashboard_records(linger_stage_value, min_stay_days)
+
+    stage_counter = Counter(record["lingerStage"] for record in records)
+    type_counter = Counter(record["lingerStageType"] for record in records)
+    summary = [
+        {"title": "滞留总数", "value": len(records)},
+        {"title": "订单阶段滞留", "value": type_counter.get("订单阶段", 0)},
+        {"title": "鞋型阶段滞留", "value": type_counter.get("鞋型阶段", 0)},
+        {"title": "超7天", "value": sum(1 for record in records if record["delayDays"] >= 7)},
+    ]
+    stage_distribution = [
+        {"name": name, "value": value}
+        for name, value in stage_counter.most_common()
+    ]
+    type_distribution = [
+        {"name": name, "value": value}
+        for name, value in type_counter.items()
+    ]
+
+    return jsonify({
+        "summary": summary,
+        "stageDistribution": stage_distribution,
+        "typeDistribution": type_distribution,
+        "topRecords": records[:20],
+        "records": records,
+    })
+
+
 @order_bp.route("/order/getorderfullinfo", methods=["GET"])
 def get_order_full_info():
     page = request.args.get("page", 1, type=int)
@@ -1399,6 +1694,18 @@ def get_order_full_info():
     shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
     order_cid_search = request.args.get("orderCIdSearch", "", type=str)
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
+    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
+    min_stay_days = request.args.get("minStayDays", 0, type=int)
+
+    linger_stage_type = None
+    linger_stage_id = None
+    if linger_stage_value and ":" in linger_stage_value:
+        linger_stage_type, linger_stage_id_text = linger_stage_value.split(":", 1)
+        try:
+            linger_stage_id = int(linger_stage_id_text)
+        except ValueError:
+            linger_stage_type = None
+            linger_stage_id = None
 
     character, staff, department = current_user_info()
 
@@ -1449,18 +1756,49 @@ def get_order_full_info():
         .subquery()
     )
 
-    query = (
-        db.session.query(
-            Order,
-            OrderStatusReference,
-            OrderShoe,
-            order_shoe_status_reference.c.status_name.label(
-                "order_shoe_status_reference_names"
-            ),
-            Customer,
-            Shoe,
-            order_amount_subquery.c.order_amount,
+    matched_status_subquery = None
+    matched_order_status = None
+    if linger_stage_type == "shoe" and linger_stage_id is not None:
+        matched_status_query = (
+            db.session.query(
+                OrderShoeStatus.order_shoe_id.label("order_shoe_id"),
+                OrderShoeStatus.current_status.label("matched_status_id"),
+                OrderShoeStatusReference.status_name.label("matched_status_name"),
+                OrderShoeStatus.update_time.label("matched_status_update_time"),
+            )
+            .join(
+                OrderShoeStatusReference,
+                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
+            )
+            .filter(OrderShoeStatus.current_status == linger_stage_id)
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
+            .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
         )
+        if min_stay_days and min_stay_days > 0:
+            matched_status_query = matched_status_query.filter(
+                OrderShoeStatus.update_time
+                <= datetime.now() - timedelta(days=min_stay_days)
+            )
+        matched_status_subquery = matched_status_query.subquery()
+    elif linger_stage_type == "order" and linger_stage_id is not None:
+        matched_order_status = linger_stage_id
+
+    query_columns = [
+        Order,
+        OrderStatus,
+        OrderStatusReference,
+        OrderShoe,
+        order_shoe_status_reference.c.status_name.label(
+            "order_shoe_status_reference_names"
+        ),
+        Customer,
+        Shoe,
+        order_amount_subquery.c.order_amount,
+    ]
+
+    query = (
+        db.session.query(*query_columns)
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(
             OrderStatusReference,
@@ -1492,6 +1830,19 @@ def get_order_full_info():
         .order_by(Order.order_id.desc())
     )
 
+    if matched_status_subquery is not None:
+        query = query.join(
+            matched_status_subquery,
+            OrderShoe.order_shoe_id == matched_status_subquery.c.order_shoe_id,
+        )
+        query = query.filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
+    elif matched_order_status is not None:
+        query = query.filter(OrderStatus.order_current_status == matched_order_status)
+        if min_stay_days and min_stay_days > 0:
+            query = query.filter(
+                OrderStatus.update_time <= datetime.now() - timedelta(days=min_stay_days)
+            )
+
     if character.character_id == DEV_DEPARTMENT_MANAGER:
         query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
         query = query.filter(Shoe.shoe_department_id == department.department_name)
@@ -1520,19 +1871,81 @@ def get_order_full_info():
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
 
+    response_order_shoe_ids = [
+        row[3].order_shoe_id
+        for row in response
+        if len(row) > 3 and row[3] is not None
+    ]
+    active_status_by_shoe = {}
+    if response_order_shoe_ids:
+        active_status_query = (
+            db.session.query(
+                OrderShoeStatus.order_shoe_id,
+                OrderShoeStatusReference.status_name,
+                OrderShoeStatus.update_time,
+            )
+            .join(
+                OrderShoeStatusReference,
+                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
+            )
+            .filter(OrderShoeStatus.order_shoe_id.in_(response_order_shoe_ids))
+            .filter(OrderShoeStatus.revert_info.is_(None))
+            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
+        )
+        active_status_query = active_status_query.filter(
+            ~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES)
+        )
+        active_status_rows = (
+            active_status_query
+            .order_by(OrderShoeStatus.order_shoe_id.asc(), OrderShoeStatus.update_time.desc())
+            .all()
+        )
+        for order_shoe_id, status_name, update_time in active_status_rows:
+            active_status_by_shoe.setdefault(order_shoe_id, []).append({
+                "status_name": status_name or "N/A",
+                "update_time": update_time,
+            })
+
     # Initialize a dictionary to group orders
     orders_dict = {}
 
     # Loop through the query result
-    for (
-        order,
-        order_status_reference,
-        order_shoe,
-        order_shoe_status_reference_names,
-        customer,
-        shoe,
-        order_amount,
-    ) in response:
+    for row in response:
+        (
+            order,
+            order_status,
+            order_status_reference,
+            order_shoe,
+            order_shoe_status_reference_names,
+            customer,
+            shoe,
+            order_amount,
+        ) = row
+        active_status_entries = active_status_by_shoe.get(order_shoe.order_shoe_id, [])
+        display_stage_names = []
+        display_stage_times = []
+        display_stage_delay_days = []
+        is_production_flow_order = (
+            order_status_reference is not None
+            and order_status_reference.order_status_name == PRODUCTION_FLOW_ORDER_STATUS_NAME
+        )
+        if is_production_flow_order:
+            for active_status_info in active_status_entries:
+                status_name = active_status_info.get("status_name")
+                update_time = active_status_info.get("update_time")
+                if not _is_linger_status_name(status_name) or not update_time:
+                    continue
+                display_stage_names.append(status_name)
+                display_stage_times.append(_format_datetime_or_na(update_time))
+                display_stage_delay_days.append(max(0, (datetime.now() - update_time).days))
+        elif order_status_reference and _is_linger_order_status_name(
+            order_status_reference.order_status_name
+        ):
+            if order_status and order_status.update_time:
+                display_stage_names.append(order_status_reference.order_status_name)
+                display_stage_times.append(_format_datetime_or_na(order_status.update_time))
+                display_stage_delay_days.append(max(0, (datetime.now() - order_status.update_time).days))
+        matched_delay_days = max(display_stage_delay_days) if display_stage_delay_days else None
         formatted_start_date = (
             order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A"
         )
@@ -1557,6 +1970,9 @@ def get_order_full_info():
                 ),
                 "shoes": {},  # Using a dictionary to avoid duplicate shoes
                 "orderAmount": order_amount if order_amount else 0,
+                "matchedStatusNames": "N/A",
+                "maxMatchedDelayDays": None,
+                "maxMatchedDelayText": "N/A",
             }
 
         # Use a unique key for each shoe to avoid duplicates
@@ -1595,6 +2011,13 @@ def get_order_full_info():
                 "firstUsageInputIssueEventTime": "N/A",
                 "firstPurchaseOrderIssueEventTime": "N/A",
                 "secondPurchaseOrderIssueEventTime": "N/A",
+                "matchedStatusName": _join_display_values(display_stage_names),
+                "matchedStatusNames": display_stage_names,
+                "matchedStatusUpdateTime": _join_display_values(display_stage_times),
+                "matchedStatusDelayDays": matched_delay_days,
+                "matchedStatusDelayText": _join_display_values([
+                    _build_delay_text(delay_days) for delay_days in display_stage_delay_days
+                ]),
             }
 
         # # Assign BOM based on bom_type
@@ -1623,6 +2046,26 @@ def get_order_full_info():
         order_data["shoes"] = list(
             order_data["shoes"].values()
         )  # Convert shoe dict to list
+        matched_status_names = sorted(
+            {
+                status_name
+                for shoe in order_data["shoes"]
+                for status_name in shoe.get("matchedStatusNames", [])
+                if status_name != "N/A"
+            }
+        )
+        matched_delay_days = [
+            shoe["matchedStatusDelayDays"]
+            for shoe in order_data["shoes"]
+            if shoe["matchedStatusDelayDays"] is not None
+        ]
+        if matched_status_names:
+            order_data["matchedStatusNames"] = "、".join(matched_status_names)
+        if matched_delay_days:
+            order_data["maxMatchedDelayDays"] = max(matched_delay_days)
+            order_data["maxMatchedDelayText"] = _build_delay_text(
+                order_data["maxMatchedDelayDays"]
+            )
         all_order_event_times = (
             db.session.query(Event).join(
                 Order, Event.event_order_id == Order.order_id
