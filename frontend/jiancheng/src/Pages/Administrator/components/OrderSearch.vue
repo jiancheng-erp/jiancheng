@@ -19,6 +19,18 @@
                 @change="tableFilter"></el-input>
         </el-col>
     </el-row>
+    <el-row :gutter="20" style="margin-top: 12px">
+        <el-col :span="6" :offset="0" style="white-space: nowrap">
+            滞留阶段筛选：
+            <el-select v-model="lingerStageValue" clearable filterable placeholder="请选择滞留阶段" @change="tableFilter">
+                <el-option v-for="item in stageOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+        </el-col>
+        <el-col :span="6" :offset="2" style="white-space: nowrap">
+            最少滞留天数：
+            <el-input-number v-model="minStayDays" :min="0" :step="1" @change="tableFilter" />
+        </el-col>
+    </el-row>
     <el-row>
         <el-table :data="orderFilterData" border stripe height="600">
             <el-table-column type="expand">
@@ -58,6 +70,9 @@
                                 </el-link>
                             </template>
                         </el-table-column>
+                        <el-table-column prop="matchedStatusName" label="滞留阶段" min-width="220" />
+                        <el-table-column prop="matchedStatusUpdateTime" label="进入阶段时间" min-width="240" />
+                        <el-table-column prop="matchedStatusDelayText" label="滞留时长" min-width="180" />
                         <el-table-column prop="statuses" label="鞋型状态"></el-table-column>
                     </el-table>
                 </template>
@@ -67,6 +82,8 @@
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
+            <el-table-column prop="matchedStatusNames" label="滞留阶段" min-width="220" />
+            <el-table-column prop="maxMatchedDelayText" label="最长滞留"></el-table-column>
             <el-table-column label="操作">
                 <template #default="scope">
                     <el-dropdown trigger="click" @command="handleCommand">
@@ -115,6 +132,9 @@ export default {
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
+            stageOptions: [],
+            lingerStageValue: '',
+            minStayDays: 0,
             currentPage: 1,
             pageSize: 10,
             totalPages: 0,
@@ -124,9 +144,18 @@ export default {
     },
     async mounted() {
         this.$setAxiosToken()
+        await this.getLingerStageOptions()
         await this.getOrderData(this.currentPage)
     },
     methods: {
+        async getLingerStageOptions() {
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/order/getordershoestatusoptions`)
+                this.stageOptions = response.data.options || []
+            } catch (error) {
+                console.error('Error fetching linger stage options:', error)
+            }
+        },
         async getOrderData() {
             try {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getorderfullinfo`, {
@@ -136,6 +165,8 @@ export default {
                         orderSearch: this.orderSearch,
                         customerSearch: this.customerSearch,
                         shoeRIdSearch: this.shoeRIdSearch,
+                        lingerStageValue: this.lingerStageValue,
+                        minStayDays: this.minStayDays,
                         viewPastTasks: this.viewPastTasks
                     },
                 })
