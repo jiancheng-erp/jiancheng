@@ -55,7 +55,7 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import InboundProduct from '../components/InboundProduct.vue'
-import FinishedInOutHistory from '../components/FinishedInOutHistory.vue'
+import FinishedInventoryPanel from '../components/FinishedInventoryPanel.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
@@ -68,7 +68,7 @@ export default {
     components: {
         AllHeader,
         InboundProduct,
-        FinishedInOutHistory,
+      FinishedInventoryPanel,
         OrderProgress,
         InOutboundRecords,
         PersonalInfo,
@@ -101,7 +101,7 @@ export default {
                     this.currentComponent = 'OrderProgress'
                     break
                 case 3:
-                    this.currentComponent = 'FinishedInOutHistory'
+                  this.currentComponent = 'FinishedInventoryPanel'
                     break
                 case 5:
                     this.currentComponent = 'InOutboundRecords'

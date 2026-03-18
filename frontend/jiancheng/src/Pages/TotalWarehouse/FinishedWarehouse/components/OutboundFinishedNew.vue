@@ -77,11 +77,11 @@
             <el-table-column prop="batchName" label="配码名称" width="120" />
             <el-table-column prop="packagingInfoName" label="包装方案" width="120" />
             <el-table-column prop="currentStock" label="当前库存(双)" width="120" />
-            <el-table-column label="入库状态" width="120">
+            <el-table-column label="状态" width="120">
               <template #default="{ row }">
-                <el-tag :type="row.inboundFinished ? 'success' : 'warning'">
-                  {{ row.inboundFinished ? '已完成入库' : '未完成入库' }}
-                </el-tag>
+                <el-tag v-if="Number(row.totalPairs) <= 0" type="info">已完成出库</el-tag>
+                <el-tag v-else-if="row.inboundFinished" type="success">已完成入库</el-tag>
+                <el-tag v-else type="warning">未完成入库</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="cartonCount" label="申请箱数" width="100" />
@@ -140,7 +140,7 @@
     <el-dialog
       v-model="executeDialogVisible"
       :title="`确认出库 - 申请单 ${currentExecuteRow?.applyRId || ''}`"
-      width="60%"
+      width="90%"
     >
       <el-form :model="executeForm" label-width="80px">
         <el-form-item label="拣货人">
@@ -156,15 +156,61 @@
         </el-form-item>
       </el-form>
 
+      <!-- 快速选择工具栏 -->
+      <div v-if="executeDetails.length" style="display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
+        <el-button size="small" @click="selectAll">全选已入库</el-button>
+        <el-button size="small" @click="deselectAll">取消全选</el-button>
+        <span style="color:#666; font-size:13px;">按鞋型选择：</span>
+        <el-select
+          v-model="executeFilterShoeRId"
+          placeholder="全部鞋型"
+          clearable
+          size="small"
+          style="width:180px;"
+          @change="onExecuteShoeFilter"
+        >
+          <el-option
+            v-for="rid in executeShoeRIdOptions"
+            :key="rid"
+            :label="rid"
+            :value="rid"
+          />
+        </el-select>
+        <el-button size="small" @click="selectFilteredShoeRId">选中该鞋型</el-button>
+      </div>
+
+      <!-- 已选鞋型汇总 -->
+      <div v-if="selectedShoeRIdSummary.length" style="margin-bottom:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span style="color:#409eff; font-size:13px; font-weight:500;">已选鞋型：</span>
+        <el-tag
+          v-for="item in selectedShoeRIdSummary"
+          :key="item.shoeRId"
+          size="small"
+          closable
+          style="margin-right:4px;"
+          @close="deselectShoeRId(item.shoeRId)"
+        >
+          {{ item.shoeRId }}（{{ item.count }}条）
+        </el-tag>
+        <span style="color:#999; font-size:12px; margin-left:4px;">
+          共 {{ selectedShoeRIdSummary.reduce((s, i) => s + i.count, 0) }} 条明细
+        </span>
+      </div>
+
       <el-table
         v-if="executeDetails.length"
-        :data="executeDetails"
+        :data="executeDetailsPaged"
         border
         stripe
         size="small"
         class="mb-2"
         max-height="320px"
       >
+        <el-table-column label="选择" width="60" align="center">
+          <template #default="{ row }">
+            <el-checkbox v-model="row._selected" :disabled="!row.inboundFinished" />
+          </template>
+        </el-table-column>
         <el-table-column prop="customerName" label="客户名称" width="120" />
         <el-table-column prop="shoeRId" label="工厂型号" width="140" />
         <el-table-column prop="customerProductName" label="客户鞋号" />
@@ -206,6 +252,19 @@
           </template>
         </el-table-column>
       </el-table>
+      <!-- 出库明细分页 -->
+      <el-pagination
+        v-if="executeDetails.length > executePageSize"
+        :current-page="executeCurrentPage"
+        :page-size="executePageSize"
+        :page-sizes="[20, 50, 100]"
+        :total="executeDetails.length"
+        layout="total, sizes, prev, pager, next"
+        size="small"
+        style="margin-top:6px;"
+        @current-change="(p) => executeCurrentPage = p"
+        @size-change="(s) => { executePageSize = s; executeCurrentPage = 1 }"
+      />
       <div v-if="executeDetails.length" class="execute-summary">
         预计合计：{{ executeTotalExpected }} 双；实际合计：{{ executeTotalActual }} 双；差异：{{ executeTotalActual - executeTotalExpected }} 双
       </div>
@@ -267,7 +326,30 @@ export default {
       },
       executeDetails: [],
       executeTotalExpected: 0,
-      executeTotalActual: 0
+      executeTotalActual: 0,
+      executeFilterShoeRId: '',
+      executeCurrentPage: 1,
+      executePageSize: 20
+    }
+  },
+  computed: {
+    executeShoeRIdOptions() {
+      const set = new Set(this.executeDetails.map((d) => d.shoeRId).filter(Boolean))
+      return [...set].sort()
+    },
+    executeDetailsPaged() {
+      const start = (this.executeCurrentPage - 1) * this.executePageSize
+      return this.executeDetails.slice(start, start + this.executePageSize)
+    },
+    selectedShoeRIdSummary() {
+      const map = {}
+      this.executeDetails.forEach((d) => {
+        if (d._selected && d.shoeRId) {
+          if (!map[d.shoeRId]) map[d.shoeRId] = 0
+          map[d.shoeRId]++
+        }
+      })
+      return Object.keys(map).sort().map((k) => ({ shoeRId: k, count: map[k] }))
     }
   },
   mounted() {
@@ -323,7 +405,7 @@ export default {
       const { details } = res.data || {}
       row.details = (details || []).map((item) => ({
         ...item,
-        inboundFinished: item.inboundFinished === 1 || item.finishedStatus === 1
+        inboundFinished: item.inboundFinished > 0 || item.finishedStatus > 0
       }))
       row.detailLoaded = true
       return row.details
@@ -338,7 +420,13 @@ export default {
         ElMessage.error('该申请单没有明细，无法出库')
         return
       }
-      const notInboundFinished = details.filter((item) => !item.inboundFinished)
+      // 过滤掉已出库完成的明细（totalPairs <= 0 表示已出库）
+      const pendingDetails = details.filter((item) => Number(item.totalPairs) > 0)
+      if (!pendingDetails.length) {
+        ElMessage.info('该申请单所有明细均已出库完成')
+        return
+      }
+      const notInboundFinished = pendingDetails.filter((item) => !item.inboundFinished)
       if (notInboundFinished.length) {
         const hint = notInboundFinished
           .slice(0, 3)
@@ -350,17 +438,19 @@ export default {
           .join(', ')
         ElMessage.warning(
           hint
-            ? `存在未完成入库的明细（${hint}），请入库完成后再出库`
-            : '存在未完成入库的明细，请入库完成后再出库'
+            ? `部分明细尚未完成入库（${hint}），已自动禁用，可对已入库明细进行出库`
+            : '部分明细尚未完成入库，已自动禁用'
         )
-        return
       }
-      this.executeDetails = details.map((item) => ({
+      this.executeDetails = pendingDetails.map((item) => ({
         ...item,
         actualCartonCount: Number(item.cartonCount) || 0,
         actualPairs: (Number(item.cartonCount) || 0) * (Number(item.pairsPerCarton) || 0),
-        _diff: 0
+        _diff: 0,
+        _selected: !!item.inboundFinished
       }))
+      this.executeFilterShoeRId = ''
+      this.executeCurrentPage = 1
       this.recalcExecuteSummary()
       this.executeForm = {
         picker: '',
@@ -389,10 +479,18 @@ export default {
         return
       }
 
-      const detailPayload = this.executeDetails.map((item) => ({
-        applyDetailId: item.applyDetailId,
-        actualCartonCount: Number(item.actualCartonCount)
-      }))
+      const detailPayload = this.executeDetails
+        .filter((item) => item._selected && Number(item.actualCartonCount) > 0)
+        .map((item) => ({
+          applyDetailId: item.applyDetailId,
+          actualCartonCount: Number(item.actualCartonCount)
+        }))
+      
+      if (!detailPayload.length) {
+        ElMessage.error('请至少勾选一行明细并填写实际出库箱数')
+        return
+      }
+
       const invalidDetail = detailPayload.find(
         (d) => Number.isNaN(d.actualCartonCount) || d.actualCartonCount < 0
       )
@@ -401,7 +499,7 @@ export default {
         return
       }
       const overExpected = this.executeDetails.find(
-        (item) => (Number(item.actualPairs) || 0) > (Number(item.totalPairs) || 0)
+        (item) => (Number(item.actualCartonCount) > 0) && ((Number(item.actualPairs) || 0) > (Number(item.totalPairs) || 0))
       )
       if (overExpected) {
         ElMessage.error('实际出库数量不能大于预计出库数量，请调整后再提交')
@@ -437,6 +535,34 @@ export default {
       }
     },
 
+    selectAll() {
+      this.executeDetails.forEach((item) => {
+        if (item.inboundFinished) item._selected = true
+      })
+    },
+    deselectAll() {
+      this.executeDetails.forEach((item) => {
+        item._selected = false
+      })
+    },
+    onExecuteShoeFilter() {
+      // 仅用于联动「选中该鞋型」按钮，不自动勾选
+    },
+    selectFilteredShoeRId() {
+      if (!this.executeFilterShoeRId) return
+      this.executeDetails.forEach((item) => {
+        if (item.shoeRId === this.executeFilterShoeRId && item.inboundFinished) {
+          item._selected = true
+        }
+      })
+    },
+    deselectShoeRId(shoeRId) {
+      this.executeDetails.forEach((item) => {
+        if (item.shoeRId === shoeRId) {
+          item._selected = false
+        }
+      })
+    },
     recalcExecuteSummary() {
       let expected = 0
       let actual = 0
