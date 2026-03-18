@@ -1,8 +1,27 @@
 <template>
     <div>
-        <!-- 筛选 -->
         <el-card shadow="never" class="mb-2">
-            <el-form :inline="true" @submit.native.prevent>
+            <el-form :inline="true" @submit.prevent>
+                <el-form-item label="数据模式">
+                    <el-radio-group v-model="queryMode" @change="refreshAndFetch">
+                        <el-radio-button label="realtime">实时库存</el-radio-button>
+                        <el-radio-button label="history">历史库存</el-radio-button>
+                    </el-radio-group>
+                </el-form-item>
+
+                <el-form-item v-if="queryMode === 'history'" label="时间区间">
+                    <el-date-picker
+                        v-model="filters.dateRange"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        value-format="YYYY-MM-DD"
+                        :disabled-date="disableAfterToday"
+                        @change="refresh"
+                    />
+                </el-form-item>
+
                 <el-form-item label="工厂型号">
                     <el-input v-model="filters.shoeRId" placeholder="输入工厂型号" clearable style="width: 220px" />
                 </el-form-item>
@@ -10,6 +29,7 @@
                 <el-form-item label="仅显示有库存">
                     <el-switch v-model="filters.showOnlyInStock" @change="refresh" />
                 </el-form-item>
+
                 <el-form-item label="鞋类型">
                     <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
                         <el-option label="男鞋" value="男鞋" />
@@ -18,24 +38,25 @@
                         <el-option label="其它" value="其它" />
                     </el-select>
                 </el-form-item>
+
                 <el-form-item>
-                    <el-button type="primary" @click="refresh">查询</el-button>
+                    <el-button type="primary" @click="refreshAndFetch">查询</el-button>
                     <el-button @click="reset">重置</el-button>
                 </el-form-item>
             </el-form>
         </el-card>
 
-        <!-- 顶部统计 -->
-        <el-alert :closable="false" type="info" :title="`型号总数：${filteredModels.length} | 当前库存合计：${sumCurrent}`" show-icon class="mb-2" />
+        <el-alert :closable="false" type="info" :title="summaryTitle" show-icon class="mb-2" />
 
-        <!-- 主表 -->
         <el-table :data="pagedModels" border stripe height="540">
-            <!-- 展开：颜色与库存 -->
             <el-table-column type="expand" width="50">
                 <template #default="scope">
                     <el-table :data="scope.row.colors" border stripe size="small">
                         <el-table-column prop="colorName" label="颜色" />
-                        <el-table-column prop="currentAmount" label="当前库存" />
+                        <el-table-column v-if="queryMode === 'history'" prop="openingAmount" label="期初" />
+                        <el-table-column v-if="queryMode === 'history'" prop="periodInbound" label="入库变化" />
+                        <el-table-column v-if="queryMode === 'history'" prop="periodOutbound" label="出库变化" />
+                        <el-table-column prop="currentAmount" :label="queryMode === 'history' ? '期末' : '当前库存'" />
                     </el-table>
                 </template>
             </el-table-column>
@@ -43,10 +64,13 @@
             <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="batchType" label="类型" width="200" show-overflow-tooltip />
             <el-table-column prop="designersText" label="设计师" show-overflow-tooltip />
-            <el-table-column prop="totalCurrent" label="当前库存总数" />
+
+            <el-table-column v-if="queryMode === 'history'" prop="totalOpening" label="期初数" />
+            <el-table-column v-if="queryMode === 'history'" prop="totalInbound" label="入库变化" />
+            <el-table-column v-if="queryMode === 'history'" prop="totalOutbound" label="出库变化" />
+            <el-table-column prop="totalCurrent" :label="queryMode === 'history' ? '期末数' : '当前库存总数'" />
         </el-table>
 
-        <!-- 分页 -->
         <div class="mt-2">
             <el-pagination
                 background
@@ -66,6 +90,7 @@
 import axios from 'axios'
 
 const DEFAULT_PAGE_SIZES = [10, 20, 30, 50]
+
 const normalizeCategoryByBatchType = (name) => {
   const s = (name || '').trim()
   if (s.includes('男')) return '男鞋'
@@ -73,15 +98,19 @@ const normalizeCategoryByBatchType = (name) => {
   if (s.includes('童')) return '童鞋'
   return '其它'
 }
+
 export default {
     name: 'FinishedFactoryModelView_ByModel_ExpandColors',
     data() {
         return {
-            rawRows: [], // /warehouse/getfinishedstorages 明细
+            queryMode: 'realtime',
+            rawRows: [],
+            modelMetaMap: {},
             filters: {
                 shoeRId: '',
                 showOnlyInStock: false,
-                category: '' // ← 新增：男鞋/女鞋/童鞋/其它（空=全部）
+                category: '',
+                dateRange: []
             },
             currentPage: 1,
             pageSize: 20,
@@ -93,20 +122,14 @@ export default {
             const { shoeRId, category } = this.filters
             return this.rawRows.filter((r) => {
                 const okShoe = shoeRId
-                    ? String(r.shoeRId || '')
-                          .toLowerCase()
-                          .includes(shoeRId.toLowerCase())
+                    ? String(r.shoeRId || '').toLowerCase().includes(shoeRId.toLowerCase())
                     : true
-
-                // 按类别筛选（来源 r.batchType）
                 const rowCat = normalizeCategoryByBatchType(r.batchType)
                 const okCat = category ? rowCat === category : true
-
                 return okShoe && okCat
             })
         },
 
-        // 聚合：型号维度；保留设计师；颜色放到 expand
         groupedByShoeRId() {
             const map = new Map()
             for (const r of this.filteredRows) {
@@ -114,32 +137,47 @@ export default {
                 if (!map.has(key)) {
                     map.set(key, {
                         shoeRId: key,
-                        batchType: r.batchType || '-', // 原始文本仍保留（如需显示）
+                        batchType: r.batchType || '-',
+                        totalOpening: 0,
+                        totalInbound: 0,
+                        totalOutbound: 0,
                         totalCurrent: 0,
                         designers: new Set(),
-                        colorMap: new Map(), // color -> { colorName, currentAmount }
-                        _flags: { man: false, woman: false, kid: false } // 类别标志
+                        colorMap: new Map(),
+                        _flags: { man: false, woman: false, kid: false }
                     })
                 }
                 const agg = map.get(key)
-
-                // 累加库存
+                const opening = Number(r.openingAmount || 0)
+                const inbound = Number(r.periodInbound || 0)
+                const outbound = Number(r.periodOutbound || 0)
                 const current = Number(r.currentAmount || 0)
+
+                agg.totalOpening += opening
+                agg.totalInbound += inbound
+                agg.totalOutbound += outbound
                 agg.totalCurrent += current
 
-                // 设计师
                 if (r.designer && String(r.designer).trim() !== '') {
                     agg.designers.add(r.designer)
                 }
 
-                // 颜色 -> 当前库存
                 const colorKey = r.colorName || '-'
                 if (!agg.colorMap.has(colorKey)) {
-                    agg.colorMap.set(colorKey, { colorName: colorKey, currentAmount: 0 })
+                    agg.colorMap.set(colorKey, {
+                        colorName: colorKey,
+                        openingAmount: 0,
+                        periodInbound: 0,
+                        periodOutbound: 0,
+                        currentAmount: 0
+                    })
                 }
-                agg.colorMap.get(colorKey).currentAmount += current
+                const colorAgg = agg.colorMap.get(colorKey)
+                colorAgg.openingAmount += opening
+                colorAgg.periodInbound += inbound
+                colorAgg.periodOutbound += outbound
+                colorAgg.currentAmount += current
 
-                // 类别标志（基于 batchType）
                 const cat = normalizeCategoryByBatchType(r.batchType)
                 if (cat === '男鞋') agg._flags.man = true
                 else if (cat === '女鞋') agg._flags.woman = true
@@ -148,7 +186,6 @@ export default {
 
             const arr = []
             for (const [, v] of map) {
-                // 统一类别：若型号下多种类别，按男>女>童>其它 优先
                 let category = '其它'
                 if (v._flags.man) category = '男鞋'
                 else if (v._flags.woman) category = '女鞋'
@@ -157,51 +194,153 @@ export default {
                 arr.push({
                     shoeRId: v.shoeRId,
                     batchType: v.batchType,
-                    category, // ← 新增：展示用
+                    category,
+                    totalOpening: v.totalOpening,
+                    totalInbound: v.totalInbound,
+                    totalOutbound: v.totalOutbound,
                     totalCurrent: v.totalCurrent,
                     designersText: Array.from(v.designers).join('、') || '-',
                     colors: Array.from(v.colorMap.values())
                 })
             }
-            // 默认按型号排序
             arr.sort((a, b) => String(a.shoeRId).localeCompare(String(b.shoeRId)))
             return arr
         },
 
-        // 应用“仅显示有库存”开关
         filteredModels() {
             const list = this.groupedByShoeRId
-            if (this.filters.showOnlyInStock) {
-                return list.filter((x) => Number(x.totalCurrent) > 0)
+            if (!this.filters.showOnlyInStock) return list
+            return list.filter((x) => Number(x.totalCurrent) > 0)
+        },
+
+        totals() {
+            return this.filteredModels.reduce(
+                (acc, row) => {
+                    acc.opening += Number(row.totalOpening || 0)
+                    acc.inbound += Number(row.totalInbound || 0)
+                    acc.outbound += Number(row.totalOutbound || 0)
+                    acc.current += Number(row.totalCurrent || 0)
+                    return acc
+                },
+                { opening: 0, inbound: 0, outbound: 0, current: 0 }
+            )
+        },
+
+        summaryTitle() {
+            if (this.queryMode === 'history') {
+                return `型号总数：${this.filteredModels.length} | 期初：${this.totals.opening} | 入库变化：+${this.totals.inbound} | 出库变化：-${this.totals.outbound} | 期末：${this.totals.current}`
             }
-            return list
+            return `型号总数：${this.filteredModels.length} | 当前库存合计：${this.totals.current}`
         },
 
-        // 顶部合计（对聚合后的行再合计）
-        sumCurrent() {
-            return this.filteredModels.reduce((sum, row) => sum + Number(row.totalCurrent || 0), 0)
-        },
-
-        // 分页
         pagedModels() {
             const start = (this.currentPage - 1) * this.pageSize
             return this.filteredModels.slice(start, start + this.pageSize)
         },
     },
     async mounted() {
+        this.initDefaultRange()
+        await this.fetchModelMeta()
         await this.fetchRows()
     },
-    
+
     methods: {
-        async fetchRows() {
-            // 拉全量明细，前端聚合；如数据量过大可改为后端按型号聚合接口
+        initDefaultRange() {
+            const end = new Date()
+            end.setDate(end.getDate() - 1)
+            const start = new Date(end)
+            start.setMonth(start.getMonth() - 3)
+            this.filters.dateRange = [this.formatDate(start), this.formatDate(end)]
+        },
+
+        formatDate(d) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            return `${y}-${m}-${day}`
+        },
+
+        disableAfterToday(date) {
+            const endToday = new Date()
+            endToday.setHours(23, 59, 59, 999)
+            return date.getTime() > endToday.getTime()
+        },
+
+        async fetchModelMeta() {
             const params = {
                 page: 1,
                 pageSize: 100000,
-                showAll: 0 // 包含未完成
+                showAll: 0
             }
             const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedstorages`, { params })
-            this.rawRows = resp.data && resp.data.result ? resp.data.result : []
+            const rows = resp.data && resp.data.result ? resp.data.result : []
+            const map = {}
+            for (const r of rows) {
+                const key = r.shoeRId || '-'
+                if (!map[key]) {
+                    map[key] = { batchTypes: new Set(), designers: new Set() }
+                }
+                if (r.batchType) map[key].batchTypes.add(r.batchType)
+                if (r.designer) map[key].designers.add(r.designer)
+            }
+            this.modelMetaMap = map
+        },
+
+        async fetchRows() {
+            if (this.queryMode === 'history') {
+                const [startDate, endDate] = this.filters.dateRange || []
+                if (!startDate || !endDate) {
+                    this.rawRows = []
+                    this.currentPage = 1
+                    return
+                }
+                const params = {
+                    page: 1,
+                    pageSize: 100000,
+                    startDate,
+                    endDate,
+                    orderRId: undefined,
+                    shoeRId: this.filters.shoeRId || undefined,
+                    customerName: undefined,
+                    customerBrand: undefined,
+                    colorName: undefined,
+                    displayZeroInventory: this.filters.showOnlyInStock
+                }
+                const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinventoryperiod`, { params })
+                const rows = resp.data?.data?.items || []
+                this.rawRows = rows.map((r) => {
+                    const meta = this.modelMetaMap[r.shoeRId] || { batchTypes: new Set(), designers: new Set() }
+                    return {
+                        shoeRId: r.shoeRId,
+                        colorName: r.colorName,
+                        batchType: Array.from(meta.batchTypes).join('、') || '-',
+                        designer: Array.from(meta.designers).join('、') || '-',
+                        openingAmount: Number(r.openingAmount || 0),
+                        periodInbound: Number(r.periodInbound || 0),
+                        periodOutbound: Number(r.periodOutbound || 0),
+                        currentAmount: Number(r.closingAmount || 0)
+                    }
+                })
+            } else {
+                const params = {
+                    page: 1,
+                    pageSize: 100000,
+                    showAll: 0,
+                    shoeRId: this.filters.shoeRId || undefined,
+                    category: this.filters.category || undefined
+                }
+                const resp = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedstorages`, { params })
+                this.rawRows = (resp.data && resp.data.result ? resp.data.result : []).map((r) => ({
+                    shoeRId: r.shoeRId,
+                    colorName: r.colorName,
+                    batchType: r.batchType,
+                    designer: r.designer,
+                    openingAmount: 0,
+                    periodInbound: 0,
+                    periodOutbound: 0,
+                    currentAmount: Number(r.currentAmount || 0)
+                }))
+            }
             this.currentPage = 1
         },
 
@@ -209,12 +348,20 @@ export default {
             this.currentPage = 1
         },
 
-        reset() {
+        async refreshAndFetch() {
+            this.currentPage = 1
+            await this.fetchRows()
+        },
+
+        async reset() {
             this.filters.shoeRId = ''
             this.filters.showOnlyInStock = false
-            this.filters.category = '' // ← 新增
+            this.filters.category = ''
+            this.initDefaultRange()
             this.currentPage = 1
+            await this.fetchRows()
         },
+
         onSizeChange(v) {
             this.pageSize = v
             this.currentPage = 1
@@ -231,6 +378,7 @@ export default {
 .mb-2 {
     margin-bottom: 12px;
 }
+
 .mt-2 {
     margin-top: 12px;
 }

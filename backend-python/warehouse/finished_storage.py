@@ -2855,7 +2855,7 @@ def get_outbound_apply_detail():
                 ),
                 "currentStock": storage.finished_amount if storage else None,
                 "finishedStatus": storage.finished_status if storage else None,
-                "inboundFinished": 1 if (storage and storage.finished_status == 1) else 0,
+                "inboundFinished": storage.finished_status if storage else 0,
                 "batchName": batch_info.name if batch_info else None,
                 "packagingInfoName": pkg.packaging_info_name if pkg else None,
             }
@@ -3043,20 +3043,21 @@ def execute_outbound_apply():
     ).all()
     if not details:
         return jsonify({"message": "申请单没有明细，无法执行"}), 400
-    missing_qty_ids = [
-        d.apply_detail_id for d in details if d.apply_detail_id not in detail_input_map
-    ]
-    if missing_qty_ids:
+    
+    # 允许只出库部分明细，不需要全部提供数量
+    if not detail_input_map:
         return (
             jsonify(
                 {
-                    "message": f"缺少明细 {missing_qty_ids[:3]} 的实际出库数量，请补充后再试"
+                    "message": "必须提供至少一行明细的实际出库数量"
                 }
             ),
             400,
         )
 
-    storage_ids = [d.finished_shoe_storage_id for d in details]
+    # 只获取有实际出库数量的明细
+    details_to_execute = [d for d in details if d.apply_detail_id in detail_input_map]
+    storage_ids = [d.finished_shoe_storage_id for d in details_to_execute]
     storages = (
         db.session.query(FinishedShoeStorage)
         .filter(FinishedShoeStorage.finished_shoe_id.in_(storage_ids))
@@ -3067,7 +3068,7 @@ def execute_outbound_apply():
         return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
 
     # 先做库存检查
-    for d in details:
+    for d in details_to_execute:
         s = storage_map[d.finished_shoe_storage_id]
         input_obj = detail_input_map.get(d.apply_detail_id, {})
         actual_qty = input_obj.get("actual_pairs")
@@ -3143,8 +3144,8 @@ def execute_outbound_apply():
     )
     unique_order_ids = {row.order_id for row in order_id_rows}
 
-    # 扣减库存 + 写出库明细
-    for d in details:
+    # 扣减库存 + 写出库明细（只处理提交数量的明细）
+    for d in details_to_execute:
         s = storage_map[d.finished_shoe_storage_id]
         input_obj = detail_input_map.get(d.apply_detail_id, {})
         qty = input_obj.get("actual_pairs")
@@ -3177,10 +3178,10 @@ def execute_outbound_apply():
 
         total_amount += qty
         diff_value = qty - expected_qty
-        # 将实际出库数量/箱数回写到申请明细，避免后续再次按预计数量处理
-        d.total_pairs = qty
-        if actual_carton is not None:
-            d.carton_count = actual_carton
+        # 将已出库明细的数量置0，标记为"已出库完成"
+        # 实际出库数量已记录在 ShoeOutboundRecordDetail.outbound_amount 中
+        d.total_pairs = 0
+        d.carton_count = 0
         if diff_value != 0:
             diff_notes.append(
                 f"明细{d.apply_detail_id}: 预计{expected_qty} 实际{qty} 差异{diff_value}"
@@ -3192,14 +3193,19 @@ def execute_outbound_apply():
     outbound_record.outbound_amount = total_amount
 
     # 更新申请单状态 & 关联出库记录
-    apply_obj.status = 4  # 已完成出库
+    # 检查是否所有明细都已出完
+    all_details_finished = all(
+        int(d.total_pairs or 0) <= 0 for d in details
+    )
+    apply_obj.status = 4 if all_details_finished else 3  # 4=已完成出库，3=待仓库出库
     apply_obj.warehouse_staff_id = staff_id
-    apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
-    apply_obj.actual_outbound_datetime = now_dt
+    if all_details_finished:
+        apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
+        apply_obj.actual_outbound_datetime = now_dt
 
-    # 推订单事件（所有涉及的订单）
+    # 推订单事件（只在全部完成时推进）
     processor: EventProcessor = current_app.config.get("event_processor")
-    if processor and unique_order_ids:
+    if processor and unique_order_ids and all_details_finished:
         orders = (
             db.session.query(Order, FinishedShoeStorage)
             .join(OrderShoe, OrderShoe.order_id == Order.order_id)

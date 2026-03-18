@@ -1,36 +1,59 @@
 <template>
     <div class="panel">
         <div class="filters">
+            <el-row :gutter="5" style="width: 100%; margin-bottom: 8px">
+                <el-col :span="6">
+                    <el-radio-group v-model="queryMode" @change="onModeChange">
+                        <el-radio-button value="snapshot">单日快照</el-radio-button>
+                        <el-radio-button value="period">区间变化（期初-变化-期末）</el-radio-button>
+                    </el-radio-group>
+                </el-col>
+            </el-row>
             <el-row :gutter="5" style="width: 100%; margin-bottom: 12px">
-                <el-col :span="3" :offset="0">
+                <!-- 单日快照模式 -->
+                <el-col v-if="queryMode === 'snapshot'" :span="3">
                     <el-date-picker v-model="dateFilter" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" :disabled-date="disableAfterYesterday" @change="loadTable" />
                 </el-col>
-                <el-col :span="3" :offset="0">
+                <!-- 区间变化模式 -->
+                <el-col v-if="queryMode === 'period'" :span="6">
+                    <el-date-picker
+                        v-model="dateRangeFilter"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        value-format="YYYY-MM-DD"
+                        :disabled-date="disableAfterToday"
+                        @change="loadTable"
+                    />
+                </el-col>
+                <el-col :span="3">
                     <el-input v-model="orderRid" placeholder="订单号" clearable @change="loadTable" />
                 </el-col>
-                <el-col :span="3" :offset="0">
+                <el-col :span="3">
                     <el-input v-model="shoeRid" placeholder="工厂型号" clearable @change="loadTable" />
                 </el-col>
-                <el-col :span="3" :offset="0">
+                <el-col :span="3">
                     <el-input v-model="customerName" placeholder="客户名称" clearable @change="loadTable" />
                 </el-col>
-                <el-col :span="3" :offset="0">
+                <el-col :span="3">
                     <el-input v-model="customerBrand" placeholder="客户品牌" clearable @change="loadTable" />
                 </el-col>
-                <el-col :span="3" :offset="0">
+                <el-col :span="3">
                     <el-input v-model="colorName" placeholder="颜色" clearable @change="loadTable" />
                 </el-col>
-                <el-col :span="2" :offset="0">
+                <el-col :span="2">
                     <el-checkbox v-model="displayZeroInventory" @change="loadTable">显示零库存</el-checkbox>
                 </el-col>
-                <el-col :span="2" :offset="0">
+                <el-col :span="2">
                     <el-button type="primary" :loading="loading" @click="loadTable">查询</el-button>
                     <el-button @click="downloadExcel" :loading="downloading">导出 Excel</el-button>
                 </el-col>
             </el-row>
         </div>
 
-        <el-table :data="rows" border stripe height="60vh" v-loading="loading">
+        <!-- 单日快照表格 -->
+        <el-table v-if="queryMode === 'snapshot'" :data="rows" border stripe height="60vh" v-loading="loading">
             <el-table-column prop="orderRId" label="订单号" />
             <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="customerName" label="客户名称" />
@@ -41,13 +64,43 @@
             <el-table-column prop="finishedActualAmount" label="实际入库" />
             <el-table-column prop="finishedAmount" label="当前库存" />
             <el-table-column prop="finishedStatusLabel" label="状态" />
-            <!-- <el-table-column label="尺码分布">
+        </el-table>
+
+        <!-- 区间变化表格：期初数-入库变化-出库变化-期末数 -->
+        <el-table v-if="queryMode === 'period'" :data="rows" border stripe height="60vh" v-loading="loading">
+            <el-table-column prop="orderRId" label="订单号" />
+            <el-table-column prop="shoeRId" label="工厂型号" />
+            <el-table-column prop="customerName" label="客户名称" />
+            <el-table-column prop="customerBrand" label="品牌" />
+            <el-table-column prop="customerProductName" label="客户鞋型" />
+            <el-table-column prop="colorName" label="颜色" />
+            <el-table-column prop="openingAmount" label="期初数" />
+            <el-table-column prop="periodInbound" label="入库变化">
                 <template #default="{ row }">
-                    <div class="size-chip" v-for="item in row.sizeBreakdown" :key="item.size">
-                        {{ item.size }}: {{ item.amount }}
-                    </div>
+                    <span :style="{ color: row.periodInbound > 0 ? '#67c23a' : '' }">
+                        {{ row.periodInbound > 0 ? `+${row.periodInbound}` : row.periodInbound }}
+                    </span>
                 </template>
-            </el-table-column> -->
+            </el-table-column>
+            <el-table-column prop="periodOutbound" label="出库变化">
+                <template #default="{ row }">
+                    <span :style="{ color: row.periodOutbound > 0 ? '#e6a23c' : '' }">
+                        {{ row.periodOutbound > 0 ? `-${row.periodOutbound}` : row.periodOutbound }}
+                    </span>
+                </template>
+            </el-table-column>
+            <el-table-column label="净变化">
+                <template #default="{ row }">
+                    <span :style="{ color: (row.periodInbound - row.periodOutbound) > 0 ? '#67c23a' : (row.periodInbound - row.periodOutbound) < 0 ? '#f56c6c' : '' }">
+                        {{ row.periodInbound - row.periodOutbound > 0 ? `+${row.periodInbound - row.periodOutbound}` : row.periodInbound - row.periodOutbound }}
+                    </span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="closingAmount" label="期末数">
+                <template #default="{ row }">
+                    <strong>{{ row.closingAmount }}</strong>
+                </template>
+            </el-table-column>
         </el-table>
 
         <div class="pager">
@@ -72,11 +125,19 @@ import { ElMessage } from 'element-plus'
 const { appContext } = getCurrentInstance()
 const $apiBaseUrl = appContext.config.globalProperties.$apiBaseUrl
 
-const rows = ref<any[]>([])
+const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
-const dateFilter = ref<string | null>(null)
+
+// 查询模式：snapshot（单日快照）或 period（区间变化）
+const queryMode = ref('snapshot')
+
+// 单日快照用
+const dateFilter = ref(null)
+// 区间变化用
+const dateRangeFilter = ref(null)
+
 const orderRid = ref('')
 const shoeRid = ref('')
 const customerName = ref('')
@@ -95,26 +156,43 @@ function presetDate() {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     dateFilter.value = yesterday.toISOString().split('T')[0]
+
+    // 区间默认为本月1日到昨天
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    dateRangeFilter.value = [firstDay, yesterday.toISOString().split('T')[0]]
 }
 
-function disableAfterYesterday(date: Date) {
+function disableAfterYesterday(date) {
     const endYesterday = new Date()
     endYesterday.setDate(endYesterday.getDate() - 1)
     endYesterday.setHours(23, 59, 59, 999)
     return date.getTime() > endYesterday.getTime()
 }
 
-function onPageSizeChange(val: number) {
+function disableAfterToday(date) {
+    const endToday = new Date()
+    endToday.setHours(23, 59, 59, 999)
+    return date.getTime() > endToday.getTime()
+}
+
+function onModeChange() {
+    page.value = 1
+    rows.value = []
+    loadTable()
+}
+
+function onPageSizeChange(val) {
     pageSize.value = val
     loadTable()
 }
 
-function onPageChange(val: number) {
+function onPageChange(val) {
     page.value = val
     loadTable()
 }
 
-function buildQuery() {
+function buildSnapshotQuery() {
     return {
         page: page.value,
         pageSize: pageSize.value,
@@ -128,14 +206,42 @@ function buildQuery() {
     }
 }
 
+function buildPeriodQuery() {
+    const [startDate, endDate] = dateRangeFilter.value || ['', '']
+    return {
+        page: page.value,
+        pageSize: pageSize.value,
+        startDate,
+        endDate,
+        orderRId: orderRid.value,
+        shoeRId: shoeRid.value,
+        customerName: customerName.value,
+        customerBrand: customerBrand.value,
+        colorName: colorName.value,
+        displayZeroInventory: displayZeroInventory.value
+    }
+}
+
 async function loadTable() {
     loading.value = true
     try {
-        const params = buildQuery()
-        const { data } = await axios.get(`${$apiBaseUrl}/warehouse/getfinishedinventoryhistory`, { params })
-        rows.value = normalizeRows(data.data.items || [])
-        total.value = data.data.total || 0
-    } catch (err: any) {
+        if (queryMode.value === 'snapshot') {
+            const params = buildSnapshotQuery()
+            const { data } = await axios.get(`${$apiBaseUrl}/warehouse/getfinishedinventoryhistory`, { params })
+            rows.value = normalizeSnapshotRows(data.data.items || [])
+            total.value = data.data.total || 0
+        } else {
+            if (!dateRangeFilter.value?.[0] || !dateRangeFilter.value?.[1]) {
+                ElMessage.warning('请选择查询区间')
+                loading.value = false
+                return
+            }
+            const params = buildPeriodQuery()
+            const { data } = await axios.get(`${$apiBaseUrl}/warehouse/getfinishedinventoryperiod`, { params })
+            rows.value = data.data.items || []
+            total.value = data.data.total || 0
+        }
+    } catch (err) {
         const message = err?.response?.data?.message || '查询失败'
         ElMessage.error(message)
     } finally {
@@ -143,23 +249,24 @@ async function loadTable() {
     }
 }
 
-function normalizeRows(rawRows: any[]) {
+function normalizeSnapshotRows(rawRows) {
     return rawRows.map((r) => {
         const sizeBreakdown = (r.sizeColumns || []).map((s) => ({
             size: s.label || s.size || s.sizeValue,
             amount: s.amount ?? s.currentAmount ?? 0
         }))
-        return {
-            ...r,
-            sizeBreakdown
-        }
+        return { ...r, sizeBreakdown }
     })
 }
 
 async function downloadExcel() {
+    if (queryMode.value === 'period') {
+        ElMessage.info('区间变化模式暂不支持导出，请切换到单日快照模式导出')
+        return
+    }
     downloading.value = true
     try {
-        const params = buildQuery()
+        const params = buildSnapshotQuery()
         const res = await axios.get(`${$apiBaseUrl}/warehouse/export/finished-inventory-history`, {
             params,
             responseType: 'blob'
@@ -180,7 +287,7 @@ async function downloadExcel() {
         link.click()
         document.body.removeChild(link)
         URL.revokeObjectURL(link.href)
-    } catch (err: any) {
+    } catch (err) {
         const message = err?.response?.data?.message || '导出失败'
         ElMessage.error(message)
     } finally {

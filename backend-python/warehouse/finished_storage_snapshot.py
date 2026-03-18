@@ -498,6 +498,88 @@ def get_finished_inventory_history():
     return jsonify({"data": data})
 
 
+def _query_inventory_period(filters: dict, paginate: bool = True):
+    """
+    区间库存变化查询：期初数 - 入库变化 - 出库变化 - 期末数
+    期初数 = startDate 前一天的库存快照
+    期末数 = 期初数 + 区间净变化
+    """
+    start_date_str = filters.get("startDate")
+    end_date_str = filters.get("endDate")
+    if not start_date_str or not end_date_str:
+        return {"total": 0, "items": []}
+
+    start_date = date.fromisoformat(start_date_str)
+    end_date = date.fromisoformat(end_date_str)
+    if start_date > end_date:
+        return {"total": 0, "items": []}
+
+    # 期初 = startDate 前一天的库存（即上一期末）
+    opening_balance_date = start_date - timedelta(days=1)
+    base_date = _get_base_snapshot_date(opening_balance_date)
+    if not base_date:
+        _create_snapshot_for_date(opening_balance_date)
+        base_date = opening_balance_date
+
+    base_q = _build_base_query(base_date, filters)
+    snapshots = base_q.order_by(Order.order_rid.asc()).all()
+
+    # 快照到 opening_balance_date 之间的累计净变化（用于从快照日推算期初值）
+    opening_adj_map: dict = {}
+    if base_date < opening_balance_date:
+        opening_adj_map = _fetch_delta_map(base_date + timedelta(days=1), opening_balance_date)
+
+    # 区间内（startDate..endDate）的入库/出库明细
+    period_delta_map = _fetch_delta_map(start_date, end_date)
+
+    display_zero = str(filters.get("displayZeroInventory", "false")).lower() == "true"
+
+    items_all = []
+    for snap, order, order_shoe, shoe, color, customer, order_shoe_type in snapshots:
+        fsid = snap.finished_shoe_storage_id
+        adj = opening_adj_map.get(fsid, {"net": 0, "in": 0, "out": 0})
+        period = period_delta_map.get(fsid, {"in": 0, "out": 0, "net": 0})
+
+        opening_amount = (snap.finished_amount or 0) + adj["net"]
+        period_inbound = period["in"]
+        period_outbound = period["out"]
+        closing_amount = opening_amount + period["net"]
+
+        if not display_zero and opening_amount <= 0 and closing_amount <= 0 and period_inbound <= 0:
+            continue
+
+        items_all.append({
+            "storageId": fsid,
+            "orderRId": order.order_rid,
+            "orderCId": order.order_cid,
+            "shoeRId": shoe.shoe_rid,
+            "customerName": customer.customer_name,
+            "customerBrand": customer.customer_brand,
+            "customerProductName": order_shoe.customer_product_name,
+            "colorName": color.color_name,
+            "openingAmount": opening_amount,
+            "periodInbound": period_inbound,
+            "periodOutbound": period_outbound,
+            "closingAmount": closing_amount,
+        })
+
+    total = len(items_all)
+    if not paginate:
+        return {"total": total, "items": items_all}
+
+    page = max(int(filters.get("page", 1)), 1)
+    page_size = max(int(filters.get("pageSize", 20)), 1)
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    return {"total": total, "items": items_all[start_idx:end_idx]}
+
+
+@finished_storage_snapshot_bp.route("/warehouse/getfinishedinventoryperiod", methods=["GET"])
+def get_finished_inventory_period():
+    data = _query_inventory_period(request.args, paginate=True)
+    return jsonify({"data": data})
+
+
 @finished_storage_snapshot_bp.route("/warehouse/export/finished-inventory-history", methods=["GET"])
 def export_finished_inventory_history():
     data = _query_inventory(request.args, paginate=False)
