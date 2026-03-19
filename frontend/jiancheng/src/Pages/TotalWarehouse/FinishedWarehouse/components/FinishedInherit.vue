@@ -42,6 +42,17 @@
                 <el-form-item>
                     <el-button type="primary" @click="refreshAndFetch">查询</el-button>
                     <el-button @click="reset">重置</el-button>
+                    <el-dropdown @command="downloadExcel" :disabled="downloading">
+                        <el-button :loading="downloading">
+                            导出 Excel<el-icon class="el-icon--right"><arrow-down /></el-icon>
+                        </el-button>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item command="model">按型号汇总导出</el-dropdown-item>
+                                <el-dropdown-item command="color">按颜色明细导出</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
                 </el-form-item>
             </el-form>
         </el-card>
@@ -88,6 +99,7 @@
 
 <script>
 import axios from 'axios'
+import { ArrowDown } from '@element-plus/icons-vue'
 
 const DEFAULT_PAGE_SIZES = [10, 20, 30, 50]
 
@@ -101,11 +113,13 @@ const normalizeCategoryByBatchType = (name) => {
 
 export default {
     name: 'FinishedFactoryModelView_ByModel_ExpandColors',
+    components: { ArrowDown },
     data() {
         return {
             queryMode: 'realtime',
             rawRows: [],
             modelMetaMap: {},
+            downloading: false,
             filters: {
                 shoeRId: '',
                 showOnlyInStock: false,
@@ -369,6 +383,58 @@ export default {
 
         onPageChange(v) {
             this.currentPage = v
+        },
+
+        async downloadExcel(mode) {
+            const groupByModel = mode === 'model'
+            this.downloading = true
+            try {
+                let url, params
+                if (this.queryMode === 'history') {
+                    const [startDate, endDate] = this.filters.dateRange || []
+                    if (!startDate || !endDate) {
+                        this.$message.warning('请先选择时间区间')
+                        this.downloading = false
+                        return
+                    }
+                    url = `${this.$apiBaseUrl}/warehouse/export/finished-inventory-period`
+                    params = {
+                        startDate,
+                        endDate,
+                        shoeRId: this.filters.shoeRId || undefined,
+                        displayZeroInventory: this.filters.showOnlyInStock,
+                        groupByModel,
+                    }
+                } else {
+                    url = `${this.$apiBaseUrl}/warehouse/export/finished-inventory-history`
+                    params = {
+                        snapshotDate: new Date().toISOString().split('T')[0],
+                        shoeRId: this.filters.shoeRId || undefined,
+                        displayZeroInventory: !this.filters.showOnlyInStock,
+                        groupByModel,
+                    }
+                }
+                const res = await axios.get(url, { params, responseType: 'blob' })
+                const blob = new Blob([res.data], { type: res.headers['content-type'] })
+                const disposition = res.headers['content-disposition']
+                let filename = '成品仓库存.xlsx'
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename="?(.+?)"?$/)
+                    if (match && match[1]) filename = decodeURIComponent(match[1])
+                }
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(link.href)
+            } catch (err) {
+                const msg = err?.response?.data?.message || '导出失败'
+                this.$message.error(msg)
+            } finally {
+                this.downloading = false
+            }
         }
     }
 }

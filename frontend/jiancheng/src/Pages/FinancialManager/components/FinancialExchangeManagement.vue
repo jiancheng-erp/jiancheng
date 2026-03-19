@@ -2,65 +2,76 @@
     <div class="financial-exchange">
         <el-card shadow="hover">
             <div class="card-header">
-                <div class="title">汇率管理</div>
+                <div class="title">汇率管理（按月）</div>
                 <div class="actions">
                     <span class="base-currency">基础货币：{{ baseCurrencyLabel }}</span>
+                    <el-date-picker
+                        v-model="selectedMonth"
+                        type="month"
+                        value-format="YYYY-MM"
+                        placeholder="选择月份"
+                        style="width: 160px"
+                        @change="onMonthChange"
+                    />
                     <el-button size="small" :loading="loading" @click="refreshData">刷新</el-button>
                 </div>
             </div>
 
-            <el-table :data="displayRows" v-loading="loading">
-                <el-table-column prop="unitName" label="目标货币"></el-table-column>
-                <el-table-column prop="rate" label="人民币兑目标汇率">
+            <el-table :data="conversions" v-loading="loading">
+                <el-table-column label="目标货币" min-width="140">
+                    <template #default="scope">
+                        {{ scope.row.unitToNameCn }} ({{ scope.row.unitToNameEn }})
+                    </template>
+                </el-table-column>
+                <el-table-column label="人民币兑目标汇率" min-width="160">
                     <template #default="scope">
                         <span v-if="scope.row.rate !== null">{{ scope.row.rate }}</span>
                         <span v-else class="placeholder">--</span>
                     </template>
                 </el-table-column>
-                <el-table-column prop="rateDate" label="汇率日期">
+                <el-table-column label="汇率来源" min-width="140">
                     <template #default="scope">
-                        <span v-if="scope.row.rateDate">{{ scope.row.rateDate }}</span>
+                        <template v-if="scope.row.rate !== null">
+                            <el-tag v-if="scope.row.inherited" type="warning" size="small">
+                                沿用 {{ scope.row.rateYear }}-{{ String(scope.row.rateMonth).padStart(2, '0') }}
+                            </el-tag>
+                            <el-tag v-else type="success" size="small">本月填写</el-tag>
+                        </template>
                         <span v-else class="placeholder">--</span>
                     </template>
                 </el-table-column>
-                <el-table-column prop="rateActive" label="启用">
+                <el-table-column label="启用" width="80">
                     <template #default="scope">
-                        <el-tag :type="scope.row.rateActive ? 'success' : 'info'">
+                        <el-tag :type="scope.row.rateActive ? 'success' : 'info'" size="small">
                             {{ scope.row.rateActive ? '启用' : '停用' }}
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="140">
+                <el-table-column label="操作" width="180">
                     <template #default="scope">
-                        <el-button type="primary" link size="small" @click="openEdit(scope.row)">编辑</el-button>
+                        <el-button type="primary" link size="small" @click="openEdit(scope.row)">
+                            {{ scope.row.inherited || scope.row.rate === null ? '填写本月' : '编辑' }}
+                        </el-button>
+                        <el-button
+                            v-if="!scope.row.inherited && scope.row.rate !== null"
+                            type="danger" link size="small"
+                            @click="handleDelete(scope.row)"
+                        >删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
         </el-card>
 
-        <el-dialog v-model="editDialogVisible" title="编辑汇率" width="420px">
+        <el-dialog v-model="editDialogVisible" :title="editDialogTitle" width="420px">
             <el-form label-width="100px">
                 <el-form-item label="目标货币">
-                    <el-select v-model="editForm.unitTo" placeholder="选择目标货币" filterable>
-                        <el-option
-                            v-for="unit in selectableUnits"
-                            :key="unit.unitId"
-                            :label="`${unit.unitNameCn} (${unit.unitNameEn})`"
-                            :value="unit.unitId"
-                        />
-                    </el-select>
+                    <span>{{ editForm.unitToLabel }}</span>
+                </el-form-item>
+                <el-form-item label="月份">
+                    <span>{{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}</span>
                 </el-form-item>
                 <el-form-item label="汇率">
                     <el-input-number v-model="editForm.rate" :precision="4" :step="0.0001" :min="0" />
-                </el-form-item>
-                <el-form-item label="汇率日期">
-                    <el-date-picker
-                        v-model="editForm.rateDate"
-                        type="date"
-                        value-format="YYYY-MM-DD"
-                        placeholder="选择日期"
-                        style="width: 100%"
-                    />
                 </el-form-item>
                 <el-form-item label="是否启用">
                     <el-switch v-model="editForm.rateActive" />
@@ -77,7 +88,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, onMounted, ref } from 'vue'
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 interface CurrencyUnit {
     unitId: number
@@ -86,15 +97,19 @@ interface CurrencyUnit {
 }
 
 interface ConversionRow {
-    conversionId?: number
+    conversionId: number | null
     unitFrom: number
     unitTo: number
     rate: number | null
-    rateDate?: string
-    rateActive?: boolean
+    rateYear: number | null
+    rateMonth: number | null
+    rateActive: boolean
+    inherited: boolean
+    unitToNameEn: string
+    unitToNameCn: string
 }
 
-const { appContext } = getCurrentInstance()
+const { appContext } = getCurrentInstance()!
 const $api_baseUrl = appContext.config.globalProperties.$apiBaseUrl
 
 const loading = ref(false)
@@ -105,16 +120,22 @@ const currencyUnits = ref<CurrencyUnit[]>([])
 const conversions = ref<ConversionRow[]>([])
 const baseUnitId = ref<number | null>(null)
 
-const editForm = ref<ConversionRow>({
-    conversionId: undefined,
-    unitFrom: 0,
+const now = new Date()
+const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+
+const currentYear = computed(() => parseInt(selectedMonth.value.split('-')[0]))
+const currentMonth = computed(() => parseInt(selectedMonth.value.split('-')[1]))
+
+const editForm = ref({
     unitTo: 0,
-    rate: null,
-    rateDate: '',
+    unitToLabel: '',
+    rate: 0 as number | null,
     rateActive: true,
 })
 
-const selectableUnits = computed(() => currencyUnits.value.filter((unit) => unit.unitId !== baseUnitId.value))
+const editDialogTitle = computed(() => {
+    return `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')} 汇率`
+})
 
 const baseCurrencyLabel = computed(() => {
     const baseUnit = currencyUnits.value.find((unit) => unit.unitId === baseUnitId.value)
@@ -122,23 +143,13 @@ const baseCurrencyLabel = computed(() => {
     return `${baseUnit.unitNameCn} (${baseUnit.unitNameEn})`
 })
 
-const displayRows = computed(() => {
-    return selectableUnits.value.map((unit) => {
-        const existing = conversions.value.find((item) => item.unitTo === unit.unitId)
-        return {
-            unitId: unit.unitId,
-            unitName: `${unit.unitNameCn} (${unit.unitNameEn})`,
-            rate: existing?.rate ?? null,
-            rateDate: existing?.rateDate ?? '',
-            rateActive: existing?.rateActive ?? false,
-            conversionId: existing?.conversionId,
-        }
-    })
-})
-
 onMounted(() => {
     refreshData()
 })
+
+function onMonthChange() {
+    if (baseUnitId.value) fetchConversions()
+}
 
 async function refreshData() {
     loading.value = true
@@ -160,29 +171,41 @@ async function fetchUnits() {
     currencyUnits.value = res.data?.units || []
 
     if (!baseUnitId.value) {
-        const rmbUnit = currencyUnits.value.find((unit) => unit.unitNameCn === '人民币' || unit.unitNameEn.toUpperCase() === 'CNY')
+        const rmbUnit = currencyUnits.value.find(
+            (unit) => unit.unitNameCn === '人民币' || unit.unitNameEn.toUpperCase() === 'CNY'
+        )
         baseUnitId.value = rmbUnit?.unitId || currencyUnits.value[0]?.unitId || null
     }
 }
 
 async function fetchConversions() {
-    const res = await axios.get(`${$api_baseUrl}/accounting/currency_conversions`, {
-        params: { baseUnitId: baseUnitId.value },
-    })
-    conversions.value = res.data?.conversions || []
-    if (res.data?.baseUnitId) {
-        baseUnitId.value = res.data.baseUnitId
+    loading.value = true
+    try {
+        const res = await axios.get(`${$api_baseUrl}/accounting/currency_conversions`, {
+            params: {
+                baseUnitId: baseUnitId.value,
+                year: currentYear.value,
+                month: currentMonth.value,
+            },
+        })
+        conversions.value = res.data?.conversions || []
+        if (res.data?.baseUnitId) {
+            baseUnitId.value = res.data.baseUnitId
+        }
+    } catch (error: any) {
+        const message = error?.response?.data?.message || error?.message || '加载汇率信息失败'
+        ElMessage.error(message)
+    } finally {
+        loading.value = false
     }
 }
 
-function openEdit(row: { unitId: number; rate: number | null; rateDate: string; rateActive: boolean; conversionId?: number }) {
+function openEdit(row: ConversionRow) {
     editForm.value = {
-        conversionId: row.conversionId,
-        unitFrom: baseUnitId.value || 0,
-        unitTo: row.unitId,
+        unitTo: row.unitTo,
+        unitToLabel: `${row.unitToNameCn} (${row.unitToNameEn})`,
         rate: row.rate ?? 0,
-        rateDate: row.rateDate || '',
-        rateActive: row.rateActive ?? false,
+        rateActive: row.rateActive ?? true,
     }
     editDialogVisible.value = true
 }
@@ -198,7 +221,8 @@ async function saveConversion() {
             unitFrom: baseUnitId.value,
             unitTo: editForm.value.unitTo,
             rate: editForm.value.rate,
-            rateDate: editForm.value.rateDate,
+            rateYear: currentYear.value,
+            rateMonth: currentMonth.value,
             rateActive: editForm.value.rateActive,
         })
         ElMessage.success('汇率已保存')
@@ -209,6 +233,22 @@ async function saveConversion() {
         ElMessage.error(message)
     } finally {
         saving.value = false
+    }
+}
+
+async function handleDelete(row: ConversionRow) {
+    if (!row.conversionId) return
+    try {
+        await ElMessageBox.confirm(
+            `确定删除 ${row.unitToNameCn} ${currentYear.value}-${String(currentMonth.value).padStart(2, '0')} 的汇率记录吗？删除后将沿用上月汇率。`,
+            '确认删除',
+            { type: 'warning' }
+        )
+        await axios.delete(`${$api_baseUrl}/accounting/currency_conversion/${row.conversionId}`)
+        ElMessage.success('已删除')
+        await fetchConversions()
+    } catch {
+        // 用户取消
     }
 }
 </script>
@@ -225,6 +265,8 @@ async function saveConversion() {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .title {

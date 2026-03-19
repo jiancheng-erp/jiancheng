@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 from decimal import Decimal
-from io import StringIO
-import csv
 
-from flask import Blueprint, abort, jsonify, request, Response, current_app
+from flask import Blueprint, abort, jsonify, request, Response, current_app, send_file
 from sqlalchemy import func, text
 
 from app_config import db
+from general_document.finished_warehouse_excel import (
+    build_finished_realtime_inventory_excel,
+    build_finished_period_inventory_excel,
+)
 from constants import FINISHED_STORAGE_STATUS
 from models import (
     FinishedShoeStorageSnapshot,
@@ -22,7 +24,9 @@ from models import (
     Shoe,
     Customer,
     Color,
+    BatchInfoType,
 )
+from shared_apis.utility_func import normalize_category_by_batch_type
 
 finished_storage_snapshot_bp = Blueprint("finished_storage_snapshot_bp", __name__)
 
@@ -289,6 +293,7 @@ def _build_base_query(base_date: date, filters: dict):
             Color,
             Customer,
             OrderShoeType,
+            BatchInfoType.batch_info_type_name,
         )
         .join(
             OrderShoeType,
@@ -300,6 +305,7 @@ def _build_base_query(base_date: date, filters: dict):
         .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
         .join(Color, Color.color_id == ShoeType.color_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
         .filter(FinishedShoeStorageSnapshot.snapshot_date == base_date)
     )
 
@@ -465,7 +471,7 @@ def _query_inventory(filters: dict, paginate: bool = True):
 
     # 先算全量，再做零库存过滤和分页，避免“空白页”问题
     items_all = []
-    for snap, order, order_shoe, shoe, color, customer, order_shoe_type in snapshots:
+    for snap, order, order_shoe, shoe, color, customer, order_shoe_type, batch_type_name in snapshots:
         row = _normalize_row(
             snap,
             order,
@@ -477,6 +483,7 @@ def _query_inventory(filters: dict, paginate: bool = True):
             size_base,
             size_delta,
         )
+        row["batchType"] = normalize_category_by_batch_type(batch_type_name)
         if not display_zero and row["finishedAmount"] <= 0:
             continue
         items_all.append(row)
@@ -535,7 +542,7 @@ def _query_inventory_period(filters: dict, paginate: bool = True):
     display_zero = str(filters.get("displayZeroInventory", "false")).lower() == "true"
 
     items_all = []
-    for snap, order, order_shoe, shoe, color, customer, order_shoe_type in snapshots:
+    for snap, order, order_shoe, shoe, color, customer, order_shoe_type, batch_type_name in snapshots:
         fsid = snap.finished_shoe_storage_id
         adj = opening_adj_map.get(fsid, {"net": 0, "in": 0, "out": 0})
         period = period_delta_map.get(fsid, {"in": 0, "out": 0, "net": 0})
@@ -557,6 +564,7 @@ def _query_inventory_period(filters: dict, paginate: bool = True):
             "customerBrand": customer.customer_brand,
             "customerProductName": order_shoe.customer_product_name,
             "colorName": color.color_name,
+            "batchType": normalize_category_by_batch_type(batch_type_name),
             "openingAmount": opening_amount,
             "periodInbound": period_inbound,
             "periodOutbound": period_outbound,
@@ -582,45 +590,44 @@ def get_finished_inventory_period():
 
 @finished_storage_snapshot_bp.route("/warehouse/export/finished-inventory-history", methods=["GET"])
 def export_finished_inventory_history():
-    data = _query_inventory(request.args, paginate=False)
-    output = StringIO()
-    writer = csv.writer(output)
-    headers = [
-        "订单号",
-        "工厂型号",
-        "客户名称",
-        "客户品牌",
-        "客户鞋型",
-        "颜色",
-        "计划入库",
-        "实际入库",
-        "当前库存",
-        "状态",
-        # "尺码分布",
-    ]
-    writer.writerow(headers)
-    for row in data["items"]:
-        size_text = "; ".join([f"{c['size']}:{c['currentAmount']}" for c in row.get("sizeColumns", [])])
-        writer.writerow(
-            [
-                row.get("orderRId"),
-                row.get("shoeRId"),
-                row.get("customerName"),
-                row.get("customerBrand"),
-                row.get("customerProductName"),
-                row.get("colorName"),
-                row.get("finishedEstimatedAmount"),
-                row.get("finishedActualAmount"),
-                row.get("finishedAmount"),
-                row.get("finishedStatusLabel"),
-                # size_text,
-            ]
-        )
-
-    csv_bytes = output.getvalue().encode("utf-8-sig")
-    filename = f"finished_inventory_history_{request.args.get('snapshotDate') or date.today().isoformat()}.csv"
-    headers = {
-        "Content-Disposition": f"attachment; filename={filename}",
-        "Content-Type": "text/csv; charset=utf-8",
+    filters = {
+        "snapshotDate": request.args.get("snapshotDate"),
+        "orderRId": request.args.get("orderRId"),
+        "shoeRId": request.args.get("shoeRId"),
+        "customerName": request.args.get("customerName"),
+        "customerBrand": request.args.get("customerBrand"),
+        "colorName": request.args.get("colorName"),
+        "displayZeroInventory": request.args.get("displayZeroInventory"),
     }
-    return Response(csv_bytes, headers=headers)
+    group_by_model = request.args.get("groupByModel", "false").lower() == "true"
+    data = _query_inventory(filters, paginate=False)
+    bio, filename = build_finished_realtime_inventory_excel(data["items"], filters, group_by_model)
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@finished_storage_snapshot_bp.route("/warehouse/export/finished-inventory-period", methods=["GET"])
+def export_finished_inventory_period():
+    filters = {
+        "startDate": request.args.get("startDate"),
+        "endDate": request.args.get("endDate"),
+        "orderRId": request.args.get("orderRId"),
+        "shoeRId": request.args.get("shoeRId"),
+        "customerName": request.args.get("customerName"),
+        "customerBrand": request.args.get("customerBrand"),
+        "colorName": request.args.get("colorName"),
+        "displayZeroInventory": request.args.get("displayZeroInventory"),
+    }
+    group_by_model = request.args.get("groupByModel", "false").lower() == "true"
+    data = _query_inventory_period(filters, paginate=False)
+    bio, filename = build_finished_period_inventory_excel(data["items"], filters, group_by_model)
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

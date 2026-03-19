@@ -17,6 +17,7 @@ from sqlalchemy.sql import union_all
 from file_locations import FILE_STORAGE_PATH
 from general_document.accounting_warehouse_history_excel import (
     generate_accounting_warehouse_excel,
+    generate_accounting_warehouse_grouped_excel,
 )
 
 material_storage_snapshot_bp = Blueprint("material_storage_snapshot_bp", __name__)
@@ -370,6 +371,176 @@ def _final_agg_for_msids_subq(msids_all, base_snapshot_date: date, start_change_
 
 
 # -----------------------------
+# Lightweight inventory (for grouped / period)
+# -----------------------------
+
+def _compute_inventory_lightweight(target_date: date, filters: dict) -> List[Dict]:
+    """
+    Compute inventory quantities + materialName + averagePrice for ALL matching items.
+    Skips full decorations (warehouse, supplier, order, shoe, etc.) and unit_price
+    for significantly better performance. Used by grouped and period computations.
+    """
+    base_snapshot_date = _get_base_snapshot_date(target_date)
+    if not base_snapshot_date:
+        return []
+
+    start_change_date = base_snapshot_date + timedelta(days=1)
+    msids_all = _union_msids_subq(base_snapshot_date, target_date, filters)
+    final_agg = _final_agg_for_msids_subq(msids_all, base_snapshot_date, start_change_date, target_date)
+
+    all_rows = db.session.execute(
+        select(final_agg).order_by(final_agg.c.msid.asc())
+    ).all()
+    if not all_rows:
+        return []
+
+    msid_list = [r.msid for r in all_rows]
+
+    # Lightweight materialName: only 3 joins (vs 7+ in full decoration)
+    name_stmt = (
+        select(
+            MaterialStorageSnapshot.material_storage_id.label("msid"),
+            Material.material_name,
+        )
+        .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorageSnapshot.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .where(
+            MaterialStorageSnapshot.snapshot_date == base_snapshot_date,
+            MaterialStorageSnapshot.material_storage_id.in_(msid_list),
+        )
+    )
+    name_map = {r.msid: r.material_name for r in db.session.execute(name_stmt).all()}
+
+    missing = [m for m in msid_list if m not in name_map]
+    if missing:
+        fallback_stmt = (
+            select(
+                MaterialStorage.material_storage_id.label("msid"),
+                Material.material_name,
+            )
+            .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
+            .join(Material, Material.material_id == SPUMaterial.material_id)
+            .where(MaterialStorage.material_storage_id.in_(missing))
+        )
+        for r in db.session.execute(fallback_stmt).all():
+            name_map[r.msid] = r.material_name
+
+    # Average price
+    price_end_dt = datetime.combine(target_date + timedelta(days=1), dt_time.min)
+    avg_price_stmt = (
+        select(
+            InboundRecordDetail.material_storage_id.label("msid"),
+            func.coalesce(
+                func.sum(InboundRecordDetail.inbound_amount * InboundRecordDetail.unit_price)
+                / func.nullif(func.sum(InboundRecordDetail.inbound_amount), 0),
+                0,
+            ).label("average_price"),
+        )
+        .join(InboundRecord, InboundRecord.inbound_record_id == InboundRecordDetail.inbound_record_id)
+        .where(
+            InboundRecord.display == 1,
+            InboundRecord.approval_status == 1,
+            InboundRecord.inbound_type.in_([0, 3]),
+            InboundRecord.inbound_datetime < price_end_dt,
+            InboundRecordDetail.material_storage_id.in_(msid_list),
+        )
+        .group_by(InboundRecordDetail.material_storage_id)
+    )
+    price_map = {r.msid: r.average_price for r in db.session.execute(avg_price_stmt).all()}
+
+    _zero = Decimal("0")
+    items = []
+    for r in all_rows:
+        avg_price = price_map.get(r.msid, _zero) or _zero
+        items.append({
+            "materialStorageId": r.msid,
+            "materialName": name_map.get(r.msid, "未知材料"),
+            "pendingInbound": r.final_pending_in or _zero,
+            "pendingOutbound": r.final_pending_out or _zero,
+            "inboundAmount": r.final_inbound or _zero,
+            "outboundAmount": r.final_outbound or _zero,
+            "currentAmount": r.final_current or _zero,
+            "makeInventoryInbound": r.final_make_inbound or _zero,
+            "makeInventoryOutbound": r.final_make_outbound or _zero,
+            "averagePrice": round(avg_price, 3),
+        })
+
+    return items
+
+
+def _fetch_decoration_for_msids(msids: List[int], base_snapshot_date: date) -> Dict[int, Dict]:
+    """Fetch decoration info (warehouse, supplier, type, model, spec, color) for a small set of msids."""
+    if not msids or not base_snapshot_date:
+        return {}
+
+    base_stmt = (
+        select(
+            MaterialStorageSnapshot.material_storage_id.label("msid"),
+            MaterialWarehouse.material_warehouse_name.label("warehouseName"),
+            Supplier.supplier_name.label("supplierName"),
+            MaterialType.material_type_name.label("materialType"),
+            Material.material_name.label("materialName"),
+            SPUMaterial.material_model.label("materialModel"),
+            SPUMaterial.material_specification.label("materialSpecification"),
+            SPUMaterial.color.label("materialColor"),
+        )
+        .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorageSnapshot.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .join(MaterialWarehouse, MaterialWarehouse.material_warehouse_id == MaterialType.warehouse_id)
+        .where(
+            MaterialStorageSnapshot.snapshot_date == base_snapshot_date,
+            MaterialStorageSnapshot.material_storage_id.in_(msids),
+        )
+    )
+    result = {}
+    for r in db.session.execute(base_stmt).all():
+        result[r.msid] = {
+            "warehouseName": r.warehouseName,
+            "supplierName": r.supplierName,
+            "materialType": r.materialType,
+            "materialName": r.materialName,
+            "materialModel": r.materialModel,
+            "materialSpecification": r.materialSpecification,
+            "materialColor": r.materialColor,
+        }
+
+    missing = [m for m in msids if m not in result]
+    if missing:
+        storage_stmt = (
+            select(
+                MaterialStorage.material_storage_id.label("msid"),
+                MaterialWarehouse.material_warehouse_name.label("warehouseName"),
+                Supplier.supplier_name.label("supplierName"),
+                MaterialType.material_type_name.label("materialType"),
+                Material.material_name.label("materialName"),
+                SPUMaterial.material_model.label("materialModel"),
+                SPUMaterial.material_specification.label("materialSpecification"),
+                SPUMaterial.color.label("materialColor"),
+            )
+            .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
+            .join(Material, Material.material_id == SPUMaterial.material_id)
+            .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+            .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+            .join(MaterialWarehouse, MaterialWarehouse.material_warehouse_id == MaterialType.warehouse_id)
+            .where(MaterialStorage.material_storage_id.in_(missing))
+        )
+        for r in db.session.execute(storage_stmt).all():
+            result[r.msid] = {
+                "warehouseName": r.warehouseName,
+                "supplierName": r.supplierName,
+                "materialType": r.materialType,
+                "materialName": r.materialName,
+                "materialModel": r.materialModel,
+                "materialSpecification": r.materialSpecification,
+                "materialColor": r.materialColor,
+            }
+
+    return result
+
+
+# -----------------------------
 # Core
 # -----------------------------
 
@@ -621,7 +792,7 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
 
     # 9) Assemble items
     items: List[Dict[str, object]] = []
-    print([id for id in msids_page])
+    # print([id for id in msids_page])
     for msid in msids_page:
         base = base_map.get(msid, None)
         fin = final_map.get(msid, {})
@@ -666,8 +837,8 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
                 "customerProductName": base.get("customer_product_name"),
                 "shoeRId": base.get("shoe_rid"),
                 "actualInboundUnit": base.get("actual_inbound_unit"),
-                "unitPrice": price_info.get("unit_price"),
-                "averagePrice": price_info.get("average_price"),
+                "unitPrice": round(price_info.get("unit_price", Decimal("0")), 3),
+                "averagePrice": round(price_info.get("average_price", Decimal("0")), 3),
                 "pendingInbound": final_pending_in,
                 "pendingOutbound": final_pending_out,
                 "inboundAmount": final_inbound,
@@ -675,12 +846,76 @@ def compute_inventory_as_of(target_date: date, filters: dict, paginate: bool) ->
                 "currentAmount": final_current,
                 "makeInventoryInbound": final_make_inbound,
                 "makeInventoryOutbound": final_make_outbound,
-                "inboundedItemTotalPrice": final_inbound * price_info.get("average_price"),
-                "currentItemTotalPrice": final_current * price_info.get("average_price"),
+                "inboundedItemTotalPrice": round(final_inbound * price_info.get("average_price", Decimal("0")), 3),
+                "currentItemTotalPrice": round(final_current * price_info.get("average_price", Decimal("0")), 3),
             }
         )
 
     return {"items": items, "total": total, "page": page, "pageSize": page_size}
+
+
+def compute_inventory_grouped_by_name(target_date: date, filters: dict, paginate: bool) -> dict:
+    """
+    Lightweight grouped inventory: uses _compute_inventory_lightweight (skips full
+    decorations) then groups by materialName with weighted-average pricing.
+    """
+    page = int(filters.get("page", 1))
+    page_size = int(filters.get("pageSize", 20))
+
+    all_items = _compute_inventory_lightweight(target_date, filters)
+
+    _zero = Decimal("0")
+    groups: Dict[str, Dict] = {}
+    for item in all_items:
+        name = item.get("materialName") or "未知材料"
+        if name not in groups:
+            groups[name] = {
+                "materialName": name,
+                "pendingInbound": _zero,
+                "pendingOutbound": _zero,
+                "inboundAmount": _zero,
+                "outboundAmount": _zero,
+                "currentAmount": _zero,
+                "makeInventoryInbound": _zero,
+                "makeInventoryOutbound": _zero,
+                "currentItemTotalPrice": _zero,
+                "_weighted_price_sum": _zero,
+                "_total_inbound_for_avg": _zero,
+            }
+        g = groups[name]
+        g["pendingInbound"] += item.get("pendingInbound") or _zero
+        g["pendingOutbound"] += item.get("pendingOutbound") or _zero
+        g["inboundAmount"] += item.get("inboundAmount") or _zero
+        g["outboundAmount"] += item.get("outboundAmount") or _zero
+        current = item.get("currentAmount") or _zero
+        avg_price = item.get("averagePrice") or _zero
+        g["currentAmount"] += current
+        g["makeInventoryInbound"] += item.get("makeInventoryInbound") or _zero
+        g["makeInventoryOutbound"] += item.get("makeInventoryOutbound") or _zero
+        g["currentItemTotalPrice"] += current * avg_price
+
+        inbound_amt = item.get("inboundAmount") or _zero
+        g["_weighted_price_sum"] += inbound_amt * avg_price
+        g["_total_inbound_for_avg"] += inbound_amt
+
+    result_items: List[Dict] = []
+    for g in groups.values():
+        total_inbound = g.pop("_total_inbound_for_avg")
+        weighted_sum = g.pop("_weighted_price_sum")
+        g["averagePrice"] = round(
+            (weighted_sum / total_inbound) if total_inbound else _zero, 3
+        )
+        g["currentItemTotalPrice"] = round(g["currentItemTotalPrice"], 3)
+        result_items.append(g)
+
+    result_items.sort(key=lambda x: x["materialName"])
+
+    total = len(result_items)
+    if paginate:
+        offset = (page - 1) * page_size
+        result_items = result_items[offset : offset + page_size]
+
+    return {"items": result_items, "total": total, "page": page, "pageSize": page_size}
 
 
 # -----------------------------
@@ -746,3 +981,311 @@ def export_inventory_history():
         data["items"],
     )
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
+@material_storage_snapshot_bp.route("/warehouse/getmaterialstoragebydate/grouped", methods=["GET"])
+def get_material_storage_by_date_grouped():
+    """
+    GET /warehouse/getmaterialstoragebydate/grouped?snapshotDate=2025-10-04&...
+    Return: inventory grouped by materialName with weighted average price.
+    """
+    date_str = request.args.get("snapshotDate")
+    if not date_str:
+        return jsonify({"code": 400, "msg": "缺少参数 date(YYYY-MM-DD)"}), 400
+
+    try:
+        target_date = _parse_date(date_str)
+    except Exception:
+        return jsonify({"code": 400, "msg": "date 格式错误，需 YYYY-MM-DD"}), 400
+
+    data = compute_inventory_grouped_by_name(target_date, filters=request.args, paginate=True)
+    return jsonify({"code": 200, "msg": "success", "data": data})
+
+
+@material_storage_snapshot_bp.route("/warehouse/exportinventoryhistory/grouped", methods=["GET"])
+def export_inventory_history_grouped():
+    date_str = request.args.get("snapshotDate")
+    warehouse_id = request.args.get("warehouseIdFilter")
+
+    warehouse_name = None
+    if warehouse_id:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_id)
+            .scalar()
+        )
+
+    supplier_name_filter = request.args.get("supplierNameFilter")
+
+    if not date_str:
+        return jsonify({"code": 400, "msg": "缺少参数 date(YYYY-MM-DD)"}), 400
+
+    try:
+        target_date = _parse_date(date_str)
+    except Exception:
+        return jsonify({"code": 400, "msg": "date 格式错误，需 YYYY-MM-DD"}), 400
+
+    data = compute_inventory_grouped_by_name(target_date, filters=request.args, paginate=False)
+
+    timestamp = str(time.time())
+    new_file_name = f"财务历史库存名称汇总_{timestamp}.xlsx"
+    save_path = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单", new_file_name)
+    time_range_string = date_str
+
+    generate_accounting_warehouse_grouped_excel(
+        save_path,
+        warehouse_name,
+        supplier_name_filter,
+        time_range_string,
+        data["items"],
+    )
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
+# ——————————————————————————————————————————————
+# 区间变化（期初 - 变化 - 期末）
+# ——————————————————————————————————————————————
+
+def _compute_period_diffs(start_date: date, end_date: date, filters: dict) -> List[Dict]:
+    """
+    Compute period diffs for ALL items using lightweight queries (no full decorations).
+    Returns list of {msid, materialName, openingAmount, period changes, closingAmount, averagePrice, closingTotalPrice}.
+    """
+    opening_date = start_date - timedelta(days=1)
+    opening_items = _compute_inventory_lightweight(opening_date, filters)
+    closing_items = _compute_inventory_lightweight(end_date, filters)
+
+    opening_map: Dict[int, Dict] = {
+        item["materialStorageId"]: item for item in opening_items
+    }
+    closing_map: Dict[int, Dict] = {
+        item["materialStorageId"]: item for item in closing_items
+    }
+    all_msids = sorted(set(opening_map.keys()) | set(closing_map.keys()))
+
+    _zero = Decimal("0")
+    items: List[Dict] = []
+    for msid in all_msids:
+        opening = opening_map.get(msid, {})
+        closing = closing_map.get(msid, {})
+
+        opening_current = opening.get("currentAmount", _zero) or _zero
+        closing_current = closing.get("currentAmount", _zero) or _zero
+
+        if opening_current == 0 and closing_current == 0:
+            continue
+
+        period_inbound = (closing.get("inboundAmount", _zero) or _zero) - (opening.get("inboundAmount", _zero) or _zero)
+        period_outbound = (closing.get("outboundAmount", _zero) or _zero) - (opening.get("outboundAmount", _zero) or _zero)
+        period_make_inbound = (closing.get("makeInventoryInbound", _zero) or _zero) - (opening.get("makeInventoryInbound", _zero) or _zero)
+        period_make_outbound = (closing.get("makeInventoryOutbound", _zero) or _zero) - (opening.get("makeInventoryOutbound", _zero) or _zero)
+        net_change = closing_current - opening_current
+
+        ref = closing if closing else opening
+        avg_price = ref.get("averagePrice", _zero) or _zero
+
+        items.append({
+            "materialStorageId": msid,
+            "materialName": ref.get("materialName"),
+            "openingAmount": opening_current,
+            "periodInbound": period_inbound,
+            "periodOutbound": period_outbound,
+            "periodMakeInbound": period_make_inbound,
+            "periodMakeOutbound": period_make_outbound,
+            "netChange": net_change,
+            "closingAmount": closing_current,
+            "averagePrice": round(avg_price, 3),
+            "closingTotalPrice": round(closing_current * avg_price, 3),
+        })
+
+    return items
+
+
+def _compute_period_detail(start_date: date, end_date: date, filters: dict, paginate: bool) -> dict:
+    """
+    Period detail view. Uses lightweight queries, then fetches decorations only
+    for the paginated page (or all items for export).
+    """
+    page = int(filters.get("page", 1))
+    page_size = int(filters.get("pageSize", 20))
+
+    all_diffs = _compute_period_diffs(start_date, end_date, filters)
+    total = len(all_diffs)
+
+    if paginate:
+        offset = (page - 1) * page_size
+        page_items = all_diffs[offset : offset + page_size]
+    else:
+        page_items = all_diffs
+
+    # Fetch decorations only for the items we're returning
+    msids = [item["materialStorageId"] for item in page_items]
+    closing_base = _get_base_snapshot_date(end_date)
+    decorations = _fetch_decoration_for_msids(msids, closing_base) if closing_base and msids else {}
+
+    for item in page_items:
+        dec = decorations.get(item["materialStorageId"], {})
+        item["warehouseName"] = dec.get("warehouseName")
+        item["supplierName"] = dec.get("supplierName")
+        item["materialType"] = dec.get("materialType")
+        item["materialModel"] = dec.get("materialModel")
+        item["materialSpecification"] = dec.get("materialSpecification")
+        item["materialColor"] = dec.get("materialColor")
+
+    return {"items": page_items, "total": total, "page": page, "pageSize": page_size}
+
+
+def _compute_period_grouped(start_date: date, end_date: date, filters: dict, paginate: bool) -> dict:
+    """区间变化按材料名称汇总，价格使用加权平均。Uses lightweight period diffs."""
+    page = int(filters.get("page", 1))
+    page_size = int(filters.get("pageSize", 20))
+
+    all_diffs = _compute_period_diffs(start_date, end_date, filters)
+
+    groups: Dict[str, Dict] = {}
+    _zero = Decimal("0")
+    for item in all_diffs:
+        name = item.get("materialName") or "未知材料"
+        if name not in groups:
+            groups[name] = {
+                "materialName": name,
+                "openingAmount": _zero,
+                "periodInbound": _zero,
+                "periodOutbound": _zero,
+                "periodMakeInbound": _zero,
+                "periodMakeOutbound": _zero,
+                "netChange": _zero,
+                "closingAmount": _zero,
+                "closingTotalPrice": _zero,
+                "_weighted_price_sum": _zero,
+                "_total_closing_for_avg": _zero,
+            }
+        g = groups[name]
+        g["openingAmount"] += item.get("openingAmount") or _zero
+        g["periodInbound"] += item.get("periodInbound") or _zero
+        g["periodOutbound"] += item.get("periodOutbound") or _zero
+        g["periodMakeInbound"] += item.get("periodMakeInbound") or _zero
+        g["periodMakeOutbound"] += item.get("periodMakeOutbound") or _zero
+        g["netChange"] += item.get("netChange") or _zero
+        g["closingAmount"] += item.get("closingAmount") or _zero
+        g["closingTotalPrice"] += item.get("closingTotalPrice") or _zero
+
+        closing_amt = item.get("closingAmount") or _zero
+        avg_price = item.get("averagePrice") or _zero
+        if closing_amt > 0:
+            g["_weighted_price_sum"] += closing_amt * avg_price
+            g["_total_closing_for_avg"] += closing_amt
+
+    result_items: List[Dict] = []
+    for g in groups.values():
+        total_closing = g.pop("_total_closing_for_avg")
+        weighted_sum = g.pop("_weighted_price_sum")
+        g["averagePrice"] = round((weighted_sum / total_closing) if total_closing else _zero, 3)
+        g["closingTotalPrice"] = round(g["closingTotalPrice"], 3)
+        result_items.append(g)
+
+    result_items.sort(key=lambda x: x["materialName"])
+
+    total = len(result_items)
+    if paginate:
+        offset = (page - 1) * page_size
+        result_items = result_items[offset : offset + page_size]
+    return {"items": result_items, "total": total, "page": page, "pageSize": page_size}
+
+
+def _parse_period_dates():
+    start_str = request.args.get("startDate")
+    end_str = request.args.get("endDate")
+    if not start_str or not end_str:
+        abort(Response(json.dumps({"message": "缺少 startDate / endDate 参数"}), 400))
+    try:
+        return _parse_date(start_str), _parse_date(end_str)
+    except Exception:
+        abort(Response(json.dumps({"message": "日期格式错误，需 YYYY-MM-DD"}), 400))
+
+
+@material_storage_snapshot_bp.route("/warehouse/getmaterialstorageperiod", methods=["GET"])
+def get_material_storage_period():
+    start_date, end_date = _parse_period_dates()
+    data = _compute_period_detail(start_date, end_date, filters=request.args, paginate=True)
+    return jsonify({"code": 200, "msg": "success", "data": data})
+
+
+@material_storage_snapshot_bp.route("/warehouse/getmaterialstorageperiod/grouped", methods=["GET"])
+def get_material_storage_period_grouped():
+    start_date, end_date = _parse_period_dates()
+    data = _compute_period_grouped(start_date, end_date, filters=request.args, paginate=True)
+    return jsonify({"code": 200, "msg": "success", "data": data})
+
+
+@material_storage_snapshot_bp.route("/warehouse/exportmaterialstorageperiod", methods=["GET"])
+def export_material_storage_period():
+    start_date, end_date = _parse_period_dates()
+    data = _compute_period_detail(start_date, end_date, filters=request.args, paginate=False)
+
+    timestamp = str(time.time())
+    new_file_name = f"财务历史库存区间明细_{timestamp}.xlsx"
+    save_path = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单", new_file_name)
+
+    _generate_period_excel(save_path, f"{start_date} ~ {end_date}", data["items"], grouped=False)
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
+@material_storage_snapshot_bp.route("/warehouse/exportmaterialstorageperiod/grouped", methods=["GET"])
+def export_material_storage_period_grouped():
+    start_date, end_date = _parse_period_dates()
+    data = _compute_period_grouped(start_date, end_date, filters=request.args, paginate=False)
+
+    timestamp = str(time.time())
+    new_file_name = f"财务历史库存区间名称汇总_{timestamp}.xlsx"
+    save_path = os.path.join(FILE_STORAGE_PATH, "财务部文件", "库存总单", new_file_name)
+
+    _generate_period_excel(save_path, f"{start_date} ~ {end_date}", data["items"], grouped=True)
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
+def _generate_period_excel(save_path: str, time_range: str, items: list, grouped: bool):
+    """Generate Excel for period (opening-change-closing) data."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment
+
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "区间变化"
+
+    title_font = Font(bold=True, size=14)
+    header_font = Font(bold=True, size=11)
+    ws["A1"] = "财务部历史库存 - 区间变化"
+    ws["A1"].font = title_font
+    ws["A2"] = "时间范围"
+    ws["B2"] = time_range
+
+    if grouped:
+        headers = ["材料名称", "期初库存", "采购入库变化", "生产出库变化",
+                    "盘库入库变化", "盘库出库变化", "净变化", "期末库存", "加权均价", "期末总金额"]
+        keys = ["materialName", "openingAmount", "periodInbound", "periodOutbound",
+                "periodMakeInbound", "periodMakeOutbound", "netChange", "closingAmount",
+                "averagePrice", "closingTotalPrice"]
+    else:
+        headers = ["仓库", "供应商", "材料类型", "材料名称", "材料型号", "材料规格", "材料颜色",
+                    "期初库存", "采购入库变化", "生产出库变化", "盘库入库变化", "盘库出库变化",
+                    "净变化", "期末库存", "加权均价", "期末总金额"]
+        keys = ["warehouseName", "supplierName", "materialType", "materialName",
+                "materialModel", "materialSpecification", "materialColor",
+                "openingAmount", "periodInbound", "periodOutbound",
+                "periodMakeInbound", "periodMakeOutbound", "netChange",
+                "closingAmount", "averagePrice", "closingTotalPrice"]
+
+    for col_idx, h in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_idx, value=h)
+        cell.font = header_font
+
+    for row_idx, item in enumerate(items, start=5):
+        for col_idx, key in enumerate(keys, start=1):
+            val = item.get(key, "")
+            if isinstance(val, Decimal):
+                val = float(val)
+            ws.cell(row=row_idx, column=col_idx, value=val)
+
+    wb.save(save_path)

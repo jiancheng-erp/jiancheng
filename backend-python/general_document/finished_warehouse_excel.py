@@ -10,8 +10,8 @@ from sqlalchemy import desc, func
 
 # === 按你的项目结构调整这些 import ===
 from app_config import db
+from accounting.currency_exchange_management import get_exchange_rate_for_month
 from models import (
-    AccountingUnitConversionTable,
     Order,
     OrderShoe,
     OrderShoeType,
@@ -490,14 +490,13 @@ def build_finished_outbound_excel(filters: dict):
     data_start_row = header_row + 1
     center_cols = {9, 10}  # 出库时间、出库数量
     r = data_start_row
-    exchange_USD = db.session.query(
-        AccountingUnitConversionTable
-    ).filter(AccountingUnitConversionTable.unit_from == 1, AccountingUnitConversionTable.unit_to == 4).first()
-    exchange_EUR = db.session.query(
-        AccountingUnitConversionTable
-    ).filter(AccountingUnitConversionTable.unit_from == 1, AccountingUnitConversionTable.unit_to == 2).first()
-    exchange_USD_rate = Decimal(exchange_USD.rate) if exchange_USD else Decimal("0")
-    exchange_EUR_rate = Decimal(exchange_EUR.rate) if exchange_EUR else Decimal("0")
+    # 根据查询的结束月份（或当前月份）获取对应月度汇率
+    rate_ref_dt = end_dt if end_dt else datetime.now()
+    rate_year, rate_month = rate_ref_dt.year, rate_ref_dt.month
+    usd_row = get_exchange_rate_for_month(1, 4, rate_year, rate_month)
+    eur_row = get_exchange_rate_for_month(1, 2, rate_year, rate_month)
+    exchange_USD_rate = Decimal(usd_row.rate) if usd_row and usd_row.rate else Decimal("0")
+    exchange_EUR_rate = Decimal(eur_row.rate) if eur_row and eur_row.rate else Decimal("0")
     exchange_CNY_rate = Decimal("1.0")
     for (
         order,
@@ -865,4 +864,224 @@ def build_finished_inout_summary_by_model_excel(
     wb.save(bio)
     bio.seek(0)
     filename = f"成品仓库存出入库明细_{_now_tag()}.xlsx"
+    return bio, filename
+
+
+# ================== 导出：成品仓实时库存 ==================
+
+
+def _group_realtime_by_model(items: list[dict]) -> list[dict]:
+    """将实时库存按工厂型号汇总"""
+    model_map: dict[str, dict] = {}
+    for row in items:
+        key = row.get("shoeRId", "")
+        if key not in model_map:
+            model_map[key] = {
+                "shoeRId": key,
+                "batchTypes": set(),
+                "finishedEstimatedAmount": 0,
+                "finishedActualAmount": 0,
+                "finishedAmount": 0,
+            }
+        agg = model_map[key]
+        bt = row.get("batchType", "")
+        if bt:
+            agg["batchTypes"].add(bt)
+        agg["finishedEstimatedAmount"] += row.get("finishedEstimatedAmount", 0) or 0
+        agg["finishedActualAmount"] += row.get("finishedActualAmount", 0) or 0
+        agg["finishedAmount"] += row.get("finishedAmount", 0) or 0
+    for agg in model_map.values():
+        agg["batchType"] = "、".join(sorted(agg.pop("batchTypes")))
+    return sorted(model_map.values(), key=lambda x: x["shoeRId"])
+
+
+def _group_period_by_model(items: list[dict]) -> list[dict]:
+    """将区间库存按工厂型号汇总"""
+    model_map: dict[str, dict] = {}
+    for row in items:
+        key = row.get("shoeRId", "")
+        if key not in model_map:
+            model_map[key] = {
+                "shoeRId": key,
+                "batchTypes": set(),
+                "openingAmount": 0,
+                "periodInbound": 0,
+                "periodOutbound": 0,
+                "closingAmount": 0,
+            }
+        agg = model_map[key]
+        bt = row.get("batchType", "")
+        if bt:
+            agg["batchTypes"].add(bt)
+        agg["openingAmount"] += row.get("openingAmount", 0) or 0
+        agg["periodInbound"] += row.get("periodInbound", 0) or 0
+        agg["periodOutbound"] += row.get("periodOutbound", 0) or 0
+        agg["closingAmount"] += row.get("closingAmount", 0) or 0
+    for agg in model_map.values():
+        agg["batchType"] = "、".join(sorted(agg.pop("batchTypes")))
+    return sorted(model_map.values(), key=lambda x: x["shoeRId"])
+
+
+def build_finished_realtime_inventory_excel(
+    items: list[dict], filters: dict, group_by_model: bool = False
+):
+    """
+    导出实时库存，数据由前端查询接口返回后传入。
+    group_by_model=True 时按型号汇总（不拆分颜色）。
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成品仓实时库存"
+
+    if group_by_model:
+        header = [
+            "工厂型号",
+            "类型",
+            "计划入库",
+            "实际入库",
+            "当前库存",
+        ]
+        grouped = _group_realtime_by_model(items)
+    else:
+        header = [
+            "订单号",
+            "工厂型号",
+            "类型",
+            "客户名称",
+            "客户品牌",
+            "客户鞋型",
+            "颜色",
+            "计划入库",
+            "实际入库",
+            "当前库存",
+            "状态",
+        ]
+    widths: list[int] = []
+    header_row = _write_title_filters(ws, "成品仓实时库存", len(header), filters)
+    _write_header(ws, header_row, header, widths)
+
+    r = header_row + 1
+    if group_by_model:
+        for row in grouped:
+            values = [
+                row.get("shoeRId", ""),
+                row.get("batchType", ""),
+                row.get("finishedEstimatedAmount", 0),
+                row.get("finishedActualAmount", 0),
+                row.get("finishedAmount", 0),
+            ]
+            _write_data_row(ws, r, values, widths)
+            r += 1
+    else:
+        for row in items:
+            values = [
+                row.get("orderRId", ""),
+                row.get("shoeRId", ""),
+                row.get("batchType", ""),
+                row.get("customerName", ""),
+                row.get("customerBrand", ""),
+                row.get("customerProductName", ""),
+                row.get("colorName", ""),
+                row.get("finishedEstimatedAmount", 0),
+                row.get("finishedActualAmount", 0),
+                row.get("finishedAmount", 0),
+                row.get("finishedStatusLabel", ""),
+            ]
+            _write_data_row(ws, r, values, widths)
+            r += 1
+
+    data_start_row = header_row + 1
+    ws.freeze_panes = ws[f"A{data_start_row}"]
+    _apply_widths(ws, widths)
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    filename = f"成品仓实时库存_{_now_tag()}.xlsx"
+    return bio, filename
+
+
+# ================== 导出：成品仓历史库存（期初-变化-期末） ==================
+
+
+def build_finished_period_inventory_excel(
+    items: list[dict], filters: dict, group_by_model: bool = False
+):
+    """
+    导出区间库存变化（期初/入库变化/出库变化/期末）。
+    group_by_model=True 时按型号汇总（不拆分颜色）。
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成品仓历史库存"
+
+    if group_by_model:
+        header = [
+            "工厂型号",
+            "类型",
+            "期初数量",
+            "入库变化",
+            "出库变化",
+            "期末数量",
+        ]
+        grouped = _group_period_by_model(items)
+    else:
+        header = [
+            "订单号",
+            "工厂型号",
+            "类型",
+            "客户名称",
+            "客户品牌",
+            "客户鞋型",
+            "颜色",
+            "期初数量",
+            "入库变化",
+            "出库变化",
+            "期末数量",
+        ]
+    widths: list[int] = []
+    header_row = _write_title_filters(ws, "成品仓历史库存", len(header), filters)
+    _write_header(ws, header_row, header, widths)
+
+    r = header_row + 1
+    if group_by_model:
+        for row in grouped:
+            values = [
+                row.get("shoeRId", ""),
+                row.get("batchType", ""),
+                row.get("openingAmount", 0),
+                row.get("periodInbound", 0),
+                row.get("periodOutbound", 0),
+                row.get("closingAmount", 0),
+            ]
+            _write_data_row(ws, r, values, widths)
+            r += 1
+    else:
+        for row in items:
+            values = [
+                row.get("orderRId", ""),
+                row.get("shoeRId", ""),
+                row.get("batchType", ""),
+                row.get("customerName", ""),
+                row.get("customerBrand", ""),
+                row.get("customerProductName", ""),
+                row.get("colorName", ""),
+                row.get("openingAmount", 0),
+                row.get("periodInbound", 0),
+                row.get("periodOutbound", 0),
+                row.get("closingAmount", 0),
+            ]
+            _write_data_row(ws, r, values, widths)
+            r += 1
+
+    data_start_row = header_row + 1
+    ws.freeze_panes = ws[f"A{data_start_row}"]
+    _apply_widths(ws, widths)
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    start_d = filters.get("startDate") or filters.get("start_date") or ""
+    end_d = filters.get("endDate") or filters.get("end_date") or ""
+    filename = f"成品仓历史库存_{start_d}_{end_d}_{_now_tag()}.xlsx"
     return bio, filename
