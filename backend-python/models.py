@@ -1897,6 +1897,8 @@ class AccountingUnitConversionTable(db.Model):
     unit_from = db.Column(db.Integer, nullable=False)
     unit_to = db.Column(db.Integer, nullable=False)
     rate = db.Column(db.DECIMAL(10, 3), nullable=True, default=0.000)
+    rate_year = db.Column(db.Integer, nullable=False, default=0)
+    rate_month = db.Column(db.Integer, nullable=False, default=0)
     rate_date = db.Column(db.DateTime, nullable=True)
     rate_active = db.Column(db.Boolean, nullable=False, default=False)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))

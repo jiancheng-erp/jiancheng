@@ -95,3 +95,90 @@ def generate_accounting_warehouse_excel(
     # Save the modified file
     workbook.save(save_path)
     return save_path
+
+
+def generate_accounting_warehouse_grouped_excel(
+    save_path,
+    warehouse_name,
+    supplier_name,
+    time_range,
+    materials_data,
+):
+    """Generate Excel for inventory grouped by material name with weighted average price."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "按名称汇总"
+
+    # Header rows
+    ws["A1"] = "财务部历史库存 - 按材料名称汇总"
+    ws["A2"] = "仓库"
+    ws["B2"] = warehouse_name if warehouse_name else "全部"
+    ws["C2"] = "供应商"
+    ws["D2"] = supplier_name if supplier_name else "全部"
+    ws["E2"] = "日期"
+    ws["F2"] = time_range if time_range else "全部"
+
+    headers = [
+        "材料名称",
+        "未审核入库数",
+        "未审核出库数",
+        "采购入库数",
+        "生产出库数",
+        "盘库入库数",
+        "盘库出库数",
+        "库存数量",
+        "加权均价",
+        "库存总金额",
+    ]
+    for col_idx, header in enumerate(headers, start=1):
+        ws.cell(row=4, column=col_idx, value=header)
+
+    quantity_sum_map = {
+        "pendingInbound": 0,
+        "pendingOutbound": 0,
+        "inboundAmount": 0,
+        "outboundAmount": 0,
+        "makeInventoryInbound": 0,
+        "makeInventoryOutbound": 0,
+        "currentAmount": 0,
+        "currentItemTotalPrice": 0,
+    }
+
+    col_keys = [
+        "materialName",
+        "pendingInbound",
+        "pendingOutbound",
+        "inboundAmount",
+        "outboundAmount",
+        "makeInventoryInbound",
+        "makeInventoryOutbound",
+        "currentAmount",
+        "averagePrice",
+        "currentItemTotalPrice",
+    ]
+
+    current_row = 5
+    for data in materials_data:
+        for col_idx, key in enumerate(col_keys, start=1):
+            ws.cell(row=current_row, column=col_idx, value=data.get(key, ""))
+
+        for sum_key in quantity_sum_map:
+            quantity_sum_map[sum_key] += data.get(sum_key, 0) or 0
+
+        current_row += 1
+
+    # Totals row
+    ws.cell(row=current_row, column=1, value="合计")
+    ws.cell(row=current_row, column=2, value=quantity_sum_map["pendingInbound"])
+    ws.cell(row=current_row, column=3, value=quantity_sum_map["pendingOutbound"])
+    ws.cell(row=current_row, column=4, value=quantity_sum_map["inboundAmount"])
+    ws.cell(row=current_row, column=5, value=quantity_sum_map["outboundAmount"])
+    ws.cell(row=current_row, column=6, value=quantity_sum_map["makeInventoryInbound"])
+    ws.cell(row=current_row, column=7, value=quantity_sum_map["makeInventoryOutbound"])
+    ws.cell(row=current_row, column=8, value=quantity_sum_map["currentAmount"])
+    ws.cell(row=current_row, column=10, value=quantity_sum_map["currentItemTotalPrice"])
+
+    wb.save(save_path)
+    return save_path

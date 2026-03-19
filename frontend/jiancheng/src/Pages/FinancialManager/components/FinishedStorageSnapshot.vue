@@ -260,14 +260,23 @@ function normalizeSnapshotRows(rawRows) {
 }
 
 async function downloadExcel() {
-    if (queryMode.value === 'period') {
-        ElMessage.info('区间变化模式暂不支持导出，请切换到单日快照模式导出')
-        return
-    }
     downloading.value = true
     try {
-        const params = buildSnapshotQuery()
-        const res = await axios.get(`${$apiBaseUrl}/warehouse/export/finished-inventory-history`, {
+        let url: string
+        let params: Record<string, any>
+        if (queryMode.value === 'snapshot') {
+            url = `${$apiBaseUrl}/warehouse/export/finished-inventory-history`
+            params = buildSnapshotQuery()
+        } else {
+            if (!dateRangeFilter.value?.[0] || !dateRangeFilter.value?.[1]) {
+                ElMessage.warning('请先选择查询区间')
+                downloading.value = false
+                return
+            }
+            url = `${$apiBaseUrl}/warehouse/export/finished-inventory-period`
+            params = buildPeriodQuery()
+        }
+        const res = await axios.get(url, {
             params,
             responseType: 'blob'
         })
