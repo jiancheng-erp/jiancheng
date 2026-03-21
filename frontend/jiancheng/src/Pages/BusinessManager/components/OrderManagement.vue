@@ -3252,7 +3252,9 @@ export default {
         async handleOrderStatusChange(value) {
             let response
             if (value === '全部订单') {
-                response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
+                response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`, {
+                    params: { excludeHistory: 1 }
+                })
             } else if (value === '我审批的订单') {
                 response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     params: {
