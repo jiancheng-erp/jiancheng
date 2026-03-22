@@ -75,14 +75,38 @@ def _batch_production_status(order_shoe_ids):
             "total_estimated": row.total_estimated or 0,
         }
 
+    # 通过 ShoeOutboundApplyDetail → OrderShoeType 查询有进行中出库审核的 order_shoe
+    # status 1=待总经理审核, 3=待仓库出库
+    pending_apply_data = (
+        db.session.query(
+            OrderShoeType.order_shoe_id,
+        )
+        .join(
+            ShoeOutboundApplyDetail,
+            ShoeOutboundApplyDetail.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .join(
+            ShoeOutboundApply,
+            ShoeOutboundApply.apply_id == ShoeOutboundApplyDetail.apply_id,
+        )
+        .filter(
+            OrderShoeType.order_shoe_id.in_(order_shoe_ids),
+            ShoeOutboundApply.status.in_([1, 3]),
+        )
+        .distinct()
+        .all()
+    )
+    pending_apply_osids = {r.order_shoe_id for r in pending_apply_data}
+
     today = date.today()
     result = {}
     for osid in order_shoe_ids:
         cs = shoe_status_map.get(osid)
         prod = prod_info_map.get(osid)
         fin = finished_map.get(osid)
+        has_pending_apply = osid in pending_apply_osids
 
-        label = _determine_warehouse_label(fin)
+        label = _determine_warehouse_label(fin, has_pending_apply)
 
         # 生产结束 → 看仓库状态
         if cs is not None and cs >= 42:
@@ -112,16 +136,18 @@ def _batch_production_status(order_shoe_ids):
     return result
 
 
-def _determine_warehouse_label(fin):
-    """根据成品仓数据判断入库/出库标签"""
+def _determine_warehouse_label(fin, has_pending_apply=False):
+    """根据成品仓数据和出库审核状态判断入库/出库标签"""
     if fin is None:
-        return "未入库"
+        return "出库审核中" if has_pending_apply else "未入库"
     min_status = fin["min_status"]
     total_actual = fin["total_actual"]
     total_estimated = fin["total_estimated"]
 
     if min_status is not None and min_status == 2:
         return "已出库"
+    if has_pending_apply:
+        return "出库审核中"
     if total_estimated > 0 and total_actual >= total_estimated:
         return "待出库"
     if total_actual > 0:
