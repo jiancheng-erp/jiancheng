@@ -82,7 +82,7 @@
             <el-table-column label="生产状态" width="100">
                 <template #default="scope">
                     <el-tag
-                        :type="{ '未排产': 'info', '裁断': '', '针车预备': '', '针车': '', '成型': 'warning', '未入库': 'warning', '部分入库': 'warning', '待出库': 'danger', '已出库': 'success' }[scope.row.productionStatus] || 'info'"
+                        :type="{ '未排产': 'info', '裁断': '', '针车预备': '', '针车': '', '成型': 'warning', '未入库': 'warning', '部分入库': 'warning', '出库审核中': 'danger', '待出库': 'danger', '已出库': 'success' }[scope.row.productionStatus] || 'info'"
                         v-if="scope.row.productionStatus"
                     >{{ scope.row.productionStatus }}</el-tag>
                 </template>
