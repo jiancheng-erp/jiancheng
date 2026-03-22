@@ -43,6 +43,9 @@
           <el-menu-item index="6" @click="handleMenuClick(6)">
             <span>订单导出</span>
           </el-menu-item>
+          <el-menu-item index="14" @click="handleMenuClick(14)">
+            <span>生产进度</span>
+          </el-menu-item>
           <el-menu-item index="12" @click="handleMenuClick(12)">
             <span>成品出库单详情</span>
           </el-menu-item>
@@ -77,6 +80,7 @@ import OrderExport from '../components/OrderExport.vue';
 import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundProduct.vue';
 import HistoryOrder from '../components/HistoryOrder.vue';
 import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue';
+import OrderProgress from '../components/OrderProgress.vue';
 export default {
     components: {
         AllHeader,
@@ -89,7 +93,8 @@ export default {
         OrderExport,
         OutboundProduct,
         HistoryOrder,
-        OutboundRecordsDownload
+        OutboundRecordsDownload,
+        OrderProgress
     },
     data() {
         return {
@@ -148,6 +153,9 @@ export default {
                 case 11:
                     this.currentComponent = 'HistoryOrder'
                     this.currentProps = { editable: false }
+                    break
+                case 14:
+                    this.currentComponent = 'OrderProgress'
                     break
             }
         },

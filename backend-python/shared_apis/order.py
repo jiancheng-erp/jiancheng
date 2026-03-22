@@ -9,7 +9,7 @@ from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
 import math
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from event_processor import EventProcessor
 
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
@@ -26,6 +26,109 @@ from models import *
 from shared_apis import customer
 from logger import logger
 order_bp = Blueprint("order_bp", __name__)
+
+
+def _batch_production_status(order_shoe_ids):
+    """
+    批量计算生产状态标签。
+    返回 {order_shoe_id: label} 映射。
+    标签: 未排产 / 裁断 / 针车预备 / 针车 / 成型 / 未入库 / 部分入库 / 待出库 / 已出库
+    """
+    if not order_shoe_ids:
+        return {}
+
+    shoe_statuses = (
+        db.session.query(OrderShoeStatus)
+        .filter(OrderShoeStatus.order_shoe_id.in_(order_shoe_ids))
+        .all()
+    )
+    shoe_status_map = {s.order_shoe_id: s.current_status for s in shoe_statuses}
+
+    prod_infos = (
+        db.session.query(OrderShoeProductionInfo)
+        .filter(OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids))
+        .all()
+    )
+    prod_info_map = {p.order_shoe_id: p for p in prod_infos}
+
+    # 查询成品仓状态: min_status 和入库比率
+    finished_data = (
+        db.session.query(
+            OrderShoeType.order_shoe_id,
+            func.min(FinishedShoeStorage.finished_status).label("min_status"),
+            func.sum(FinishedShoeStorage.finished_actual_amount).label("total_actual"),
+            func.sum(FinishedShoeStorage.finished_estimated_amount).label("total_estimated"),
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .filter(OrderShoeType.order_shoe_id.in_(order_shoe_ids))
+        .group_by(OrderShoeType.order_shoe_id)
+        .all()
+    )
+    finished_map = {}
+    for row in finished_data:
+        finished_map[row.order_shoe_id] = {
+            "min_status": row.min_status,
+            "total_actual": row.total_actual or 0,
+            "total_estimated": row.total_estimated or 0,
+        }
+
+    today = date.today()
+    result = {}
+    for osid in order_shoe_ids:
+        cs = shoe_status_map.get(osid)
+        prod = prod_info_map.get(osid)
+        fin = finished_map.get(osid)
+
+        label = _determine_warehouse_label(fin)
+
+        # 生产结束 → 看仓库状态
+        if cs is not None and cs >= 42:
+            result[osid] = label
+            continue
+
+        # 尚未进入生产或无排产信息 → 若有入库记录则按仓库状态判断
+        if prod is None or cs is None or cs < 23:
+            if fin is not None and fin["total_actual"] > 0:
+                result[osid] = label
+            else:
+                result[osid] = "未排产"
+            continue
+
+        # 已过成型排产结束时间 → 看入库情况
+        if prod.molding_end_date and today > prod.molding_end_date:
+            result[osid] = label
+        elif prod.molding_start_date and today >= prod.molding_start_date:
+            result[osid] = "成型"
+        elif prod.sewing_start_date and today >= prod.sewing_start_date:
+            result[osid] = "针车"
+        elif prod.pre_sewing_start_date and today >= prod.pre_sewing_start_date:
+            result[osid] = "针车预备"
+        else:
+            result[osid] = "裁断"
+
+    return result
+
+
+def _determine_warehouse_label(fin):
+    """根据成品仓数据判断入库/出库标签"""
+    if fin is None:
+        return "未入库"
+    min_status = fin["min_status"]
+    total_actual = fin["total_actual"]
+    total_estimated = fin["total_estimated"]
+
+    if min_status is not None and min_status == 2:
+        return "已出库"
+    if total_estimated > 0 and total_actual >= total_estimated:
+        return "待出库"
+    if total_actual > 0:
+        return "部分入库"
+    return "未入库"
+
+
 # 订单初始状态
 ORDER_CREATION_STATUS = 6
 # 订单开发部状态
@@ -1161,6 +1264,10 @@ def get_display_orders_manager():
     )
     id_to_name = {s.staff_id: s.staff_name for s in department_staff}
 
+    # --- 批量计算生产状态 ---
+    order_shoe_ids = [order_shoe.order_shoe_id for _, order_shoe, *_ in entities]
+    prod_status_map = _batch_production_status(order_shoe_ids)
+
     # --- 结果组装 ---
     result = []
     for order, order_shoe, shoe, customer, order_status, order_status_reference in entities:
@@ -1194,6 +1301,7 @@ def get_display_orders_manager():
             "wrapRequirementUploaded": order.production_list_upload_status == PACKAGING_SPECS_UPLOADED,
             "orderSalesman": id_to_name.get(order.salesman_id, ""),
             "orderSupervisor": id_to_name.get(order.supervisor_id, ""),
+            "productionStatus": prod_status_map.get(order_shoe.order_shoe_id, "未排产"),
         })
 
     return jsonify(result)
@@ -1234,6 +1342,8 @@ def get_all_orders():
     staff_id_to_name_mapping = {}
     for staff in staff_entities:
         staff_id_to_name_mapping[staff.staff_id] = staff.staff_name
+    order_shoe_ids_all = [order_shoe.order_shoe_id for _, order_shoe, *_ in entities]
+    prod_status_map_all = _batch_production_status(order_shoe_ids_all)
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
@@ -1277,6 +1387,7 @@ def get_all_orders():
                 "orderPackagingStatus": order.packaging_status,
                 "orderLastStatus": order.last_status,
                 "orderCuttingModelStatus": order.cutting_model_status,
+                "productionStatus": prod_status_map_all.get(order_shoe.order_shoe_id, "未排产"),
             }
         )
     return jsonify(result)

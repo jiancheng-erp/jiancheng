@@ -209,7 +209,7 @@
         <template #footer>
             <span>
                 <el-button @click="isBusinessDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="submitBusinessForm">
+                <el-button type="primary" @click="submitBusinessForm" :loading="isBusinessSubmitting" :disabled="isBusinessSubmitting">
                     {{ businessForm.applyId ? '保存修改并提交审核' : '提交出库申请' }}
                 </el-button>
             </span>
@@ -429,6 +429,7 @@ export default {
             PRODUCT_OUTBOUND_AUDIT_STATUS_ENUM: {},
 
             isBusinessDialogVisible: false,
+            isBusinessSubmitting: false,
 
             // 出库申请列表
             isApplyListDialogVisible: false,
@@ -745,6 +746,7 @@ export default {
 
         // ====== 业务：提交出库申请（新建 / 编辑） => /warehouse/outbound-apply/save ======
         async submitBusinessForm() {
+            if (this.isBusinessSubmitting) return
             const hasPositive = this.businessForm.items.some((it) => it.applyCartons > 0)
             if (!hasPositive) {
                 ElMessage.error('请至少为一个配码填写申请箱数')
@@ -785,6 +787,7 @@ export default {
                 return
             }
 
+            this.isBusinessSubmitting = true
             try {
                 const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/save`, payload)
                 ElMessage.success(res.data.message || '出库申请已提交')
@@ -794,6 +797,8 @@ export default {
                 console.error(e)
                 const msg = e.response?.data?.message || e.response?.data?.error || '提交出库申请失败'
                 ElMessage.error(msg)
+            } finally {
+                this.isBusinessSubmitting = false
             }
         },
 

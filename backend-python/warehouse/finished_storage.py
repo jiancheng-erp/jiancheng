@@ -744,6 +744,7 @@ def inbound_finished():
     db.session.flush()
 
     total_amount = 0
+    order_shoe_map = {}  # order_shoe_id -> (order, order_shoe)
     for item in items:
         storage_id = item["storageId"]
         remark = item["remark"]
@@ -767,6 +768,7 @@ def inbound_finished():
             return jsonify({"message": "无成品记录"}), 400
 
         order, order_shoe, storage = response
+        order_shoe_map[order_shoe.order_shoe_id] = (order, order_shoe)
         storage.finished_actual_amount += inbound_quantity
         storage.finished_amount += inbound_quantity
         # for i in range(len(amount_list)):
@@ -797,50 +799,51 @@ def inbound_finished():
         record_detail.shoe_inbound_record_id = inbound_record.shoe_inbound_record_id
         total_amount += inbound_quantity
     inbound_record.inbound_amount = total_amount
-    # check if the order_shoe is completed
-    cross_check = (
-        db.session.query(FinishedShoeStorage)
-        .join(
-            OrderShoeType,
-            OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id,
+    # check if each order_shoe is completed
+    for os_id, (os_order, os_order_shoe) in order_shoe_map.items():
+        cross_check = (
+            db.session.query(FinishedShoeStorage)
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id,
+            )
+            .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+            .filter(
+                OrderShoe.order_shoe_id == os_id,
+            )
+            .all()
         )
-        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
-        .filter(
-            OrderShoe.order_shoe_id == order_shoe.order_shoe_id,
-        )
-        .all()
-    )
-    is_finished = True
-    for storage in cross_check:
-        if _determine_status(storage) is False:
-            is_finished = False
-            break
-    if is_finished:
-        processor: EventProcessor = current_app.config["event_processor"]
-        staff_id = current_user_info()[1].staff_id
-        try:
-            for operation in [84, 85]:
-                event = Event(
-                    staff_id=staff_id,
-                    handle_time=datetime.now(),
-                    operation_id=operation,
-                    event_order_id=order.order_id,
-                    event_order_shoe_id=order_shoe.order_shoe_id,
-                )
-                processor.processEvent(event)
+        is_finished = True
+        for storage in cross_check:
+            if _determine_status(storage) is False:
+                is_finished = False
+                break
+        if is_finished:
+            processor: EventProcessor = current_app.config["event_processor"]
+            staff_id = current_user_info()[1].staff_id
+            try:
+                for operation in [84, 85]:
+                    event = Event(
+                        staff_id=staff_id,
+                        handle_time=datetime.now(),
+                        operation_id=operation,
+                        event_order_id=os_order.order_id,
+                        event_order_shoe_id=os_id,
+                    )
+                    processor.processEvent(event)
 
-            # update order status
-            for operation in [18, 19, 20, 21]:
-                event = Event(
-                    staff_id=staff_id,
-                    handle_time=datetime.now(),
-                    operation_id=operation,
-                    event_order_id=order.order_id,
-                )
-                processor.processEvent(event)
-        except Exception as e:
-            logger.debug(e)
-            return jsonify({"message": "failed"}), 400
+                # update order status
+                for operation in [18, 19, 20, 21]:
+                    event = Event(
+                        staff_id=staff_id,
+                        handle_time=datetime.now(),
+                        operation_id=operation,
+                        event_order_id=os_order.order_id,
+                    )
+                    processor.processEvent(event)
+            except Exception as e:
+                logger.debug(e)
+                return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "success"})
 
