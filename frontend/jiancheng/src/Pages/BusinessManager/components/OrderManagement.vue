@@ -79,6 +79,14 @@
             <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
             <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
             <el-table-column prop="orderStatus" label="订单状态" />
+            <el-table-column label="生产状态" width="100">
+                <template #default="scope">
+                    <el-tag
+                        :type="{ '未排产': 'info', '裁断': '', '针车预备': '', '针车': '', '成型': 'warning', '未入库': 'warning', '部分入库': 'warning', '待出库': 'danger', '已出库': 'success' }[scope.row.productionStatus] || 'info'"
+                        v-if="scope.row.productionStatus"
+                    >{{ scope.row.productionStatus }}</el-tag>
+                </template>
+            </el-table-column>
             <el-table-column label="操作" width="200">
                 <template #default="scope">
                     <el-button-group>
