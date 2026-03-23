@@ -235,13 +235,20 @@
               :precision="2"
               controls-position="right"
               style="width: 120px"
-              @change="recalcExecuteSummary"
+              @change="onCartonChange(row)"
             />
           </template>
         </el-table-column>
-        <el-table-column label="实际出库(双)" width="120">
+        <el-table-column label="实际出库(双)" width="160">
           <template #default="{ row }">
-            {{ row.actualPairs || 0 }}
+            <el-input-number
+              v-model="row.actualPairs"
+              :min="0"
+              :precision="0"
+              controls-position="right"
+              style="width: 120px"
+              @change="onPairsChange(row)"
+            />
           </template>
         </el-table-column>
         <el-table-column label="差异(双)" width="120">
@@ -563,26 +570,37 @@ export default {
         }
       })
     },
+    onCartonChange(row) {
+      const pairsPerCarton = Number(row.pairsPerCarton) || 0
+      const maxPairs = Number(row.totalPairs) || 0
+      let carton = Number(row.actualCartonCount) || 0
+      if (pairsPerCarton > 0 && carton * pairsPerCarton > maxPairs) {
+        carton = maxPairs / pairsPerCarton
+        row.actualCartonCount = Math.round(carton * 100) / 100
+      }
+      row.actualPairs = Math.round(carton * pairsPerCarton)
+      this.recalcExecuteSummary()
+    },
+    onPairsChange(row) {
+      const pairsPerCarton = Number(row.pairsPerCarton) || 0
+      const maxPairs = Number(row.totalPairs) || 0
+      let pairs = Number(row.actualPairs) || 0
+      if (pairs > maxPairs) {
+        pairs = maxPairs
+        row.actualPairs = pairs
+      }
+      row.actualCartonCount = pairsPerCarton > 0 ? Math.round((pairs / pairsPerCarton) * 100) / 100 : 0
+      this.recalcExecuteSummary()
+    },
     recalcExecuteSummary() {
       let expected = 0
       let actual = 0
       this.executeDetails.forEach((item) => {
         const exp = Number(item.totalPairs) || 0
-        const carton = Number(item.actualCartonCount)
-        const normalizedCarton = Number.isFinite(carton) ? carton : 0
-        const pairsPerCarton = Number(item.pairsPerCarton) || 0
-        const maxCarton =
-          pairsPerCarton > 0 ? exp / pairsPerCarton : normalizedCarton
-        const cappedCarton =
-          pairsPerCarton > 0
-            ? Math.min(normalizedCarton, maxCarton)
-            : normalizedCarton
-        item.actualCartonCount = cappedCarton
-        const normalizedActual = cappedCarton * pairsPerCarton
-        item.actualPairs = normalizedActual
-        item._diff = normalizedActual - exp
+        const act = Number(item.actualPairs) || 0
+        item._diff = act - exp
         expected += exp
-        actual += normalizedActual
+        actual += act
       })
       this.executeTotalExpected = expected
       this.executeTotalActual = actual
