@@ -124,7 +124,19 @@
       <el-table-column prop="createTime" label="申请时间" width="170" />
       <el-table-column prop="orderRId" label="订单号" width="140" />
       <el-table-column prop="orderCId" label="客户订单号" width="140" />
-      <el-table-column prop="customerName" label="客户名称" min-width="140" />
+      <el-table-column label="客户名称" min-width="160">
+        <template #default="{ row }">
+          <span>{{ row.customerName }}</span>
+          <el-tooltip v-if="row.allCustomerNames && row.allCustomerNames !== row.customerName" placement="top" :teleported="false">
+            <template #content>
+              <div>涉及客户：{{ row.allCustomerNames }}</div>
+              <div v-if="row.allOrderRIds">涉及订单：{{ row.allOrderRIds }}</div>
+              <div v-if="row.allShoeRIds">涉及鞋型：{{ row.allShoeRIds }}</div>
+            </template>
+            <el-tag size="small" type="warning" style="margin-left:4px">多客户</el-tag>
+          </el-tooltip>
+        </template>
+      </el-table-column>
       <el-table-column prop="customerBrand" label="客户商标" min-width="120" />
       <el-table-column prop="totalPairs" label="申请总双数" width="120" />
 

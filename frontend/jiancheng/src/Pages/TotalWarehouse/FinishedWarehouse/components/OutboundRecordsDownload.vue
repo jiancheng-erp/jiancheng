@@ -36,6 +36,19 @@
 
                         <el-table-column prop="outboundRId" label="出库单号"/>
                         <el-table-column prop="timestamp" label="操作时间"/>
+                        <el-table-column label="客户名称" min-width="160">
+                            <template #default="{ row }">
+                                <span>{{ row.customerName }}</span>
+                                <el-tooltip v-if="row.allCustomerNames" placement="top" :teleported="false">
+                                    <template #content>
+                                        <div>涉及客户：{{ row.allCustomerNames }}</div>
+                                        <div v-if="row.allOrderRIds">涉及订单：{{ row.allOrderRIds }}</div>
+                                        <div v-if="row.allShoeRIds">涉及鞋型：{{ row.allShoeRIds }}</div>
+                                    </template>
+                                    <el-tag size="small" type="warning" style="margin-left:4px">多客户</el-tag>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
                         <el-table-column
                             prop="ordersCount"
                             label="订单数量"
@@ -144,7 +157,18 @@
                         <el-table-column prop="applyRId" label="申请单号" width="180"/>
                         <el-table-column prop="orderRId" label="订单号" width="180"/>
                         <el-table-column prop="orderCId" label="客户订单号" width="180"/>
-                        <el-table-column prop="customerName" label="客户名称"/>
+                        <el-table-column label="客户名称" min-width="160">
+                            <template #default="{ row }">
+                                <span>{{ row.customerName }}</span>
+                                <el-tooltip v-if="row.allCustomerNames && row.allCustomerNames !== row.customerName" placement="top" :teleported="false">
+                                    <template #content>
+                                        <div>涉及客户：{{ row.allCustomerNames }}</div>
+                                        <div v-if="row.allOrderRIds">涉及订单：{{ row.allOrderRIds }}</div>
+                                    </template>
+                                    <el-tag size="small" type="warning" style="margin-left:4px">多客户</el-tag>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
                         <el-table-column prop="statusLabel" label="状态" width="140"/>
                         <el-table-column prop="totalPairs" label="总数量（双）" width="140"/>
                         <el-table-column prop="timestamp" label="建单时间" width="190"/>
@@ -250,6 +274,7 @@ export default {
                         totalAmount: Number(item.detailAmount) || 0,
                         ordersSet: new Set(item.orderRId ? [item.orderRId] : []),
                         shoesSet: new Set(item.shoeRId ? [item.shoeRId] : []),
+                        customersSet: new Set(item.customerName ? [item.customerName] : []),
                         applyIds: new Set(item.applyId ? [item.applyId] : []),
                         details: [
                             {
@@ -268,6 +293,7 @@ export default {
                     rec.totalAmount += Number(item.detailAmount) || 0
                     if (item.orderRId) rec.ordersSet.add(item.orderRId)
                     if (item.shoeRId) rec.shoesSet.add(item.shoeRId)
+                    if (item.customerName) rec.customersSet.add(item.customerName)
                     if (item.applyId) rec.applyIds.add(item.applyId)
 
                     rec.details.push({
@@ -285,14 +311,18 @@ export default {
             // 把 Set 转成数量，组装最终数组
             return Array.from(map.values()).map((rec) => {
                 const applyIds = Array.from(rec.applyIds)
+                const allCustomers = Array.from(rec.customersSet)
                 return {
-                outboundRId: rec.outboundRId,
-                outboundId: rec.outboundId,
-                timestamp: rec.timestamp,
-                customerName: rec.customerName,
-                totalAmount: rec.totalAmount,
-                ordersCount: rec.ordersSet.size,
-                shoesCount: rec.shoesSet.size,
+                    outboundRId: rec.outboundRId,
+                    outboundId: rec.outboundId,
+                    timestamp: rec.timestamp,
+                    customerName: rec.customerName,
+                    allCustomerNames: allCustomers.length > 1 ? allCustomers.join('、') : '',
+                    allOrderRIds: Array.from(rec.ordersSet).join('、'),
+                    allShoeRIds: Array.from(rec.shoesSet).join('、'),
+                    totalAmount: rec.totalAmount,
+                    ordersCount: rec.ordersSet.size,
+                    shoesCount: rec.shoesSet.size,
                     details: rec.details,
                     applyIds,
                     applyId: applyIds.length === 1 ? applyIds[0] : null
@@ -319,7 +349,10 @@ export default {
                 customerBrand: item.customerBrand,
                 totalPairs: item.totalPairs,
                 statusLabel: item.statusLabel,
-                timestamp: item.createTime || item.updateTime
+                timestamp: item.createTime || item.updateTime,
+                allCustomerNames: item.allCustomerNames,
+                allOrderRIds: item.allOrderRIds,
+                allShoeRIds: item.allShoeRIds
             }))
         },
         applyTotal() {

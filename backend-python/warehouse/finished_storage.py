@@ -2571,9 +2571,10 @@ def save_outbound_apply():
         apply_obj.expected_outbound_datetime = expected_outbound_dt
         ShoeOutboundApplyDetail.query.filter_by(apply_id=apply_obj.apply_id).delete()
     else:
+        customer_index = data.get("customerIndex", 0)
         timestamp = format_datetime(datetime.now())
         rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
-        apply_rid = "SOA" + rid_suffix + "T0"
+        apply_rid = "SOA" + rid_suffix + "T" + str(customer_index)
 
         apply_obj = ShoeOutboundApply(
             apply_rid=apply_rid,
@@ -2735,8 +2736,52 @@ def list_outbound_applies():
     total = q.count()
     rows = q.limit(page_size).offset((page - 1) * page_size).all()
 
+    # 预查询所有相关申请单的明细中客户/订单/鞋型信息
+    apply_ids = [r[0].apply_id for r in rows]
+    multi_customer_map = {}
+    if apply_ids:
+        detail_info_rows = (
+            db.session.query(
+                ShoeOutboundApplyDetail.apply_id,
+                Customer.customer_name,
+                Order.order_rid,
+                Shoe.shoe_rid,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.finished_shoe_id
+                == ShoeOutboundApplyDetail.finished_shoe_storage_id,
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_type_id
+                == FinishedShoeStorage.order_shoe_type_id,
+            )
+            .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+            .join(Order, Order.order_id == OrderShoe.order_id)
+            .join(Customer, Customer.customer_id == Order.customer_id)
+            .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+            .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
+            .filter(ShoeOutboundApplyDetail.apply_id.in_(apply_ids))
+            .all()
+        )
+        for aid, cname, orid, srid in detail_info_rows:
+            if aid not in multi_customer_map:
+                multi_customer_map[aid] = {
+                    "customers": set(),
+                    "orders": set(),
+                    "shoes": set(),
+                }
+            multi_customer_map[aid]["customers"].add(cname)
+            multi_customer_map[aid]["orders"].add(orid)
+            multi_customer_map[aid]["shoes"].add(srid)
+
     result = []
     for apply_obj, order, customer, total_pairs in rows:
+        mc = multi_customer_map.get(apply_obj.apply_id, {})
+        all_customers = sorted(mc.get("customers", set()))
+        all_orders = sorted(mc.get("orders", set()))
+        all_shoes = sorted(mc.get("shoes", set()))
         result.append(
             {
                 "applyId": apply_obj.apply_id,
@@ -2752,6 +2797,9 @@ def list_outbound_applies():
                     apply_obj.status, "未知状态"
                 ),
                 "remark": apply_obj.remark,
+                "allCustomerNames": "、".join(all_customers) if all_customers else customer.customer_name,
+                "allOrderRIds": "、".join(all_orders) if all_orders else order.order_rid,
+                "allShoeRIds": "、".join(all_shoes) if all_shoes else "",
                 "expectedOutboundTime": (
                     format_datetime(apply_obj.expected_outbound_datetime)
                     if apply_obj.expected_outbound_datetime
