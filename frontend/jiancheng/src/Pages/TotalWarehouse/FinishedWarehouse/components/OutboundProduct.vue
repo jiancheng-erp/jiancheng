@@ -62,12 +62,32 @@
         </el-col>
     </el-row>
 
+    <!-- ===== 已选订单汇总 ===== -->
+    <el-row v-if="isMultipleSelection && selectedRows.length > 0" class="mt-2">
+        <el-col :span="24">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 12px; background:#f0f9eb; border-radius:4px; border:1px solid #e1f3d8;">
+                <span style="color:#67c23a; font-weight:500;">已选 {{ selectedRows.length }} 个订单：</span>
+                <el-tag
+                    v-for="row in selectedRows"
+                    :key="row.orderId"
+                    closable
+                    size="small"
+                    style="margin-right:4px;"
+                    @close="removeSelectedRow(row)"
+                >
+                    {{ row.orderRId }}（{{ row.customerName }}）
+                </el-tag>
+                <el-button type="danger" link size="small" @click="clearAllSelections" style="margin-left:8px;">清空全部</el-button>
+            </div>
+        </el-col>
+    </el-row>
+
     <!-- ===== 订单总览表（展开到颜色；不再展示配码细节） ===== -->
     <el-row :gutter="20" class="mt-3">
         <el-col :span="24">
-            <el-table :data="tableData" border stripe height="50vh" @selection-change="handleSelectionChange">
+            <el-table ref="mainTable" :data="tableData" border stripe height="50vh" row-key="orderId" @selection-change="handleSelectionChange">
                 <!-- 多选 -->
-                <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
+                <el-table-column v-if="isMultipleSelection" type="selection" width="55" :reserve-selection="true" />
 
                 <!-- 展开：订单下所有鞋型+颜色（精简版） -->
                 <el-table-column type="expand">
@@ -150,6 +170,7 @@
 
         <!-- 每行 = 订单 + 型号 + 颜色 + 配码 + 鞋码比例 + 配码库存 + 申请箱数/双数 -->
         <el-table :data="businessPagedItems" border stripe size="small" style="width: 100%">
+            <el-table-column prop="customerName" label="客户名称" />
             <el-table-column prop="orderRId" label="订单号" />
             <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="customerProductName" label="客户鞋号" />
@@ -314,7 +335,19 @@
             <el-table-column prop="applyRId" label="申请单号" width="180" />
             <el-table-column prop="orderRId" label="主订单号" width="140" />
             <el-table-column prop="orderCId" label="客户订单号" width="160" />
-            <el-table-column prop="customerName" label="客户名称" />
+            <el-table-column label="客户名称" min-width="160">
+                <template #default="{ row }">
+                    <span>{{ row.customerName }}</span>
+                    <el-tooltip v-if="row.allCustomerNames && row.allCustomerNames !== row.customerName" placement="top" :teleported="false">
+                        <template #content>
+                            <div>涉及客户：{{ row.allCustomerNames }}</div>
+                            <div v-if="row.allOrderRIds">涉及订单：{{ row.allOrderRIds }}</div>
+                            <div v-if="row.allShoeRIds">涉及鞋型：{{ row.allShoeRIds }}</div>
+                        </template>
+                        <el-tag size="small" type="warning" style="margin-left:4px">多客户</el-tag>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
             <el-table-column prop="customerBrand" label="客户商标" />
             <el-table-column prop="totalPairs" label="申请总双数" width="120" />
             <el-table-column prop="statusLabel" label="状态" width="140" />
@@ -349,6 +382,16 @@
     <el-dialog :title="`订单 ${pendingApplyOrderRId} 正在审核的出库申请`" v-model="isOrderPendingApplyDialogVisible" width="70%">
         <el-table :data="orderPendingApplyList" border stripe height="400">
             <el-table-column prop="applyRId" label="申请单号" width="180" />
+            <el-table-column label="涉及客户" min-width="160">
+                <template #default="{ row }">
+                    {{ row.allCustomerNames || row.customerName || '' }}
+                </template>
+            </el-table-column>
+            <el-table-column label="涉及订单" min-width="160">
+                <template #default="{ row }">
+                    {{ row.allOrderRIds || row.orderRId || '' }}
+                </template>
+            </el-table-column>
             <el-table-column prop="totalPairs" label="申请双数" width="120" />
             <el-table-column prop="statusLabel" label="状态" width="140" />
             <el-table-column prop="remark" label="备注" min-width="200" />
@@ -525,9 +568,22 @@ export default {
         toggleSelectionMode() {
             this.isMultipleSelection = !this.isMultipleSelection
             this.selectedRows = []
+            if (!this.isMultipleSelection && this.$refs.mainTable) {
+                this.$refs.mainTable.clearSelection()
+            }
         },
         handleSelectionChange(selection) {
             this.selectedRows = selection
+        },
+        removeSelectedRow(row) {
+            if (this.$refs.mainTable) {
+                this.$refs.mainTable.toggleRowSelection(row, false)
+            }
+        },
+        clearAllSelections() {
+            if (this.$refs.mainTable) {
+                this.$refs.mainTable.clearSelection()
+            }
         },
         handleSizeChange(val) {
             this.pageSize = val
@@ -646,6 +702,7 @@ export default {
             this.selectedRows.forEach((orderRow) => {
                 const orderRId = orderRow.orderRId
                 const orderId = orderRow.orderId
+                const customerName = orderRow.customerName || ''
 
                 ;(orderRow.orderShoeTable || []).forEach((colorRow) => {
                     const sizeColumns = colorRow.sizeColumns || []
@@ -693,6 +750,7 @@ export default {
                             // 关键：明细里带上自己对应的订单
                             orderId,
                             orderRId,
+                            customerName,
 
                             shoeRId: colorRow.shoeRId,
                             customerProductName: colorRow.customerProductName,
@@ -753,50 +811,127 @@ export default {
                 return
             }
 
-            const orderId = this.businessForm.orderId || (this.businessForm.items[0] && this.businessForm.items[0].orderId)
-            if (!orderId) {
-                ElMessage.error('缺少订单信息，无法提交')
+            // 编辑模式：保持原有逻辑，不按客户拆分
+            if (this.businessForm.applyId) {
+                const orderId = this.businessForm.orderId || (this.businessForm.items[0] && this.businessForm.items[0].orderId)
+                if (!orderId) {
+                    ElMessage.error('缺少订单信息，无法提交')
+                    return
+                }
+                const payload = {
+                    applyId: this.businessForm.applyId,
+                    orderId,
+                    status: 1,
+                    remark: this.businessForm.remark,
+                    expectedOutboundTime: this.businessForm.expectedOutboundTime || null,
+                    details: this.businessForm.items
+                        .filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+                        .map((it) => ({
+                            applyDetailId: it.applyDetailId,
+                            finishedShoeStorageId: it.storageId,
+                            orderShoeTypeId: it.orderShoeTypeId,
+                            orderShoeBatchInfoId: it.batchInfoId,
+                            packagingInfoId: it.packagingInfoId,
+                            cartonCount: it.applyCartons,
+                            pairsPerCarton: it.pairsPerCarton,
+                            totalPairs: it.applyPairs,
+                            remark: it.remark
+                        }))
+                }
+                if (!payload.details.length) {
+                    ElMessage.error('请至少为一条明细填写有效的申请箱数')
+                    return
+                }
+                this.isBusinessSubmitting = true
+                try {
+                    const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/save`, payload)
+                    ElMessage.success(res.data.message || '出库申请已提交')
+                    this.isBusinessDialogVisible = false
+                    this.selectedRows = []
+                    if (this.$refs.mainTable) this.$refs.mainTable.clearSelection()
+                    this.isMultipleSelection = false
+                    this.getTableData()
+                } catch (e) {
+                    console.error(e)
+                    const msg = e.response?.data?.message || e.response?.data?.error || '提交出库申请失败'
+                    ElMessage.error(msg)
+                } finally {
+                    this.isBusinessSubmitting = false
+                }
                 return
             }
 
-            const payload = {
-                applyId: this.businessForm.applyId, // 新建时为 null，编辑时有值
-                orderId, // 主订单
-                status: 1, // 直接提交审核（0=草稿，1=提交）
-                remark: this.businessForm.remark,
-                expectedOutboundTime: this.businessForm.expectedOutboundTime || null,
-                details: this.businessForm.items
-                    .filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
-                    .map((it) => ({
-                        // 编辑时可选带入 applyDetailId
-                        applyDetailId: it.applyDetailId,
-                        // 这些字段后端仍按原逻辑用来确定库存/配码
-                        finishedShoeStorageId: it.storageId,
-                        orderShoeTypeId: it.orderShoeTypeId,
-                        orderShoeBatchInfoId: it.batchInfoId,
-                        packagingInfoId: it.packagingInfoId,
-                        cartonCount: it.applyCartons,
-                        pairsPerCarton: it.pairsPerCarton,
-                        totalPairs: it.applyPairs,
-                        remark: it.remark
-                    }))
-            }
-
-            if (!payload.details.length) {
+            // 新建模式：按客户名称分组，每个客户生成一个申请单
+            const validItems = this.businessForm.items.filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+            if (!validItems.length) {
                 ElMessage.error('请至少为一条明细填写有效的申请箱数')
                 return
             }
 
+            // 按客户名称分组
+            const customerGroups = {}
+            validItems.forEach((it) => {
+                const key = it.customerName || '未知客户'
+                if (!customerGroups[key]) customerGroups[key] = []
+                customerGroups[key].push(it)
+            })
+
+            const customerNames = Object.keys(customerGroups)
+            if (customerNames.length > 1) {
+                try {
+                    await ElMessageBox.confirm(
+                        `所选订单涉及 ${customerNames.length} 个不同客户（${customerNames.join('、')}），系统将自动按客户拆分为 ${customerNames.length} 个出库申请单，是否继续？`,
+                        '按客户拆分申请单',
+                        { confirmButtonText: '确认提交', cancelButtonText: '取消' }
+                    )
+                } catch {
+                    return
+                }
+            }
+
             this.isBusinessSubmitting = true
+            const results = []
             try {
-                const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/save`, payload)
-                ElMessage.success(res.data.message || '出库申请已提交')
+                for (const [idx, custName] of customerNames.entries()) {
+                    const groupItems = customerGroups[custName]
+                    const mainOrderId = groupItems[0].orderId
+                    const payload = {
+                        applyId: null,
+                        orderId: mainOrderId,
+                        status: 1,
+                        remark: this.businessForm.remark,
+                        expectedOutboundTime: this.businessForm.expectedOutboundTime || null,
+                        customerIndex: idx,
+                        details: groupItems.map((it) => ({
+                            finishedShoeStorageId: it.storageId,
+                            orderShoeTypeId: it.orderShoeTypeId,
+                            orderShoeBatchInfoId: it.batchInfoId,
+                            packagingInfoId: it.packagingInfoId,
+                            cartonCount: it.applyCartons,
+                            pairsPerCarton: it.pairsPerCarton,
+                            totalPairs: it.applyPairs,
+                            remark: it.remark
+                        }))
+                    }
+                    const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/save`, payload)
+                    results.push({ customer: custName, applyRId: res.data.applyRId })
+                }
+                const summary = results.map((r) => `${r.customer}: ${r.applyRId}`).join('；')
+                ElMessage.success(`已提交 ${results.length} 个申请单（${summary}）`)
                 this.isBusinessDialogVisible = false
+                this.selectedRows = []
+                if (this.$refs.mainTable) this.$refs.mainTable.clearSelection()
+                this.isMultipleSelection = false
                 this.getTableData()
             } catch (e) {
                 console.error(e)
                 const msg = e.response?.data?.message || e.response?.data?.error || '提交出库申请失败'
-                ElMessage.error(msg)
+                if (results.length > 0) {
+                    const done = results.map((r) => `${r.customer}: ${r.applyRId}`).join('；')
+                    ElMessage.error(`部分提交成功（${done}），但后续失败：${msg}`)
+                } else {
+                    ElMessage.error(msg)
+                }
             } finally {
                 this.isBusinessSubmitting = false
             }
