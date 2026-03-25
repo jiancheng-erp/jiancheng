@@ -1836,6 +1836,10 @@ def get_order_full_info():
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
     linger_stage_value = request.args.get("lingerStageValue", "", type=str)
     min_stay_days = request.args.get("minStayDays", 0, type=int)
+    start_date_from = request.args.get("startDateFrom", "", type=str)
+    start_date_to = request.args.get("startDateTo", "", type=str)
+    end_date_from = request.args.get("endDateFrom", "", type=str)
+    end_date_to = request.args.get("endDateTo", "", type=str)
 
     linger_stage_type = None
     linger_stage_id = None
@@ -1969,6 +1973,15 @@ def get_order_full_info():
         .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_id.desc())
     )
+
+    if start_date_from:
+        query = query.filter(Order.start_date >= start_date_from)
+    if start_date_to:
+        query = query.filter(Order.start_date <= start_date_to)
+    if end_date_from:
+        query = query.filter(Order.end_date >= end_date_from)
+    if end_date_to:
+        query = query.filter(Order.end_date <= end_date_to)
 
     if matched_status_subquery is not None:
         query = query.join(
@@ -2272,6 +2285,170 @@ def get_order_full_info():
         
 
     return jsonify({"result": result, "total": count_result})
+
+
+@order_bp.route("/order/exportorderexcel", methods=["GET"])
+def export_order_excel():
+    """导出订单查询结果为 Excel"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side
+    from io import BytesIO
+
+    order_search = request.args.get("orderSearch", "", type=str)
+    customer_search = request.args.get("customerSearch", "", type=str)
+    shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
+    start_date_from = request.args.get("startDateFrom", "", type=str)
+    start_date_to = request.args.get("startDateTo", "", type=str)
+    end_date_from = request.args.get("endDateFrom", "", type=str)
+    end_date_to = request.args.get("endDateTo", "", type=str)
+
+    order_amount_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    order_shoe_status_reference = (
+        db.session.query(
+            OrderShoe.order_shoe_id,
+            func.group_concat(OrderShoeStatusReference.status_name).label("status_name"),
+        )
+        .join(OrderShoeStatus, OrderShoeStatusReference.status_id == OrderShoeStatus.current_status)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .group_by(OrderShoe.order_shoe_id)
+        .subquery()
+    )
+
+    query = (
+        db.session.query(
+            Order,
+            OrderStatus,
+            OrderStatusReference,
+            OrderShoe,
+            order_shoe_status_reference.c.status_name.label("shoe_status_names"),
+            Customer,
+            Shoe,
+            order_amount_subquery.c.order_amount,
+        )
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .join(OrderStatusReference, OrderStatus.order_current_status == OrderStatusReference.order_status_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(order_shoe_status_reference, OrderShoe.order_shoe_id == order_shoe_status_reference.c.order_shoe_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(order_amount_subquery, Order.order_id == order_amount_subquery.c.order_id)
+        .filter(
+            Order.order_rid.like(f"%{order_search}%"),
+            Customer.customer_name.like(f"%{customer_search}%"),
+            Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
+        )
+        .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
+        .order_by(Order.order_id.desc())
+    )
+
+    if start_date_from:
+        query = query.filter(Order.start_date >= start_date_from)
+    if start_date_to:
+        query = query.filter(Order.start_date <= start_date_to)
+    if end_date_from:
+        query = query.filter(Order.end_date >= end_date_from)
+    if end_date_to:
+        query = query.filter(Order.end_date <= end_date_to)
+
+    rows = query.distinct().all()
+
+    # Build order dict
+    orders_dict = {}
+    for row in rows:
+        order, order_status, order_status_ref, order_shoe, shoe_status_names, customer, shoe, order_amount = row
+        fmt_start = order.start_date.strftime("%Y-%m-%d") if order.start_date else ""
+        fmt_end = order.end_date.strftime("%Y-%m-%d") if order.end_date else ""
+
+        if order.order_id not in orders_dict:
+            orders_dict[order.order_id] = {
+                "orderRid": order.order_rid or "",
+                "customerName": customer.customer_name if customer else "",
+                "createTime": fmt_start,
+                "deadlineTime": fmt_end,
+                "status": order_status_ref.order_status_name if order_status_ref else "",
+                "orderAmount": order_amount or 0,
+                "shoes": [],
+            }
+
+        orders_dict[order.order_id]["shoes"].append({
+            "shoeRid": shoe.shoe_rid if shoe else "",
+            "customerId": order_shoe.customer_product_name if order_shoe else "",
+            "statuses": shoe_status_names or "",
+        })
+
+    # Create Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "订单查询"
+
+    header_font = Font(bold=True, size=11)
+    thin_border = Border(
+        left=Side(style="thin"), right=Side(style="thin"),
+        top=Side(style="thin"), bottom=Side(style="thin"),
+    )
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", "订单日期", "交货日期", "订单状态", "鞋型状态"]
+    for col_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx, value=h)
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = center_align
+
+    row_idx = 2
+    for order_data in orders_dict.values():
+        shoe_rids = ", ".join(s["shoeRid"] for s in order_data["shoes"])
+        customer_ids = ", ".join(s["customerId"] for s in order_data["shoes"])
+        statuses = ", ".join(s["statuses"] for s in order_data["shoes"])
+
+        values = [
+            order_data["orderRid"],
+            order_data["customerName"],
+            shoe_rids,
+            customer_ids,
+            order_data["orderAmount"],
+            order_data["createTime"],
+            order_data["deadlineTime"],
+            order_data["status"],
+            statuses,
+        ]
+        for col_idx, val in enumerate(values, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+        row_idx += 1
+
+    # Auto-fit column widths
+    for col in ws.columns:
+        max_len = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = min(max_len + 4, 40)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"订单查询_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 @order_bp.route("/order/getorderpageinfo", methods=["GET"])

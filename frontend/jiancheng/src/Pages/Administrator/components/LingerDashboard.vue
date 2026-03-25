@@ -196,6 +196,18 @@ onMounted(async () => {
     margin-top: 16px;
 }
 
+.toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.toolbar-row :deep(.el-col) {
+    flex: 0 0 auto;
+    max-width: none;
+}
+
 .toolbar-label {
     margin-bottom: 8px;
     font-size: 13px;

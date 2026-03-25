@@ -20,6 +20,16 @@ export default [
       role: 21
     }
   },
+  {
+    path: '/business/businessorderdetail/orderid=:orderId/finance',
+    name: 'business-orderdetail-finance',
+    component: BusinessOrderDetail,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: 10
+    }
+  },
   // {
   //   path: '/logistics/secondpurchase/orderid=:orderId',
   //   name: 'logistics-secondpurchase',
