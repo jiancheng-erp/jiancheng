@@ -11,7 +11,7 @@ from general_document.finished_warehouse_excel import (
     build_finished_realtime_inventory_excel,
     build_finished_period_inventory_excel,
 )
-from constants import FINISHED_STORAGE_STATUS
+from constants import FINISHED_STORAGE_STATUS, FINISHED_STORAGE_STATUS_ENUM
 from models import (
     FinishedShoeStorageSnapshot,
     FinishedShoeSizeDetailSnapshot,
@@ -29,6 +29,19 @@ from models import (
 from shared_apis.utility_func import normalize_category_by_batch_type
 
 finished_storage_snapshot_bp = Blueprint("finished_storage_snapshot_bp", __name__)
+
+
+def _derive_finished_status(estimated_amount: int, actual_amount: int, current_amount: int) -> int:
+    estimated_amount = int(estimated_amount or 0)
+    actual_amount = int(actual_amount or 0)
+    current_amount = int(current_amount or 0)
+    outbound_amount = max(actual_amount - current_amount, 0)
+
+    if outbound_amount >= estimated_amount:
+        return FINISHED_STORAGE_STATUS_ENUM["PRODUCT_OUTBOUND_FINISHED"]
+    if actual_amount >= estimated_amount:
+        return FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_FINISHED"]
+    return FINISHED_STORAGE_STATUS_ENUM["PRODUCT_INBOUND_NOT_FINISHED"]
 
 
 def _parse_date_or_default(value: str | None) -> date:
@@ -404,8 +417,10 @@ def _normalize_row(snapshot_row, order, order_shoe, shoe, color, customer, delta
     fsid = snapshot_row.finished_shoe_storage_id
     delta = delta_map.get(fsid, {"in": 0, "out": 0, "net": 0})
 
+    estimated_amount = snapshot_row.finished_estimated_amount or 0
     final_actual = (snapshot_row.finished_actual_amount or 0) + delta["in"]
     final_current = (snapshot_row.finished_amount or 0) + delta["net"]
+    final_status = _derive_finished_status(estimated_amount, final_actual, final_current)
 
     size_breakdown = []
     base_sizes = size_base.get(fsid, {})
@@ -442,11 +457,11 @@ def _normalize_row(snapshot_row, order, order_shoe, shoe, color, customer, delta
         "customerBrand": customer.customer_brand,
         "customerProductName": order_shoe.customer_product_name,
         "colorName": color.color_name,
-        "finishedEstimatedAmount": snapshot_row.finished_estimated_amount or 0,
+        "finishedEstimatedAmount": estimated_amount,
         "finishedActualAmount": final_actual,
         "finishedAmount": final_current,
-        "finishedStatus": snapshot_row.finished_status,
-        "finishedStatusLabel": FINISHED_STORAGE_STATUS.get(snapshot_row.finished_status, ""),
+        "finishedStatus": final_status,
+        "finishedStatusLabel": FINISHED_STORAGE_STATUS.get(final_status, ""),
         "sizeColumns": size_breakdown,
     }
 

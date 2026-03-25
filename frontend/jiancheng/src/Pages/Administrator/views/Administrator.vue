@@ -25,6 +25,15 @@
                     <el-menu-item index="wechat" @click="handleMenuClick('wechat')">
                         <span>微信推送模板</span>
                     </el-menu-item>
+                    <el-menu-item index="materialConsolidation" @click="handleMenuClick('materialConsolidation')">
+                        <span>材料整改工具</span>
+                    </el-menu-item>
+                    <el-menu-item index="materialBatchEdit" @click="handleMenuClick('materialBatchEdit')">
+                        <span>材料同步修改</span>
+                    </el-menu-item>
+                    <el-menu-item index="finishedStorageOverview" @click="handleMenuClick('finishedStorageOverview')">
+                        <span>成品入出库概览</span>
+                    </el-menu-item>
                     <el-menu-item index="logout" @click="logout">
                         <span>退出系统</span>
                     </el-menu-item>
@@ -46,13 +55,19 @@ import OrderSearch from '../components/OrderSearch.vue'
 import LingerDashboard from '../components/LingerDashboard.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import WechatTemplateManager from '@/Pages/System/WechatTemplateManager.vue'
+import MaterialConsolidation from '../components/MaterialConsolidation.vue'
+import MaterialBatchEdit from '../components/MaterialBatchEdit.vue'
+import FinishedStorageOverview from '../components/FinishedStorageOverview.vue'
 export default {
     components: {
         AllHeader,
         OrderSearch,
         LingerDashboard,
         PersonalInfo,
-        WechatTemplateManager
+        WechatTemplateManager,
+        MaterialConsolidation,
+        MaterialBatchEdit,
+        FinishedStorageOverview
     },
     data() {
         return {
@@ -80,6 +95,12 @@ export default {
                 this.currentComponent = 'PersonalInfo'
             } else if (index === 'wechat') {
                 this.currentComponent = 'WechatTemplateManager'
+            } else if (index === 'materialConsolidation') {
+                this.currentComponent = 'MaterialConsolidation'
+            } else if (index === 'materialBatchEdit') {
+                this.currentComponent = 'MaterialBatchEdit'
+            } else if (index === 'finishedStorageOverview') {
+                this.currentComponent = 'FinishedStorageOverview'
             }
         },
         async logout() {

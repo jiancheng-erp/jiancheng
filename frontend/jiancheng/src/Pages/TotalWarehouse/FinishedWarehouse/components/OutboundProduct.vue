@@ -1,7 +1,7 @@
 <template>
     <!-- ===== 搜索区 ===== -->
-    <el-row :gutter="20">
-        <el-col :span="16">
+    <el-row :gutter="20" class="search-row">
+        <el-col :span="24">
             <el-input v-model="orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
             <el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
             <el-input v-model="orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
@@ -1145,7 +1145,14 @@ export default {
 .mt-3 {
     margin-top: 12px;
 }
-.search-input + .search-input {
-    margin-left: 8px;
+.search-row :deep(.el-col) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.search-row :deep(.el-input) {
+    width: 200px !important;
+    flex: 0 0 auto;
 }
 </style>

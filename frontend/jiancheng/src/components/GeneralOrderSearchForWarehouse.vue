@@ -16,6 +16,25 @@
             <el-input v-model="shoeRIdSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
         </el-col>
     </el-row>
+    <el-row :gutter="20" style="margin-top: 10px">
+        <el-col :span="7" :offset="0" style="white-space: nowrap">
+            订单日期：
+            <el-date-picker v-model="startDateRange" type="daterange" range-separator="至"
+                start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+                style="width: 240px" @change="tableFilter" clearable />
+        </el-col>
+        <el-col :span="7" :offset="2" style="white-space: nowrap">
+            交货日期：
+            <el-date-picker v-model="endDateRange" type="daterange" range-separator="至"
+                start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
+                style="width: 240px" @change="tableFilter" clearable />
+        </el-col>
+        <el-col :span="6" :offset="1">
+            <el-button type="primary" @click="tableFilter">搜索</el-button>
+            <el-button @click="resetFilters">重置</el-button>
+            <el-button type="success" @click="exportExcel" :loading="exporting">导出Excel</el-button>
+        </el-col>
+    </el-row>
     <el-row>
         <el-table :data="orderFilterData" border stripe height="600">
             <el-table-column type="expand">
@@ -42,6 +61,11 @@
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
+            <el-table-column label="操作" width="100" v-if="showDetailLink">
+                <template #default="scope">
+                    <el-button type="primary" link @click="openOrderDetail(scope.row)">查看详情</el-button>
+                </template>
+            </el-table-column>
         </el-table>
     </el-row>
     <el-row :gutter="20">
@@ -55,6 +79,7 @@
 import { ref, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 export default {
     data() {
@@ -65,11 +90,39 @@ export default {
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
+            startDateRange: null,
+            endDateRange: null,
             currentPage: 1,
             pageSize: 10,
             totalPages: 0,
             totalData: 0,
-            viewPastTasks: 0
+            viewPastTasks: 0,
+            exporting: false
+        }
+    },
+    computed: {
+        showDetailLink() {
+            const role = parseInt(localStorage.getItem('role'), 10)
+            return role === 10
+        },
+        queryParams() {
+            const params = {
+                page: this.currentPage,
+                pageSize: this.pageSize,
+                orderSearch: this.orderSearch,
+                customerSearch: this.customerSearch,
+                shoeRIdSearch: this.shoeRIdSearch,
+                viewPastTasks: this.viewPastTasks
+            }
+            if (this.startDateRange && this.startDateRange.length === 2) {
+                params.startDateFrom = this.startDateRange[0]
+                params.startDateTo = this.startDateRange[1]
+            }
+            if (this.endDateRange && this.endDateRange.length === 2) {
+                params.endDateFrom = this.endDateRange[0]
+                params.endDateTo = this.endDateRange[1]
+            }
+            return params
         }
     },
     async mounted() {
@@ -80,22 +133,15 @@ export default {
         async getOrderData() {
             try {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getorderfullinfo`, {
-                    params: {
-                        page: this.currentPage,
-                        pageSize: this.pageSize,
-                        orderSearch: this.orderSearch,
-                        customerSearch: this.customerSearch,
-                        shoeRIdSearch: this.shoeRIdSearch,
-                        viewPastTasks: this.viewPastTasks
-                    }
+                    params: this.queryParams
                 })
-                this.orderFilterData = response.data.result // Update table data
+                this.orderFilterData = response.data.result
                 this.orderFilterData = this.orderFilterData.map((order) => ({
                     ...order,
                     shoeRid: order.shoes.map((s) => s.shoeRid).join(', ') || 'N/A',
                     customerId: order.shoes.map((s) => s.customerId).join(', ') || 'N/A'
                 }))
-                this.totalData = response.data.total // Update total data count
+                this.totalData = response.data.total
             } catch (error) {
                 console.error('Error fetching order data:', error)
             }
@@ -105,12 +151,56 @@ export default {
             this.getOrderData()
         },
         tableFilter() {
-            // Reset to the first page on filter
             this.currentPage = 1
             this.getOrderData()
         },
+        resetFilters() {
+            this.orderSearch = ''
+            this.customerSearch = ''
+            this.shoeRIdSearch = ''
+            this.startDateRange = null
+            this.endDateRange = null
+            this.tableFilter()
+        },
+        async exportExcel() {
+            this.exporting = true
+            try {
+                const params = { ...this.queryParams }
+                delete params.page
+                delete params.pageSize
+                const response = await axios.get(`${this.$apiBaseUrl}/order/exportorderexcel`, {
+                    params,
+                    responseType: 'blob'
+                })
+                const blob = new Blob([response.data], { type: response.headers['content-type'] })
+                const disposition = response.headers['content-disposition']
+                let filename = '订单查询.xlsx'
+                if (disposition && disposition.includes('filename=')) {
+                    const match = disposition.match(/filename="?(.+?)"?$/)
+                    if (match && match[1]) {
+                        filename = decodeURIComponent(match[1])
+                    }
+                }
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(link.href)
+            } catch (error) {
+                ElMessage.error('导出失败')
+                console.error('Export error:', error)
+            } finally {
+                this.exporting = false
+            }
+        },
         handleRowClick(row) {
             const url = `${window.location.origin}/processsheet/orderid=${row.orderId}`
+            window.open(url, '_blank')
+        },
+        openOrderDetail(row) {
+            const url = `${window.location.origin}/business/businessorderdetail/orderid=${row.orderId}/finance`
             window.open(url, '_blank')
         },
         handleRowClick2(row) {

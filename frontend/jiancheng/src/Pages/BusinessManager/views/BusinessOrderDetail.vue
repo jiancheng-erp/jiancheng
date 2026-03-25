@@ -31,7 +31,7 @@
                             <el-descriptions-item label="包装资料上传状态" align="center"
                                 >{{ orderData.wrapRequirementUploadStatus }}
                                 <el-button v-if="allowEditInfo" type="primary" size="default" @click="openSubmitDialog()">上传</el-button>
-                                <el-button v-if="orderData.wrapRequirementUploadStatus === '已上传包装文件'" type="primary" size="default" @click="download(2)">查看</el-button>
+                                <el-button v-if="orderData.wrapRequirementUploadStatus === '已上传包装文件' && !isFinanceManager" type="primary" size="default" @click="download(2)">查看</el-button>
                             </el-descriptions-item>
                             <el-descriptions-item label="订单业务员" align="center">
                                 {{ orderData.orderStaffName }}
@@ -45,13 +45,13 @@
                                     转为普通单
                                 </el-button>
 
-                                <el-button v-if="orderClerkEditable" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
+                                <el-button v-if="orderClerkEditable && !isFinanceManager" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
                                 <el-button v-if="this.userIsManager && this.readyPending" type="warning" @click="sendOrderNext" :disabled="this.role == 21 ? true : false"> 下发 </el-button>
 
                                 <el-button v-if="this.userIsManager && this.orderManagerEditable" type="warning" @click="sendOrderPrevious" :disabled="this.role == 21 ? true : false">
                                     退回
                                 </el-button>
-                                <el-button v-if="allowSaveTemplate" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
+                                <el-button v-if="allowSaveTemplate && !isFinanceManager" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
@@ -190,10 +190,10 @@
 
                         <el-table-column label="备注">
                             <template #default="scope">
-                                <el-button v-if="!scope.row.orderShoeRemarkExist" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
+                                <el-button v-if="!scope.row.orderShoeRemarkExist && !isFinanceManager" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
 
                                 <el-text v-if="scope.row.orderShoeRemarkExist" style="display: inline-block">{{ scope.row.orderShoeRemarkRep }}</el-text>
-                                <el-button v-if="scope.row.orderShoeRemarkExist" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px"> 编辑备注 </el-button>
+                                <el-button v-if="scope.row.orderShoeRemarkExist && !isFinanceManager" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px"> 编辑备注 </el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -298,11 +298,14 @@ export default {
         orderManagerEditable() {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
+        isFinanceManager() {
+            return this.role == 10
+        },
         userIsManager() {
             return this.role == 4
         },
         canViewPrice() {
-            return this.userIsManager
+            return this.userIsManager || this.isFinanceManager
         },
         canEditPrice() {
             return this.canViewPrice && !this.editOrderInfoDisabled
