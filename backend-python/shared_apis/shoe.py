@@ -1,5 +1,4 @@
 from flask import Blueprint, jsonify, request
-from matplotlib.style import available
 
 from app_config import db
 from sqlalchemy import func
@@ -60,6 +59,7 @@ def get_all_shoes_new():
     time_s = time.time()
     shoe_rid = request.args.get("shoerid")
     customer_name = request.args.get("customerName", None)
+    customer_product_name = request.args.get("customerProductName", None)
     available = request.args.get("available", type=int)
     _, _, department = current_user_info()
     user_department = department.department_name
@@ -73,6 +73,7 @@ def get_all_shoes_new():
     # .outerjoin(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
     #         .outerjoin(Color, ShoeType.color_id == Color.color_id)
     query = db.session.query(Shoe)
+    joined_order_shoe = False
     if user_department in ["开发一部", "开发二部", "开发三部", "开发五部"]:
         query = query.filter(Shoe.shoe_department_id == user_department)
 
@@ -82,9 +83,28 @@ def get_all_shoes_new():
         query = query.filter(Shoe.shoe_available == True)
     if customer_name is not None and customer_name != "":
         query = query.join(OrderShoe, Shoe.shoe_id == OrderShoe.shoe_id).filter(OrderShoe.customer_product_name.ilike(f"%{customer_name}%"))
+        joined_order_shoe = True
+    if customer_product_name is not None and customer_product_name != "":
+        if not joined_order_shoe:
+            query = query.join(OrderShoe, Shoe.shoe_id == OrderShoe.shoe_id)
+            joined_order_shoe = True
+        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
     total_count = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
     shoe_id_list = [shoe.shoe_id for shoe in response]
+    # 查询匹配的客户型号用于前端展示
+    customer_product_names_map = {}
+    if joined_order_shoe and shoe_id_list:
+        cpn_keyword = customer_product_name or customer_name or ""
+        cpn_rows = (
+            db.session.query(OrderShoe.shoe_id, OrderShoe.customer_product_name)
+            .filter(OrderShoe.shoe_id.in_(shoe_id_list))
+            .filter(OrderShoe.customer_product_name.ilike(f"%{cpn_keyword}%"))
+            .distinct()
+            .all()
+        )
+        for row in cpn_rows:
+            customer_product_names_map.setdefault(row.shoe_id, []).append(row.customer_product_name)
     entities = (
         db.session.query(Shoe, ShoeType, Color)
         .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
@@ -99,6 +119,7 @@ def get_all_shoes_new():
             res_data[shoe.shoe_id][to_camel(attr)] = getattr(shoe, attr)
         res_data[shoe.shoe_id]["shoeTypeData"] = []
         res_data[shoe.shoe_id]["shoeTypeColors"] = []
+        res_data[shoe.shoe_id]["customerProductNames"] = customer_product_names_map.get(shoe.shoe_id, [])
 
     for shoe, shoe_type, color in entities:
         shoe_type_res = {}
