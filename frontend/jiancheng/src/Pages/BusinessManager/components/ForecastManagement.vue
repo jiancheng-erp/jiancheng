@@ -106,7 +106,7 @@
     </el-col>
   </el-row>
 
-  <el-dialog v-model="createDialogVisible" :title="isEditMode ? '编辑预报单' : '创建预报单'" width="88%" :close-on-click-modal="false">
+  <el-dialog v-model="createDialogVisible" :title="isEditMode ? '编辑预报单' : '创建预报单'" width="88%" :close-on-click-modal="false" @keydown.ctrl.enter.prevent="addItemRow">
     <el-form :model="createForm" label-width="130px">
       <el-row :gutter="12">
         <el-col :span="8">
@@ -208,14 +208,14 @@
               clearable
               :remote-method="queryManualShoeType"
               :loading="manualShoeTypeLoading"
-              placeholder="选择鞋型+颜色"
+              placeholder="搜索工厂型号或客户型号"
               style="width: 100%"
               @change="(val) => handleShoeTypeChange(scope.row, val)"
             >
               <el-option
                 v-for="item in allShoeTypeOptions"
                 :key="item.shoeTypeId"
-                :label="`${item.shoeRid} - ${item.colorName}`"
+                :label="`${item.shoeRid} - ${item.colorName}${item.customerProductName ? ' (' + item.customerProductName + ')' : ''}`"
                 :value="item.shoeTypeId"
               />
             </el-select>
@@ -226,12 +226,13 @@
             <el-input
               v-model="scope.row.customerShoeName"
               @input="(val) => handleCustomerShoeNameInput(scope.row, val)"
+              @keypress.enter="addItemRow"
             />
           </template>
         </el-table-column>
         <el-table-column label="客户颜色" min-width="140">
           <template #default="scope">
-            <el-input v-model="scope.row.customerColorName" />
+            <el-input v-model="scope.row.customerColorName" @keypress.enter="addItemRow" />
           </template>
         </el-table-column>
         <el-table-column label="配码" min-width="220">
@@ -736,9 +737,16 @@ export default {
   },
   computed: {
     allShoeTypeOptions() {
-      const cacheValues = Object.values(this.shoeTypeOptionCache || {})
-      if (cacheValues.length) return cacheValues
-      return this.manualShoeTypeOptions || []
+      const searchResults = this.manualShoeTypeOptions || []
+      const resultIdSet = new Set(searchResults.map((i) => i.shoeTypeId))
+      // 保留已选中行的缓存项（用于显示已选值的标签）
+      const selectedIds = new Set(
+        (this.createItems || []).map((r) => r.shoeTypeId).filter(Boolean)
+      )
+      const selectedExtras = Object.values(this.shoeTypeOptionCache || {}).filter(
+        (item) => selectedIds.has(item.shoeTypeId) && !resultIdSet.has(item.shoeTypeId)
+      )
+      return [...searchResults, ...selectedExtras]
     },
     selectedShoeTypeCount() {
       return Object.keys(this.selectedShoeTypeMap || {}).length
@@ -1248,6 +1256,7 @@ export default {
           page: params.page || 1,
           pageSize: params.pageSize || this.shoeSelectorPageSize,
           shoerid: params.shoeRid || '',
+          customerProductName: params.customerProductName || '',
           available: 1
         }
       })
@@ -1256,6 +1265,8 @@ export default {
       this.shoeSelectorShoes = shoes
       const options = []
       shoes.forEach((shoe) => {
+        const cpnList = shoe.customerProductNames || []
+        const cpnLabel = cpnList.length ? cpnList.join(', ') : ''
         const shoeTypes = shoe.shoeTypeData || []
         shoeTypes.forEach((type) => {
           options.push({
@@ -1263,7 +1274,8 @@ export default {
             shoeRid: shoe.shoeRid,
             colorName: type.colorName,
             colorId: type.colorId,
-            shoeImageUrl: type.shoeImageUrl || ''
+            shoeImageUrl: type.shoeImageUrl || '',
+            customerProductName: cpnLabel
           })
         })
       })
@@ -1290,12 +1302,60 @@ export default {
         return
       }
       this.manualShoeTypeLoading = true
-      await this.loadShoeTypes({ page: 1, pageSize: 120, shoeRid: q })
-      this.manualShoeTypeOptions = [...this.shoeTypeCatalog]
+      // 同时按工厂型号和客户型号搜索，合并结果
+      const [ridRes, cpnRes] = await Promise.allSettled([
+        this.loadShoeTypesRaw({ page: 1, pageSize: 60, shoeRid: q }),
+        this.loadShoeTypesRaw({ page: 1, pageSize: 60, customerProductName: q })
+      ])
+      const ridOptions = ridRes.status === 'fulfilled' ? ridRes.value : []
+      const cpnOptions = cpnRes.status === 'fulfilled' ? cpnRes.value : []
+      const merged = new Map()
+      ;[...ridOptions, ...cpnOptions].forEach((item) => merged.set(item.shoeTypeId, item))
+      // 本地缓存颜色名匹配
+      const lowerQ = q.toLowerCase()
+      Object.values(this.shoeTypeOptionCache).forEach((item) => {
+        if (!merged.has(item.shoeTypeId) &&
+          (String(item.colorName || '').toLowerCase().includes(lowerQ) ||
+           String(item.customerProductName || '').toLowerCase().includes(lowerQ)))
+          merged.set(item.shoeTypeId, item)
+      })
+      this.manualShoeTypeOptions = [...merged.values()]
       this.manualShoeTypeOptions.forEach((item) => {
         this.shoeTypeOptionCache[item.shoeTypeId] = item
       })
       this.manualShoeTypeLoading = false
+    },
+    async loadShoeTypesRaw(params = {}) {
+      const response = await axios.get(`${this.$apiBaseUrl}/shoe/getallshoesnew`, {
+        params: {
+          page: params.page || 1,
+          pageSize: params.pageSize || 60,
+          shoerid: params.shoeRid || '',
+          customerProductName: params.customerProductName || '',
+          available: 1
+        }
+      })
+      const shoes = response.data?.shoeTable || []
+      const options = []
+      shoes.forEach((shoe) => {
+        const cpnList = shoe.customerProductNames || []
+        const cpnLabel = cpnList.length ? cpnList.join(', ') : ''
+        const shoeTypes = shoe.shoeTypeData || []
+        shoeTypes.forEach((type) => {
+          options.push({
+            shoeTypeId: type.shoeTypeId,
+            shoeRid: shoe.shoeRid,
+            colorName: type.colorName,
+            colorId: type.colorId,
+            shoeImageUrl: type.shoeImageUrl || '',
+            customerProductName: cpnLabel
+          })
+        })
+      })
+      options.forEach((item) => {
+        this.shoeTypeOptionCache[item.shoeTypeId] = item
+      })
+      return options
     },
     async searchShoeSelector() {
       this.shoeSelectorPage = 1
@@ -1406,7 +1466,6 @@ export default {
       }
       this.createItems = []
       this.createItemPage = 1
-      this.addItemRow()
     },
     async openEditDialog(row) {
       if (!row?.forecastSheetId) return
