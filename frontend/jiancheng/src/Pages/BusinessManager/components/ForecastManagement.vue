@@ -736,9 +736,16 @@ export default {
   },
   computed: {
     allShoeTypeOptions() {
-      const cacheValues = Object.values(this.shoeTypeOptionCache || {})
-      if (cacheValues.length) return cacheValues
-      return this.manualShoeTypeOptions || []
+      const searchResults = this.manualShoeTypeOptions || []
+      const resultIdSet = new Set(searchResults.map((i) => i.shoeTypeId))
+      // 保留已选中行的缓存项（用于显示已选值的标签）
+      const selectedIds = new Set(
+        (this.createItems || []).map((r) => r.shoeTypeId).filter(Boolean)
+      )
+      const selectedExtras = Object.values(this.shoeTypeOptionCache || {}).filter(
+        (item) => selectedIds.has(item.shoeTypeId) && !resultIdSet.has(item.shoeTypeId)
+      )
+      return [...searchResults, ...selectedExtras]
     },
     selectedShoeTypeCount() {
       return Object.keys(this.selectedShoeTypeMap || {}).length
@@ -1291,7 +1298,18 @@ export default {
       }
       this.manualShoeTypeLoading = true
       await this.loadShoeTypes({ page: 1, pageSize: 120, shoeRid: q })
-      this.manualShoeTypeOptions = [...this.shoeTypeCatalog]
+      // API 按 shoeRid 搜索；同时支持按颜色名本地匹配缓存
+      const apiResults = [...this.shoeTypeCatalog]
+      const apiIds = new Set(apiResults.map((i) => i.shoeTypeId))
+      const lowerQ = q.toLowerCase()
+      const colorMatches = Object.values(this.shoeTypeOptionCache)
+        .filter(
+          (item) =>
+            !apiIds.has(item.shoeTypeId) &&
+            (String(item.colorName || '').toLowerCase().includes(lowerQ) ||
+             String(item.shoeRid || '').toLowerCase().includes(lowerQ))
+        )
+      this.manualShoeTypeOptions = [...apiResults, ...colorMatches]
       this.manualShoeTypeOptions.forEach((item) => {
         this.shoeTypeOptionCache[item.shoeTypeId] = item
       })

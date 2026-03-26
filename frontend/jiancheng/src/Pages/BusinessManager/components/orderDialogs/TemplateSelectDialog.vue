@@ -7,7 +7,7 @@
                     <el-button type="primary" :loading="historyOrderLoading" @click="$emit('search-history')">搜索</el-button>
                     <el-button :loading="historyOrderLoading" @click="$emit('refresh-history')">刷新</el-button>
                 </div>
-                <el-table :data="historyOrderDisplayData" style="margin-top:8px" height="420" v-loading="historyOrderLoading">
+                <el-table :data="historyOrderDisplayData" style="margin-top:8px" height="420" v-loading="historyOrderLoading" @row-dblclick="(row) => $emit('create-from-history', row.orderDbId)">
                     <el-table-column prop="orderRid" label="订单号" min-width="150" />
                     <el-table-column prop="orderCid" label="客户订单号" min-width="150" />
                     <el-table-column prop="customerName" label="客户名称" min-width="120" />
