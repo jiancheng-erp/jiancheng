@@ -6,6 +6,7 @@
             <el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
             <el-input v-model="orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
             <el-input v-model="customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
+            <el-input v-model="customerProductNameSearch" placeholder="请输入客户型号" clearable @keypress.enter="getTableData" @clear="getTableData" class="search-input" />
         </el-col>
     </el-row>
 
@@ -104,9 +105,27 @@
                 </el-table-column>
 
                 <el-table-column prop="orderRId" label="订单号" />
-                <el-table-column prop="customerName" label="客户名称" />
-                <el-table-column prop="orderCId" label="客户订单号" />
-                <el-table-column prop="customerBrand" label="客户商标" />
+                <el-table-column prop="customerName" label="客户名称" min-width="110" show-overflow-tooltip />
+                <el-table-column prop="orderCId" label="客户订单号" min-width="120" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        <span class="single-line-cell">{{ formatInlineText(row.orderCId) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="customerBrand" label="客户商标" min-width="110" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        <span class="single-line-cell">{{ formatInlineText(row.customerBrand) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="shoeRIds" label="工厂型号" min-width="180" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        <span class="single-line-cell">{{ formatInlineText(row.shoeRIds) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="customerProductNames" label="客户型号" min-width="180" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        <span class="single-line-cell">{{ formatInlineText(row.customerProductNames) }}</span>
+                    </template>
+                </el-table-column>
                 <el-table-column prop="orderAmount" label="订单数量" />
                 <el-table-column prop="currentStock" label="成品库存" />
                 <el-table-column prop="pendingOutboundAmount" label="审核中出库数量" />
@@ -332,8 +351,14 @@
         </el-form>
 
         <el-table :data="applyTableData" border stripe height="400">
+            <el-table-column label="明细" width="80" fixed="left">
+                <template #default="{ row }">
+                    <el-button type="primary" link size="small" @click="openApplyDetailDialog(row)">查看</el-button>
+                </template>
+            </el-table-column>
             <el-table-column prop="applyRId" label="申请单号" width="180" />
-            <el-table-column prop="orderRId" label="主订单号" width="140" />
+            <el-table-column prop="createTime" label="申请时间" width="170" />
+            <el-table-column prop="orderRId" label="订单号" width="140" />
             <el-table-column prop="orderCId" label="客户订单号" width="160" />
             <el-table-column label="客户名称" min-width="160">
                 <template #default="{ row }">
@@ -348,10 +373,18 @@
                     </el-tooltip>
                 </template>
             </el-table-column>
-            <el-table-column prop="customerBrand" label="客户商标" />
+            <el-table-column prop="customerBrand" label="客户商标" min-width="120" />
             <el-table-column prop="totalPairs" label="申请总双数" width="120" />
-            <el-table-column prop="statusLabel" label="状态" width="140" />
-            <el-table-column prop="remark" label="备注" min-width="200" />
+            <el-table-column label="状态" width="150">
+                <template #default="{ row }">
+                    <el-tag v-if="row.status === 1" type="warning">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 3" type="success">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 2" type="danger">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 4" type="success">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else type="info">{{ row.statusLabel || '未知' }}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
             <el-table-column prop="expectedOutboundTime" label="预计出库时间" width="180" />
             <el-table-column prop="actualOutboundTime" label="实际出库时间" width="180" />
             <!-- 编辑入口 -->
@@ -378,25 +411,106 @@
         </el-row>
     </el-dialog>
 
+    <!-- ===== 出库申请明细对话框（PACKING LIST 格式） ===== -->
+    <el-dialog
+        v-model="isApplyDetailDialogVisible"
+        :title="`出库申请明细 - ${applyDetailRow?.applyRId || ''}`"
+        width="92%"
+    >
+        <el-descriptions :column="4" border size="small" style="margin-bottom: 12px">
+            <el-descriptions-item label="订单号">{{ applyDetailRow?.allOrderRIds || applyDetailRow?.orderRId }}</el-descriptions-item>
+            <el-descriptions-item label="客户订单号">{{ applyDetailRow?.allOrderCIds || applyDetailRow?.orderCId }}</el-descriptions-item>
+            <el-descriptions-item label="客户名称">{{ applyDetailRow?.allCustomerNames || applyDetailRow?.customerName }}</el-descriptions-item>
+            <el-descriptions-item label="客户商标">{{ applyDetailRow?.customerBrand }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-table
+            v-loading="applyDetailLoading"
+            :data="applyDetailPageData"
+            border
+            stripe
+            size="small"
+            show-summary
+            :summary-method="getApplyDetailSummary"
+        >
+            <el-table-column label="起始箱号" prop="cNoStart" width="90" align="center" />
+            <el-table-column label="截止箱号" prop="cNoEnd" width="90" align="center" />
+            <el-table-column label="PO.NO. (工厂型号)" prop="shoeRId" min-width="130" />
+            <el-table-column label="STYLE# (客户型号)" prop="customerProductName" min-width="140" />
+            <el-table-column label="COLOR" prop="colorName" width="100" />
+            <el-table-column label="配码名称" prop="batchName" min-width="110" />
+            <el-table-column label="SIZE" align="center" v-if="applyDetailSizeColumns.length > 0">
+                <el-table-column
+                    v-for="col in applyDetailSizeColumns"
+                    :key="col.label"
+                    :label="col.label"
+                    width="55"
+                    align="center"
+                >
+                    <template #default="{ row }">{{ row.sizeRatios?.[col.label] || '' }}</template>
+                </el-table-column>
+            </el-table-column>
+            <el-table-column label="PRS/Ctn" prop="pairsPerCarton" width="90" align="center" />
+            <el-table-column label="CTNS" prop="cartonCount" width="80" align="center" />
+            <el-table-column label="Units(prs)" prop="totalPairs" width="100" align="center" />
+        </el-table>
+
+        <el-pagination
+            style="margin-top: 10px"
+            @size-change="(s) => { applyDetailPageSize = s; applyDetailCurrentPage = 1 }"
+            @current-change="(p) => { applyDetailCurrentPage = p }"
+            :current-page="applyDetailCurrentPage"
+            :page-sizes="[10, 20, 30, 50, 100]"
+            :page-size="applyDetailPageSize"
+            layout="total, sizes, prev, pager, next"
+            :total="applyDetailPackingList.length"
+        />
+
+        <template #footer>
+            <el-button type="primary" @click="exportApplyDetailPackingList">导出Excel</el-button>
+            <el-button @click="isApplyDetailDialogVisible = false">关闭</el-button>
+        </template>
+    </el-dialog>
+
     <!-- 某订单的“正在审核”的出库申请列表 -->
-    <el-dialog :title="`订单 ${pendingApplyOrderRId} 正在审核的出库申请`" v-model="isOrderPendingApplyDialogVisible" width="70%">
+    <el-dialog :title="`订单 ${pendingApplyOrderRId} 正在审核的出库申请`" v-model="isOrderPendingApplyDialogVisible" width="85%">
         <el-table :data="orderPendingApplyList" border stripe height="400">
-            <el-table-column prop="applyRId" label="申请单号" width="180" />
-            <el-table-column label="涉及客户" min-width="160">
+            <el-table-column label="明细" width="80" fixed="left">
                 <template #default="{ row }">
-                    {{ row.allCustomerNames || row.customerName || '' }}
+                    <el-button type="primary" link size="small" @click="openApplyDetailDialog(row)">查看</el-button>
                 </template>
             </el-table-column>
-            <el-table-column label="涉及订单" min-width="160">
+            <el-table-column prop="applyRId" label="申请单号" width="180" />
+            <el-table-column prop="createTime" label="申请时间" width="170" />
+            <el-table-column label="订单号" width="140">
                 <template #default="{ row }">
                     {{ row.allOrderRIds || row.orderRId || '' }}
                 </template>
             </el-table-column>
-            <el-table-column prop="totalPairs" label="申请双数" width="120" />
-            <el-table-column prop="statusLabel" label="状态" width="140" />
-            <el-table-column prop="remark" label="备注" min-width="200" />
-            <el-table-column prop="createTime" label="创建时间" width="180" />
-            <el-table-column prop="updateTime" label="更新时间" width="180" />
+            <el-table-column label="客户名称" min-width="160">
+                <template #default="{ row }">
+                    <span>{{ row.customerName }}</span>
+                    <el-tooltip v-if="row.allCustomerNames && row.allCustomerNames !== row.customerName" placement="top" :teleported="false">
+                        <template #content>
+                            <div>涉及客户：{{ row.allCustomerNames }}</div>
+                            <div v-if="row.allOrderRIds">涉及订单：{{ row.allOrderRIds }}</div>
+                        </template>
+                        <el-tag size="small" type="warning" style="margin-left:4px">多客户</el-tag>
+                    </el-tooltip>
+                </template>
+            </el-table-column>
+            <el-table-column prop="customerBrand" label="客户商标" min-width="120" />
+            <el-table-column prop="totalPairs" label="申请总双数" width="120" />
+            <el-table-column label="状态" width="150">
+                <template #default="{ row }">
+                    <el-tag v-if="row.status === 1" type="warning">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 3" type="success">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 2" type="danger">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else-if="row.status === 4" type="success">{{ row.statusLabel }}</el-tag>
+                    <el-tag v-else type="info">{{ row.statusLabel || '未知' }}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="200" show-overflow-tooltip />
         </el-table>
     </el-dialog>
 </template>
@@ -405,6 +519,7 @@
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { PAGESIZE, PAGESIZES } from '../../warehouseUtils'
+import * as XLSX from 'xlsx'
 
 export default {
     data() {
@@ -442,6 +557,7 @@ export default {
             orderCIdSearch: '',
             customerNameSearch: '',
             customerBrandSearch: '',
+            customerProductNameSearch: '',
 
             currentRow: { orderShoeTable: [] },
             isMultipleSelection: false,
@@ -499,7 +615,15 @@ export default {
             // 某订单的“正在审核”的出库申请弹窗
             isOrderPendingApplyDialogVisible: false,
             pendingApplyOrderRId: '',
-            orderPendingApplyList: []
+            orderPendingApplyList: [],
+
+            // PACKING LIST 明细对话框
+            isApplyDetailDialogVisible: false,
+            applyDetailRow: null,
+            applyDetailLoading: false,
+            applyDetailSizeColumns: [],
+            applyDetailCurrentPage: 1,
+            applyDetailPageSize: 20
         }
     },
     computed: {
@@ -527,6 +651,28 @@ export default {
             const start = (this.businessCurrentPage - 1) * this.businessPageSize
             const end = start + this.businessPageSize
             return this.businessForm.items.slice(start, end)
+        },
+        // PACKING LIST 明细（带起止箱号）
+        applyDetailPackingList() {
+            const details = this.applyDetailRow?.details || []
+            if (!details.length) return []
+            let cumulative = 0
+            let prevStyle = null
+            return details.map((d) => {
+                const style = d.customerProductName || ''
+                if (style !== prevStyle) {
+                    cumulative = 0
+                    prevStyle = style
+                }
+                const cartons = Math.ceil(Number(d.cartonCount || 0))
+                const cNoStart = cumulative + 1
+                cumulative += cartons
+                return { ...d, cNoStart, cNoEnd: cumulative, cartonCount: cartons }
+            })
+        },
+        applyDetailPageData() {
+            const start = (this.applyDetailCurrentPage - 1) * this.applyDetailPageSize
+            return this.applyDetailPackingList.slice(start, start + this.applyDetailPageSize)
         }
     },
     async mounted() {
@@ -618,6 +764,7 @@ export default {
                 orderCId: this.orderCIdSearch,
                 customerName: this.customerNameSearch,
                 customerBrand: this.customerBrandSearch,
+                customerProductName: this.customerProductNameSearch,
                 auditStatusNum: effectiveAuditStatusNum,
                 storageStatusNum: this.storageStatusNum
             }
@@ -1050,6 +1197,84 @@ export default {
             this.getApplyList()
         },
 
+        // PACKING LIST 明细
+        async openApplyDetailDialog(row) {
+            if (!row) return
+            this.applyDetailRow = row
+            this.isApplyDetailDialogVisible = true
+            this.applyDetailCurrentPage = 1
+            if (row.detailLoaded) return
+            this.applyDetailLoading = true
+            try {
+                const res = await axios.get(`${this.$apiBaseUrl}/warehouse/outbound-apply/detail`, {
+                    params: { applyId: row.applyId }
+                })
+                row.details = res.data.details || []
+                row.detailLoaded = true
+                const h = res.data.header || {}
+                row.allOrderRIds = h.allOrderRIds || row.allOrderRIds || row.orderRId
+                row.allOrderCIds = h.allOrderCIds || row.allOrderCIds || row.orderCId
+                row.allCustomerNames = h.allCustomerNames || row.allCustomerNames || row.customerName
+                row.customerBrand = row.customerBrand || h.customerBrand
+                this.applyDetailSizeColumns = res.data.sizeColumns || []
+            } catch (e) {
+                console.error(e)
+                ElMessage.error(e.response?.data?.message || '加载明细失败')
+            } finally {
+                this.applyDetailLoading = false
+            }
+        },
+        getApplyDetailSummary({ columns }) {
+            const allData = this.applyDetailPackingList
+            const sums = []
+            columns.forEach((col, index) => {
+                if (index === 0) {
+                    sums[index] = '合计'
+                    return
+                }
+                if (col.property === 'cartonCount' || col.property === 'totalPairs') {
+                    sums[index] = allData.reduce((sum, row) => sum + (Number(row[col.property]) || 0), 0)
+                } else {
+                    sums[index] = ''
+                }
+            })
+            return sums
+        },
+
+        exportApplyDetailPackingList() {
+            const row = this.applyDetailRow
+            if (!row) return
+            const allData = this.applyDetailPackingList
+            const sizeCols = this.applyDetailSizeColumns
+            const title = row.applyRId || '出库明细'
+            const headerRows = [
+                [`出库申请明细 - ${title}`],
+                ['订单号', row.allOrderRIds || row.orderRId || '', '', '客户订单号', row.allOrderCIds || row.orderCId || ''],
+                ['客户名称', row.allCustomerNames || row.customerName || '', '', '客户商标', row.customerBrand || ''],
+                []
+            ]
+            const colHeaders = ['起始箱号', '截止箱号', 'PO.NO. (工厂型号)', 'STYLE# (客户型号)', 'COLOR', '配码名称']
+            sizeCols.forEach(c => colHeaders.push(c.label))
+            colHeaders.push('PRS/Ctn', 'CTNS', 'Units(prs)')
+            headerRows.push(colHeaders)
+            const dataRows = allData.map(d => {
+                const r = [d.cNoStart, d.cNoEnd, d.shoeRId || '', d.customerProductName || '', d.colorName || '', d.batchName || '']
+                sizeCols.forEach(c => r.push(d.sizeRatios?.[c.label] || ''))
+                r.push(d.pairsPerCarton || '', d.cartonCount || '', d.totalPairs || '')
+                return r
+            })
+            const sumCartons = allData.reduce((s, d) => s + (Number(d.cartonCount) || 0), 0)
+            const sumPairs = allData.reduce((s, d) => s + (Number(d.totalPairs) || 0), 0)
+            const sumRow = ['合计', '', '', '', '', '']
+            sizeCols.forEach(() => sumRow.push(''))
+            sumRow.push('', sumCartons, sumPairs)
+            const wsData = [...headerRows, ...dataRows, sumRow]
+            const ws = XLSX.utils.aoa_to_sheet(wsData)
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'PACKING LIST')
+            XLSX.writeFile(wb, `${title}.xlsx`)
+        },
+
         // 是否可以编辑出库申请：仅业务角色 + 状态为草稿/驳回
         canEditApply(row) {
             if (!(this.role == 4 || this.role == 21)) return false
@@ -1133,6 +1358,13 @@ export default {
                 ElMessage.error('加载该订单的出库申请失败')
                 this.orderPendingApplyList = []
             }
+        },
+
+        formatInlineText(val) {
+            return String(val || '')
+                .replace(/[\r\n\t]+/g, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .trim()
         }
     }
 }
@@ -1154,5 +1386,12 @@ export default {
 .search-row :deep(.el-input) {
     width: 200px !important;
     flex: 0 0 auto;
+}
+.single-line-cell {
+    display: inline-block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

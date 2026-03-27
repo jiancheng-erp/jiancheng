@@ -268,6 +268,7 @@ def get_product_overview():
     order_cid = request.args.get("orderCId")
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
+    customer_product_name = request.args.get("customerProductName")
     audit_status_num = request.args.get("auditStatusNum", type=int)
     storage_status_num = request.args.get("storageStatusNum", type=int)
 
@@ -424,6 +425,10 @@ def get_product_overview():
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
     if customer_brand:
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+    if customer_product_name:
+        query = query.filter(
+            OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%")
+        )
 
     # 审核状态筛选（基于 audit_level）
     if audit_status_num is not None and audit_status_num > -1:
@@ -532,6 +537,8 @@ def get_product_overview():
             "orderCId": order.order_cid,
             "customerName": customer.customer_name,
             "customerBrand": customer.customer_brand,
+            "shoeRIds": "",
+            "customerProductNames": "",
             "startDate": format_date(order.start_date),
             "endDate": format_date(order.end_date),
             "orderAmount": order_amount,
@@ -574,6 +581,7 @@ def get_product_overview():
     # ====== 第二层：每个订单下的 鞋型 + 颜色 + 配码 + 尺码列 ======
     for order_obj in result:
         order_id = order_obj["orderId"]
+        shoe_rid_set = set()
 
         # 1）当前订单的尺码列配置
         shoe_size_meta_list = get_order_batch_type_helper(order_id)
@@ -692,6 +700,7 @@ def get_product_overview():
             )
             .all()
         )
+        customer_product_names_set = set()
 
         for (
             order_shoe,
@@ -716,6 +725,18 @@ def get_product_overview():
                 "batchInfos": batch_info_map.get(order_s_type.order_shoe_type_id, []),
             }
             order_obj["orderShoeTable"].append(color_obj)
+            if shoe.shoe_rid:
+                cleaned_shoe_rid = " ".join(str(shoe.shoe_rid).split())
+                cleaned_shoe_rid = cleaned_shoe_rid.replace(" ,", ",").replace(", ", ",")
+                if cleaned_shoe_rid:
+                    shoe_rid_set.add(cleaned_shoe_rid)
+            if order_shoe.customer_product_name:
+                customer_product_names_set.add(order_shoe.customer_product_name)
+
+        order_obj["shoeRIds"] = "、".join(sorted(shoe_rid_set))
+        order_obj["customerProductNames"] = "、".join(
+            sorted(customer_product_names_set)
+        )
 
     return jsonify({"result": result, "total": count_result})
 
@@ -2875,6 +2896,25 @@ def get_outbound_apply_detail():
         .all()
     )
 
+    # 如果申请单已执行出库，从出库明细记录中获取实际出库数量
+    # （因为执行出库后 ShoeOutboundApplyDetail 的 total_pairs/carton_count 被置0）
+    actual_outbound_map = {}
+    if apply_obj.outbound_record_id:
+        record_details = (
+            ShoeOutboundRecordDetail.query
+            .filter_by(shoe_outbound_record_id=apply_obj.outbound_record_id)
+            .all()
+        )
+        for rd in record_details:
+            actual_outbound_map[rd.finished_shoe_storage_id] = rd.outbound_amount or 0
+
+    # 获取订单的鞋码尺码元数据（US / EU 等）
+    shoe_size_meta = []
+    try:
+        shoe_size_meta = get_order_batch_type_helper(apply_obj.order_id) or []
+    except Exception:
+        shoe_size_meta = []
+
     detail_list = []
     for (
         d,
@@ -2887,6 +2927,33 @@ def get_outbound_apply_detail():
         batch_info,
         pkg,
     ) in detail_rows:
+        # 计算每箱各尺码数量（来自 PackagingInfo 的 size_XX_ratio）
+        size_ratios = {}
+        if pkg and shoe_size_meta:
+            for i in range(34, 47):
+                ratio = getattr(pkg, f"size_{i}_ratio", 0) or 0
+                if ratio > 0:
+                    meta = next(
+                        (m for m in shoe_size_meta if m["prop"] == f"size{i}Amount"),
+                        None,
+                    )
+                    if meta:
+                        size_ratios[meta["label"]] = int(ratio)
+
+        # 如果明细已被清零且有实际出库记录，用出库记录的数量还原
+        actual_pairs = actual_outbound_map.get(d.finished_shoe_storage_id)
+        if actual_pairs is not None and int(d.total_pairs or 0) == 0:
+            display_total_pairs = actual_pairs
+            ppc = int(d.pairs_per_carton or 0)
+            display_carton_count = (
+                (Decimal(str(actual_pairs)) / Decimal(str(ppc)))
+                if ppc > 0
+                else 0
+            )
+        else:
+            display_total_pairs = d.total_pairs
+            display_carton_count = d.carton_count
+
         detail_list.append(
             {
                 "customerName": customer.customer_name if customer else None,
@@ -2895,9 +2962,9 @@ def get_outbound_apply_detail():
                 "orderShoeTypeId": d.order_shoe_type_id,
                 "orderShoeBatchInfoId": d.order_shoe_batch_info_id,
                 "packagingInfoId": d.packaging_info_id,
-                "cartonCount": d.carton_count,
+                "cartonCount": display_carton_count,
                 "pairsPerCarton": d.pairs_per_carton,
-                "totalPairs": d.total_pairs,
+                "totalPairs": display_total_pairs,
                 "remark": d.remark,
                 "shoeRId": shoe.shoe_rid if shoe else None,
                 "colorName": color.color_name if color else None,
@@ -2909,8 +2976,32 @@ def get_outbound_apply_detail():
                 "inboundFinished": storage.finished_status if storage else 0,
                 "batchName": batch_info.name if batch_info else None,
                 "packagingInfoName": pkg.packaging_info_name if pkg else None,
+                "sizeRatios": size_ratios,
             }
         )
+
+    # 从明细行中收集所有不同的订单号、客户订单号、客户名称（单次查询）
+    all_order_rids = set()
+    all_order_cids = set()
+    all_customer_names = set()
+    ost_ids = [ost.order_shoe_type_id for (_, _, ost, *_rest) in detail_rows]
+    if ost_ids:
+        multi_order_rows = (
+            db.session.query(Order.order_rid, Order.order_cid, Customer.customer_name)
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(Customer, Customer.customer_id == Order.customer_id)
+            .filter(OrderShoeType.order_shoe_type_id.in_(ost_ids))
+            .distinct()
+            .all()
+        )
+        for orid, ocid, cname in multi_order_rows:
+            if orid:
+                all_order_rids.add(orid)
+            if ocid:
+                all_order_cids.add(ocid)
+            if cname:
+                all_customer_names.add(cname)
 
     header = {
         "applyId": apply_obj.apply_id,
@@ -2920,6 +3011,9 @@ def get_outbound_apply_detail():
         "orderCId": order.order_cid if order else None,
         "customerName": customer.customer_name if customer else None,
         "customerBrand": customer.customer_brand if customer else None,
+        "allOrderRIds": "、".join(sorted(all_order_rids - {""})) or (order.order_rid if order else None),
+        "allOrderCIds": "、".join(sorted(all_order_cids - {""})) or (order.order_cid if order else None),
+        "allCustomerNames": "、".join(sorted(all_customer_names - {""})) or (customer.customer_name if customer else None),
         "status": apply_obj.status,
         "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(apply_obj.status, "未知状态"),
         "remark": apply_obj.remark,
@@ -2941,7 +3035,17 @@ def get_outbound_apply_detail():
         "updateTime": format_datetime(apply_obj.update_time),
     }
 
-    return jsonify({"header": header, "details": detail_list})
+    # 汇总所有明细中出现的尺码列
+    all_size_labels = set()
+    for detail in detail_list:
+        all_size_labels.update(detail.get("sizeRatios", {}).keys())
+    size_columns = [
+        {"label": m["label"], "prop": m["prop"]}
+        for m in shoe_size_meta
+        if m["label"] in all_size_labels
+    ]
+
+    return jsonify({"header": header, "details": detail_list, "sizeColumns": size_columns})
 
 
 @finished_storage_bp.route("/warehouse/outbound-apply/audit", methods=["POST"])
@@ -3250,8 +3354,9 @@ def execute_outbound_apply():
     )
     apply_obj.status = 4 if all_details_finished else 3  # 4=已完成出库，3=待仓库出库
     apply_obj.warehouse_staff_id = staff_id
+    # 无论是否全部完成，都关联出库记录（已创建了 ShoeOutboundRecord）
+    apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
     if all_details_finished:
-        apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
         apply_obj.actual_outbound_datetime = now_dt
 
     # 推订单事件（只在全部完成时推进）

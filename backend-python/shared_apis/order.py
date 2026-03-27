@@ -4,7 +4,7 @@ import constants
 import time
 from app_config import db
 from flask import Blueprint, jsonify, request, send_file, current_app
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, case
 from api_utility import to_snake, to_camel
 from login.login import current_user, current_user_info
 import math
@@ -26,6 +26,53 @@ from models import *
 from shared_apis import customer
 from logger import logger
 order_bp = Blueprint("order_bp", __name__)
+
+
+def _get_currency_to_rmb_rate_map():
+    """
+    从汇率表获取最新汇率，返回 currency_type 字符串 → RMB 汇率的映射。
+    例: {"USD": 6.893, "EUR": 8.114, "RMB": 1.0, "CNY": 1.0, ...}
+    """
+    from accounting.currency_exchange_management import get_exchange_rate_for_month
+    now = datetime.now()
+    year, month = now.year, now.month
+
+    # 获取 CNY base unit id
+    rmb_unit = db.session.query(AccountingCurrencyUnit).filter(
+        AccountingCurrencyUnit.unit_name_cn == "人民币"
+    ).first()
+    if not rmb_unit:
+        rmb_unit = db.session.query(AccountingCurrencyUnit).filter(
+            AccountingCurrencyUnit.unit_name_en.ilike("CNY")
+        ).first()
+    base_id = rmb_unit.unit_id if rmb_unit else 1
+
+    # 获取所有货币单位
+    all_units = db.session.query(AccountingCurrencyUnit).all()
+    unit_rate_map = {}  # unit_name_en → rate
+    for unit in all_units:
+        if unit.unit_id == base_id:
+            unit_rate_map[unit.unit_name_en.upper()] = 1.0
+            continue
+        row = get_exchange_rate_for_month(base_id, unit.unit_id, year, month)
+        if row and row.rate:
+            unit_rate_map[unit.unit_name_en.upper()] = float(row.rate)
+
+    # 建立 currency_type 字符串 → 汇率映射（含别名）
+    rate_map = {"RMB": 1.0, "CNY": 1.0}
+    for en_name, rate in unit_rate_map.items():
+        rate_map[en_name] = rate
+    # 常见别名
+    usd_rate = unit_rate_map.get("USD", 1.0)
+    eur_rate = unit_rate_map.get("EUR", 1.0)
+    rate_map.update({"USA": usd_rate, "USE": usd_rate, "美金": usd_rate, "€": eur_rate})
+    return rate_map
+
+
+def _build_currency_rate_case(rate_map):
+    """构建 SQLAlchemy CASE 表达式: currency_type → RMB 汇率"""
+    whens = [(OrderShoeType.currency_type == ct, rate) for ct, rate in rate_map.items()]
+    return case(*whens, else_=1.0)
 
 
 def _batch_production_status(order_shoe_ids):
@@ -1879,10 +1926,21 @@ def get_order_full_info():
         .subquery()
     )
 
+    rate_map = _get_currency_to_rmb_rate_map()
+
     order_amount_subquery = (
         db.session.query(
             Order.order_id,
             func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
+            func.sum(
+                OrderShoeBatchInfo.total_amount * func.coalesce(OrderShoeType.unit_price, 0)
+            ).label("order_total_price"),
+            func.group_concat(func.distinct(OrderShoeType.currency_type)).label("order_currency"),
+            func.sum(
+                OrderShoeBatchInfo.total_amount
+                * func.coalesce(OrderShoeType.unit_price, 0)
+                * _build_currency_rate_case(rate_map)
+            ).label("order_total_price_rmb"),
         )
         .join(
             OrderShoe,
@@ -1896,7 +1954,7 @@ def get_order_full_info():
             OrderShoeBatchInfo,
             OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
-        .group_by(OrderShoe.order_id)
+        .group_by(Order.order_id)
         .subquery()
     )
 
@@ -1939,6 +1997,9 @@ def get_order_full_info():
         Customer,
         Shoe,
         order_amount_subquery.c.order_amount,
+        order_amount_subquery.c.order_total_price,
+        order_amount_subquery.c.order_currency,
+        order_amount_subquery.c.order_total_price_rmb,
     ]
 
     query = (
@@ -2073,6 +2134,9 @@ def get_order_full_info():
             customer,
             shoe,
             order_amount,
+            order_total_price,
+            order_currency,
+            order_total_price_rmb,
         ) = row
         active_status_entries = active_status_by_shoe.get(order_shoe.order_shoe_id, [])
         display_stage_names = []
@@ -2123,6 +2187,9 @@ def get_order_full_info():
                 ),
                 "shoes": {},  # Using a dictionary to avoid duplicate shoes
                 "orderAmount": order_amount if order_amount else 0,
+                "orderTotalPrice": float(order_total_price) if order_total_price else 0,
+                "orderCurrency": order_currency or "",
+                "orderTotalPriceRmb": float(order_total_price_rmb) if order_total_price_rmb else 0,
                 "matchedStatusNames": "N/A",
                 "maxMatchedDelayDays": None,
                 "maxMatchedDelayText": "N/A",
@@ -2287,6 +2354,13 @@ def get_order_full_info():
     return jsonify({"result": result, "total": count_result})
 
 
+@order_bp.route("/order/getcurrencyrates", methods=["GET"])
+def get_currency_rates():
+    """获取最新汇率映射（currency_type → RMB 汇率）"""
+    rate_map = _get_currency_to_rmb_rate_map()
+    return jsonify({"rates": rate_map})
+
+
 @order_bp.route("/order/exportorderexcel", methods=["GET"])
 def export_order_excel():
     """导出订单查询结果为 Excel"""
@@ -2301,11 +2375,21 @@ def export_order_excel():
     start_date_to = request.args.get("startDateTo", "", type=str)
     end_date_from = request.args.get("endDateFrom", "", type=str)
     end_date_to = request.args.get("endDateTo", "", type=str)
+    convert_to_rmb = request.args.get("convertToRMB", "0", type=str) == "1"
+
+    rate_map = _get_currency_to_rmb_rate_map()
 
     order_amount_subquery = (
         db.session.query(
             Order.order_id,
             func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
+            func.sum(OrderShoeBatchInfo.total_amount * func.coalesce(OrderShoeType.unit_price, 0)).label("order_total_price"),
+            func.group_concat(func.distinct(OrderShoeType.currency_type)).label("order_currency"),
+            func.sum(
+                OrderShoeBatchInfo.total_amount
+                * func.coalesce(OrderShoeType.unit_price, 0)
+                * _build_currency_rate_case(rate_map)
+            ).label("order_total_price_rmb"),
         )
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
@@ -2335,6 +2419,9 @@ def export_order_excel():
             Customer,
             Shoe,
             order_amount_subquery.c.order_amount,
+            order_amount_subquery.c.order_total_price,
+            order_amount_subquery.c.order_currency,
+            order_amount_subquery.c.order_total_price_rmb,
         )
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(OrderStatusReference, OrderStatus.order_current_status == OrderStatusReference.order_status_id)
@@ -2366,7 +2453,7 @@ def export_order_excel():
     # Build order dict
     orders_dict = {}
     for row in rows:
-        order, order_status, order_status_ref, order_shoe, shoe_status_names, customer, shoe, order_amount = row
+        order, order_status, order_status_ref, order_shoe, shoe_status_names, customer, shoe, order_amount, order_total_price, order_currency, order_total_price_rmb = row
         fmt_start = order.start_date.strftime("%Y-%m-%d") if order.start_date else ""
         fmt_end = order.end_date.strftime("%Y-%m-%d") if order.end_date else ""
 
@@ -2378,6 +2465,9 @@ def export_order_excel():
                 "deadlineTime": fmt_end,
                 "status": order_status_ref.order_status_name if order_status_ref else "",
                 "orderAmount": order_amount or 0,
+                "orderTotalPrice": float(order_total_price) if order_total_price else 0,
+                "orderCurrency": order_currency or "",
+                "orderTotalPriceRmb": float(order_total_price_rmb) if order_total_price_rmb else 0,
                 "shoes": [],
             }
 
@@ -2399,7 +2489,8 @@ def export_order_excel():
     )
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", "订单日期", "交货日期", "订单状态", "鞋型状态"]
+    price_header = "订单总价(RMB)" if convert_to_rmb else "订单总价"
+    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", price_header, "订单日期", "交货日期", "订单状态", "鞋型状态"]
     for col_idx, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=h)
         cell.font = header_font
@@ -2412,12 +2503,20 @@ def export_order_excel():
         customer_ids = ", ".join(s["customerId"] for s in order_data["shoes"])
         statuses = ", ".join(s["statuses"] for s in order_data["shoes"])
 
+        total_price_str = ""
+        if convert_to_rmb:
+            if order_data["orderTotalPriceRmb"]:
+                total_price_str = f"{order_data['orderTotalPriceRmb']:.2f} RMB"
+        else:
+            if order_data["orderTotalPrice"]:
+                total_price_str = f"{order_data['orderTotalPrice']:.2f} {order_data['orderCurrency']}".strip()
         values = [
             order_data["orderRid"],
             order_data["customerName"],
             shoe_rids,
             customer_ids,
             order_data["orderAmount"],
+            total_price_str,
             order_data["createTime"],
             order_data["deadlineTime"],
             order_data["status"],
