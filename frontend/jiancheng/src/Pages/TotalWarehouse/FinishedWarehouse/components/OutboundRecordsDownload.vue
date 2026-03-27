@@ -15,25 +15,11 @@
                         stripe
                         style="height: 60vh;"
                     >
-                        <el-table-column type="expand">
+                        <el-table-column label="明细" width="80" fixed="left">
                             <template #default="{ row }">
-                                <el-table
-                                    :data="row.details"
-                                    size="small"
-                                    border
-                                    style="width: 100%;"
-                                >
-                                    <el-table-column prop="orderRId" label="订单号"/>
-                                    <el-table-column prop="orderCId" label="客户订单号"/>
-                                    <el-table-column prop="shoeRId" label="工厂鞋型"/>
-                                    <el-table-column prop="customerProductName" label="客户鞋型"/>
-                                    <el-table-column prop="customerBrand" label="客户商标"/>
-                                    <el-table-column prop="colorName" label="颜色"/>
-                                    <el-table-column prop="detailAmount" label="数量（双）"/>
-                                </el-table>
+                                <el-button type="primary" link size="small" @click="openOutboundDetailDialog(row)">查看</el-button>
                             </template>
                         </el-table-column>
-
                         <el-table-column prop="outboundRId" label="出库单号"/>
                         <el-table-column prop="timestamp" label="操作时间"/>
                         <el-table-column label="客户名称" min-width="160">
@@ -154,6 +140,11 @@
                         :loading="applyLoading"
                         :empty-text="applyDownloadList.length ? '本页暂无申请单' : '暂无申请单'"
                     >
+                        <el-table-column label="明细" width="80" fixed="left">
+                            <template #default="{ row }">
+                                <el-button type="primary" link size="small" @click="openApplyDetailDialog(row)">查看</el-button>
+                            </template>
+                        </el-table-column>
                         <el-table-column prop="applyRId" label="申请单号" width="180"/>
                         <el-table-column prop="orderRId" label="订单号" width="180"/>
                         <el-table-column prop="orderCId" label="客户订单号" width="180"/>
@@ -203,6 +194,84 @@
             </el-row>
         </el-tab-pane>
     </el-tabs>
+
+    <!-- ===== PACKING LIST 明细对话框 ===== -->
+    <el-dialog
+        v-model="isDetailDialogVisible"
+        :title="`出库明细 - ${detailDialogTitle}`"
+        width="92%"
+    >
+        <el-descriptions :column="4" border size="small" style="margin-bottom: 12px">
+            <el-descriptions-item label="订单号">{{ detailRow?.allOrderRIds || detailRow?.orderRId || '' }}</el-descriptions-item>
+            <el-descriptions-item label="客户订单号">{{ detailRow?.allOrderCIds || detailRow?.orderCId || '' }}</el-descriptions-item>
+            <el-descriptions-item label="客户名称">{{ detailRow?.allCustomerNames || detailRow?.customerName || '' }}</el-descriptions-item>
+            <el-descriptions-item label="客户商标">{{ detailRow?.customerBrand || '' }}</el-descriptions-item>
+        </el-descriptions>
+
+        <!-- 无关联申请的旧出库单：显示简易明细表 -->
+        <template v-if="isLegacyDetail">
+            <el-table :data="detailRow?.details || []" border stripe size="small">
+                <el-table-column prop="orderRId" label="订单号" />
+                <el-table-column prop="orderCId" label="客户订单号" />
+                <el-table-column prop="shoeRId" label="工厂鞋型" />
+                <el-table-column prop="customerProductName" label="客户鞋型" />
+                <el-table-column prop="customerBrand" label="客户商标" />
+                <el-table-column prop="colorName" label="颜色" />
+                <el-table-column prop="detailAmount" label="数量（双）" />
+            </el-table>
+        </template>
+
+        <!-- 有关联申请的出库单：显示 PACKING LIST -->
+        <template v-else>
+
+        <el-table
+            v-loading="detailLoading"
+            :data="detailPageData"
+            border
+            stripe
+            size="small"
+            show-summary
+            :summary-method="getDetailSummary"
+        >
+            <el-table-column label="起始箱号" prop="cNoStart" width="90" align="center" />
+            <el-table-column label="截止箱号" prop="cNoEnd" width="90" align="center" />
+            <el-table-column label="PO.NO. (工厂型号)" prop="shoeRId" min-width="130" />
+            <el-table-column label="STYLE# (客户型号)" prop="customerProductName" min-width="140" />
+            <el-table-column label="COLOR" prop="colorName" width="100" />
+            <el-table-column label="配码名称" prop="batchName" min-width="110" />
+            <el-table-column label="SIZE" align="center" v-if="detailSizeColumns.length > 0">
+                <el-table-column
+                    v-for="col in detailSizeColumns"
+                    :key="col.label"
+                    :label="col.label"
+                    width="55"
+                    align="center"
+                >
+                    <template #default="{ row }">{{ row.sizeRatios?.[col.label] || '' }}</template>
+                </el-table-column>
+            </el-table-column>
+            <el-table-column label="PRS/Ctn" prop="pairsPerCarton" width="90" align="center" />
+            <el-table-column label="CTNS" prop="cartonCount" width="80" align="center" />
+            <el-table-column label="Units(prs)" prop="totalPairs" width="100" align="center" />
+        </el-table>
+
+        <el-pagination
+            style="margin-top: 10px"
+            @size-change="(s) => { detailPageSize = s; detailCurrentPage = 1 }"
+            @current-change="(p) => { detailCurrentPage = p }"
+            :current-page="detailCurrentPage"
+            :page-sizes="[10, 20, 30, 50, 100]"
+            :page-size="detailPageSize"
+            layout="total, sizes, prev, pager, next"
+            :total="detailPackingList.length"
+        />
+        </template>
+
+        <template #footer>
+            <el-button type="primary" @click="exportDetailPackingList" v-if="!isLegacyDetail">导出Excel</el-button>
+            <el-button @click="isDetailDialogVisible = false">关闭</el-button>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -210,6 +279,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { PAGESIZE, PAGESIZES, getSummaries } from '../../warehouseUtils'
 import FinishedSearchBar from './FinishedSearchBar.vue'
+import * as XLSX from 'xlsx'
 
 export default {
     name: 'FinishedOutboundExpandView',
@@ -254,7 +324,18 @@ export default {
             },
             exportLoadingOutbound: false,
             exportLoadingInout: false,
-            getSummaries: getSummaries
+            getSummaries: getSummaries,
+
+            // PACKING LIST 明细对话框
+            isDetailDialogVisible: false,
+            detailRow: null,
+            detailDialogTitle: '',
+            detailLoading: false,
+            detailSizeColumns: [],
+            detailCurrentPage: 1,
+            detailPageSize: 20,
+            detailDetails: [],
+            isLegacyDetail: false
         }
     },
     computed: {
@@ -362,6 +443,28 @@ export default {
             const start = (this.applyCurrentPage - 1) * this.applyPageSize
             const end = start + this.applyPageSize
             return this.applyDownloadList.slice(start, end)
+        },
+        // PACKING LIST 明细（带起止箱号）
+        detailPackingList() {
+            const details = this.detailDetails
+            if (!details.length) return []
+            let cumulative = 0
+            let prevStyle = null
+            return details.map((d) => {
+                const style = d.customerProductName || ''
+                if (style !== prevStyle) {
+                    cumulative = 0
+                    prevStyle = style
+                }
+                const cartons = Math.ceil(Number(d.cartonCount || 0))
+                const cNoStart = cumulative + 1
+                cumulative += cartons
+                return { ...d, cNoStart, cNoEnd: cumulative, cartonCount: cartons }
+            })
+        },
+        detailPageData() {
+            const start = (this.detailCurrentPage - 1) * this.detailPageSize
+            return this.detailPackingList.slice(start, start + this.detailPageSize)
         }
     },
     mounted() {
@@ -532,8 +635,130 @@ export default {
                 this.exportLoadingInout = false
             }
         },
+        // ====== PACKING LIST 明细对话框 ======
+        async openOutboundDetailDialog(row) {
+            if (!row) return
+            const applyIds = row.applyIds || []
+            this.detailRow = row
+            this.detailDialogTitle = row.outboundRId || ''
+            this.isDetailDialogVisible = true
+            this.detailCurrentPage = 1
+            this.detailDetails = []
+            this.detailSizeColumns = []
 
-        // 按“出库单”下载出库清单
+            // 旧出库单无关联申请，显示简易明细
+            if (!applyIds.length) {
+                this.isLegacyDetail = true
+                return
+            }
+            this.isLegacyDetail = false
+            this.detailLoading = true
+            try {
+                // 加载第一个关联的 apply 的明细（多 apply 合并）
+                let allDetails = []
+                let sizeColumns = []
+                let headerInfo = {}
+                for (const applyId of applyIds) {
+                    const res = await axios.get(`${this.$apiBaseUrl}/warehouse/outbound-apply/detail`, {
+                        params: { applyId }
+                    })
+                    allDetails = allDetails.concat(res.data.details || [])
+                    if (!sizeColumns.length && res.data.sizeColumns) {
+                        sizeColumns = res.data.sizeColumns
+                    }
+                    if (res.data.header) {
+                        headerInfo = res.data.header
+                    }
+                }
+                this.detailDetails = allDetails
+                this.detailSizeColumns = sizeColumns
+                // 补充 header 信息
+                if (headerInfo.allOrderRIds) row.allOrderRIds = headerInfo.allOrderRIds
+                if (headerInfo.allOrderCIds) row.allOrderCIds = headerInfo.allOrderCIds
+                if (headerInfo.allCustomerNames) row.allCustomerNames = headerInfo.allCustomerNames
+                if (headerInfo.customerBrand) row.customerBrand = headerInfo.customerBrand
+            } catch (e) {
+                console.error(e)
+                ElMessage.error(e.response?.data?.message || '加载明细失败')
+            } finally {
+                this.detailLoading = false
+            }
+        },
+
+        async openApplyDetailDialog(row) {
+            if (!row || !row.applyId) return
+            this.detailRow = row
+            this.detailDialogTitle = row.applyRId || ''
+            this.isDetailDialogVisible = true
+            this.detailCurrentPage = 1
+            this.detailLoading = true
+            try {
+                const res = await axios.get(`${this.$apiBaseUrl}/warehouse/outbound-apply/detail`, {
+                    params: { applyId: row.applyId }
+                })
+                this.detailDetails = res.data.details || []
+                this.detailSizeColumns = res.data.sizeColumns || []
+                const h = res.data.header || {}
+                if (h.allOrderRIds) row.allOrderRIds = h.allOrderRIds
+                if (h.allOrderCIds) row.allOrderCIds = h.allOrderCIds
+                if (h.allCustomerNames) row.allCustomerNames = h.allCustomerNames
+                if (h.customerBrand) row.customerBrand = h.customerBrand
+            } catch (e) {
+                console.error(e)
+                ElMessage.error(e.response?.data?.message || '加载明细失败')
+            } finally {
+                this.detailLoading = false
+            }
+        },
+
+        getDetailSummary({ columns }) {
+            const allData = this.detailPackingList
+            const sums = []
+            columns.forEach((col, index) => {
+                if (index === 0) {
+                    sums[index] = '合计'
+                    return
+                }
+                if (col.property === 'cartonCount' || col.property === 'totalPairs') {
+                    sums[index] = allData.reduce((sum, row) => sum + (Number(row[col.property]) || 0), 0)
+                } else {
+                    sums[index] = ''
+                }
+            })
+            return sums
+        },        exportDetailPackingList() {
+            const row = this.detailRow
+            if (!row) return
+            const allData = this.detailPackingList
+            const sizeCols = this.detailSizeColumns
+            const title = this.detailDialogTitle || '出库明细'
+            const headerRows = [
+                [`出库明细 - ${title}`],
+                ['订单号', row.allOrderRIds || row.orderRId || '', '', '客户订单号', row.allOrderCIds || row.orderCId || ''],
+                ['客户名称', row.allCustomerNames || row.customerName || '', '', '客户商标', row.customerBrand || ''],
+                []
+            ]
+            const colHeaders = ['起始箱号', '截止箱号', 'PO.NO. (工厂型号)', 'STYLE# (客户型号)', 'COLOR', '配码名称']
+            sizeCols.forEach(c => colHeaders.push(c.label))
+            colHeaders.push('PRS/Ctn', 'CTNS', 'Units(prs)')
+            headerRows.push(colHeaders)
+            const dataRows = allData.map(d => {
+                const r = [d.cNoStart, d.cNoEnd, d.shoeRId || '', d.customerProductName || '', d.colorName || '', d.batchName || '']
+                sizeCols.forEach(c => r.push(d.sizeRatios?.[c.label] || ''))
+                r.push(d.pairsPerCarton || '', d.cartonCount || '', d.totalPairs || '')
+                return r
+            })
+            const sumCartons = allData.reduce((s, d) => s + (Number(d.cartonCount) || 0), 0)
+            const sumPairs = allData.reduce((s, d) => s + (Number(d.totalPairs) || 0), 0)
+            const sumRow = ['合计', '', '', '', '', '']
+            sizeCols.forEach(() => sumRow.push(''))
+            sumRow.push('', sumCartons, sumPairs)
+            const wsData = [...headerRows, ...dataRows, sumRow]
+            const ws = XLSX.utils.aoa_to_sheet(wsData)
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, 'PACKING LIST')
+            XLSX.writeFile(wb, `${title}.xlsx`)
+        },        // 按“出库单”下载出库清单
         async downloadOutboundList(row) {
             try {
                 const params = {

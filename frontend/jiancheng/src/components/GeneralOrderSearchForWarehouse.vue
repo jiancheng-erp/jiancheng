@@ -33,6 +33,15 @@
             <el-button type="primary" @click="tableFilter">搜索</el-button>
             <el-button @click="resetFilters">重置</el-button>
             <el-button type="success" @click="exportExcel" :loading="exporting">导出Excel</el-button>
+            <el-switch v-model="showRmb" active-text="RMB" inactive-text="原单位" style="margin-left: 12px" />
+        </el-col>
+    </el-row>
+    <el-row style="margin-top: 8px" v-if="Object.keys(currencyRates).length">
+        <el-col :span="24">
+            <span style="font-size: 13px; color: #909399">实时汇率：</span>
+            <el-tag v-for="(rate, currency) in displayRates" :key="currency" size="small" style="margin-right: 6px" type="info">
+                1 {{ currency }} = {{ rate }} RMB
+            </el-tag>
         </el-col>
     </el-row>
     <el-row>
@@ -58,6 +67,16 @@
             <el-table-column prop="shoeRid" label="工厂型号"></el-table-column>
             <el-table-column prop="customerId" label="客户型号"></el-table-column>
             <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
+            <el-table-column prop="orderTotalPrice" :label="showRmb ? '订单总价(RMB)' : '订单总价'" width="160">
+                <template #default="{ row }">
+                    <template v-if="showRmb">
+                        {{ row.orderTotalPriceRmb != null ? Number(row.orderTotalPriceRmb).toFixed(2) + ' RMB' : '' }}
+                    </template>
+                    <template v-else>
+                        {{ row.orderTotalPrice != null ? Number(row.orderTotalPrice).toFixed(2) + ' ' + (row.orderCurrency || '') : '' }}
+                    </template>
+                </template>
+            </el-table-column>
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
             <el-table-column prop="deadlineTime" label="交货日期"></el-table-column>
             <el-table-column prop="status" label="订单状态"></el-table-column>
@@ -97,13 +116,25 @@ export default {
             totalPages: 0,
             totalData: 0,
             viewPastTasks: 0,
-            exporting: false
+            exporting: false,
+            showRmb: false,
+            currencyRates: {}
         }
     },
     computed: {
         showDetailLink() {
             const role = parseInt(localStorage.getItem('role'), 10)
             return role === 10
+        },
+        displayRates() {
+            const skip = new Set(['RMB', 'CNY', 'USA', 'USE', '美金', '€'])
+            const result = {}
+            for (const [k, v] of Object.entries(this.currencyRates)) {
+                if (!skip.has(k) && v !== 1.0) {
+                    result[k] = v
+                }
+            }
+            return result
         },
         queryParams() {
             const params = {
@@ -127,7 +158,7 @@ export default {
     },
     async mounted() {
         this.$setAxiosToken()
-        await this.getOrderData(this.currentPage)
+        await Promise.all([this.getOrderData(this.currentPage), this.fetchCurrencyRates()])
     },
     methods: {
         async getOrderData() {
@@ -144,6 +175,14 @@ export default {
                 this.totalData = response.data.total
             } catch (error) {
                 console.error('Error fetching order data:', error)
+            }
+        },
+        async fetchCurrencyRates() {
+            try {
+                const resp = await axios.get(`${this.$apiBaseUrl}/order/getcurrencyrates`)
+                this.currencyRates = resp.data.rates || {}
+            } catch (e) {
+                console.error('Error fetching currency rates:', e)
             }
         },
         handlePageChange(page) {
@@ -168,6 +207,9 @@ export default {
                 const params = { ...this.queryParams }
                 delete params.page
                 delete params.pageSize
+                if (this.showRmb) {
+                    params.convertToRMB = '1'
+                }
                 const response = await axios.get(`${this.$apiBaseUrl}/order/exportorderexcel`, {
                     params,
                     responseType: 'blob'
