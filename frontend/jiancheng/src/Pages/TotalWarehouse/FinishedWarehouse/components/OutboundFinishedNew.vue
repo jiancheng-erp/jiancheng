@@ -492,9 +492,11 @@ export default {
         ElMessage.error('请填写拣货人')
         return
       }
-      const unfinishedDetail = this.executeDetails.find((item) => !item.inboundFinished)
-      if (unfinishedDetail) {
-        ElMessage.error('仍有未完成入库的明细，暂无法出库')
+      const selectedUnfinishedDetail = this.executeDetails.find(
+        (item) => item._selected && !item.inboundFinished
+      )
+      if (selectedUnfinishedDetail) {
+        ElMessage.error('勾选明细中仍有未完成入库项，暂无法出库')
         return
       }
 
