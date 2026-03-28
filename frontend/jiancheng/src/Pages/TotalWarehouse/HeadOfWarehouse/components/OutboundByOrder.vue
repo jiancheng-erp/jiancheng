@@ -5,7 +5,7 @@
             <el-card shadow="never" class="mb-3">
                 <el-form :inline="true">
                     <el-form-item label="订单搜索">
-                        <el-input v-model.trim="orderQuery.keyword" placeholder="输入订单号/客户信息/鞋型等关键词" clearable style="width: 280px" @keyup.enter="loadOrders" />
+                        <el-input v-model.trim="orderQuery.keyword" placeholder="输入订单号/客户信息/鞋型等关键词" clearable class="order-search-input" @keyup.enter="loadOrders" />
                     </el-form-item>
                     <el-form-item>
                         <el-button type="primary" :loading="orderLoading" @click="loadOrders">查询订单</el-button>
@@ -35,15 +35,15 @@
 
                 <div class="panel-grid">
                     <!-- 表格占满第一行 -->
-                    <el-table :data="orderRows" border stripe style="height: 55vh;" :row-key="(row) => row.orderRId" @selection-change="onOrderSelectionChange">
-                        <el-table-column type="selection" width="44" />
-                        <el-table-column prop="orderRId" label="订单号" />
-                        <el-table-column prop="shoeRId" label="工厂型号" />
-                        <el-table-column prop="customerName" label="客户" show-overflow-tooltip />
-                        <el-table-column prop="brand" label="商标" width="120" />
-                        <el-table-column prop="productName" label="客户型号" show-overflow-tooltip />
-                        <el-table-column prop="period" label="订单周期" show-overflow-tooltip />
-                        <el-table-column label="操作" width="120" fixed="right">
+                    <el-table :data="orderRows" border stripe size="small" style="height: 55vh;" :row-key="(row) => row.orderRId" @selection-change="onOrderSelectionChange" class="order-table">
+                        <el-table-column type="selection" width="40" />
+                        <el-table-column prop="orderRId" label="订单号" min-width="90" />
+                        <el-table-column prop="shoeRId" label="工厂型号" min-width="90" />
+                        <el-table-column prop="customerName" label="客户" min-width="80" show-overflow-tooltip />
+                        <el-table-column prop="brand" label="商标" min-width="80" show-overflow-tooltip />
+                        <el-table-column prop="productName" label="客户型号" min-width="80" show-overflow-tooltip />
+                        <el-table-column prop="period" label="订单周期" min-width="90" show-overflow-tooltip />
+                        <el-table-column label="操作" width="80" fixed="right">
                             <template #default="{ row }">
                                 <el-button type="primary" link @click="selectOrder(row)">进入</el-button>
                             </template>
@@ -125,23 +125,25 @@
                             :data="rows"
                             border
                             stripe
+                            size="small"
                             height="100%"
                             :row-key="(row) => row.materialStorageId"
                             :reserve-selection="true"
                             @select="onRowSelect"
                             @select-all="onSelectAll"
                             @selection-change="onSelectionChange"
+                            class="material-table"
                         >
-                            <el-table-column type="selection" width="44" />
-                            <el-table-column prop="materialName" label="材料" />
-                            <el-table-column prop="materialModel" label="型号" show-overflow-tooltip />
-                            <el-table-column prop="materialSpecification" label="规格" show-overflow-tooltip />
-                            <el-table-column prop="materialColor" label="颜色" />
-                            <el-table-column prop="supplierName" label="供应商" show-overflow-tooltip />
-                            <el-table-column prop="actualInboundUnit" label="单位" />
-                            <el-table-column prop="allowedOutboundAmount" label="可出库库存" />
+                            <el-table-column type="selection" width="40" />
+                            <el-table-column prop="materialName" label="材料" min-width="80" />
+                            <el-table-column prop="materialModel" label="型号" min-width="70" show-overflow-tooltip />
+                            <el-table-column prop="materialSpecification" label="规格" min-width="70" show-overflow-tooltip />
+                            <el-table-column prop="materialColor" label="颜色" min-width="60" />
+                            <el-table-column prop="supplierName" label="供应商" min-width="80" show-overflow-tooltip />
+                            <el-table-column prop="actualInboundUnit" label="单位" min-width="50" />
+                            <el-table-column prop="allowedOutboundAmount" label="可出库库存" min-width="70" />
 
-                            <el-table-column label="按尺码分配" min-width="160">
+                            <el-table-column label="按尺码分配" min-width="140">
                                 <template #default="{ row }">
                                     <div class="flex items-center gap-3">
                                         <span class="text-sm opacity-80"> 合计 {{ row._outboundQuantity || 0 }} / 库存 {{ row.allowedOutboundAmount || 0 }} </span>
@@ -150,7 +152,7 @@
                                 </template>
                             </el-table-column>
 
-                            <el-table-column label="出库总数" min-width="120">
+                            <el-table-column label="出库总数" min-width="100">
                                 <template #default="{ row }">
                                     <el-input-number v-model="row._outboundQuantity" size="small" :min="0" :max="row.allowedOutboundAmount" :step="1" @change="syncRowByTotal(row)" />
                                 </template>
@@ -1159,6 +1161,50 @@ function persistRowEdit(row: any) {
 @media (max-width: 1200px) {
     .footer-actions {
         flex-wrap: wrap;
+    }
+}
+
+/* 搜索框默认宽度 */
+.order-search-input {
+    width: 280px;
+}
+
+/* 低分辨率屏幕适配 (<1080px) */
+@media screen and (max-width: 1080px) {
+    .order-search-input {
+        width: 200px;
+    }
+    .page {
+        padding: 0.5rem;
+    }
+    .order-table :deep(.el-table__header th .cell),
+    .order-table :deep(.el-table__body td .cell),
+    .material-table :deep(.el-table__header th .cell),
+    .material-table :deep(.el-table__body td .cell) {
+        font-size: 12px;
+        padding: 2px 4px;
+    }
+    .order-table :deep(.el-table__header th),
+    .order-table :deep(.el-table__body td),
+    .material-table :deep(.el-table__header th),
+    .material-table :deep(.el-table__body td) {
+        padding: 4px 0;
+    }
+    .order-table :deep(.el-tag),
+    .material-table :deep(.el-tag) {
+        font-size: 11px;
+        padding: 0 4px;
+        height: 20px;
+        line-height: 20px;
+    }
+    .order-table :deep(.el-button),
+    .material-table :deep(.el-button) {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+    :deep(.el-table__header),
+    :deep(.el-table__body) {
+        min-width: 800px;
     }
 }
 </style>
