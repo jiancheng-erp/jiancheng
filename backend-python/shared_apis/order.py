@@ -2489,8 +2489,8 @@ def export_order_excel():
     )
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    price_header = "订单总价(RMB)" if convert_to_rmb else "订单总价"
-    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", price_header, "订单日期", "交货日期", "订单状态", "鞋型状态"]
+    price_header = "订单金额(RMB)" if convert_to_rmb else "订单金额"
+    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", price_header, "金额单位", "订单日期", "交货日期", "订单状态", "鞋型状态"]
     for col_idx, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=h)
         cell.font = header_font
@@ -2503,20 +2503,24 @@ def export_order_excel():
         customer_ids = ", ".join(s["customerId"] for s in order_data["shoes"])
         statuses = ", ".join(s["statuses"] for s in order_data["shoes"])
 
-        total_price_str = ""
+        total_price_val = ""
+        currency_unit = ""
         if convert_to_rmb:
             if order_data["orderTotalPriceRmb"]:
-                total_price_str = f"{order_data['orderTotalPriceRmb']:.2f} RMB"
+                total_price_val = f"{order_data['orderTotalPriceRmb']:.2f}"
+            currency_unit = "RMB"
         else:
             if order_data["orderTotalPrice"]:
-                total_price_str = f"{order_data['orderTotalPrice']:.2f} {order_data['orderCurrency']}".strip()
+                total_price_val = f"{order_data['orderTotalPrice']:.2f}"
+            currency_unit = order_data["orderCurrency"] or ""
         values = [
             order_data["orderRid"],
             order_data["customerName"],
             shoe_rids,
             customer_ids,
             order_data["orderAmount"],
-            total_price_str,
+            total_price_val,
+            currency_unit,
             order_data["createTime"],
             order_data["deadlineTime"],
             order_data["status"],

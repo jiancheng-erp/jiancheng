@@ -67,14 +67,19 @@
             <el-table-column prop="shoeRid" label="工厂型号"></el-table-column>
             <el-table-column prop="customerId" label="客户型号"></el-table-column>
             <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
-            <el-table-column prop="orderTotalPrice" :label="showRmb ? '订单总价(RMB)' : '订单总价'" width="160">
+            <el-table-column :label="showRmb ? '订单金额(RMB)' : '订单金额'" width="160">
                 <template #default="{ row }">
                     <template v-if="showRmb">
-                        {{ row.orderTotalPriceRmb != null ? Number(row.orderTotalPriceRmb).toFixed(2) + ' RMB' : '' }}
+                        {{ row.orderTotalPriceRmb != null ? Number(row.orderTotalPriceRmb).toFixed(2) : '' }}
                     </template>
                     <template v-else>
-                        {{ row.orderTotalPrice != null ? Number(row.orderTotalPrice).toFixed(2) + ' ' + (row.orderCurrency || '') : '' }}
+                        {{ row.orderTotalPrice != null ? Number(row.orderTotalPrice).toFixed(2) : '' }}
                     </template>
+                </template>
+            </el-table-column>
+            <el-table-column label="金额单位" width="100">
+                <template #default="{ row }">
+                    {{ showRmb ? 'RMB' : (row.orderCurrency || '') }}
                 </template>
             </el-table-column>
             <el-table-column prop="createTime" label="订单日期"></el-table-column>
