@@ -51,6 +51,7 @@
                     <el-table :data="props.row.shoes" :border="true">
                         <el-table-column label="工厂型号" prop="shoeRid" />
                         <el-table-column label="客户型号" prop="customerId" />
+                        <el-table-column label="设计部门" prop="designDepartment" />
                         <el-table-column label="业务下发时间" prop="bussinessEventTime" />
                         <el-table-column label="投产指令单下发时间" prop="productionOrderIssueEventTime" />
                         <el-table-column label="用量填写完成时间" prop="firstUsageInputIssueEventTime" />
@@ -66,6 +67,7 @@
             <el-table-column prop="customerName" label="客人名称"></el-table-column>
             <el-table-column prop="shoeRid" label="工厂型号"></el-table-column>
             <el-table-column prop="customerId" label="客户型号"></el-table-column>
+            <el-table-column prop="designDepartment" label="设计部门"></el-table-column>
             <el-table-column prop="orderAmount" label="订单数量"></el-table-column>
             <el-table-column :label="showRmb ? '订单金额(RMB)' : '订单金额'" width="160">
                 <template #default="{ row }">
@@ -100,7 +102,6 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
@@ -175,7 +176,8 @@ export default {
                 this.orderFilterData = this.orderFilterData.map((order) => ({
                     ...order,
                     shoeRid: order.shoes.map((s) => s.shoeRid).join(', ') || 'N/A',
-                    customerId: order.shoes.map((s) => s.customerId).join(', ') || 'N/A'
+                    customerId: order.shoes.map((s) => s.customerId).join(', ') || 'N/A',
+                    designDepartment: order.shoes.map((s) => s.designDepartment).filter(Boolean).join(', ') || 'N/A'
                 }))
                 this.totalData = response.data.total
             } catch (error) {

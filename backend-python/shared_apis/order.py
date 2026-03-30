@@ -2218,6 +2218,7 @@ def get_order_full_info():
             orders_dict[order.order_id]["shoes"][shoe_key] = {
                 "shoeRid": shoe.shoe_rid if shoe else "N/A",
                 "customerId": order_shoe.customer_product_name if order_shoe else "N/A",
+                "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "N/A",
                 "firstBom": "N/A",
                 "secondBom": "N/A",
                 "firstOrder": "N/A",
@@ -2474,6 +2475,7 @@ def export_order_excel():
         orders_dict[order.order_id]["shoes"].append({
             "shoeRid": shoe.shoe_rid if shoe else "",
             "customerId": order_shoe.customer_product_name if order_shoe else "",
+            "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "",
             "statuses": shoe_status_names or "",
         })
 
@@ -2490,7 +2492,7 @@ def export_order_excel():
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     price_header = "订单金额(RMB)" if convert_to_rmb else "订单金额"
-    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "订单数量", price_header, "金额单位", "订单日期", "交货日期", "订单状态", "鞋型状态"]
+    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "设计部门", "订单数量", price_header, "金额单位", "订单日期", "交货日期", "订单状态", "鞋型状态"]
     for col_idx, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=h)
         cell.font = header_font
@@ -2501,6 +2503,7 @@ def export_order_excel():
     for order_data in orders_dict.values():
         shoe_rids = ", ".join(s["shoeRid"] for s in order_data["shoes"])
         customer_ids = ", ".join(s["customerId"] for s in order_data["shoes"])
+        design_departments = ", ".join(s["designDepartment"] for s in order_data["shoes"])
         statuses = ", ".join(s["statuses"] for s in order_data["shoes"])
 
         total_price_val = ""
@@ -2518,6 +2521,7 @@ def export_order_excel():
             order_data["customerName"],
             shoe_rids,
             customer_ids,
+            design_departments,
             order_data["orderAmount"],
             total_price_val,
             currency_unit,
