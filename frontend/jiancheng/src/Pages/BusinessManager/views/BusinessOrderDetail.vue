@@ -299,7 +299,7 @@ export default {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
         isFinanceManager() {
-            return this.role == 10
+            return this.role == 10 || this.role == 24
         },
         userIsManager() {
             return this.role == 4

@@ -30,6 +30,9 @@
           <el-menu-item index="5" @click="handleMenuClick('InOutboundRecordsForFinished','5')">
             <span>成品仓出入库记录</span>
           </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick('GeneralOrderSearchForWarehouse','6')">
+            <span>订单查询</span>
+          </el-menu-item>
           <el-menu-item index="99" @click="logout">
             <span>退出系统</span>
           </el-menu-item>
@@ -58,12 +61,14 @@ import InOutboundRecords from '@/Pages/TotalWarehouse/HeadOfWarehouse/components
 import InboundDetails from '../components/FinancialWarehouseDetail.vue'
 import FinancialRecievableDetail from '../components/FinancialRecievableDetail.vue'
 import InOutboundRecordsForFinished from '@/Pages/TotalWarehouse/FinishedWarehouse/components/InOutboundRecords.vue'
+import GeneralOrderSearchForWarehouse from '@/components/GeneralOrderSearchForWarehouse.vue'
 
 const components = {
   InOutboundRecords,
   InboundDetails,
   FinancialRecievableDetail,
-  InOutboundRecordsForFinished
+  InOutboundRecordsForFinished,
+  GeneralOrderSearchForWarehouse
 }
 
 const userName = ref('财务部-审核')

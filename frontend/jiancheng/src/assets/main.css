@@ -332,10 +332,37 @@
 /* =================================================================== */
 @media (max-width: 1200px) {
   :root { --aside-w: 220px; }
+
+  /* 小屏自动隐藏侧栏，主区全宽 */
+  .app-body {
+    grid-template-columns: 1fr;
+  }
+
+  .app-body > .app-aside,
+  .app-body > .el-aside {
+    display: none !important;
+  }
 }
 @media (max-width: 992px) {
-  .app-body { grid-template-columns: 1fr; }
-  .app-aside { position: sticky; top: calc(var(--header-h) + 8px); z-index: 9; }
+  .app-body {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+
+  /* 小屏下改为上下堆叠，避免侧栏 sticky 覆盖主区 */
+  .app-aside,
+  .el-aside {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .el-main {
+    min-width: 0;
+  }
 }
 @media (max-width: 768px) {
   :root { --aside-w: 100%; }
