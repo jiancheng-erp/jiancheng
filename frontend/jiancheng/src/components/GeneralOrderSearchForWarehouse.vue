@@ -130,7 +130,7 @@ export default {
     computed: {
         showDetailLink() {
             const role = parseInt(localStorage.getItem('role'), 10)
-            return role === 10
+            return role === 10 || role === 24
         },
         displayRates() {
             const skip = new Set(['RMB', 'CNY', 'USA', 'USE', '美金', '€'])
