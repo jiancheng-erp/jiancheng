@@ -435,6 +435,8 @@
     @submit="submitForecastAddCustomerBatchForm"
   />
 
+  <AddShoeDialog :color-options="colorOptions" @submit="addNewShoe" />
+
   <CustomerBatchTemplateDialog
     :batch-template-display-data="batchTemplateDisplayData"
     :attr-mapping="attrMapping"
@@ -453,7 +455,9 @@
       <el-col :span="6">
         <el-input v-model="shoeSelectorFilters.colorName" clearable placeholder="颜色筛选" />
       </el-col>
-      <el-col :span="6"></el-col>
+      <el-col :span="6" style="text-align: right">
+        <el-button type="primary" plain @click="openAddShoeDialog">新建鞋型</el-button>
+      </el-col>
       <el-col :span="6"></el-col>
     </el-row>
     <el-row :gutter="12" style="margin-top: 8px">
@@ -585,12 +589,14 @@ import { useOrderDialogStore } from '@/Pages/BusinessManager/stores/orderDialog'
 import AddBatchInfoDialog from './orderDialogs/AddBatchInfoDialog.vue'
 import AddCustomerBatchDialog from './orderDialogs/AddCustomerBatchDialog.vue'
 import CustomerBatchTemplateDialog from './orderDialogs/CustomerBatchTemplateDialog.vue'
+import AddShoeDialog from './orderDialogs/AddShoeDialog.vue'
 
 export default {
   components: {
     AddBatchInfoDialog,
     AddCustomerBatchDialog,
     CustomerBatchTemplateDialog,
+    AddShoeDialog,
     Upload
   },
   data() {
@@ -613,6 +619,7 @@ export default {
       customerOptions: [],
       batchTypeOptions: [],
       managerOptions: [],
+      colorOptions: [],
       currencyTypeOptions: ['RMB', 'USD', 'EUR'],
       shoeSelectorShoes: [],
       shoeTypeCatalog: [],
@@ -1234,8 +1241,13 @@ export default {
         this.loadCustomers(),
         this.loadBatchTypes(),
         this.loadManagers(),
+        this.getAllColors(),
         this.loadForecastSheets()
       ])
+    },
+    async getAllColors() {
+      const response = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
+      this.colorOptions = response.data || []
     },
     async loadUser() {
       const response = await axios.get(`${this.$apiBaseUrl}/order/onmount`)
@@ -1933,6 +1945,29 @@ export default {
       } catch (error) {
         const message = error?.response?.data?.error || error?.response?.data?.message || '新增客户配码失败'
         ElMessage.error(message)
+      }
+    },
+    openAddShoeDialog() {
+      this.dialogStore.resetShoeForm()
+      this.dialogStore.openAddShoeDialog()
+    },
+    async addNewShoe() {
+      try {
+        await ElMessageBox.confirm('确认添加新鞋型？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+      } catch (error) {
+        return
+      }
+
+      const response = await axios.post(`${this.$apiBaseUrl}/shoemanage/addshoe`, this.dialogStore.shoeForm)
+      if (response.status === 200) {
+        ElMessage.success('添加成功')
+        this.dialogStore.closeAddShoeDialog()
+        this.dialogStore.resetShoeForm()
+        await this.searchShoeSelector()
       }
     },
     async saveSheetPackaging() {

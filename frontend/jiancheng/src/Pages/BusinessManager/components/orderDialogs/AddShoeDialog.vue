@@ -1,5 +1,12 @@
 <template>
-    <el-dialog title="添加新鞋型" v-model="dialogStore.addShoeDialogVis" width="50%">
+    <el-dialog
+        title="添加新鞋型"
+        v-model="dialogStore.addShoeDialogVis"
+        width="50%"
+        :append-to-body="true"
+        :modal-append-to-body="true"
+        :z-index="4000"
+    >
         <el-form :model="dialogStore.shoeForm" label-width="120px" :inline="false">
             <el-form-item label="鞋型编号">
                 <el-input v-model="dialogStore.shoeForm.shoeRid"></el-input>
