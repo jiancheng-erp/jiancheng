@@ -168,8 +168,10 @@ def _batch_production_status(order_shoe_ids):
                 result[osid] = "未排产"
             continue
 
-        # 已过成型排产结束时间 → 看入库情况
-        if prod.molding_end_date and today > prod.molding_end_date:
+        # 业务显示按时间区间归类阶段：
+        # 裁断-针车预备前 => 裁断；针车预备-针车 => 针车预备；
+        # 针车-成型 => 针车；成型开始后到全部入库前 => 成型。
+        if _is_fully_inbound(fin):
             result[osid] = label
         elif prod.molding_start_date and today >= prod.molding_start_date:
             result[osid] = "成型"
@@ -200,6 +202,20 @@ def _determine_warehouse_label(fin, has_pending_apply=False):
     if total_actual > 0:
         return "部分入库"
     return "未入库"
+
+
+def _is_fully_inbound(fin):
+    """是否已全部入库（或已进入出库流程）。"""
+    if fin is None:
+        return False
+
+    min_status = fin.get("min_status")
+    if min_status is not None and min_status >= 1:
+        return True
+
+    total_actual = fin.get("total_actual") or 0
+    total_estimated = fin.get("total_estimated") or 0
+    return total_estimated > 0 and total_actual >= total_estimated
 
 
 # 订单初始状态
