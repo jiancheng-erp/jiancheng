@@ -374,8 +374,15 @@
     />
   </el-dialog>
 
-  <el-dialog v-model="rowQuantityDialogVisible" title="修改单位数量" width="560px" :close-on-click-modal="false">
-    <el-table :data="paginatedRowQuantityEditingRows" border style="max-height: 320px">
+  <el-dialog
+    v-model="rowQuantityDialogVisible"
+    title="修改单位数量"
+    width="560px"
+    :close-on-click-modal="false"
+    top="6vh"
+    class="row-quantity-dialog"
+  >
+    <el-table :data="paginatedRowQuantityEditingRows" border :max-height="320">
       <el-table-column prop="packagingInfoName" label="配码" min-width="220" />
       <el-table-column label="单位数量" min-width="180">
         <template #default="scope">
@@ -1430,6 +1437,35 @@ export default {
       row.shoeRid = target.shoeRid
       row.colorName = target.colorName
       row.shoeImageUrl = target.shoeImageUrl || ''
+      this.groupCreateItemsByShoeRid()
+    },
+    groupCreateItemsByShoeRid() {
+      const items = Array.isArray(this.createItems) ? this.createItems : []
+      if (items.length < 2) return
+
+      const groupedOrder = []
+      const groupedMap = new Map()
+      const blankRows = []
+
+      items.forEach((item) => {
+        const key = String(item?.shoeRid || '').trim()
+        if (!key) {
+          blankRows.push(item)
+          return
+        }
+        if (!groupedMap.has(key)) {
+          groupedMap.set(key, [])
+          groupedOrder.push(key)
+        }
+        groupedMap.get(key).push(item)
+      })
+
+      const nextItems = []
+      groupedOrder.forEach((key) => {
+        nextItems.push(...(groupedMap.get(key) || []))
+      })
+      nextItems.push(...blankRows)
+      this.createItems = nextItems
     },
     handleCustomerShoeNameInput(row, value) {
       const shoeRid = String(row?.shoeRid || '').trim()
@@ -1518,6 +1554,7 @@ export default {
             .map((item) => [item.shoeTypeId, item])
         ).values()
       )
+      this.groupCreateItemsByShoeRid()
       this.createItemPage = 1
     },
     async deleteForecastSheet(row) {
@@ -2001,6 +2038,7 @@ export default {
         appendCount += 1
       })
 
+      this.groupCreateItemsByShoeRid()
       this.createItemPage = Math.max(1, Math.ceil(this.createItems.length / this.createItemPageSize))
 
       this.shoeSelectorDialogVisible = false
@@ -2269,5 +2307,14 @@ export default {
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+}
+
+:deep(.row-quantity-dialog) {
+  max-height: 88vh;
+}
+
+:deep(.row-quantity-dialog .el-dialog__body) {
+  max-height: calc(88vh - 120px);
+  overflow-y: auto;
 }
 </style>
