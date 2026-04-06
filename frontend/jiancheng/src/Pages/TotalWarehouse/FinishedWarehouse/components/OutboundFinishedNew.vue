@@ -581,8 +581,11 @@ export default {
         ElMessage.error('该申请单没有明细，无法出库')
         return
       }
-      // 过滤掉已出库完成的明细（totalPairs <= 0 表示已出库）
-      const pendingDetails = details.filter((item) => Number(item.totalPairs) > 0)
+      // 过滤掉已出库完成或当前已无库存可出的明细。
+      // totalPairs <= 0：该明细已完成出库；currentStock <= 0：库存不足，不能执行本次出库。
+      const pendingDetails = details.filter(
+        (item) => Number(item.totalPairs) > 0 && Number(item.currentStock) > 0
+      )
       if (!pendingDetails.length) {
         ElMessage.info('该申请单所有明细均已出库完成')
         return

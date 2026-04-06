@@ -1067,6 +1067,7 @@ class ShoeOutboundRecord(db.Model):
     subsequent_revenue = db.Column(db.DECIMAL(10, 3), default=None)
     outbound_datetime = db.Column(db.DateTime, nullable=False)
     outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
+    apply_id = db.Column(db.BigInteger, nullable=True)
     picker = db.Column(db.String(15), default=None)
     remark = db.Column(db.String(40), default=None)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
