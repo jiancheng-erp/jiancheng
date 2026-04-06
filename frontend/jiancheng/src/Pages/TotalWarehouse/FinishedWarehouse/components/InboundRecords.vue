@@ -94,7 +94,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import htmlToPdf from '@/Pages/utils/htmlToPdf'
 import print from 'vue3-print-nb'
-import { getSummaries, PAGESIZE, PAGESIZES } from '../../warehouseUtils'
+import { PAGESIZE, PAGESIZES } from '../../warehouseUtils'
 import FinishedSearchBar from './FinishedSearchBar.vue'
 export default {
     components: {
@@ -127,6 +127,7 @@ export default {
             pageSizes: PAGESIZES,
             tableData: [],
             total: 0,
+            totalDetailAmount: 0,
             currentRow: {},
             recordData: {},
             dialogVisible: false,
@@ -140,7 +141,18 @@ export default {
                 orderCIdSearch: null,
                 customerBrandSearch: null
             },
-            getSummaries: getSummaries,
+            getSummaries: (param) => {
+                const { columns } = param
+                const sums = []
+                columns.forEach((column, index) => {
+                    if (column.property === 'detailAmount') {
+                        sums[index] = this.totalDetailAmount
+                    } else {
+                        sums[index] = index === 0 ? '合计' : ''
+                    }
+                })
+                return sums
+            },
             exportLoadingInbound: false,
             exportLoadingInout: false
         }
@@ -190,6 +202,7 @@ export default {
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedinboundrecords`, { params })
                 this.tableData = response.data.result
                 this.total = response.data.total
+                this.totalDetailAmount = response.data.totalDetailAmount || 0
             } catch (error) {
                 console.log(error)
             }

@@ -13,10 +13,15 @@ from general_document.finished_warehouse_excel import (
 )
 from constants import FINISHED_STORAGE_STATUS, FINISHED_STORAGE_STATUS_ENUM
 from models import (
+    FinishedShoeStorage,
     FinishedShoeStorageSnapshot,
     FinishedShoeSizeDetailSnapshot,
     DailyFinishedShoeStorageChange,
     DailyFinishedShoeSizeDetailChange,
+    ShoeInboundRecord,
+    ShoeInboundRecordDetail,
+    ShoeOutboundRecord,
+    ShoeOutboundRecordDetail,
     OrderShoeType,
     OrderShoe,
     Order,
@@ -523,8 +528,11 @@ def get_finished_inventory_history():
 def _query_inventory_period(filters: dict, paginate: bool = True):
     """
     区间库存变化查询：期初数 - 入库变化 - 出库变化 - 期末数
-    期初数 = startDate 前一天的库存快照
-    期末数 = 期初数 + 区间净变化
+    直接利用现有库存 (FinishedShoeStorage) 和出入库记录反推，不依赖 snapshot。
+
+    算法：
+      closing = current_live - post_period_inbound + post_period_outbound
+      opening = closing - period_inbound + period_outbound
     """
     start_date_str = filters.get("startDate")
     end_date_str = filters.get("endDate")
@@ -536,36 +544,132 @@ def _query_inventory_period(filters: dict, paginate: bool = True):
     if start_date > end_date:
         return {"total": 0, "items": []}
 
-    # 期初 = startDate 前一天的库存（即上一期末）
-    opening_balance_date = start_date - timedelta(days=1)
-    base_date = _get_base_snapshot_date(opening_balance_date)
-    if not base_date:
-        _create_snapshot_for_date(opening_balance_date)
-        base_date = opening_balance_date
+    end_date_next = end_date + timedelta(days=1)
 
-    base_q = _build_base_query(base_date, filters)
-    snapshots = base_q.order_by(Order.order_rid.asc()).all()
+    # ── 1. 查询所有 FinishedShoeStorage 并关联元数据 ──
+    q = (
+        db.session.query(
+            FinishedShoeStorage,
+            Order,
+            OrderShoe,
+            Shoe,
+            Color,
+            Customer,
+            OrderShoeType,
+            BatchInfoType.batch_info_type_name,
+        )
+        .join(OrderShoeType, OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id)
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(BatchInfoType, BatchInfoType.batch_info_type_id == Order.batch_info_type_id)
+    )
 
-    # 快照到 opening_balance_date 之间的累计净变化（用于从快照日推算期初值）
-    opening_adj_map: dict = {}
-    if base_date < opening_balance_date:
-        opening_adj_map = _fetch_delta_map(base_date + timedelta(days=1), opening_balance_date)
+    order_rid = filters.get("orderRId")
+    shoe_rid = filters.get("shoeRId")
+    customer_name = filters.get("customerName")
+    customer_brand = filters.get("customerBrand")
+    color_name = filters.get("colorName")
+    if order_rid:
+        q = q.filter(Order.order_rid.ilike(f"%{order_rid}%"))
+    if shoe_rid:
+        q = q.filter(Shoe.shoe_rid.ilike(f"%{shoe_rid}%"))
+    if customer_name:
+        q = q.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
+    if customer_brand:
+        q = q.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+    if color_name:
+        q = q.filter(Color.color_name.ilike(f"%{color_name}%"))
 
-    # 区间内（startDate..endDate）的入库/出库明细
-    period_delta_map = _fetch_delta_map(start_date, end_date)
+    storage_rows = q.order_by(Order.order_rid.asc()).all()
 
+    # ── 2. 计算区间内入库量 (period) ──
+    period_inbound_rows = (
+        db.session.query(
+            ShoeInboundRecordDetail.finished_shoe_storage_id.label("fsid"),
+            func.coalesce(func.sum(ShoeInboundRecordDetail.inbound_amount), 0).label("amount"),
+        )
+        .join(ShoeInboundRecord, ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id)
+        .filter(
+            ShoeInboundRecord.inbound_datetime >= start_date,
+            ShoeInboundRecord.inbound_datetime < end_date_next,
+            ShoeInboundRecord.transaction_type == 1,
+            ShoeInboundRecordDetail.is_deleted == 0,
+            ShoeInboundRecordDetail.finished_shoe_storage_id.isnot(None),
+        )
+        .group_by(ShoeInboundRecordDetail.finished_shoe_storage_id)
+        .all()
+    )
+    period_inbound_map = {r.fsid: int(r.amount) for r in period_inbound_rows}
+
+    # ── 3. 计算区间内出库量 (period) ──
+    period_outbound_rows = (
+        db.session.query(
+            ShoeOutboundRecordDetail.finished_shoe_storage_id.label("fsid"),
+            func.coalesce(func.sum(ShoeOutboundRecordDetail.outbound_amount), 0).label("amount"),
+        )
+        .join(ShoeOutboundRecord, ShoeOutboundRecord.shoe_outbound_record_id == ShoeOutboundRecordDetail.shoe_outbound_record_id)
+        .filter(
+            ShoeOutboundRecord.outbound_datetime >= start_date,
+            ShoeOutboundRecord.outbound_datetime < end_date_next,
+            ShoeOutboundRecordDetail.finished_shoe_storage_id.isnot(None),
+        )
+        .group_by(ShoeOutboundRecordDetail.finished_shoe_storage_id)
+        .all()
+    )
+    period_outbound_map = {r.fsid: int(r.amount) for r in period_outbound_rows}
+
+    # ── 4. 计算区间后入库量 (post-period，用于反推期末) ──
+    post_inbound_rows = (
+        db.session.query(
+            ShoeInboundRecordDetail.finished_shoe_storage_id.label("fsid"),
+            func.coalesce(func.sum(ShoeInboundRecordDetail.inbound_amount), 0).label("amount"),
+        )
+        .join(ShoeInboundRecord, ShoeInboundRecord.shoe_inbound_record_id == ShoeInboundRecordDetail.shoe_inbound_record_id)
+        .filter(
+            ShoeInboundRecord.inbound_datetime >= end_date_next,
+            ShoeInboundRecord.transaction_type == 1,
+            ShoeInboundRecordDetail.is_deleted == 0,
+            ShoeInboundRecordDetail.finished_shoe_storage_id.isnot(None),
+        )
+        .group_by(ShoeInboundRecordDetail.finished_shoe_storage_id)
+        .all()
+    )
+    post_inbound_map = {r.fsid: int(r.amount) for r in post_inbound_rows}
+
+    # ── 5. 计算区间后出库量 (post-period) ──
+    post_outbound_rows = (
+        db.session.query(
+            ShoeOutboundRecordDetail.finished_shoe_storage_id.label("fsid"),
+            func.coalesce(func.sum(ShoeOutboundRecordDetail.outbound_amount), 0).label("amount"),
+        )
+        .join(ShoeOutboundRecord, ShoeOutboundRecord.shoe_outbound_record_id == ShoeOutboundRecordDetail.shoe_outbound_record_id)
+        .filter(
+            ShoeOutboundRecord.outbound_datetime >= end_date_next,
+            ShoeOutboundRecordDetail.finished_shoe_storage_id.isnot(None),
+        )
+        .group_by(ShoeOutboundRecordDetail.finished_shoe_storage_id)
+        .all()
+    )
+    post_outbound_map = {r.fsid: int(r.amount) for r in post_outbound_rows}
+
+    # ── 6. 组装结果 ──
     display_zero = str(filters.get("displayZeroInventory", "false")).lower() == "true"
 
     items_all = []
-    for snap, order, order_shoe, shoe, color, customer, order_shoe_type, batch_type_name in snapshots:
-        fsid = snap.finished_shoe_storage_id
-        adj = opening_adj_map.get(fsid, {"net": 0, "in": 0, "out": 0})
-        period = period_delta_map.get(fsid, {"in": 0, "out": 0, "net": 0})
+    for fss, order, order_shoe, shoe, color, customer, order_shoe_type, batch_type_name in storage_rows:
+        fsid = fss.finished_shoe_id
+        current_amount = fss.finished_amount or 0
+        period_inbound = period_inbound_map.get(fsid, 0)
+        period_outbound = period_outbound_map.get(fsid, 0)
+        post_inbound = post_inbound_map.get(fsid, 0)
+        post_outbound = post_outbound_map.get(fsid, 0)
 
-        opening_amount = (snap.finished_amount or 0) + adj["net"]
-        period_inbound = period["in"]
-        period_outbound = period["out"]
-        closing_amount = opening_amount + period["net"]
+        closing_amount = current_amount - post_inbound + post_outbound
+        opening_amount = closing_amount - period_inbound + period_outbound
 
         if not display_zero and opening_amount <= 0 and closing_amount <= 0 and period_inbound <= 0:
             continue

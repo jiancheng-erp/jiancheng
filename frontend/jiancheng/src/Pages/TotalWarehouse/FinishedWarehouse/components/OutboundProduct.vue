@@ -1134,18 +1134,31 @@ export default {
                 return
             }
             this.currentOperation = 1
-            this.groupSelectedRowsForWarehouse()
+            const hasOutboundItems = this.groupSelectedRowsForWarehouse()
+            if (!hasOutboundItems) {
+                ElMessage.warning('所选订单已无可出库条目，请刷新后重试')
+                return
+            }
             this.isOutboundDialogVisible = true
         },
-        async groupSelectedRowsForWarehouse() {
+        groupSelectedRowsForWarehouse() {
             const selectedRowsCopy = JSON.parse(JSON.stringify(this.selectedRows))
             this.outboundForm = JSON.parse(JSON.stringify(this.formItemTemplate))
             this.outboundForm.items = []
             for (let i = 0; i < selectedRowsCopy.length; i++) {
                 for (let j = 0; j < selectedRowsCopy[i].orderShoeTable.length; j++) {
                     const orderShoe = selectedRowsCopy[i].orderShoeTable[j]
-                    // 默认全部库存出库（最大可出库数量）
-                    orderShoe.outboundQuantity = orderShoe.currentStock
+                    const currentStock = Number(orderShoe.currentStock || 0)
+                    const orderAmountPerColor = Number(orderShoe.orderAmountPerColor || 0)
+                    const outboundedAmount = Number(orderShoe.outboundedAmount || 0)
+                    // 当前库存为 0 或该颜色已全部出完时，不再展示到出库对话框。
+                    const remainToOutbound = Math.max(orderAmountPerColor - outboundedAmount, 0)
+                    if (currentStock <= 0 || remainToOutbound <= 0) {
+                        continue
+                    }
+
+                    // 默认全部库存出库（受“未出完数量”约束，避免出现超过应出库数量）
+                    orderShoe.outboundQuantity = Math.min(currentStock, remainToOutbound)
                     orderShoe.remark = null
                     this.outboundForm.items.push({
                         ...orderShoe,
@@ -1154,6 +1167,7 @@ export default {
                     })
                 }
             }
+            return this.outboundForm.items.length > 0
         },
         async submitOperationForm() {
             try {

@@ -62,6 +62,7 @@ def snapshot_daily_finished_storage_change(app):
                         ON sir.shoe_inbound_record_id = sird.shoe_inbound_record_id
                     WHERE sir.inbound_datetime >= :start_dt
                       AND sir.inbound_datetime <  :end_dt
+                      AND sir.transaction_type = 1
                       AND sird.is_deleted = 0
                       AND sird.finished_shoe_storage_id IS NOT NULL
                     GROUP BY DATE(sir.inbound_datetime), sird.finished_shoe_storage_id

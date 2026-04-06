@@ -350,18 +350,22 @@ export default {
             this.fetchData()
         },
 
-        // 表格合计行（仅合计当前页金额/数量）
-        tableSummary({ columns, data }) {
+        // 表格合计行（所有搜索结果的合计）
+        tableSummary({ columns }) {
             const sums = []
+            const totalQty = (this.total.inQty || 0) + (this.total.outQty || 0)
+            const totalAmt =
+                Object.values(this.total.inAmountByCurrency || {}).reduce((a, b) => a + Number(b || 0), 0) +
+                Object.values(this.total.outAmountByCurrency || {}).reduce((a, b) => a + Number(b || 0), 0)
             columns.forEach((col, index) => {
                 if (index === 0) {
-                    sums[index] = '本页小计'
+                    sums[index] = '合计'
                     return
                 }
-                if (['quantity', 'amount'].includes(col.property)) {
-                    const values = data.map((item) => Number(item[col.property] || 0))
-                    const total = values.reduce((a, b) => a + (isNaN(b) ? 0 : b), 0)
-                    sums[index] = col.property === 'amount' ? this.fmtMoney(total) : this.fmtNumber(total)
+                if (col.property === 'quantity') {
+                    sums[index] = this.fmtNumber(totalQty)
+                } else if (col.property === 'amount') {
+                    sums[index] = this.fmtMoney(totalAmt)
                 } else {
                     sums[index] = ''
                 }
