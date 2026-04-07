@@ -2746,22 +2746,78 @@ def list_outbound_applies():
     customer_name_kw = (request.args.get("customerName") or "").strip()
     status = request.args.get("status", type=int)
 
+    pending_pairs_subq = (
+        db.session.query(
+            ShoeOutboundApplyDetail.apply_id.label("apply_id"),
+            func.coalesce(func.sum(ShoeOutboundApplyDetail.total_pairs), 0).label(
+                "pending_pairs"
+            ),
+        )
+        .group_by(ShoeOutboundApplyDetail.apply_id)
+        .subquery()
+    )
+
+    actual_pairs_subq = (
+        db.session.query(
+            ShoeOutboundRecord.apply_id.label("apply_id"),
+            func.coalesce(func.sum(ShoeOutboundRecordDetail.outbound_amount), 0).label(
+                "actual_pairs"
+            ),
+        )
+        .join(
+            ShoeOutboundRecordDetail,
+            ShoeOutboundRecordDetail.shoe_outbound_record_id
+            == ShoeOutboundRecord.shoe_outbound_record_id,
+        )
+        .filter(ShoeOutboundRecord.apply_id.isnot(None))
+        .group_by(ShoeOutboundRecord.apply_id)
+        .subquery()
+    )
+
+    # 显示兜底：如果历史出库记录没有绑定 apply_id，
+    # 但该申请明细对应的库存状态已是“完成出库(2)”，将其剩余申请双数视为“已出库双数”。
+    inferred_actual_pairs_subq = (
+        db.session.query(
+            ShoeOutboundApplyDetail.apply_id.label("apply_id"),
+            func.coalesce(func.sum(ShoeOutboundApplyDetail.total_pairs), 0).label(
+                "inferred_actual_pairs"
+            ),
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.finished_shoe_id
+            == ShoeOutboundApplyDetail.finished_shoe_storage_id,
+        )
+        .filter(FinishedShoeStorage.finished_status == 2)
+        .group_by(ShoeOutboundApplyDetail.apply_id)
+        .subquery()
+    )
+
     q = (
         db.session.query(
             ShoeOutboundApply,
             Order,
             Customer,
-            func.coalesce(func.sum(ShoeOutboundApplyDetail.total_pairs), 0).label(
-                "total_pairs"
-            ),
+            func.coalesce(pending_pairs_subq.c.pending_pairs, 0).label("pending_pairs"),
+            func.coalesce(actual_pairs_subq.c.actual_pairs, 0).label("actual_pairs"),
+            func.coalesce(
+                inferred_actual_pairs_subq.c.inferred_actual_pairs, 0
+            ).label("inferred_actual_pairs"),
         )
         .join(Order, Order.order_id == ShoeOutboundApply.order_id)
         .join(Customer, Customer.customer_id == Order.customer_id)
         .outerjoin(
-            ShoeOutboundApplyDetail,
-            ShoeOutboundApplyDetail.apply_id == ShoeOutboundApply.apply_id,
+            pending_pairs_subq,
+            pending_pairs_subq.c.apply_id == ShoeOutboundApply.apply_id,
         )
-        .group_by(ShoeOutboundApply.apply_id, Order.order_id, Customer.customer_id)
+        .outerjoin(
+            actual_pairs_subq,
+            actual_pairs_subq.c.apply_id == ShoeOutboundApply.apply_id,
+        )
+        .outerjoin(
+            inferred_actual_pairs_subq,
+            inferred_actual_pairs_subq.c.apply_id == ShoeOutboundApply.apply_id,
+        )
         .order_by(desc(ShoeOutboundApply.create_time))
     )
 
@@ -2847,11 +2903,27 @@ def list_outbound_applies():
             multi_customer_map[aid]["shoes"].add(srid)
 
     result = []
-    for apply_obj, order, customer, total_pairs in rows:
+    for (
+        apply_obj,
+        order,
+        customer,
+        pending_pairs,
+        actual_pairs,
+        inferred_actual_pairs,
+    ) in rows:
         mc = multi_customer_map.get(apply_obj.apply_id, {})
         all_customers = sorted(mc.get("customers", set()))
         all_orders = sorted(mc.get("orders", set()))
         all_shoes = sorted(mc.get("shoes", set()))
+        pending_pairs = int(pending_pairs or 0)
+        actual_pairs = int(actual_pairs or 0)
+        inferred_actual_pairs = int(inferred_actual_pairs or 0)
+
+        # 避免重复计算：兜底补偿最多把“待出库双数”转移到“已出库双数”。
+        inferred_move_pairs = min(max(inferred_actual_pairs, 0), max(pending_pairs, 0))
+        display_pending_pairs = max(pending_pairs - inferred_move_pairs, 0)
+        display_actual_pairs = max(actual_pairs, 0) + inferred_move_pairs
+        display_total_pairs = display_pending_pairs + display_actual_pairs
         result.append(
             {
                 "applyId": apply_obj.apply_id,
@@ -2861,7 +2933,9 @@ def list_outbound_applies():
                 "orderCId": order.order_cid,
                 "customerName": customer.customer_name,
                 "customerBrand": customer.customer_brand,
-                "totalPairs": int(total_pairs or 0),
+                "totalPairs": display_total_pairs,
+                "pendingPairs": display_pending_pairs,
+                "actualPairs": display_actual_pairs,
                 "status": apply_obj.status,
                 "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(
                     apply_obj.status, "未知状态"

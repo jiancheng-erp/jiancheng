@@ -85,6 +85,8 @@
       </el-table-column>
       <el-table-column prop="customerBrand" label="客户商标" min-width="120" />
       <el-table-column prop="totalPairs" label="申请总双数" width="120" />
+      <el-table-column prop="pendingPairs" label="待出库双数" width="120" />
+      <el-table-column prop="actualPairs" label="已出库双数" width="120" />
       <el-table-column prop="statusLabel" label="状态" width="140" />
       <el-table-column prop="remark" label="业务备注" min-width="180" show-overflow-tooltip />
       <el-table-column prop="createTime" label="创建时间" width="180" />
@@ -251,7 +253,7 @@
       >
         <el-table-column label="选择" width="60" align="center">
           <template #default="{ row }">
-            <el-checkbox v-model="row._selected" :disabled="!row.inboundFinished" />
+            <el-checkbox v-model="row._selected" :disabled="!canSelectExecuteDetail(row)" />
           </template>
         </el-table-column>
         <el-table-column prop="customerName" label="客户名称" width="120" />
@@ -263,8 +265,8 @@
         <el-table-column prop="currentStock" label="当前库存(双)" width="120" />
         <el-table-column label="入库状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.inboundFinished ? 'success' : 'warning'">
-              {{ row.inboundFinished ? '已完成入库' : '未完成入库' }}
+            <el-tag :type="!row.inboundFinished ? 'warning' : (Number(row.currentStock) <= 0 ? 'info' : 'success')">
+              {{ !row.inboundFinished ? '未完成入库' : (Number(row.currentStock) <= 0 ? '库存为0' : '可出库') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -316,7 +318,7 @@
         @size-change="(s) => { executePageSize = s; executeCurrentPage = 1 }"
       />
       <div v-if="executeDetails.length" class="execute-summary">
-        预计合计：{{ executeTotalExpected }} 双；实际合计：{{ executeTotalActual }} 双；差异：{{ executeTotalActual - executeTotalExpected }} 双
+        外部待出库：{{ executeTotalAllPending }} 双；可确认出库：{{ executeTotalExpected }} 双；实际合计：{{ executeTotalActual }} 双；差异：{{ executeTotalActual - executeTotalExpected }} 双
       </div>
 
       <!-- <p style="margin-top: 8px; color:#999;">
@@ -384,6 +386,7 @@ export default {
         remark: ''
       },
       executeDetails: [],
+      executeTotalAllPending: 0,
       executeTotalExpected: 0,
       executeTotalActual: 0,
       executeFilterShoeRId: '',
@@ -486,7 +489,7 @@ export default {
       const { details, header, sizeColumns } = res.data || {}
       row.details = (details || []).map((item) => ({
         ...item,
-        inboundFinished: item.inboundFinished > 0 || item.finishedStatus > 0
+        inboundFinished: Number(item.finishedStatus) >= 1
       }))
       row.detailLoaded = true
       // 补充多订单/客户信息
@@ -581,14 +584,15 @@ export default {
         ElMessage.error('该申请单没有明细，无法出库')
         return
       }
-      // 过滤掉已出库完成或当前已无库存可出的明细。
-      // totalPairs <= 0：该明细已完成出库；currentStock <= 0：库存不足，不能执行本次出库。
-      const pendingDetails = details.filter(
-        (item) => Number(item.totalPairs) > 0 && Number(item.currentStock) > 0
-      )
+      // 仅展示“本申请仍待出库”的明细（按申请明细 totalPairs 判断）。
+      const pendingDetails = details.filter((item) => Number(item.totalPairs) > 0)
       if (!pendingDetails.length) {
         ElMessage.info('该申请单所有明细均已出库完成')
         return
+      }
+      const noStockDetails = pendingDetails.filter((item) => Number(item.currentStock) <= 0)
+      if (noStockDetails.length) {
+        ElMessage.warning(`有 ${noStockDetails.length} 条明细库存为0，已自动禁用`) 
       }
       const notInboundFinished = pendingDetails.filter((item) => !item.inboundFinished)
       if (notInboundFinished.length) {
@@ -611,7 +615,7 @@ export default {
         actualCartonCount: Number(item.cartonCount) || 0,
         actualPairs: (Number(item.cartonCount) || 0) * (Number(item.pairsPerCarton) || 0),
         _diff: 0,
-        _selected: !!item.inboundFinished
+        _selected: !!item.inboundFinished && Number(item.currentStock) > 0
       }))
       this.executeFilterShoeRId = ''
       this.executeCurrentPage = 1
@@ -703,7 +707,7 @@ export default {
 
     selectAll() {
       this.executeDetails.forEach((item) => {
-        if (item.inboundFinished) item._selected = true
+        if (this.canSelectExecuteDetail(item)) item._selected = true
       })
     },
     deselectAll() {
@@ -717,10 +721,13 @@ export default {
     selectFilteredShoeRId() {
       if (!this.executeFilterShoeRId) return
       this.executeDetails.forEach((item) => {
-        if (item.shoeRId === this.executeFilterShoeRId && item.inboundFinished) {
+        if (item.shoeRId === this.executeFilterShoeRId && this.canSelectExecuteDetail(item)) {
           item._selected = true
         }
       })
+    },
+    canSelectExecuteDetail(item) {
+      return !!item?.inboundFinished && Number(item?.currentStock) > 0
     },
     deselectShoeRId(shoeRId) {
       this.executeDetails.forEach((item) => {
@@ -752,15 +759,20 @@ export default {
       this.recalcExecuteSummary()
     },
     recalcExecuteSummary() {
+      let allPending = 0
       let expected = 0
       let actual = 0
       this.executeDetails.forEach((item) => {
         const exp = Number(item.totalPairs) || 0
         const act = Number(item.actualPairs) || 0
         item._diff = act - exp
-        expected += exp
+        allPending += exp
+        if (this.canSelectExecuteDetail(item)) {
+          expected += exp
+        }
         actual += act
       })
+      this.executeTotalAllPending = allPending
       this.executeTotalExpected = expected
       this.executeTotalActual = actual
     }
