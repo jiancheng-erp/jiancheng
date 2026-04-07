@@ -2075,6 +2075,10 @@ class ShoeOutboundApply(db.Model):
     # 5 已作废/取消
     status = db.Column(db.SmallInteger, nullable=False, default=0)
 
+    # 0 业务发起（走审核流程）
+    # 1 仓库发起（一步完成，仅通知业务/总经理）
+    apply_type = db.Column(db.SmallInteger, nullable=False, default=0)
+
     remark = db.Column(db.String(200))
     expected_outbound_datetime = db.Column(db.DateTime)   # 业务填写
     actual_outbound_datetime = db.Column(db.DateTime)     # 仓库执行时写入
@@ -2122,6 +2126,9 @@ class ShoeOutboundApplyDetail(db.Model):
 
     # 冗余总双数 = carton_count * pairs_per_carton
     total_pairs = db.Column(db.Integer, nullable=False, default=0)
+
+    # 实际出库双数（NULL=未执行，有值=已执行出库）
+    actual_outbound_pairs = db.Column(db.Integer, nullable=True, default=None)
 
     remark = db.Column(db.String(200))
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))

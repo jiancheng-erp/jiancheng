@@ -42,6 +42,7 @@
             <el-option :value="STATUS_ENUM.APPROVED" label="已通过(待仓库出库)" />
             <!-- 2=总经理驳回 -->
             <el-option :value="STATUS_ENUM.REJECTED" label="总经理已驳回" />
+            <el-option :value="4" label="已完成出库" />
           </el-select>
         </el-form-item>
 
@@ -116,6 +117,13 @@
       </el-table-column>
       <el-table-column prop="customerBrand" label="客户商标" min-width="120" />
       <el-table-column prop="totalPairs" label="申请总双数" width="120" />
+
+      <el-table-column label="发起方" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.applyType === 1" type="warning" size="small">仓库直发</el-tag>
+          <el-tag v-else size="small">业务申请</el-tag>
+        </template>
+      </el-table-column>
 
       <el-table-column label="状态" width="150">
         <template #default="{ row }">
@@ -359,6 +367,10 @@ export default {
         applyRId: this.filters.applyRId || undefined,
         // status 为 null 时后端应视为“全部”；为 1/2/3 时则按对应状态过滤
         status: this.filters.status
+      }
+      // 待审核状态下只看业务发起的申请（仓库直发不需审核）
+      if (this.filters.status === this.STATUS_ENUM.PENDING) {
+        params.applyType = 0
       }
 
       const res = await axios.get(

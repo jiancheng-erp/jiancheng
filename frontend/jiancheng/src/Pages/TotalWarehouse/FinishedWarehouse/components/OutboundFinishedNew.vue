@@ -47,9 +47,18 @@
     </el-card>
 
     <!-- ===== 操作区 ===== -->
-    <el-row class="mb-2">
-      <el-col :span="12">
-        <span style="color:#999;">仅展示状态为「待仓库出库」的申请单</span>
+    <el-row class="mb-2" :gutter="12" align="middle">
+      <el-col :span="14">
+        <el-radio-group v-model="listStatus" @change="loadTable" size="small">
+          <el-radio-button :label="3">待出库</el-radio-button>
+          <el-radio-button :label="4">已完成</el-radio-button>
+          <el-radio-button :label="-1">全部</el-radio-button>
+        </el-radio-group>
+        <el-radio-group v-model="listApplyType" @change="loadTable" size="small" style="margin-left:16px;">
+          <el-radio-button :label="null">全部类型</el-radio-button>
+          <el-radio-button :label="0">业务申请</el-radio-button>
+          <el-radio-button :label="1">仓库直发</el-radio-button>
+        </el-radio-group>
       </el-col>
     </el-row>
 
@@ -87,6 +96,12 @@
       <el-table-column prop="totalPairs" label="申请总双数" width="120" />
       <el-table-column prop="pendingPairs" label="待出库双数" width="120" />
       <el-table-column prop="actualPairs" label="已出库双数" width="120" />
+      <el-table-column label="发起方" width="100">
+        <template #default="{ row }">
+          <el-tag v-if="row.applyType === 1" type="warning" size="small">仓库直发</el-tag>
+          <el-tag v-else size="small">业务申请</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="statusLabel" label="状态" width="140" />
       <el-table-column prop="remark" label="业务备注" min-width="180" show-overflow-tooltip />
       <el-table-column prop="createTime" label="创建时间" width="180" />
@@ -95,6 +110,7 @@
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
           <el-button
+            v-if="row.status === STATUS_ENUM.PENDING_WAREHOUSE"
             type="primary"
             size="small"
             @click="openExecuteDialog(row)"
@@ -370,6 +386,9 @@ export default {
 
       tableData: [],
 
+      listStatus: 3, // 3=待出库(默认), 4=已完成, -1=全部
+      listApplyType: null, // null=全部, 0=业务申请, 1=仓库直发
+
       // PACKING LIST 明细对话框
       packingListDialogVisible: false,
       packingListRow: null,
@@ -458,9 +477,14 @@ export default {
         orderRId: this.filters.orderRId || undefined,
         applyRId: this.filters.applyRId || undefined,
         customerName: this.filters.customerName || undefined,
-        status: this.STATUS_ENUM.PENDING_WAREHOUSE, // 只看待仓库出库
         startDate: this.filters.dateRange?.[0] || undefined,
         endDate: this.filters.dateRange?.[1] || undefined
+      }
+      if (this.listStatus != null && this.listStatus >= 0) {
+        params.status = this.listStatus
+      }
+      if (this.listApplyType != null) {
+        params.applyType = this.listApplyType
       }
       const res = await axios.get(`${this.$apiBaseUrl}/warehouse/outbound-apply/list`, { params })
       this.tableData = (res.data.result || []).map((item) => ({

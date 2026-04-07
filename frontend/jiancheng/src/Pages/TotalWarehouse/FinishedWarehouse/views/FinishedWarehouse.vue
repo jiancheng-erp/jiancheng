@@ -24,7 +24,10 @@
             <span>成品入库</span>
           </el-menu-item>
           <el-menu-item index="7" @click="handleMenuClick(7)">
-            <span>成品出库</span>
+            <span>发起出库</span>
+          </el-menu-item>
+          <el-menu-item index="8" @click="handleMenuClick(8)">
+            <span>出库申请记录</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
             <span>入\出库单</span>
@@ -110,6 +113,9 @@ export default {
                     this.currentComponent = 'PersonalInfo'
                     break
                 case 7:
+                    this.currentComponent = 'OutboundProduct'
+                    break
+                case 8:
                     this.currentComponent = 'OutboundFinishedNew'
                     break
             }

@@ -33,22 +33,19 @@
     <!-- ===== 操作按钮区（业务 + 仓库；总经理逻辑已移除） ===== -->
     <el-row :gutter="20" class="mt-3">
         <el-col :span="12">
-            <!-- 仓库：role = 20 只做确认出库 -->
+            <!-- 仓库：role = 20 发起出库（一步式，带配码预览） -->
             <el-button-group v-if="role == 20">
-                <el-button type="warning" v-if="isMultipleSelection" @click="openWarehouseOutboundDialog" :disabled="storageStatusNum === FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED">
-                    批量出库
+                <el-button v-if="isMultipleSelection" type="warning" @click="openWarehouseDirectDialog" :disabled="storageStatusNum === FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED">
+                    填写出库
                 </el-button>
                 <el-button type="primary" @click="toggleSelectionMode" :disabled="storageStatusNum === FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED">
-                    {{ isMultipleSelection ? '退出选择' : '选择成品出库' }}
+                    {{ isMultipleSelection ? '退出选择' : '选择订单出库' }}
                 </el-button>
             </el-button-group>
 
-            <!-- 业务：填写出库申请（支持多订单） -->
+            <!-- 业务：不再允许创建新的出库申请，仅查看 -->
             <el-button-group v-else-if="role == 4 || role == 21">
-                <el-button v-if="isMultipleSelection" type="primary" @click="openBusinessDialog"> 填写出库申请 </el-button>
-                <el-button type="primary" @click="toggleSelectionMode">
-                    {{ isMultipleSelection ? '退出选择' : '选择订单' }}
-                </el-button>
+                <el-tag type="info" size="large" style="line-height:32px;">出库申请已转由成品仓处理</el-tag>
             </el-button-group>
 
             <!-- 其他角色在这个页面只能查看，不做任何操作 -->
@@ -256,7 +253,88 @@
         </template>
     </el-dialog>
 
-    <!-- ========== 仓库：确认出库（按订单颜色聚合） ========== -->
+    <!-- ========== 仓库：一步式出库（配码预览 + 实际数量 + 拣货人） ========== -->
+    <el-dialog title="仓库出库（配码 + 鞋码比例）" v-model="isWarehouseDirectDialogVisible" width="95%">
+        <el-form :model="warehouseDirectForm" label-width="120px" class="mb-2">
+            <el-row :gutter="20">
+                <el-col :span="8">
+                    <el-form-item label="拣货人" required>
+                        <el-input v-model="warehouseDirectForm.picker" placeholder="必填：拣货人姓名" />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="16">
+                    <el-form-item label="备注">
+                        <el-input v-model="warehouseDirectForm.remark" type="textarea" :rows="2" placeholder="出库备注（可选）" />
+                    </el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+
+        <el-table :data="warehouseDirectPagedItems" border stripe size="small" style="width: 100%">
+            <el-table-column prop="customerName" label="客户名称" />
+            <el-table-column prop="orderRId" label="订单号" />
+            <el-table-column prop="shoeRId" label="工厂型号" />
+            <el-table-column prop="customerProductName" label="客户鞋号" />
+            <el-table-column prop="colorName" label="颜色" />
+            <el-table-column prop="batchName" label="配码名称" />
+            <el-table-column prop="packagingInfoName" label="包装方案" />
+
+            <el-table-column v-for="col in warehouseDirectForm.sizeColumns" :key="col.key" :label="col.label" min-width="70">
+                <template #default="{ row }">
+                    {{ row.sizeRatiosMap[col.key] ?? '' }}
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="batchStock" label="配码库存(双)">
+                <template #default="{ row }">
+                    {{ row.batchStock }}
+                </template>
+            </el-table-column>
+
+            <el-table-column prop="pairsPerCarton" label="每箱双数" />
+            <el-table-column label="出库箱数" min-width="160">
+                <template #default="{ row }">
+                    <el-input-number v-model="row.applyCartons" :min="0" :step="0.05" :precision="2" @change="updateWarehouseDirectPairs(row)" />
+                </template>
+            </el-table-column>
+            <el-table-column label="出库双数">
+                <template #default="{ row }">
+                    {{ row.applyPairs }}
+                </template>
+            </el-table-column>
+
+            <el-table-column label="备注" min-width="160">
+                <template #default="{ row }">
+                    <el-input v-model="row.remark" size="small" />
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <el-row class="mt-2" v-if="warehouseDirectForm.items.length > 0">
+            <el-col>
+                <el-pagination
+                    @size-change="(val) => { warehouseDirectPageSize = val; warehouseDirectCurrentPage = 1 }"
+                    @current-change="(val) => { warehouseDirectCurrentPage = val }"
+                    :current-page="warehouseDirectCurrentPage"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :page-size="warehouseDirectPageSize"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="warehouseDirectForm.items.length"
+                />
+            </el-col>
+        </el-row>
+
+        <template #footer>
+            <span>
+                <el-button @click="isWarehouseDirectDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="submitWarehouseDirectOutbound" :loading="isWarehouseDirectSubmitting" :disabled="isWarehouseDirectSubmitting">
+                    确认出库
+                </el-button>
+            </span>
+        </template>
+    </el-dialog>
+
+    <!-- ========== 仓库：确认出库（按订单颜色聚合）[旧流程保留] ========== -->
     <el-dialog :title="operationLabels.dialogTitle[currentOperation]" v-model="isOutboundDialogVisible" width="70%">
         <el-form :model="outboundForm">
             <el-form-item prop="remark" label="备注">
@@ -547,6 +625,18 @@ export default {
             businessPageSize: 20,
             businessPageSizes: [10, 20, 50, 100],
 
+            // 仓库一步式出库
+            isWarehouseDirectDialogVisible: false,
+            isWarehouseDirectSubmitting: false,
+            warehouseDirectForm: {
+                picker: '',
+                remark: '',
+                items: [],
+                sizeColumns: []
+            },
+            warehouseDirectCurrentPage: 1,
+            warehouseDirectPageSize: 20,
+
             currentPage: 1,
             pageSize: PAGESIZE,
             pageSizes: PAGESIZES,
@@ -651,6 +741,12 @@ export default {
             const start = (this.businessCurrentPage - 1) * this.businessPageSize
             const end = start + this.businessPageSize
             return this.businessForm.items.slice(start, end)
+        },
+        // 仓库一步式出库分页数据
+        warehouseDirectPagedItems() {
+            const start = (this.warehouseDirectCurrentPage - 1) * this.warehouseDirectPageSize
+            const end = start + this.warehouseDirectPageSize
+            return this.warehouseDirectForm.items.slice(start, end)
         },
         // PACKING LIST 明细（带起止箱号）
         applyDetailPackingList() {
@@ -1114,7 +1210,180 @@ export default {
             this.isOpenShoeSizeDialogVisible = true
         },
 
-        // ====== 仓库：确认出库 ======
+        // ====== 仓库：一步式出库（带配码预览） ======
+        openWarehouseDirectDialog() {
+            if (this.selectedRows.length === 0) {
+                ElMessage.error('未选择订单')
+                return
+            }
+            for (const row of this.selectedRows) {
+                if (row.storageStatusNum === this.FINISHED_STORAGE_STATUS_ENUM.PRODUCT_OUTBOUND_FINISHED) {
+                    ElMessage.error(`订单 ${row.orderRId} 已完成出库，无法再次出库`)
+                    return
+                }
+            }
+
+            const orderIds = [...new Set(this.selectedRows.map((r) => r.orderId))]
+            const mainOrderId = orderIds[0]
+
+            this.warehouseDirectForm.picker = ''
+            this.warehouseDirectForm.remark = ''
+            this.warehouseDirectForm.items = []
+            this.warehouseDirectForm.sizeColumns = []
+            this.warehouseDirectCurrentPage = 1
+
+            const sizeLabelSet = new Set()
+
+            this.selectedRows.forEach((orderRow) => {
+                const orderRId = orderRow.orderRId
+                const orderId = orderRow.orderId
+                const customerName = orderRow.customerName || ''
+
+                ;(orderRow.orderShoeTable || []).forEach((colorRow) => {
+                    const sizeColumns = colorRow.sizeColumns || []
+                    const batchInfos = colorRow.batchInfos || []
+
+                    batchInfos.forEach((bi) => {
+                        const sizeRatiosMap = {}
+                        const packagingQty = Number(bi.packagingInfoQuantity || 0)
+
+                        sizeColumns.forEach((sc) => {
+                            const label = sc.label
+                            const prop = sc.prop
+                            const sizeTotal = Number(bi[prop] || 0)
+                            if (!label) return
+                            let ratio = sizeTotal
+                            if (packagingQty > 0) {
+                                ratio = sizeTotal / packagingQty
+                            }
+                            if (ratio > 0) {
+                                sizeRatiosMap[label] = Number(ratio)
+                                sizeLabelSet.add(label)
+                            }
+                        })
+
+                        let pairsPerCarton = Number(bi.pairsPerCarton || 0)
+                        if (!pairsPerCarton) {
+                            pairsPerCarton = Object.values(sizeRatiosMap).reduce((sum, v) => sum + Number(v || 0), 0)
+                        }
+
+                        const batchStock = Number(bi.batchAvailableAmount || 0)
+                        let defaultCartons = 0
+                        if (pairsPerCarton > 0 && batchStock > 0) {
+                            defaultCartons = batchStock / pairsPerCarton
+                        }
+                        const defaultPairs = defaultCartons * pairsPerCarton
+
+                        if (batchStock <= 0) return // 库存为0的配码不展示
+
+                        this.warehouseDirectForm.items.push({
+                            orderId,
+                            orderRId,
+                            customerName,
+                            shoeRId: colorRow.shoeRId,
+                            customerProductName: colorRow.customerProductName,
+                            colorName: colorRow.colorName,
+                            storageId: colorRow.storageId,
+                            orderShoeTypeId: colorRow.orderShoeTypeId,
+                            batchInfoId: bi.batchInfoId,
+                            batchName: bi.batchName || bi.name,
+                            packagingInfoId: bi.packagingInfoId,
+                            packagingInfoName: bi.packagingInfoName,
+                            sizeRatiosMap,
+                            batchStock,
+                            pairsPerCarton,
+                            applyCartons: defaultCartons,
+                            applyPairs: defaultPairs,
+                            remark: ''
+                        })
+                    })
+                })
+            })
+
+            if (this.warehouseDirectForm.items.length === 0) {
+                ElMessage.warning('所选订单暂无可出库的配码信息')
+                return
+            }
+
+            this.warehouseDirectForm.sizeColumns = Array.from(sizeLabelSet)
+                .sort((a, b) => {
+                    const na = parseInt(a, 10)
+                    const nb = parseInt(b, 10)
+                    if (!isNaN(na) && !isNaN(nb)) return na - nb
+                    return String(a).localeCompare(String(b))
+                })
+                .map((label) => ({ key: label, label }))
+
+            this.warehouseDirectForm._mainOrderId = mainOrderId
+            this.warehouseDirectForm._customerIndex = 0
+            this.isWarehouseDirectDialogVisible = true
+        },
+
+        updateWarehouseDirectPairs(row) {
+            const cartons = Number(row.applyCartons || 0)
+            const perCarton = Number(row.pairsPerCarton || 0)
+            row.applyPairs = cartons * perCarton
+        },
+
+        async submitWarehouseDirectOutbound() {
+            if (this.isWarehouseDirectSubmitting) return
+            if (!this.warehouseDirectForm.picker) {
+                ElMessage.error('请填写拣货人')
+                return
+            }
+            const hasPositive = this.warehouseDirectForm.items.some((it) => it.applyCartons > 0)
+            if (!hasPositive) {
+                ElMessage.error('请至少为一个配码填写出库箱数')
+                return
+            }
+
+            // 校验不超过库存
+            const overstock = this.warehouseDirectForm.items.find((it) => it.applyPairs > it.batchStock)
+            if (overstock) {
+                ElMessage.error(`${overstock.shoeRId}-${overstock.colorName}-${overstock.batchName} 出库双数(${overstock.applyPairs})超过库存(${overstock.batchStock})`)
+                return
+            }
+
+            this.isWarehouseDirectSubmitting = true
+            try {
+                const details = this.warehouseDirectForm.items
+                    .filter((it) => it.applyCartons > 0)
+                    .map((it) => ({
+                        finishedShoeStorageId: it.storageId,
+                        orderShoeTypeId: it.orderShoeTypeId,
+                        orderShoeBatchInfoId: it.batchInfoId,
+                        packagingInfoId: it.packagingInfoId,
+                        cartonCount: it.applyCartons,
+                        pairsPerCarton: it.pairsPerCarton,
+                        totalPairs: it.applyPairs,
+                        remark: it.remark || ''
+                    }))
+
+                const payload = {
+                    orderId: this.warehouseDirectForm._mainOrderId,
+                    customerIndex: this.warehouseDirectForm._customerIndex || 0,
+                    picker: this.warehouseDirectForm.picker,
+                    remark: this.warehouseDirectForm.remark,
+                    details
+                }
+
+                const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/warehouse-outbound`, payload)
+                ElMessage.success(res.data.message || '出库成功')
+                this.isWarehouseDirectDialogVisible = false
+                this.isMultipleSelection = false
+                this.selectedRows = []
+                if (this.$refs.mainTable) this.$refs.mainTable.clearSelection()
+                this.getTableData()
+            } catch (error) {
+                console.error(error)
+                const msg = error.response?.data?.message || '出库失败'
+                ElMessage.error(msg)
+            } finally {
+                this.isWarehouseDirectSubmitting = false
+            }
+        },
+
+        // ====== 仓库：确认出库（旧流程，保留兼容） ======
         openWarehouseOutboundDialog() {
             if (this.selectedRows.length === 0) {
                 ElMessage.error('未选择订单')
