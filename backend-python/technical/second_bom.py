@@ -228,9 +228,12 @@ def get_current_bom():
     bom = (
         db.session.query(Bom, OrderShoeType)
         .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == "1")
+        .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 1)
+        .order_by(Bom.bom_id.desc())
         .first()
     )
+    if not bom:
+        return jsonify({"bomId": None})
     bom_id = bom.Bom.bom_id
     result = {
         "bomId": bom.Bom.bom_rid,
@@ -252,6 +255,7 @@ def get_current_bom_item():
     bom_id = (
         db.session.query(Bom.bom_id)
         .filter(Bom.order_shoe_type_id == order_shoe_type_id, Bom.bom_type == 1)
+        .order_by(Bom.bom_id.desc())
         .scalar()
     )
     if not bom_id:

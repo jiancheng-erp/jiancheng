@@ -5,12 +5,15 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 from event_processor import EventProcessor
 import time
+import os
+import shutil
 from decimal import Decimal
 from collections import defaultdict
 from wechat_api.send_message_api import send_configurable_message
 from login.login import current_user_info
 from constants import *
 from logger import logger
+from file_locations import FILE_STORAGE_PATH
 
 head_manager_bp = Blueprint("head_manager_bp", __name__)
 
@@ -1278,3 +1281,201 @@ def get_schedule_production_order_monthly_line_chart():
         })
 
     return jsonify(monthly_data)
+
+
+@head_manager_bp.route("/headmanager/checkorderdelete", methods=["GET"])
+def check_order_delete():
+    """检查订单是否可以删除：已下到采购的订单不能删除"""
+    order_id = request.args.get("orderId")
+    if not order_id:
+        return jsonify({"message": "缺少orderId参数"}), 400
+
+    order = db.session.query(Order).filter_by(order_id=order_id).first()
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    order_shoes = db.session.query(OrderShoe).filter_by(order_id=order_id).all()
+    order_shoe_ids = [os.order_shoe_id for os in order_shoes]
+
+    if not order_shoe_ids:
+        return jsonify({"canDelete": True, "reason": ""})
+
+    # 检查是否有采购订单
+    purchase_count = (
+        db.session.query(func.count(PurchaseOrder.purchase_order_id))
+        .filter(PurchaseOrder.order_shoe_id.in_(order_shoe_ids))
+        .scalar()
+    )
+    if purchase_count > 0:
+        return jsonify({
+            "canDelete": False,
+            "reason": f"该订单已创建{purchase_count}条采购订单，无法删除"
+        })
+
+    # 检查鞋型状态是否已到达采购阶段 (status >= 6 表示一次采购订单创建)
+    purchase_status = (
+        db.session.query(OrderShoeStatus)
+        .filter(
+            OrderShoeStatus.order_shoe_id.in_(order_shoe_ids),
+            OrderShoeStatus.current_status >= 6,
+        )
+        .first()
+    )
+    if purchase_status:
+        status_refs = {
+            ref.status_id: ref.status_name
+            for ref in db.session.query(OrderShoeStatusReference).all()
+        }
+        status_name = status_refs.get(purchase_status.current_status, "采购阶段")
+        return jsonify({
+            "canDelete": False,
+            "reason": f"订单中有鞋型已进入「{status_name}」阶段，无法删除"
+        })
+
+    return jsonify({"canDelete": True, "reason": ""})
+
+
+@head_manager_bp.route("/headmanager/deleteorder", methods=["DELETE"])
+def head_manager_delete_order():
+    """总经理删除订单（已下到采购的不允许删除）"""
+    order_id = request.args.get("orderId")
+    if not order_id:
+        return jsonify({"message": "缺少orderId参数"}), 400
+
+    order = db.session.query(Order).filter_by(order_id=order_id).first()
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    order_shoes = db.session.query(OrderShoe).filter_by(order_id=order_id).all()
+    order_shoe_ids = [os.order_shoe_id for os in order_shoes]
+
+    # 再次校验：是否有采购订单
+    if order_shoe_ids:
+        purchase_count = (
+            db.session.query(func.count(PurchaseOrder.purchase_order_id))
+            .filter(PurchaseOrder.order_shoe_id.in_(order_shoe_ids))
+            .scalar()
+        )
+        if purchase_count > 0:
+            return jsonify({"message": "该订单已下到采购，无法删除"}), 403
+
+        purchase_status = (
+            db.session.query(OrderShoeStatus)
+            .filter(
+                OrderShoeStatus.order_shoe_id.in_(order_shoe_ids),
+                OrderShoeStatus.current_status >= 6,
+            )
+            .first()
+        )
+        if purchase_status:
+            return jsonify({"message": "订单中有鞋型已进入采购阶段，无法删除"}), 403
+
+    try:
+        if order_shoe_ids:
+            # 获取 order_shoe_type_ids
+            ost_entities = (
+                db.session.query(OrderShoeType)
+                .filter(OrderShoeType.order_shoe_id.in_(order_shoe_ids))
+                .all()
+            )
+            ost_ids = [e.order_shoe_type_id for e in ost_entities]
+
+            if ost_ids:
+                # 删除 BomItem (通过 Bom)
+                bom_entities = (
+                    db.session.query(Bom)
+                    .filter(Bom.order_shoe_type_id.in_(ost_ids))
+                    .all()
+                )
+                bom_ids = [b.bom_id for b in bom_entities]
+                if bom_ids:
+                    db.session.query(BomItem).filter(
+                        BomItem.bom_id.in_(bom_ids)
+                    ).delete()
+                    db.session.query(Bom).filter(
+                        Bom.bom_id.in_(bom_ids)
+                    ).delete()
+
+                # 删除 FinishedShoeStorage
+                db.session.query(FinishedShoeStorage).filter(
+                    FinishedShoeStorage.order_shoe_type_id.in_(ost_ids)
+                ).delete()
+
+                # 删除 OrderShoeBatchInfo
+                db.session.query(OrderShoeBatchInfo).filter(
+                    OrderShoeBatchInfo.order_shoe_type_id.in_(ost_ids)
+                ).delete()
+
+                # 删除 OrderShoeType
+                db.session.query(OrderShoeType).filter(
+                    OrderShoeType.order_shoe_id.in_(order_shoe_ids)
+                ).delete()
+
+            # 删除 CraftSheetItem + CraftSheet
+            craft_sheets = (
+                db.session.query(CraftSheet)
+                .filter(CraftSheet.order_shoe_id.in_(order_shoe_ids))
+                .all()
+            )
+            cs_ids = [cs.craft_sheet_id for cs in craft_sheets]
+            if cs_ids:
+                db.session.query(CraftSheetItem).filter(
+                    CraftSheetItem.craft_sheet_id.in_(cs_ids)
+                ).delete()
+                db.session.query(CraftSheet).filter(
+                    CraftSheet.craft_sheet_id.in_(cs_ids)
+                ).delete()
+
+            # 删除 ProductionInstructionItem + ProductionInstruction
+            pi_entities = (
+                db.session.query(ProductionInstruction)
+                .filter(ProductionInstruction.order_shoe_id.in_(order_shoe_ids))
+                .all()
+            )
+            pi_ids = [pi.production_instruction_id for pi in pi_entities]
+            if pi_ids:
+                db.session.query(ProductionInstructionItem).filter(
+                    ProductionInstructionItem.production_instruction_id.in_(pi_ids)
+                ).delete()
+                db.session.query(ProductionInstruction).filter(
+                    ProductionInstruction.production_instruction_id.in_(pi_ids)
+                ).delete()
+
+            # 删除 TotalBom
+            db.session.query(TotalBom).filter(
+                TotalBom.order_shoe_id.in_(order_shoe_ids)
+            ).delete()
+
+            # 删除 OrderShoeStatus
+            db.session.query(OrderShoeStatus).filter(
+                OrderShoeStatus.order_shoe_id.in_(order_shoe_ids)
+            ).delete()
+
+            # 删除 OrderShoeProductionInfo
+            db.session.query(OrderShoeProductionInfo).filter(
+                OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids)
+            ).delete()
+
+            # 删除 OrderShoe
+            db.session.query(OrderShoe).filter_by(order_id=order_id).delete()
+
+        # 删除 OrderStatus
+        db.session.query(OrderStatus).filter_by(order_id=order_id).delete()
+
+        # 删除 Order
+        db.session.delete(order)
+
+        db.session.commit()
+
+        # 删除本地文件目录
+        order_local_path = os.path.join(FILE_STORAGE_PATH, order.order_rid)
+        if os.path.exists(order_local_path):
+            shutil.rmtree(order_local_path)
+
+        logger.info(f"总经理删除订单成功: order_id={order_id}, order_rid={order.order_rid}")
+        return jsonify({"message": "订单删除成功"})
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"删除订单失败: order_id={order_id}, error={str(e)}")
+        return jsonify({"message": f"删除失败: {str(e)}"}), 500

@@ -52,6 +52,14 @@
                         >
                             订单详情
                         </el-button>
+                        <el-button
+                            link
+                            type="danger"
+                            size="small"
+                            @click="handleDeleteOrder(scope.row)"
+                        >
+                            删除订单
+                        </el-button>
                     </template>
                 </el-table-column>
             </el-table-column>
@@ -73,6 +81,8 @@
 <script setup>
 import { ref, getCurrentInstance } from 'vue'
 import { onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
 import useTablePagination from '../../hooks/useTablePagination'
 import { Download } from '@element-plus/icons-vue'
 
@@ -96,6 +106,37 @@ const {
 onMounted(() => {
     updataParams('orderStatus', { route: routeMsg, orderType: 0 })
 })
+
+const handleDeleteOrder = async (row) => {
+    try {
+        // 先检查是否可以删除
+        const checkRes = await axios.get(`${$api_baseUrl}/headmanager/checkorderdelete`, {
+            params: { orderId: row.orderId }
+        })
+        const { canDelete, reason } = checkRes.data
+        if (!canDelete) {
+            ElMessage.warning(reason)
+            return
+        }
+        // 确认删除
+        await ElMessageBox.confirm(
+            `确定要删除订单「${row.orderRid}」吗？此操作不可恢复。`,
+            '删除确认',
+            { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+        )
+        // 执行删除
+        await axios.delete(`${$api_baseUrl}/headmanager/deleteorder`, {
+            params: { orderId: row.orderId }
+        })
+        ElMessage.success('订单删除成功')
+        // 刷新列表
+        getTableData()
+    } catch (err) {
+        if (err === 'cancel' || err?.toString?.().includes('cancel')) return
+        const msg = err?.response?.data?.message || '删除失败'
+        ElMessage.error(msg)
+    }
+}
 </script>
 
 <style scoped></style>

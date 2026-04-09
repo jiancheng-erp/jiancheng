@@ -87,7 +87,7 @@
                             >查看生产订单</el-button>
                             <el-button
                             type="danger"
-                            @click="deleteOrder(scope.row.orderRid)"
+                            @click="deleteOrder(scope.row)"
                             >删除订单</el-button>
                         </el-button-group>
 
@@ -113,7 +113,7 @@
 import { Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 let orderRidFilter = ref('')
 let orderCidFilter = ref('')
@@ -192,16 +192,36 @@ function dataPagination() {
     )
 }
 
-async function deleteOrder(value) {
-    // 此处更换删除订单的路由
-    const response = await axios.post(`${$api_baseUrl}/order/getallorders`, {'orderRid': value})
-    if (response.status === 200) {
-        ElMessage.success('删除成功,数据正在更新,请稍后')
-        getAllOrders()
-    } else {
-        ElMessage.error('修改失败')
+async function deleteOrder(row) {
+    try {
+        // 先检查是否可以删除
+        const checkRes = await axios.get(`${$api_baseUrl}/headmanager/checkorderdelete`, {
+            params: { orderId: row.orderDbId }
+        })
+        const { canDelete, reason } = checkRes.data
+        if (!canDelete) {
+            ElMessage.warning(reason)
+            return
+        }
+        // 确认删除
+        await ElMessageBox.confirm(
+            `确定要删除订单「${row.orderRid}」吗？此操作不可恢复。`,
+            '删除确认',
+            { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+        )
+        // 执行删除
+        const response = await axios.delete(`${$api_baseUrl}/headmanager/deleteorder`, {
+            params: { orderId: row.orderDbId }
+        })
+        if (response.status === 200) {
+            ElMessage.success('删除成功')
+            getAllOrders()
+        }
+    } catch (err) {
+        if (err === 'cancel' || err?.toString?.().includes('cancel')) return
+        const msg = err?.response?.data?.message || '删除失败'
+        ElMessage.error(msg)
     }
-    
 }
 
 function openOrderDetail(orderId) {
