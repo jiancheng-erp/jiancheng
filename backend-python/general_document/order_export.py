@@ -58,7 +58,7 @@ def insert_row_with_format(ws, row_to_copy, new_row_idx):
             new_cell.alignment = cell.alignment.copy()
             new_cell.number_format = cell.number_format
             
-def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_size_count=13):
+def delete_extra_size_columns(ws, size_name_list, start_col_letter="E", total_size_count=13):
     """
     删除从 start_col_letter 开始的尺码列，只保留非空名称对应的列。
     size_name_list: 尺码名称列表（可能含 '', None）
@@ -81,7 +81,7 @@ def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_si
         title_cell = ws[f"{start_col_letter}7"]
         title_cell.value = "尺码"
         title_cell.font = Font(bold=True)
-def fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=None, total_size_count=13):
+def fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=None, total_size_count=13):
     """
     删除尺码列后，从其下一列开始，将所有列的第7行和第8行重新合并，修复双行表头。
     """
@@ -161,7 +161,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("F")
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -172,9 +172,9 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"E{row}"] = "尺码"
-                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("F")
+                ws[f"D{row}"] = "尺码"
+                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -207,7 +207,6 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
-                        col_idx += 1  # Skip material column
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
                         col_idx += 1
 
@@ -242,11 +241,10 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
                         row += 1
 
-                # Merge columns A (image), D, E
+                # Merge columns A (image), C
                 if row_count_for_color > 1:
                     ws.merge_cells(f"A{color_start}:A{color_end}")
                     ws.merge_cells(f"C{color_start}:C{color_end}")
-                    ws.merge_cells(f"D{color_start}:D{color_end}")
 
                 # Insert image only if provided
                 if img_url:
@@ -280,7 +278,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
                 
 def insert_series_data_amount(wb: Workbook, series_data, col, row):
     all_size_names = []
@@ -330,7 +328,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("F")
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -341,9 +339,9 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"E{row}"] = "尺码"
-                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("F")
+                ws[f"D{row}"] = "尺码"
+                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -377,7 +375,6 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
-                        col_idx += 1  # Skip material column
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
                         col_idx += 1
 
@@ -411,11 +408,10 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
                         row += 1
 
-                # Merge columns A (image), D, E
+                # Merge columns A (image), C
                 if row_count_for_color > 1:
                     ws.merge_cells(f"A{color_start}:A{color_end}")
                     ws.merge_cells(f"C{color_start}:C{color_end}")
-                    ws.merge_cells(f"D{color_start}:D{color_end}")
 
                 # Insert image only if provided
                 if img_url:
@@ -449,7 +445,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
 
 
 # Function to save the workbook after modification
@@ -467,7 +463,7 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     insert_series_data(wb, order_data, "A", 9)
 
     # insert shoe size name
-    # column = "F"
+    # column = "E"
     # row = 8
     # for i in range(len(SHOESIZERANGE)):
     #     ws[f"{column}{row}"] = metadata["sizeNames"][i]
@@ -486,7 +482,7 @@ def generate_amount_excel_file(template_path, new_file_path, order_data: dict, m
     insert_series_data_amount(wb, order_data, "A", 9)
 
     # insert shoe size name
-    # column = "F"
+    # column = "E"
     # row = 8
     # for i in range(len(SHOESIZERANGE)):
     #     ws[f"{column}{row}"] = metadata["sizeNames"][i]
