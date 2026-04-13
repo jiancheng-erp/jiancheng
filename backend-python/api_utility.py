@@ -150,21 +150,15 @@ def estimate_status_converter(production_info):
     today = datetime.now().date()
     result = "未排期"
     if today < interval1[0]:
-        result = "裁断未开始"
-    elif interval1[0] <= today <= interval1[1]:
-        result = "裁断进行中"
-    elif interval1[1] < today < interval2[0]:
-        result = "预备未开始"
-    elif interval2[0] <= today <= interval2[1]:
-        result = "预备进行中"
-    elif interval2[1] < today < interval3[0]:
-        result = "针车未开始"
-    elif interval3[0] <= today <= interval3[1]:
-        result = "针车进行中"
-    elif interval3[1] < today < interval4[0]:
-        result = "成型未开始"
+        result = "未排期"
+    elif interval1[0] <= today < interval2[0]:
+        result = "裁断"
+    elif interval2[0] <= today < interval3[0]:
+        result = "针车预备"
+    elif interval3[0] <= today < interval4[0]:
+        result = "针车"
     elif interval4[0] <= today <= interval4[1]:
-        result = "成型进行中"
+        result = "成型"
     elif interval4[1] < today:
         result = "生产已结束"
     return result
