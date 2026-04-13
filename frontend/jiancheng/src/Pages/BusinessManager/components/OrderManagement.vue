@@ -2,65 +2,67 @@
     <el-row :gutter="20">
         <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单管理</el-col>
     </el-row>
-    <el-row :gutter="12" class="toolbar-row">
-        <el-col :span="24">
-            <div class="toolbar-wrap">
-                <el-button v-if="!isForecastEntry" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
-                <el-button v-else type="warning" @click="openCreateForecastOrderDialog">创建预报单</el-button>
-                <el-select
-                    v-model="orderStore.selectedOrderStatus"
-                    placeholder="请选择订单类型"
-                    size="default"
-                    :disabled="role === '21'"
-                    @change="handleOrderStatusChange"
-                    class="toolbar-status-select"
-                >
-                    <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
-                </el-select>
-                <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.switchRadio(orderStore.radio)">
-                    <el-radio-button label="全部订单" value="all" />
-                    <el-radio-button label="已下发订单" value="已下发" />
-                    <el-radio-button label="未下发订单" value="未下发" />
-                </el-radio-group>
-                <div class="toolbar-right" v-if="Number(userRole) === 4">
-                    <el-button type="warning" @click="openBatchFillOrderRidDialog">批量添加订单号</el-button>
-                    <el-button type="primary" @click="openBatchSendDialog">批量下发</el-button>
-                </div>
-            </div>
+    <el-row :gutter="10" style="margin-top: 20px">
+        <el-col :span="4" :offset="0">
+            <el-button size="default" type="primary" @click="openCreateOrderDialog">创建订单</el-button>
+            <!-- <el-button size="default" type="primary" @click="showTemplate"> 模板 </el-button> -->
+            <el-select v-model="orderStore.selectedOrderStatus" placeholder="请选择订单类型" size="default"
+                :disabled="role === '21'" @change="handleOrderStatusChange" style="width: 200px; width: 150px">
+                <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
+            </el-select>
+        </el-col>
+        <el-col :span="4" :offset="1"><el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="4"><el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default"
+            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="4"><el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default"
+            :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        </el-col>
+        <el-col :span="4">
+            <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至"
+                start-placeholder="订单开始日期起" end-placeholder="订单开始日期终" :shortcuts="shortcuts" size="default"
+                @change="orderStore.filterDisplayOrder" />
         </el-col>
     </el-row>
-    <el-row :gutter="12" class="filter-row">
-        <el-col :span="6">
-            <el-input v-model="orderStore.orderRidFilter" placeholder="订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+    <el-row :gutter="10" style="margin-top: 20px">
+        <el-col :span="5" :offset="0">
+            <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.switchRadio(orderStore.radio)">
+                <el-radio-button label="全部订单" value="all" />
+                <el-radio-button label="已下发订单" value="已下发" />
+                <el-radio-button label="未下发订单" value="未下发" />
+            </el-radio-group>
         </el-col>
-        <el-col :span="6">
-            <el-input v-model="orderStore.orderCidFilter" placeholder="客户订单号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        <el-col :span="4">
+            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-        <el-col :span="6">
-            <el-input v-model="orderStore.orderCustomerNameFilter" placeholder="客户名称筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        <el-col :span="4">
+            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-        <el-col :span="6">
-            <el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
+        <el-col :span="4"><el-input v-model="orderStore.orderCustomerBrandFilter" placeholder="客户商标筛选" size="default"
+                :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
         </el-col>
-    </el-row>
-    <el-row :gutter="12" class="filter-row">
-        <el-col :span="6">
-            <el-input v-model="orderStore.customerProductNameFilter" placeholder="客户型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="6">
-            <el-input v-model="orderStore.shoeRIdSearch" placeholder="工厂型号筛选" size="default" :suffix-icon="'el-icon-search'" clearable @input="orderStore.filterDisplayOrder"></el-input>
-        </el-col>
-        <el-col :span="6">
-            <el-date-picker v-model="orderStore.orderStartDateFilter" type="daterange" unlink-panels range-separator="至" start-placeholder="订单开始日期起" end-placeholder="订单开始日期终" :shortcuts="shortcuts" size="default" @change="orderStore.filterDisplayOrder" />
-        </el-col>
-        <el-col :span="6">
-            <el-date-picker v-model="orderStore.orderEndDateFilter" type="daterange" unlink-panels range-separator="至" start-placeholder="订单结束日期起" end-placeholder="订单结束日期终" :shortcuts="shortcuts" size="default" @change="orderStore.filterDisplayOrder" />
+
+        <el-col :span="4">
+            <el-date-picker v-model="orderStore.orderEndDateFilter" type="daterange" unlink-panels range-separator="至"
+                start-placeholder="订单结束日期起" end-placeholder="订单结束日期终" :shortcuts="shortcuts" size="default"
+                @change="orderStore.filterDisplayOrder" />
         </el-col>
     </el-row>
     <el-row :gutter="20">
+        <!-- <el-col :span="4">
+            <el-radio-group v-model="sortRadio" size="small" @change="switchSortLogic(sortRadio)">
+                <el-radio-button label="升序排列" value="asc" />
+                <el-radio-button label="降序排列" value="desc" />
+            </el-radio-group>
+        </el-col> -->
+    </el-row>
+    <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
-            style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
-            <el-table-column type="selection" width="55" :selectable="isBatchOperableRow" />
+            style="height: 60vh">
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column label="订单类型" width="120">
                 <template #default="scope">
@@ -79,12 +81,18 @@
             <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
             <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
             <el-table-column prop="orderStatus" label="订单状态" />
-            <el-table-column label="生产状态" width="100">
+            <el-table-column label="生产状态">
                 <template #default="scope">
-                    <el-tag
-                        :type="{ '未排产': 'info', '裁断': '', '针车预备': '', '针车': '', '成型': 'warning', '未入库': 'warning', '部分入库': 'warning', '出库审核中': 'danger', '待出库': 'danger', '已出库': 'success' }[scope.row.productionStatus] || 'info'"
-                        v-if="scope.row.productionStatus"
-                    >{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-if="scope.row.productionStatus && scope.row.productionStatus.includes('已全部出库')" type="success">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus && scope.row.productionStatus.includes('部分出库')" type="warning">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus && scope.row.productionStatus.includes('审核')" type="danger">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus === '裁断'" type="warning">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus === '针车预备'" type="warning">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus === '针车'" type="warning">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus === '成型'" type="warning">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus && scope.row.productionStatus.includes('未排')" type="info">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus && scope.row.productionStatus.includes('待')" type="">{{ scope.row.productionStatus }}</el-tag>
+                    <el-tag v-else-if="scope.row.productionStatus" type="success">{{ scope.row.productionStatus }}</el-tag>
                 </template>
             </el-table-column>
             <el-table-column label="操作" width="200">
@@ -107,10 +115,15 @@
         :close-on-click-modal="false">
         <el-form ref="orderCreationForm" :model="newOrderForm" label-width="120px" :inline="false" size="default">
             <el-form-item>
-                <el-button type="primary" @click="showOrderTemplates">选择订单来源</el-button>
+                <el-button type="primary" @click="showOrderTemplates">选择订单模板</el-button>
                 <!-- <el-button type="warning" style="margin-left:8px" @click="injectTemplateTestData">注入模板测试数据</el-button> -->
             </el-form-item>
             <el-form-item label="请输入订单号" prop="orderRId" :rules="[
+                {
+                    required: true,
+                    message: '订单号不能为空',
+                    trigger: ['blur', 'change']
+                },
                 {
                     validator: validateOrderRid,
                     trigger: ['blur', 'change']
@@ -118,12 +131,7 @@
             ]">
                 <el-input @change="checkOrderRidExists" v-model="newOrderForm.orderRId"></el-input>
             </el-form-item>
-            <el-form-item label="客户订单号" prop="orderCid" :rules="[
-                {
-                    validator: validateOrderCidWhenOrderRidEmpty,
-                    trigger: ['blur', 'change']
-                }
-            ]">
+            <el-form-item label="客户订单号">
                 <el-input v-model="newOrderForm.orderCid"></el-input>
             </el-form-item>
             <el-form-item label="请选择客户" prop="customerName" :rules="[
@@ -251,9 +259,8 @@
                     <template #default="props">
                         <el-table :data="props.row.shoeTypeData" border row-key="shoeTypeId"
                             @selection-change="(selection) => handleSelectionShoeType(selection, props.row.shoeId)"
-                            :ref="(el) => registerShoeSelectionTable(el, props.row.shoeId)">
-                            <el-table-column size="small" type="selection" align="center"
-                                :selectable="(row) => isShoeTypeSelectable(row, props.row.shoeId)"> </el-table-column>
+                            ref="shoeSelectionTable">
+                            <el-table-column size="small" type="selection" align="center"> </el-table-column>
                             <el-table-column prop="colorName" label="鞋型颜色" width="100px" />
                             <el-table-column prop="shoeImageUrl" label="鞋型图片" align="center">
                                 <template #default="scope">
@@ -346,11 +353,6 @@
                                     controls-position="right" :disabled="true"> </el-input>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="90">
-                            <template #default="scope">
-                                <el-button type="danger" size="small" @click="removeBatchInfoRow(props.row, scope.row)">删除</el-button>
-                            </template>
-                        </el-table-column>
                     </el-table>
                 </template>
             </el-table-column>
@@ -361,7 +363,7 @@
                     <el-image :src="scope.row.shoeImageUrl" style="width: 150px; height: 100px"></el-image>
                 </template>
             </el-table-column>
-            <el-table-column width="500" label="操作">
+            <el-table-column>
                 <template #default="scope">
                     <el-button type="primary" size="default"
                         @click="openAddBatchInfoDialog(scope.row)">编辑鞋型配码</el-button>
@@ -394,19 +396,14 @@
     </el-dialog>
 
     <AddBatchInfoDialog ref="batchInfoDialog" v-model:batchNameFilter="batchNameFilter" :new-order-form="newOrderForm"
-        :customer-display-batch-data="customerDisplayBatchData" :selected-batch-data="currentBatch" :attr-mapping="attrMapping"
+        :customer-display-batch-data="customerDisplayBatchData" :attr-mapping="attrMapping"
         :cur-batch-type="curBatchType" @selection-change="handleSelectionBatchData" @close="closeAddBatchInfoDialog"
         @open-add-customer-batch="openAddCustomerBatchDialog" @open-add-color="openAddColorDialog"
         @open-save-template="openSaveBatchTemplateDialog" @save-batch="addShoeTypeBatchInfo"
         @filter-with-selection="filterBatchDataWithSelection" />
-    <TemplateSelectDialog v-model:templateFilter="templateFilter" v-model:history-order-filter="historyOrderFilter"
-        :template-display-data="templateDisplayData" :history-order-display-data="historyOrderDisplayData"
-        :history-order-loading="historyOrderLoading" :history-order-total="historyOrderTotal"
-        :history-order-page="historyOrderPage" :history-order-page-size="historyOrderPageSize" :user-role="userRole"
-        @filter-template="filterTemplateOptions" @search-history="handleHistoryOrderSearch"
-        @refresh-history="fetchHistoryOrders" @history-page-change="handleHistoryOrderPageChange" @create-from-template="openCreateOrderDialogFromTemplate"
-        @create-from-history="loadHistoryOrderAndOpen" @delete-template="deleteOrderTemplate"
-        @edit-template="editOrderTemplate" />
+    <TemplateSelectDialog v-model:templateFilter="templateFilter" :template-display-data="templateDisplayData"
+        @filter="filterTemplateOptions" @create-from-template="openCreateOrderDialogFromTemplate"
+        @delete-template="deleteOrderTemplate" @edit-template="editOrderTemplate" />
     <AddCustomerBatchDialog v-model:batchForm="batchForm" :attr-mapping="attrMapping" :cur-batch-type="curBatchType"
         @close="dialogStore.closeCustomerBatchDialog()" @submit="submitAddCustomerBatchForm" />
     <ReUploadImageDialog ref="reUploadImageDialog" :image-url="imageUrl" @file-change="onFileChange"
@@ -417,101 +414,6 @@
         @close="dialogStore.closeBatchTemplateDialog()" />
     <CustomerBatchTemplateSaveDialog v-model:batchTemplateForm="batchTemplateForm" :attr-mapping="attrMapping"
         :cur-batch-type="curBatchType" @close="dialogStore.closeBatchTemplateSaveDialog()" @save="saveBatchTemplate" />
-
-    <el-dialog title="批量添加订单号" v-model="batchOrderRidDialogVis" width="65%">
-        <el-form label-position="top">
-            <el-form-item label="搜索">
-                <el-row :gutter="8" class="batch-filter-row">
-                    <el-col :span="5">
-                        <el-input v-model="batchFillFilters.orderRid" placeholder="订单号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchFillFilters.orderCid" placeholder="客户订单号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchFillFilters.customerName" placeholder="客户名" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchFillFilters.customerProductName" placeholder="客户型号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-input v-model="batchFillFilters.shoeRId" placeholder="工厂型号" clearable></el-input>
-                    </el-col>
-                </el-row>
-            </el-form-item>
-            <el-form-item label="可处理订单">
-                <el-table :data="batchFillFilteredRows" border height="320" row-key="orderDbId" @selection-change="handleBatchFillDialogSelectionChange">
-                    <el-table-column type="selection" width="55" />
-                    <el-table-column label="订单号" min-width="180">
-                        <template #default="scope">
-                            <el-input
-                                v-model="scope.row.manualOrderRid"
-                                placeholder="请输入订单号"
-                                :class="{ 'rid-error': isManualOrderRidError(scope.row) }"
-                                @input="handleManualOrderRidInput(scope.row)"
-                            ></el-input>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="orderCid" label="客户订单号" width="160" />
-                    <el-table-column prop="customerName" label="客户名" width="140" />
-                    <el-table-column prop="customerProductName" label="客户型号" width="140" />
-                    <el-table-column prop="shoeRId" label="工厂型号" width="140" />
-                </el-table>
-            </el-form-item>
-            <el-form-item label="已选订单数量">
-                <el-text>{{ batchFillSelectedRows.length }}</el-text>
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <span>
-                <el-button @click="batchOrderRidDialogVis = false">取消</el-button>
-                <el-button type="primary" @click="confirmBatchFillOrderRid">确定</el-button>
-            </span>
-        </template>
-    </el-dialog>
-
-    <el-dialog title="批量下发确认" v-model="batchSendDialogVis" width="60%">
-        <el-form label-position="top">
-            <el-form-item label="搜索">
-                <el-row :gutter="8" class="batch-filter-row">
-                    <el-col :span="5">
-                        <el-input v-model="batchSendFilters.orderRid" placeholder="订单号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchSendFilters.orderCid" placeholder="客户订单号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchSendFilters.customerName" placeholder="客户名" clearable></el-input>
-                    </el-col>
-                    <el-col :span="5">
-                        <el-input v-model="batchSendFilters.customerProductName" placeholder="客户型号" clearable></el-input>
-                    </el-col>
-                    <el-col :span="4">
-                        <el-input v-model="batchSendFilters.shoeRId" placeholder="工厂型号" clearable></el-input>
-                    </el-col>
-                </el-row>
-            </el-form-item>
-            <el-form-item label="可处理订单">
-                <el-table :data="batchSendFilteredRows" border height="320" row-key="orderDbId" @selection-change="handleBatchSendDialogSelectionChange">
-                    <el-table-column type="selection" width="55" />
-                    <el-table-column prop="orderRid" label="订单号" width="140" />
-                    <el-table-column prop="orderCid" label="客户订单号" width="160" />
-                    <el-table-column prop="customerName" label="客户名" width="140" />
-                    <el-table-column prop="customerProductName" label="客户型号" width="140" />
-                    <el-table-column prop="shoeRId" label="工厂型号" width="140" />
-                </el-table>
-            </el-form-item>
-            <el-form-item label="已选可下发订单数">
-                <el-text>{{ batchSendSelectedRows.length }}</el-text>
-            </el-form-item>
-        </el-form>
-        <template #footer>
-            <span>
-                <el-button @click="batchSendDialogVis = false">取消</el-button>
-                <el-button type="primary" :disabled="batchSendSelectedRows.length === 0" @click="confirmBatchSendOrders">确认下发</el-button>
-            </span>
-        </template>
-    </el-dialog>
 </template>
 
 <script>
@@ -533,12 +435,6 @@ import CustomerBatchTemplateDialog from './orderDialogs/CustomerBatchTemplateDia
 import CustomerBatchTemplateSaveDialog from './orderDialogs/CustomerBatchTemplateSaveDialog.vue'
 
 export default {
-    props: {
-        entryMode: {
-            type: String,
-            default: 'order'
-        }
-    },
     components: {
         AddShoeDialog,
         AddShoeTypeDialog,
@@ -571,12 +467,8 @@ export default {
             customerDisplayBatchData: [],
             selectedShoeList: [],
             selectedShoeByShoeId: {},
-            selectedShoeMasterId: null,
-            shoeSelectionTableRefs: {},
-            isSyncingShoeSelection: false,
             // orderStatusList: [],
             currentBatch: [],
-            isSyncingBatchSelection: false,
             expandedRowKeys: [],
             previewOrderVis: false,
             orderInfoVis: false,
@@ -608,12 +500,6 @@ export default {
             templateDisplayData: [],
             templateCustomerBrandMatch: [],
             templateCustomerNameMatch: [],
-            historyOrderDisplayData: [],
-            historyOrderFilter: '',
-            historyOrderLoading: false,
-            historyOrderPage: 1,
-            historyOrderPageSize: 10,
-            historyOrderTotal: 0,
             customerBatchTemplateVis: false,
             batchTemplateForm: {
                 templateName: '',
@@ -725,35 +611,10 @@ export default {
             currentShoeColorId: 0,
             currentImageRow: {},
             imageUrl: '',
-            selectedBatchTemplate: {},
-            selectedDispatchRows: [],
-            batchOrderRidDialogVis: false,
-            batchSendDialogVis: false,
-            batchFillCandidateRows: [],
-            batchFillSelectedRows: [],
-            batchSendCandidateRows: [],
-            batchSendSelectedRows: [],
-            batchFillDbDuplicateRids: [],
-            batchFillFilters: {
-                orderRid: '',
-                orderCid: '',
-                customerName: '',
-                customerProductName: '',
-                shoeRId: ''
-            },
-            batchSendFilters: {
-                orderRid: '',
-                orderCid: '',
-                customerName: '',
-                customerProductName: '',
-                shoeRId: ''
-            }
+            selectedBatchTemplate: {}
         }
     },
     computed: {
-        isForecastEntry() {
-            return this.entryMode === 'forecast'
-        },
         allowDeleteOrder(row) {
             return this.userRole == 4
         },
@@ -764,21 +625,6 @@ export default {
         },
         computeTotal(row) {
             console.log(row)
-        },
-        batchFillFilteredRows() {
-            return (this.batchFillCandidateRows || []).filter((row) => this.batchRowMatchesFilters(row, this.batchFillFilters))
-        },
-        batchSendFilteredRows() {
-            return (this.batchSendCandidateRows || []).filter((row) => this.batchRowMatchesFilters(row, this.batchSendFilters))
-        },
-        batchFillLocalDuplicateRids() {
-            const ridCountMap = {}
-            ;(this.batchFillCandidateRows || []).forEach((row) => {
-                const rid = String(row?.manualOrderRid || '').trim()
-                if (!rid) return
-                ridCountMap[rid] = (ridCountMap[rid] || 0) + 1
-            })
-            return Object.keys(ridCountMap).filter((rid) => ridCountMap[rid] > 1)
         }
     },
     mounted() {
@@ -794,37 +640,6 @@ export default {
         // this.getTemplate()
     },
     methods: {
-        applyEntryModeOrders(rows) {
-            const sourceRows = Array.isArray(rows) ? rows : []
-            if (this.isForecastEntry) {
-                return sourceRows.filter((row) => row?.orderType === 'F')
-            }
-            return sourceRows.filter((row) => row?.orderType !== 'F')
-        },
-        batchRowMatchesFilters(row, filters) {
-            const toText = (value) => String(value || '').toLowerCase()
-            const matchField = (rowValue, filterValue) => {
-                const keyword = toText(filterValue).trim()
-                if (!keyword) return true
-                return toText(rowValue).includes(keyword)
-            }
-
-            return matchField(row?.orderRid, filters?.orderRid)
-                && matchField(row?.orderCid, filters?.orderCid)
-                && matchField(row?.customerName, filters?.customerName)
-                && matchField(row?.customerProductName, filters?.customerProductName)
-                && matchField(row?.shoeRId, filters?.shoeRId)
-        },
-        isManualOrderRidError(row) {
-            const rid = String(row?.manualOrderRid || '').trim()
-            if (!rid) return false
-            return this.batchFillLocalDuplicateRids.includes(rid) || this.batchFillDbDuplicateRids.includes(rid)
-        },
-        handleManualOrderRidInput(row) {
-            const rid = String(row?.manualOrderRid || '').trim()
-            if (!rid) return
-            this.batchFillDbDuplicateRids = (this.batchFillDbDuplicateRids || []).filter((item) => item !== rid)
-        },
         formatOrderType(orderType) {
             return orderType === 'F' ? '预报单' : '普通单'
         },
@@ -909,10 +724,6 @@ export default {
                 this.loadOrderTemplateAndOpen(row.orderTemplateId)
                 return
             }
-            if (row.orderDbId) {
-                this.loadHistoryOrderAndOpen(row.orderDbId)
-                return
-            }
             this.newOrderForm.batchInfoTypeId = row.batchInfoTypeId
             this.newOrderForm.batchInfoTypeName = row.batchInfoTypeName
             this.newOrderForm.customerId = row.customerId
@@ -924,252 +735,197 @@ export default {
             this.dialogStore.closeTemplateDialog()
         },
 
-        async hydrateOrderSourceAndOpen(responseData) {
-            const tpl = responseData.orderTemplate || {}
-            const orderData = tpl.orderData || {}
-            const sourceOrderIdFromResp = responseData && responseData.sourceOrderId ? responseData.sourceOrderId : null
-            const orderShoeData = tpl.orderShoeData || []
-
-            // Populate basic fields
-            this.newOrderForm.orderRId = ''
-            this.newOrderForm.orderCid = ''
-            this.newOrderForm.customerName = orderData.customerName || ''
-            this.newOrderForm.customerBrand = orderData.customerBrand || ''
-            this.newOrderForm.customerId = orderData.customerId || null
-            this.newOrderForm.batchInfoTypeId = orderData.batchInfoTypeId || ''
-            this.newOrderForm.batchInfoTypeName = orderData.batchInfoTypeName || ''
-            // ensure batch type metadata and available batches are loaded so UI can auto-select
-            if (!this.batchTypes || this.batchTypes.length === 0) {
-                try {
-                    await this.getAllBatchTypes()
-                } catch (e) {
-                    console.error('getAllBatchTypes failed', e)
-                }
-            }
-            this.updateBatchType()
-            try {
-                if (this.newOrderForm.customerId) {
-                    await this.getCustomerBatchInfo(this.newOrderForm.customerId)
-                }
-            } catch (e) {
-                console.error('getCustomerBatchInfo failed', e)
-            }
-            this.newOrderForm.orderStartDate = ''
-            this.newOrderForm.orderEndDate = ''
-            this.newOrderForm.supervisorId = ''
-            this.newOrderForm.salesman = this.userName
-            this.newOrderForm.salesmanId = this.staffId
-            // preserve source order identifiers when loading from a template or history order
-            this.newOrderForm.sourceOrderRid = orderData.sourceOrderRid || orderData.sourceOrderId || orderData.orderRid || null
-            this.newOrderForm.sourceOrderId = orderData.sourceOrderId || orderData.sourceOrderRid || sourceOrderIdFromResp || null
-
-            // Fill shoe types and allow editing (copy source data into orderShoeTypes)
-            this.newOrderForm.orderShoeTypes = orderShoeData.map((s) => {
-                // normalize to expected orderShoeTypes shape used by creation UI
-                const item = Object.assign({}, s)
-                // ensure identifiers
-                item.shoeTypeId = item.shoeTypeId || item.shoeTypeId || item.shoeRid || item.shoeRid
-                item.shoeRid = item.shoeRid || item.orderShoeRid || item.shoeRid
-                item.shoeImageUrl = item.shoeImageUrl || item.shoeImageUrl || (item.shoeTypeImgUrl && item.shoeTypeImgUrl) || ''
-
-                // batch info: prefer orderShoeTypeBatchInfo or shoeTypeBatchInfoList
-                item.orderShoeTypeBatchInfo = item.orderShoeTypeBatchInfo || item.shoeTypeBatchInfoList || item.orderShoeTypeBatchInfo || []
-
-                // initialize mappings
-                item.quantityMapping = item.quantityMapping || {}
-                item.amountMapping = item.amountMapping || {}
-                if (Array.isArray(item.orderShoeTypeBatchInfo)) {
-                    item.orderShoeTypeBatchInfo.forEach((batch) => {
-                        const pid = batch.packagingInfoId
-                        if (!pid) return
-                        if (item.quantityMapping[pid] === undefined) {
-                            // try to pick up defaults from source batch info
-                            if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) {
-                                item.quantityMapping[pid] = Number(batch.unitPerRatio) || 0
-                            } else if (item.defaultQuantityMapping && item.defaultQuantityMapping[pid] !== undefined) {
-                                item.quantityMapping[pid] = Number(item.defaultQuantityMapping[pid]) || 0
-                            } else {
-                                item.quantityMapping[pid] = 0
-                            }
-                        }
-                        // compute amount mapping based on ratio
-                        const ratio = batch.totalQuantityRatio || batch.totalQuantityRatio === 0 ? Number(batch.totalQuantityRatio) : 1
-                        item.amountMapping[pid] = Number(item.quantityMapping[pid] || 0) * (ratio || 1)
-                    })
-                }
-
-                // customer-provided fields
-                item.customerColorName = item.customerColorName || item.customerColor || ''
-                item.customerShoeName = item.customerShoeName || ''
-
-                // business remarks (may come from OrderShoe DB fields)
-                item.businessMaterialRemark = item.businessMaterialRemark || item.business_material_remark || ''
-                item.businessTechnicalRemark = item.businessTechnicalRemark || item.business_technical_remark || ''
-
-                // normalize color display fields used by create UI
-                item.colorName = item.colorName || item.shoeTypeColorName || item.shoeColorName || item.color || ''
-                if (!item.shoeTypeColors) {
-                    if (item.shoeTypeColorList && Array.isArray(item.shoeTypeColorList)) {
-                        item.shoeTypeColors = item.shoeTypeColorList.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
-                    } else if (item.colors && Array.isArray(item.colors)) {
-                        item.shoeTypeColors = item.colors.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
-                    } else {
-                        item.shoeTypeColors = item.shoeTypeColors || []
-                    }
-                } else if (Array.isArray(item.shoeTypeColors) && item.shoeTypeColors.length && typeof item.shoeTypeColors[0] === 'object') {
-                    item.shoeTypeColors = item.shoeTypeColors.map((c) => c.value || c.colorId || c.colorName || '')
-                }
-
-                return item
-            })
-
-            // Map stored batch entries to the customer's batch objects so selection is shown in UI
-            if (Array.isArray(this.newOrderForm.orderShoeTypes) && Array.isArray(this.customerDisplayBatchData)) {
-                console.log('mapping source batches to customerDisplayBatchData', { shoeTypesLen: this.newOrderForm.orderShoeTypes.length, batchDataLen: this.customerDisplayBatchData.length })
-                this.newOrderForm.orderShoeTypes.forEach((item) => {
-                    if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
-                    const mapped = []
-                    item.orderShoeTypeBatchInfo.forEach((batch) => {
-                        const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
-                        if (pid == null) {
-                            console.warn('source batch missing packaging id', batch)
-                            return
-                        }
-                        const found = this.customerDisplayBatchData.find((d) => String(d.packagingInfoId) === String(pid))
-                        if (found) mapped.push(found)
-                        else {
-                            console.warn('no matching customer batch found for pid', pid, 'batch:', batch)
-                            const resolvedFallback = this.resolveBatchInfoById(pid)
-                            if (resolvedFallback) mapped.push(resolvedFallback)
-                            else mapped.push(batch)
-                        }
-                    })
-                    item.orderShoeTypeBatchInfo = mapped
-                })
-            }
-
-            // Recompute and normalize quantityMapping/amountMapping using the mapped batch objects
-            this.newOrderForm.orderShoeTypes.forEach((item) => {
-                item.quantityMapping = item.quantityMapping || {}
-                item.amountMapping = item.amountMapping || {}
-                if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
-                item.orderShoeTypeBatchInfo.forEach((batch) => {
-                    const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
-                    if (pid == null) return
-                    let q = item.quantityMapping[pid]
-                    if (q === undefined) q = item.quantityMapping[String(pid)]
-                    if (q === undefined) {
-                        if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) q = Number(batch.unitPerRatio) || 0
-                        else if (item.defaultQuantityMapping && (item.defaultQuantityMapping[pid] !== undefined || item.defaultQuantityMapping[String(pid)] !== undefined)) {
-                            q = Number(item.defaultQuantityMapping[pid] || item.defaultQuantityMapping[String(pid)]) || 0
-                        } else {
-                            q = 0
-                        }
-                    }
-                    item.quantityMapping[pid] = q
-                    item.quantityMapping[String(pid)] = q
-                    const ratio = (batch.totalQuantityRatio !== undefined && batch.totalQuantityRatio !== null) ? Number(batch.totalQuantityRatio) : 1
-                    item.amountMapping[pid] = Number(q || 0) * (ratio || 1)
-                    item.amountMapping[String(pid)] = item.amountMapping[pid]
-                })
-            })
-
-            // reset helper maps and set flag so next-step is allowed
-            this.newOrderForm.customerShoeName = {}
-            this.newOrderForm.customerShoeColorName = {}
-            this.newOrderForm.flag = true
-            this.openCreateOrderDialog()
-            this.newOrderForm.orderType = orderData.orderType || 'N'
-            this.newOrderForm.orderStartDate = ''
-            this.newOrderForm.orderEndDate = ''
-
-            this.$nextTick(() => {
-                if (!this.newOrderForm.orderShoeTypes || this.newOrderForm.orderShoeTypes.length === 0) {
-                    ElMessage.info('来源订单未包含鞋型，请在下方选择鞋型或点击 添加新鞋型')
-                    const el = document.querySelector('.order-shoe-create-table') || document.querySelector('.el-table')
-                    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }
-            })
-            this.dialogStore.closeTemplateDialog()
-        },
-
         async loadOrderTemplateAndOpen(orderTemplateId) {
             try {
                 const resp = await axios.get(`${this.$apiBaseUrl}/ordercreate/getordertemplate`, {
                     params: { orderTemplateId }
                 })
-                await this.hydrateOrderSourceAndOpen(resp.data)
+                const tpl = resp.data.orderTemplate || {}
+                const orderData = tpl.orderData || {}
+                // backend may expose the template's source order id either inside orderData or at the top level
+                const sourceOrderIdFromResp = resp.data && resp.data.sourceOrderId ? resp.data.sourceOrderId : null
+                const orderShoeData = tpl.orderShoeData || []
+
+                // Populate basic fields
+                this.newOrderForm.orderRId = ''
+                this.newOrderForm.orderCid = ''
+                this.newOrderForm.customerName = orderData.customerName || ''
+                this.newOrderForm.customerBrand = orderData.customerBrand || ''
+                this.newOrderForm.customerId = orderData.customerId || null
+                this.newOrderForm.batchInfoTypeId = orderData.batchInfoTypeId || ''
+                this.newOrderForm.batchInfoTypeName = orderData.batchInfoTypeName || ''
+                // ensure batch type metadata and available batches are loaded so UI can auto-select
+                if (!this.batchTypes || this.batchTypes.length === 0) {
+                    try {
+                        await this.getAllBatchTypes()
+                    } catch (e) {
+                        console.error('getAllBatchTypes failed', e)
+                    }
+                }
+                this.updateBatchType()
+                try {
+                    if (this.newOrderForm.customerId) {
+                        await this.getCustomerBatchInfo(this.newOrderForm.customerId)
+                    }
+                } catch (e) {
+                    console.error('getCustomerBatchInfo failed', e)
+                }
+                this.newOrderForm.orderStartDate = ''
+                this.newOrderForm.orderEndDate = ''
+                this.newOrderForm.supervisorId = ''
+                this.newOrderForm.salesman = this.userName
+                this.newOrderForm.salesmanId = this.staffId
+                // preserve source order identifiers when loading from a template
+                this.newOrderForm.sourceOrderRid = orderData.sourceOrderRid || orderData.sourceOrderId || orderData.orderRid || null
+                this.newOrderForm.sourceOrderId = orderData.sourceOrderId || orderData.sourceOrderRid || sourceOrderIdFromResp || null
+
+                // Fill shoe types and allow editing (copy template data into orderShoeTypes)
+                this.newOrderForm.orderShoeTypes = orderShoeData.map((s) => {
+                    // normalize to expected orderShoeTypes shape used by creation UI
+                    const item = Object.assign({}, s)
+                    // ensure identifiers
+                    item.shoeTypeId = item.shoeTypeId || item.shoeTypeId || item.shoeRid || item.shoeRid
+                    item.shoeRid = item.shoeRid || item.orderShoeRid || item.shoeRid
+                    item.shoeImageUrl = item.shoeImageUrl || item.shoeImageUrl || (item.shoeTypeImgUrl && item.shoeTypeImgUrl) || ''
+
+                    // batch info: prefer orderShoeTypeBatchInfo or shoeTypeBatchInfoList
+                    item.orderShoeTypeBatchInfo = item.orderShoeTypeBatchInfo || item.shoeTypeBatchInfoList || item.orderShoeTypeBatchInfo || []
+
+                    // initialize mappings
+                    item.quantityMapping = item.quantityMapping || {}
+                    item.amountMapping = item.amountMapping || {}
+                    if (Array.isArray(item.orderShoeTypeBatchInfo)) {
+                        item.orderShoeTypeBatchInfo.forEach((batch) => {
+                            const pid = batch.packagingInfoId
+                            if (!pid) return
+                            if (item.quantityMapping[pid] === undefined) {
+                                // try to pick up defaults from template batch info
+                                if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) {
+                                    item.quantityMapping[pid] = Number(batch.unitPerRatio) || 0
+                                } else if (item.defaultQuantityMapping && item.defaultQuantityMapping[pid] !== undefined) {
+                                    item.quantityMapping[pid] = Number(item.defaultQuantityMapping[pid]) || 0
+                                } else {
+                                    item.quantityMapping[pid] = 0
+                                }
+                            }
+                            // compute amount mapping based on ratio
+                            const ratio = batch.totalQuantityRatio || batch.totalQuantityRatio === 0 ? Number(batch.totalQuantityRatio) : 1
+                            item.amountMapping[pid] = Number(item.quantityMapping[pid] || 0) * (ratio || 1)
+                        })
+                    }
+
+                    // customer-provided fields
+                    item.customerColorName = item.customerColorName || item.customerColor || ''
+                    item.customerShoeName = item.customerShoeName || ''
+
+                    // business remarks (may come from OrderShoe DB fields)
+                    item.businessMaterialRemark = item.businessMaterialRemark || item.business_material_remark || ''
+                    item.businessTechnicalRemark = item.businessTechnicalRemark || item.business_technical_remark || ''
+
+                    // normalize color display fields used by create UI
+                    // prefer explicit colorName, fall back to various possible keys
+                    item.colorName = item.colorName || item.shoeTypeColorName || item.shoeColorName || item.color || ''
+                    // normalize shoeTypeColors to an array of simple values if template provides objects
+                    if (!item.shoeTypeColors) {
+                        if (item.shoeTypeColorList && Array.isArray(item.shoeTypeColorList)) {
+                            item.shoeTypeColors = item.shoeTypeColorList.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
+                        } else if (item.colors && Array.isArray(item.colors)) {
+                            item.shoeTypeColors = item.colors.map((c) => (typeof c === 'object' ? c.value || c.colorId || c.colorName || '' : c))
+                        } else {
+                            item.shoeTypeColors = item.shoeTypeColors || []
+                        }
+                    } else {
+                        // if shoeTypeColors provided as objects, map to values
+                        if (Array.isArray(item.shoeTypeColors) && item.shoeTypeColors.length && typeof item.shoeTypeColors[0] === 'object') {
+                            item.shoeTypeColors = item.shoeTypeColors.map((c) => c.value || c.colorId || c.colorName || '')
+                        }
+                    }
+
+                    return item
+                })
+
+                // Map stored batch entries to the customer's batch objects so selection is shown in UI
+                if (Array.isArray(this.newOrderForm.orderShoeTypes) && Array.isArray(this.customerDisplayBatchData)) {
+                    console.log('mapping template batches to customerDisplayBatchData', { shoeTypesLen: this.newOrderForm.orderShoeTypes.length, batchDataLen: this.customerDisplayBatchData.length })
+                    this.newOrderForm.orderShoeTypes.forEach((item) => {
+                        if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
+                        const mapped = []
+                        item.orderShoeTypeBatchInfo.forEach((batch) => {
+                            const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
+                            if (pid == null) {
+                                console.warn('template batch missing packaging id', batch)
+                                return
+                            }
+                            const found = this.customerDisplayBatchData.find((d) => String(d.packagingInfoId) === String(pid))
+                            if (found) mapped.push(found)
+                            else {
+                                console.warn('no matching customer batch found for pid', pid, 'batch:', batch)
+                                mapped.push(batch) // fallback to stored object
+                            }
+                        })
+                        item.orderShoeTypeBatchInfo = mapped
+                    })
+                }
+
+                // Recompute and normalize quantityMapping/amountMapping using the mapped batch objects
+                this.newOrderForm.orderShoeTypes.forEach((item) => {
+                    item.quantityMapping = item.quantityMapping || {}
+                    item.amountMapping = item.amountMapping || {}
+                    if (!Array.isArray(item.orderShoeTypeBatchInfo)) return
+                    item.orderShoeTypeBatchInfo.forEach((batch) => {
+                        const pid = batch.packagingInfoId || batch.packaging_info_id || batch.id || batch.packagingId
+                        if (pid == null) return
+                        // prefer existing numeric key, else string key
+                        let q = item.quantityMapping[pid]
+                        if (q === undefined) q = item.quantityMapping[String(pid)]
+                        if (q === undefined) {
+                            if (batch.unitPerRatio !== undefined && batch.unitPerRatio !== null) q = Number(batch.unitPerRatio) || 0
+                            else if (item.defaultQuantityMapping && (item.defaultQuantityMapping[pid] !== undefined || item.defaultQuantityMapping[String(pid)] !== undefined)) {
+                                q = Number(item.defaultQuantityMapping[pid] || item.defaultQuantityMapping[String(pid)]) || 0
+                            } else {
+                                q = 0
+                            }
+                        }
+                        // store both string and numeric keys to be resilient
+                        item.quantityMapping[pid] = q
+                        item.quantityMapping[String(pid)] = q
+                        const ratio = (batch.totalQuantityRatio !== undefined && batch.totalQuantityRatio !== null) ? Number(batch.totalQuantityRatio) : 1
+                        item.amountMapping[pid] = Number(q || 0) * (ratio || 1)
+                        item.amountMapping[String(pid)] = item.amountMapping[pid]
+                    })
+                })
+
+                // reset helper maps and set flag so next-step is allowed
+                this.newOrderForm.customerShoeName = {}
+                this.newOrderForm.customerShoeColorName = {}
+                this.newOrderForm.flag = true
+                this.openCreateOrderDialog()
+                // If template didn't include shoes, inform user and scroll to shoe selection area
+                this.$nextTick(() => {
+                    if (!this.newOrderForm.orderShoeTypes || this.newOrderForm.orderShoeTypes.length === 0) {
+                        ElMessage.info('模板未包含鞋型，请在下方选择鞋型或点击 添加新鞋型')
+                        // try to scroll to shoe table
+                        const el = document.querySelector('.order-shoe-create-table') || document.querySelector('.el-table')
+                        if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
+                })
+                this.dialogStore.closeTemplateDialog()
             } catch (err) {
                 console.error('loadOrderTemplateAndOpen error', err)
                 ElMessage.error('加载模板失败')
             }
         },
 
-        async loadHistoryOrderAndOpen(orderId) {
-            try {
-                const resp = await axios.get(`${this.$apiBaseUrl}/ordercreate/gethistoryordertemplate`, {
-                    params: { orderId }
-                })
-                await this.hydrateOrderSourceAndOpen(resp.data)
-            } catch (err) {
-                console.error('loadHistoryOrderAndOpen error', err)
-                ElMessage.error('加载历史订单失败')
-            }
-        },
-
-        async fetchHistoryOrders() {
-            this.historyOrderLoading = true
-            try {
-                const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/getordersourcelist`, {
-                    params: {
-                        page: this.historyOrderPage,
-                        pageSize: this.historyOrderPageSize,
-                        keyword: this.historyOrderFilter
-                    }
-                })
-                this.historyOrderDisplayData = Array.isArray(response?.data?.items) ? response.data.items : []
-                this.historyOrderTotal = Number(response?.data?.total || 0)
-            } catch (error) {
-                console.error('Error fetching history orders:', error)
-                this.historyOrderDisplayData = []
-                this.historyOrderTotal = 0
-                ElMessage.error('加载历史订单失败')
-            } finally {
-                this.historyOrderLoading = false
-            }
-        },
-        handleHistoryOrderSearch() {
-            this.historyOrderPage = 1
-            this.fetchHistoryOrders()
-        },
-        handleHistoryOrderPageChange(page) {
-            this.historyOrderPage = page
-            this.fetchHistoryOrders()
-        },
-
         async showOrderTemplates() {
-            this.historyOrderPage = 1
-            let hasAnySource = false
-            const [templateResult, orderSourceResult] = await Promise.allSettled([
-                axios.get(`${this.$apiBaseUrl}/ordercreate/getordertemplates`),
-                this.fetchHistoryOrders()
-            ])
-
-            if (templateResult.status === 'fulfilled') {
-                this.templateData = Array.isArray(templateResult.value.data) ? templateResult.value.data : []
-                this.filterTemplateOptions()
-                hasAnySource = hasAnySource || this.templateData.length > 0
-            } else {
-                console.error('Error fetching order templates:', templateResult.reason)
-                this.templateData = []
-                this.templateDisplayData = []
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/getordertemplates`)
+                this.templateData = response.data
+                this.templateDisplayData = this.templateData
+                this.dialogStore.openTemplateDialog()
+            } catch (error) {
+                console.error('Error fetching order templates:', error)
+                ElMessage.error('加载订单模板失败')
             }
-
-            if (orderSourceResult.status === 'fulfilled') {
-                hasAnySource = hasAnySource || this.historyOrderDisplayData.length > 0 || this.historyOrderTotal > 0
-            }
-            this.dialogStore.openTemplateDialog()
-            if (!hasAnySource) ElMessage.error('加载订单来源失败')
         },
         injectTemplateTestData() {
             console.log('injectTemplateTestData invoked')
@@ -1312,16 +1068,10 @@ export default {
         },
         openCreateOrderDialog() {
             this.orderRidDuplicated = false
-            this.newOrderForm.orderType = 'N'
             this.newOrderForm.orderStartDate = this.formatDateToYYYYMMDD(new Date())
             this.newOrderForm.salesman = this.userName
             this.newOrderForm.salesmanId = this.staffId
-            this.syncSelectedShoeStateFromOrderForm()
             this.dialogStore.openOrderCreationDialog()
-        },
-        openCreateForecastOrderDialog() {
-            this.openCreateOrderDialog()
-            this.newOrderForm.orderType = 'F'
         },
         async showTemplate() {
             const response = await axios.get(`${this.$apiBaseUrl}/ordercreate/template`, {
@@ -1394,7 +1144,6 @@ export default {
 
             // use canonical row from newOrderForm to avoid shallow/copy issues
             const canonicalRow = (this.newOrderForm.orderShoeTypes || []).find((r) => r.shoeTypeId == row.shoeTypeId) || row
-            this.currentBatch = this.normalizeBatchSelection(canonicalRow?.orderShoeTypeBatchInfo || [])
             // log row batch info for debugging
             console.log('openAddBatchInfoDialog row data for selection (canonical)', { shoeTypeId: canonicalRow.shoeTypeId, orderShoeTypeBatchInfo: canonicalRow.orderShoeTypeBatchInfo, quantityMapping: canonicalRow.quantityMapping, packagingInfoIds: canonicalRow.packagingInfoIds })
 
@@ -1530,7 +1279,6 @@ export default {
             if (idx >= 0) {
                 this.newOrderForm.orderShoeTypes.splice(idx, 1)
             }
-            this.syncSelectedShoeStateFromOrderForm()
         },
 
 
@@ -2155,7 +1903,8 @@ export default {
             this.$refs.batchInfoDialog.batchTable?.clearSelection()
         },
         async orderCreationSecondStep() {
-            if (!(await this.validateOrderIdentifiers())) {
+            if (this.newOrderForm.orderRId === '') {
+                ElMessage.error('未输入订单号，不允许创建订单')
                 return
             }
             const ridValidation = await this.validateOrderRidField()
@@ -2208,11 +1957,6 @@ export default {
                 ElMessage.error('请至少选择一种鞋型号')
                 return
             }
-            const selectedShoeIds = [...new Set((this.newOrderForm.orderShoeTypes || []).map((item) => String(item.shoeId || item.shoeRid || '')))].filter((v) => v)
-            if (selectedShoeIds.length > 1) {
-                ElMessage.error('只允许选择一个鞋型，但可以选择多个颜色')
-                return
-            }
             if (this.newOrderForm.supervisorId === '') {
                 ElMessage.error('未选择下发经理，不允许创建订单')
                 return
@@ -2245,179 +1989,25 @@ export default {
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
-        removeBatchInfoRow(orderShoeRow, batchRow) {
-            if (!orderShoeRow || !Array.isArray(orderShoeRow.orderShoeTypeBatchInfo) || !batchRow) {
-                return
-            }
-
-            const batchId = batchRow.packagingInfoId ?? batchRow.packaging_info_id
-            orderShoeRow.orderShoeTypeBatchInfo = orderShoeRow.orderShoeTypeBatchInfo.filter((item) => {
-                const itemId = item.packagingInfoId ?? item.packaging_info_id
-                return String(itemId) !== String(batchId)
-            })
-
-            if (orderShoeRow.quantityMapping && batchId !== undefined && batchId !== null) {
-                delete orderShoeRow.quantityMapping[batchId]
-                delete orderShoeRow.quantityMapping[String(batchId)]
-            }
-            if (orderShoeRow.amountMapping && batchId !== undefined && batchId !== null) {
-                delete orderShoeRow.amountMapping[batchId]
-                delete orderShoeRow.amountMapping[String(batchId)]
-            }
-
-            this.newOrderForm.flag = (this.newOrderForm.orderShoeTypes || []).some((item) => {
-                return Array.isArray(item.orderShoeTypeBatchInfo) && item.orderShoeTypeBatchInfo.length > 0
-            })
-        },
-        syncSelectedShoeStateFromOrderForm() {
-            const list = Array.isArray(this.newOrderForm.orderShoeTypes) ? this.newOrderForm.orderShoeTypes : []
-            if (list.length === 0) {
-                this.selectedShoeByShoeId = {}
-                this.selectedShoeList = []
-                this.selectedShoeMasterId = null
-                this.applyShoeSelectionToTables()
-                return
-            }
-
-            const grouped = {}
-            list.forEach((row) => {
-                const key = String(row.shoeId || row.shoeRid || '')
-                if (!key) return
-                if (!grouped[key]) grouped[key] = []
-                grouped[key].push(row)
-            })
-
-            const keys = Object.keys(grouped)
-            this.selectedShoeByShoeId = grouped
-            this.selectedShoeMasterId = keys.length ? keys[0] : null
-            this.selectedShoeList = this.selectedShoeMasterId ? [...(grouped[this.selectedShoeMasterId] || [])] : []
-            this.applyShoeSelectionToTables()
-        },
-        registerShoeSelectionTable(el, shoeId) {
-            if (!shoeId) return
-            if (el) this.shoeSelectionTableRefs[shoeId] = el
-            else delete this.shoeSelectionTableRefs[shoeId]
-        },
-        applyShoeSelectionToTables() {
-            this.$nextTick(() => {
-                this.isSyncingShoeSelection = true
-                const refs = this.shoeSelectionTableRefs || {}
-                Object.keys(refs).forEach((sid) => {
-                    const table = refs[sid]
-                    if (!table) return
-                    if (typeof table.clearSelection === 'function') table.clearSelection()
-                    const desired = Array.isArray(this.selectedShoeByShoeId[sid]) ? this.selectedShoeByShoeId[sid] : []
-                    if (!desired.length) return
-                    const data = table.data || (table.store && table.store.states && (table.store.states.data?.value || table.store.states.data)) || []
-                    desired.forEach((sel) => {
-                        const row = data.find((r) => {
-                            const rId = r.shoeTypeId || r.id
-                            const sId = sel.shoeTypeId || sel.id
-                            if (rId != null && sId != null && String(rId) === String(sId)) return true
-                            const rColor = r.colorId || r.color_id || r.value || r.colorName || r.label
-                            const sColor = sel.colorId || sel.color_id || sel.value || sel.colorName || sel.label
-                            return rColor != null && sColor != null && String(rColor) === String(sColor)
-                        })
-                        if (row && typeof table.toggleRowSelection === 'function') table.toggleRowSelection(row, true)
-                    })
-                })
-                this.isSyncingShoeSelection = false
-            })
-        },
-        clearOtherShoeSelections(activeShoeId) {
-            this.$nextTick(() => {
-                this.isSyncingShoeSelection = true
-                const refs = this.shoeSelectionTableRefs || {}
-                Object.keys(refs).forEach((sid) => {
-                    if (String(sid) === String(activeShoeId)) return
-                    const table = refs[sid]
-                    if (table && typeof table.clearSelection === 'function') table.clearSelection()
-                })
-                this.isSyncingShoeSelection = false
-            })
-        },
-        isShoeTypeSelectable(row, shoeId) {
-            return true
-        },
         handleSelectionShoeType(selection, shoeId) {
-            if (this.isSyncingShoeSelection) return
             // Preserve selections across expand/collapse and table re-renders by keying per shoeId.
             const normalized = Array.isArray(selection) ? selection.map((item) => ({ ...item, shoeId })) : []
+            this.selectedShoeList = [...normalized]
+
             if (!this.selectedShoeByShoeId) this.selectedShoeByShoeId = {}
             const existing = Array.isArray(this.selectedShoeByShoeId[shoeId]) ? this.selectedShoeByShoeId[shoeId] : []
 
             // Ignore transient empty emissions that occur during re-render/expand updates.
             if (normalized.length === 0 && existing.length > 0) return
 
-            if (normalized.length > 0) {
-                if (this.selectedShoeMasterId && String(this.selectedShoeMasterId) !== String(shoeId)) {
-                    this.selectedShoeByShoeId = {}
-                    this.selectedShoeList = []
-                    this.clearOtherShoeSelections(shoeId)
-                }
-                this.selectedShoeMasterId = shoeId
-            }
-
             this.selectedShoeByShoeId[shoeId] = normalized
-            this.selectedShoeList = [...normalized]
 
             const merged = Object.values(this.selectedShoeByShoeId).flat()
             this.newOrderForm.orderShoeTypes = [...merged]
-
-            if (merged.length === 0) {
-                this.selectedShoeMasterId = null
-            }
         },
         handleSelectionBatchData(selection) {
-            const incoming = this.normalizeBatchSelection(selection)
-            const current = this.normalizeBatchSelection(this.currentBatch)
-            if (this.isSyncingBatchSelection && incoming.length === 0 && current.length > 0) {
-                return
-            }
-
-            const visibleIdSet = new Set((this.customerDisplayBatchData || []).map((row) => String(row?.packagingInfoId)))
-            const mergedMap = new Map()
-
-            current.forEach((item) => {
-                const id = item?.packagingInfoId
-                if (id === undefined || id === null) return
-                const key = String(id)
-                if (!visibleIdSet.has(key)) {
-                    mergedMap.set(key, item)
-                }
-            })
-
-            incoming.forEach((item) => {
-                const id = item?.packagingInfoId
-                if (id === undefined || id === null) return
-                mergedMap.set(String(id), item)
-            })
-
-            this.currentBatch = Array.from(mergedMap.values())
-        },
-        resolveBatchInfoById(packagingInfoId) {
-            if (packagingInfoId === undefined || packagingInfoId === null) return null
-            const targetId = String(packagingInfoId)
-            const sourceList = [
-                ...(Array.isArray(this.customerDisplayBatchData) ? this.customerDisplayBatchData : []),
-                ...(Array.isArray(this.customerBatchData) ? this.customerBatchData : [])
-            ]
-            return sourceList.find((item) => String(item?.packagingInfoId) === targetId) || null
-        },
-        normalizeBatchSelection(batchList) {
-            if (!Array.isArray(batchList)) return []
-            return batchList
-                .map((batch) => {
-                    const packagingInfoId = batch?.packagingInfoId ?? batch?.packaging_info_id ?? batch?.id ?? batch?.packagingId
-                    if (packagingInfoId === undefined || packagingInfoId === null) return null
-                    const resolved = this.resolveBatchInfoById(packagingInfoId)
-                    if (resolved) return resolved
-                    return {
-                        ...batch,
-                        packagingInfoId: isNaN(Number(packagingInfoId)) ? packagingInfoId : Number(packagingInfoId)
-                    }
-                })
-                .filter(Boolean)
+            this.currentBatch = selection
+            // console.log(this.currentBatch)
         },
         async getCustomerBatchInfo(customerId) {
             const response = await axios.get(`${this.$apiBaseUrl}/customer/getcustomerbatchinfo`, {
@@ -2425,10 +2015,8 @@ export default {
                     customerid: customerId
                 }
             })
-            const batchInfoType = (response.data || []).find((batch) => String(batch.batchInfoTypeId) === String(this.newOrderForm.batchInfoTypeId))
-            const batchInfoList = Array.isArray(batchInfoType?.batchInfoList) ? batchInfoType.batchInfoList : []
-            this.customerBatchData = batchInfoList
-            this.customerDisplayBatchData = batchInfoList
+            this.customerBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
+            this.customerDisplayBatchData = response.data.filter((batch) => batch.batchInfoTypeId == this.newOrderForm.batchInfoTypeId)[0].batchInfoList
         },
         async getAllCutomers() {
             const response = await axios.get(`${this.$apiBaseUrl}/customer/getcustomerdetails`)
@@ -2464,36 +2052,31 @@ export default {
             }
         },
         filterBatchDataWithSelection() {
-            const selectedBatch = this.normalizeBatchSelection(this.currentBatch)
-            this.isSyncingBatchSelection = true
+            const selectedBatch = this.currentBatch
             if (!this.batchNameFilter) {
-                this.customerDisplayBatchData = [...(this.customerBatchData || [])]
+                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerBatchData)]))
             } else {
                 this.customerFilteredBatchData = this.customerBatchData.filter((task) => {
                     const filteredData = task.packagingInfoName.includes(this.batchNameFilter)
                     return filteredData
                 })
-                this.customerDisplayBatchData = [...(this.customerFilteredBatchData || [])]
+                this.customerDisplayBatchData = Array.from(new Set([...selectedBatch.concat(this.customerFilteredBatchData)]))
             }
             this.$nextTick(() => {
                 selectedBatch.forEach((item) => {
-                    const child = this.$refs.batchInfoDialog
-                    const tableRef = child?.batchTable?.value || child?.batchTable || child?.$refs?.batchTable
-                    const matchedRow = this.customerDisplayBatchData.find((row) => {
-                        return String(row.packagingInfoId) === String(item.packagingInfoId)
-                    })
-                    if (tableRef && matchedRow && typeof tableRef.toggleRowSelection === 'function') {
-                        tableRef.toggleRowSelection(matchedRow, true)
-                    }
+                    this.$refs.batchInfoSelectionTable.toggleRowSelection(
+                        this.customerDisplayBatchData.find((row) => {
+                            return row.packagingInfoId == item.packagingInfoId
+                        }),
+                        true
+                    )
                 })
-                this.isSyncingBatchSelection = false
             })
         },
         addShoeTypeBatchInfo() {
-            const selectedBatch = this.normalizeBatchSelection(this.currentBatch)
             this.newOrderForm.orderShoeTypes.find((row) => {
                 return row.shoeTypeId == this.curShoeTypeId
-            }).orderShoeTypeBatchInfo = selectedBatch
+            }).orderShoeTypeBatchInfo = this.currentBatch
 
             const curQuantityMapping = this.newOrderForm.orderShoeTypes.find((row) => {
                 return row.shoeTypeId == this.curShoeTypeId
@@ -2502,7 +2085,7 @@ export default {
                 return row.shoeTypeId == this.curShoeTypeId
             }).amountMapping
 
-            selectedBatch.forEach((batch) => {
+            this.currentBatch.forEach((batch) => {
                 {
                     curQuantityMapping[batch.packagingInfoId] = 0
                     curAmountMapping[batch.packagingInfoId] = 0
@@ -2535,10 +2118,10 @@ export default {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     currentStaffId: staffId
                 })
-                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                this.orderStore.setOrders(response.data)
             } else if (this.role == 4) {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                this.orderStore.setOrders(response.data)
             }
         },
         // async getAllOrderStatus() {
@@ -2609,20 +2192,19 @@ export default {
             }
         },
         filterTemplateOptions() {
-            const keyword = String(this.templateFilter || '').trim().toLowerCase()
-            if (!keyword) {
+            if (this.templateFilter != '') {
+                this.templateCustomerBrandMatch = this.templateData.filter((task) => {
+                    const templateCustomerBrandMatch = task.customerBrand.toLowerCase().includes(this.templateFilter.toLowerCase())
+                    return templateCustomerBrandMatch
+                })
+                this.templateCustomerNameMatch = this.templateData.filter((task) => {
+                    const templateCustomerNameMatch = task.customerName.toLowerCase().includes(this.templateFilter.toLowerCase())
+                    return templateCustomerNameMatch
+                })
+                this.templateDisplayData = this.templateCustomerBrandMatch.concat(this.templateCustomerNameMatch)
+            } else {
                 this.templateDisplayData = this.templateData
-                return
             }
-
-            const matchedRows = this.templateData.filter((task) => {
-                return [task.templateName, task.templateDescription, task.customerName, task.customerBrand]
-                    .some((value) => String(value || '').toLowerCase().includes(keyword))
-            })
-            this.templateDisplayData = matchedRows
-        },
-        filterHistoryOrderOptions() {
-            this.handleHistoryOrderSearch()
         },
         handleUploadSuccess(response, file) {
             // Handle the successful response
@@ -2814,9 +2396,6 @@ export default {
                 ElMessage.error('请添加鞋型配码')
                 return
             }
-            if (!(await this.validateOrderIdentifiers())) {
-                return
-            }
             const ridValidation = await this.validateOrderRidField()
             if (!ridValidation.valid) {
                 if (ridValidation.message) {
@@ -2961,21 +2540,21 @@ export default {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                         currentStaffId: this.staffId
                     })
-                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                    this.orderStore.setOrders(response.data)
                 } else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
-                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                    this.orderStore.setOrders(response.data)
                 }
             } else if (value === 'desc') {
                 if (!this.buttonFlag) {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                         currentStaffId: this.staffId
                     })
-                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                    this.orderStore.setOrders(response.data)
                     console.log(this.orderStore.unfilteredData)
                 } else {
                     const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders?descSymbol=1`)
-                    this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                    this.orderStore.setOrders(response.data)
                 }
             }
         },
@@ -3004,25 +2583,6 @@ export default {
                 callback(new Error('订单号校验失败，请稍后重试'))
             }
         },
-        validateOrderCidWhenOrderRidEmpty(rule, value, callback) {
-            const orderRid = (this.newOrderForm.orderRId || '').trim()
-            const orderCid = (value || '').trim()
-            if (!orderRid && !orderCid) {
-                callback(new Error('订单号为空时客户订单号不能为空'))
-                return
-            }
-            callback()
-        },
-        async validateOrderIdentifiers() {
-            const orderCidValidation = await this.validateOrderCidField()
-            if (!orderCidValidation.valid) {
-                if (orderCidValidation.message) {
-                    ElMessage.error(orderCidValidation.message)
-                }
-                return false
-            }
-            return true
-        },
         async validateOrderRidField() {
             if (!this.$refs.orderCreationForm) {
                 return { valid: false, message: '' }
@@ -3036,233 +2596,14 @@ export default {
                 })
             })
         },
-        async validateOrderCidField() {
-            if (!this.$refs.orderCreationForm) {
-                return { valid: false, message: '' }
-            }
-            return new Promise((resolve) => {
-                this.$refs.orderCreationForm.validateField('orderCid', (errorMessage) => {
-                    const message = typeof errorMessage === 'string' ? errorMessage : errorMessage?.message || ''
-                    const noError =
-                        !errorMessage || (Array.isArray(errorMessage) && errorMessage.length === 0) || errorMessage === true
-                    resolve({ valid: noError, message })
-                })
-            })
-        },
         async checkOrderRidExists() {
             const result = await this.validateOrderRidField()
-            await this.validateOrderCidField()
             return result.valid
-        },
-        isBatchOperableRow(row) {
-            const statusText = String(row?.orderStatus || '')
-            const statusCurrentOk = Number(row?.orderStatusVal) === 6
-            const statusValueOk = row?.orderStatusValue !== undefined && row?.orderStatusValue !== null
-                ? Number(row?.orderStatusValue) === 1
-                : statusText.includes('待经理审核下发')
-            const wrapUploadedOk = row?.wrapRequirementUploaded !== undefined && row?.wrapRequirementUploaded !== null
-                ? row?.wrapRequirementUploaded === true
-                : !statusText.includes('包装材料待上传')
-
-            return Number(this.userRole) === 4
-                && statusCurrentOk
-                && statusValueOk
-                && wrapUploadedOk
-        },
-        isBatchFillOrderRidCandidate(row) {
-            return Number(this.userRole) === 4 && !(row?.orderRid || '').trim()
-        },
-        isDispatchableRow(row) {
-            return this.isBatchOperableRow(row) && !!(row?.orderRid || '').trim()
-        },
-        handleDispatchSelectionChange(selection) {
-            this.selectedDispatchRows = (selection || []).filter((row) => this.isBatchOperableRow(row))
-        },
-        handleBatchFillDialogSelectionChange(selection) {
-            this.batchFillSelectedRows = selection || []
-        },
-        handleBatchSendDialogSelectionChange(selection) {
-            this.batchSendSelectedRows = selection || []
-        },
-        openBatchFillOrderRidDialog() {
-            const allRows = this.orderStore?.displayData || []
-            this.batchFillCandidateRows = allRows
-                .filter((row) => this.isBatchFillOrderRidCandidate(row))
-                .map((row) => ({
-                    ...row,
-                    manualOrderRid: ''
-                }))
-            this.batchFillSelectedRows = []
-            this.batchFillFilters = {
-                orderRid: '',
-                orderCid: '',
-                customerName: '',
-                customerProductName: '',
-                shoeRId: ''
-            }
-            this.batchFillDbDuplicateRids = []
-            if (!this.batchFillCandidateRows.length) {
-                ElMessage.warning('当前无可批量添加订单号的订单')
-                return
-            }
-            this.batchOrderRidDialogVis = true
-        },
-        async checkOrderRidUnique(pendingRid) {
-            if (!pendingRid) return true
-            const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
-                params: {
-                    pendingRid
-                }
-            })
-            return response?.data?.exists !== true
-        },
-        async confirmBatchFillOrderRid() {
-            const targetRows = this.batchFillSelectedRows
-            if (!targetRows.length) {
-                ElMessage.warning('请先在对话框中选择订单')
-                return
-            }
-
-            const manualRidList = targetRows.map((row) => (row.manualOrderRid || '').trim())
-            if (manualRidList.some((rid) => !rid)) {
-                ElMessage.error('请为每个已选订单填写订单号')
-                return
-            }
-            if (new Set(manualRidList).size !== manualRidList.length) {
-                ElMessage.error('已填写的订单号存在重复，请检查')
-                return
-            }
-
-            const duplicateRids = []
-            this.batchFillDbDuplicateRids = []
-            for (const rid of manualRidList) {
-                try {
-                    const unique = await this.checkOrderRidUnique(rid)
-                    if (!unique) {
-                        duplicateRids.push(rid)
-                    }
-                } catch (error) {
-                    console.error('checkOrderRidUnique in batch failed', error)
-                    ElMessage.error('订单号校验失败，请稍后重试')
-                    return
-                }
-            }
-            if (duplicateRids.length) {
-                this.batchFillDbDuplicateRids = [...new Set(duplicateRids)]
-                ElMessage.error(`订单号已存在：${duplicateRids.join('，')}`)
-                return
-            }
-
-            let successCount = 0
-            let duplicateCount = 0
-            const duplicateDuringSave = []
-            for (let i = 0; i < targetRows.length; i++) {
-                const row = targetRows[i]
-                const rid = manualRidList[i]
-                try {
-                    const stillUnique = await this.checkOrderRidUnique(rid)
-                    if (!stillUnique) {
-                        duplicateCount += 1
-                        duplicateDuringSave.push(rid)
-                        continue
-                    }
-                    const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateorderrid`, {
-                        orderId: row.orderDbId,
-                        orderNewRid: rid
-                    })
-                    if (response.status === 200) {
-                        successCount += 1
-                    } else {
-                        const msg = response?.data?.message || response?.data?.result || ''
-                        if (msg.includes('重复') || msg.includes('存在')) {
-                            duplicateCount += 1
-                            duplicateDuringSave.push(rid)
-                        }
-                    }
-                } catch (error) {
-                    console.error('batch updateorderrid failed', error)
-                    const msg = error?.response?.data?.message || error?.response?.data?.result || ''
-                    if (msg.includes('重复') || msg.includes('存在')) {
-                        duplicateCount += 1
-                        duplicateDuringSave.push(rid)
-                    }
-                }
-            }
-
-            this.batchOrderRidDialogVis = false
-            if (successCount > 0 && duplicateCount === 0) {
-                ElMessage.success(`批量添加订单号完成，成功 ${successCount} 条`)
-                await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
-            } else if (successCount > 0 && duplicateCount > 0) {
-                const duplicateText = [...new Set(duplicateDuringSave)].join('，')
-                ElMessage.warning(`批量添加订单号完成：成功 ${successCount} 条，重复 ${duplicateCount} 条（${duplicateText}）`)
-                await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
-            } else {
-                if (duplicateCount > 0) {
-                    const duplicateText = [...new Set(duplicateDuringSave)].join('，')
-                    ElMessage.error(`批量添加失败：存在重复订单号（${duplicateText}）`)
-                } else {
-                    ElMessage.error('批量添加订单号失败')
-                }
-            }
-        },
-        openBatchSendDialog() {
-            const allRows = this.orderStore?.displayData || []
-            this.batchSendCandidateRows = allRows.filter((row) => this.isDispatchableRow(row))
-            this.batchSendSelectedRows = []
-            this.batchSendFilters = {
-                orderRid: '',
-                orderCid: '',
-                customerName: '',
-                customerProductName: '',
-                shoeRId: ''
-            }
-            if (!this.batchSendCandidateRows.length) {
-                ElMessage.error('当前无可下发订单')
-                return
-            }
-            this.batchSendDialogVis = true
-        },
-        async confirmBatchSendOrders() {
-            if (!this.batchSendSelectedRows.length) {
-                ElMessage.warning('请先在对话框中选择订单')
-                return
-            }
-            let successCount = 0
-            let failedCount = 0
-            for (const row of this.batchSendSelectedRows) {
-                try {
-                    const endpoint = row?.orderType === 'F'
-                        ? '/ordercreate/sendnextsplitforecast'
-                        : '/ordercreate/sendnext'
-                    const result = await axios.post(`${this.$apiBaseUrl}${endpoint}`, {
-                        orderId: row.orderDbId,
-                        staffId: this.staffId
-                    })
-                    if (result.status === 200) {
-                        successCount += 1
-                    } else {
-                        failedCount += 1
-                    }
-                } catch (error) {
-                    failedCount += 1
-                }
-            }
-
-            this.batchSendDialogVis = false
-            if (failedCount === 0) {
-                ElMessage.success(`批量下发成功，共 ${successCount} 条`)
-            } else {
-                ElMessage.warning(`批量下发完成：成功 ${successCount} 条，失败 ${failedCount} 条`)
-            }
-            await this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
         },
         async handleOrderStatusChange(value) {
             let response
             if (value === '全部订单') {
-                response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`, {
-                    params: { excludeHistory: 1 }
-                })
+                response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
             } else if (value === '我审批的订单') {
                 response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     params: {
@@ -3280,32 +2621,10 @@ export default {
             }
 
             if (response && response.data) {
-                this.orderStore.setOrders(this.applyEntryModeOrders(response.data))
+                this.orderStore.setOrders(response.data)
 
                 this.orderStore.radio = 'all'
                 this.sortRadio = 'asc'
-                this.selectedDispatchRows = []
-                this.batchOrderRidDialogVis = false
-                this.batchSendDialogVis = false
-                this.batchFillCandidateRows = []
-                this.batchFillSelectedRows = []
-                this.batchSendCandidateRows = []
-                this.batchSendSelectedRows = []
-                this.batchFillDbDuplicateRids = []
-                this.batchFillFilters = {
-                    orderRid: '',
-                    orderCid: '',
-                    customerName: '',
-                    customerProductName: '',
-                    shoeRId: ''
-                }
-                this.batchSendFilters = {
-                    orderRid: '',
-                    orderCid: '',
-                    customerName: '',
-                    customerProductName: '',
-                    shoeRId: ''
-                }
             }
         },
         openReUploadImageDialog(row) {
@@ -3547,46 +2866,6 @@ export default {
 </script>
 
 <style scoped>
-.toolbar-row {
-    margin-top: 20px;
-}
-
-.toolbar-wrap {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-}
-
-.toolbar-status-select {
-    width: 180px;
-}
-
-.toolbar-right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.filter-row {
-    margin-top: 12px;
-}
-
-.filter-row :deep(.el-input),
-.filter-row :deep(.el-select),
-.filter-row :deep(.el-date-editor) {
-    width: 100%;
-}
-
-.batch-filter-row :deep(.el-input) {
-    width: 100%;
-}
-
-:deep(.rid-error .el-input__wrapper) {
-    box-shadow: 0 0 0 1px var(--el-color-danger) inset !important;
-}
-
 /* Clean base style */
 ::v-deep(.persistent-shadow-row > td) {
     border-top: 5px solid #dcdfe6;

@@ -627,6 +627,77 @@ def get_all_order_production_progress():
                     "moldingAmount": order_shoe_type.molding_amount,
                 }
             )
+
+    # —— 对"生产已结束"的鞋型，补充成品出库数量信息 ——
+    finished_shoe_ids = [
+        r["orderShoeId"] for r in res if r["status"] == "生产已结束"
+    ]
+    if finished_shoe_ids:
+        estimated_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(FinishedShoeStorage.finished_estimated_amount), 0
+                ).label("total_estimated"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(finished_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        estimated_map = {
+            row.order_shoe_id: int(row.total_estimated)
+            for row in estimated_info
+        }
+        outbound_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(ShoeOutboundRecordDetail.outbound_amount), 0
+                ).label("total_outbound"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .join(
+                ShoeOutboundRecordDetail,
+                ShoeOutboundRecordDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(finished_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        outbound_map = {
+            row.order_shoe_id: int(row.total_outbound)
+            for row in outbound_info
+        }
+        for r in res:
+            if r["status"] != "生产已结束":
+                continue
+            estimated = estimated_map.get(r["orderShoeId"], 0)
+            outbound = outbound_map.get(r["orderShoeId"], 0)
+            if outbound <= 0:
+                r["status"] = "待出库"
+            elif outbound >= estimated and estimated > 0:
+                r["status"] = f"已全部出库 ({outbound}双)"
+            else:
+                r["status"] = f"部分出库 (已出{outbound}/{estimated}双)"
+
     return {"result": res, "totalLength": count_result}
 
 

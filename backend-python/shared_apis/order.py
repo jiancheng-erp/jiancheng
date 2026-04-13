@@ -1,15 +1,14 @@
 from numpy import character
-from collections import Counter
 import constants
 import time
 from app_config import db
 from flask import Blueprint, jsonify, request, send_file, current_app
 from sqlalchemy import func, or_, case
-from api_utility import to_snake, to_camel
+from api_utility import to_snake, to_camel, estimate_status_converter
 from login.login import current_user, current_user_info
 import math
 import os
-from datetime import datetime, timedelta, date
+from datetime import datetime
 from event_processor import EventProcessor
 
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
@@ -26,198 +25,6 @@ from models import *
 from shared_apis import customer
 from logger import logger
 order_bp = Blueprint("order_bp", __name__)
-
-
-def _get_currency_to_rmb_rate_map():
-    """
-    从汇率表获取最新汇率，返回 currency_type 字符串 → RMB 汇率的映射。
-    例: {"USD": 6.893, "EUR": 8.114, "RMB": 1.0, "CNY": 1.0, ...}
-    """
-    from accounting.currency_exchange_management import get_exchange_rate_for_month
-    now = datetime.now()
-    year, month = now.year, now.month
-
-    # 获取 CNY base unit id
-    rmb_unit = db.session.query(AccountingCurrencyUnit).filter(
-        AccountingCurrencyUnit.unit_name_cn == "人民币"
-    ).first()
-    if not rmb_unit:
-        rmb_unit = db.session.query(AccountingCurrencyUnit).filter(
-            AccountingCurrencyUnit.unit_name_en.ilike("CNY")
-        ).first()
-    base_id = rmb_unit.unit_id if rmb_unit else 1
-
-    # 获取所有货币单位
-    all_units = db.session.query(AccountingCurrencyUnit).all()
-    unit_rate_map = {}  # unit_name_en → rate
-    for unit in all_units:
-        if unit.unit_id == base_id:
-            unit_rate_map[unit.unit_name_en.upper()] = 1.0
-            continue
-        row = get_exchange_rate_for_month(base_id, unit.unit_id, year, month)
-        if row and row.rate:
-            unit_rate_map[unit.unit_name_en.upper()] = float(row.rate)
-
-    # 建立 currency_type 字符串 → 汇率映射（含别名）
-    rate_map = {"RMB": 1.0, "CNY": 1.0}
-    for en_name, rate in unit_rate_map.items():
-        rate_map[en_name] = rate
-    # 常见别名
-    usd_rate = unit_rate_map.get("USD", 1.0)
-    eur_rate = unit_rate_map.get("EUR", 1.0)
-    rate_map.update({"USA": usd_rate, "USE": usd_rate, "美金": usd_rate, "€": eur_rate})
-    return rate_map
-
-
-def _build_currency_rate_case(rate_map):
-    """构建 SQLAlchemy CASE 表达式: currency_type → RMB 汇率"""
-    whens = [(OrderShoeType.currency_type == ct, rate) for ct, rate in rate_map.items()]
-    return case(*whens, else_=1.0)
-
-
-def _batch_production_status(order_shoe_ids):
-    """
-    批量计算生产状态标签。
-    返回 {order_shoe_id: label} 映射。
-    标签: 未排产 / 裁断 / 针车预备 / 针车 / 成型 / 未入库 / 部分入库 / 待出库 / 已出库
-    """
-    if not order_shoe_ids:
-        return {}
-
-    shoe_statuses = (
-        db.session.query(OrderShoeStatus)
-        .filter(OrderShoeStatus.order_shoe_id.in_(order_shoe_ids))
-        .all()
-    )
-    shoe_status_map = {s.order_shoe_id: s.current_status for s in shoe_statuses}
-
-    prod_infos = (
-        db.session.query(OrderShoeProductionInfo)
-        .filter(OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids))
-        .all()
-    )
-    prod_info_map = {p.order_shoe_id: p for p in prod_infos}
-
-    # 查询成品仓状态: min_status 和入库比率
-    finished_data = (
-        db.session.query(
-            OrderShoeType.order_shoe_id,
-            func.min(FinishedShoeStorage.finished_status).label("min_status"),
-            func.sum(FinishedShoeStorage.finished_actual_amount).label("total_actual"),
-            func.sum(FinishedShoeStorage.finished_estimated_amount).label("total_estimated"),
-        )
-        .join(
-            FinishedShoeStorage,
-            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
-        )
-        .filter(OrderShoeType.order_shoe_id.in_(order_shoe_ids))
-        .group_by(OrderShoeType.order_shoe_id)
-        .all()
-    )
-    finished_map = {}
-    for row in finished_data:
-        finished_map[row.order_shoe_id] = {
-            "min_status": row.min_status,
-            "total_actual": row.total_actual or 0,
-            "total_estimated": row.total_estimated or 0,
-        }
-
-    # 通过 ShoeOutboundApplyDetail → OrderShoeType 查询有进行中出库审核的 order_shoe
-    # status 1=待总经理审核, 3=待仓库出库
-    pending_apply_data = (
-        db.session.query(
-            OrderShoeType.order_shoe_id,
-        )
-        .join(
-            ShoeOutboundApplyDetail,
-            ShoeOutboundApplyDetail.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
-        )
-        .join(
-            ShoeOutboundApply,
-            ShoeOutboundApply.apply_id == ShoeOutboundApplyDetail.apply_id,
-        )
-        .filter(
-            OrderShoeType.order_shoe_id.in_(order_shoe_ids),
-            ShoeOutboundApply.status.in_([1, 3]),
-        )
-        .distinct()
-        .all()
-    )
-    pending_apply_osids = {r.order_shoe_id for r in pending_apply_data}
-
-    today = date.today()
-    result = {}
-    for osid in order_shoe_ids:
-        cs = shoe_status_map.get(osid)
-        prod = prod_info_map.get(osid)
-        fin = finished_map.get(osid)
-        has_pending_apply = osid in pending_apply_osids
-
-        label = _determine_warehouse_label(fin, has_pending_apply)
-
-        # 生产结束 → 看仓库状态
-        if cs is not None and cs >= 42:
-            result[osid] = label
-            continue
-
-        # 尚未进入生产或无排产信息 → 若有入库记录则按仓库状态判断
-        if prod is None or cs is None or cs < 23:
-            if fin is not None and fin["total_actual"] > 0:
-                result[osid] = label
-            else:
-                result[osid] = "未排产"
-            continue
-
-        # 业务显示按时间区间归类阶段：
-        # 裁断-针车预备前 => 裁断；针车预备-针车 => 针车预备；
-        # 针车-成型 => 针车；成型开始后到全部入库前 => 成型。
-        if _is_fully_inbound(fin):
-            result[osid] = label
-        elif prod.molding_start_date and today >= prod.molding_start_date:
-            result[osid] = "成型"
-        elif prod.sewing_start_date and today >= prod.sewing_start_date:
-            result[osid] = "针车"
-        elif prod.pre_sewing_start_date and today >= prod.pre_sewing_start_date:
-            result[osid] = "针车预备"
-        else:
-            result[osid] = "裁断"
-
-    return result
-
-
-def _determine_warehouse_label(fin, has_pending_apply=False):
-    """根据成品仓数据和出库审核状态判断入库/出库标签"""
-    if fin is None:
-        return "出库审核中" if has_pending_apply else "未入库"
-    min_status = fin["min_status"]
-    total_actual = fin["total_actual"]
-    total_estimated = fin["total_estimated"]
-
-    if min_status is not None and min_status == 2:
-        return "已出库"
-    if has_pending_apply:
-        return "出库审核中"
-    if total_estimated > 0 and total_actual >= total_estimated:
-        return "待出库"
-    if total_actual > 0:
-        return "部分入库"
-    return "未入库"
-
-
-def _is_fully_inbound(fin):
-    """是否已全部入库（或已进入出库流程）。"""
-    if fin is None:
-        return False
-
-    min_status = fin.get("min_status")
-    if min_status is not None and min_status >= 1:
-        return True
-
-    total_actual = fin.get("total_actual") or 0
-    total_estimated = fin.get("total_estimated") or 0
-    return total_estimated > 0 and total_actual >= total_estimated
-
-
 # 订单初始状态
 ORDER_CREATION_STATUS = 6
 # 订单开发部状态
@@ -238,52 +45,6 @@ ORDER_STATUS_CLERK_DISPLAY_MSG = {
 }
 # 技术部文员
 TECHNICAL_CLERK_ROLE = 15
-PRODUCTION_FLOW_ORDER_STATUS_NAME = "生产流程"
-ORDER_LINGER_TERMINAL_STATUS_NAMES = {
-    "发货量上传",
-    "全部发货确认",
-    "订单完成",
-}
-LINGER_IGNORED_SHOE_STATUS_NAMES = {
-    "裁断，批皮工价填报",
-    "针车及预备工序填报",
-    "成型工价填报",
-}
-LINGER_TERMINAL_SHOE_STATUS_NAMES = {
-    "一次采购入库",
-    "二次采购入库",
-    "二次BOM下发",
-    "二次BOM用量完成",
-    "二次BOM填写完成",
-}
-NON_LINGER_SHOE_STATUS_NAMES = LINGER_TERMINAL_SHOE_STATUS_NAMES | LINGER_IGNORED_SHOE_STATUS_NAMES
-
-
-def _format_datetime_or_na(value):
-    if not value:
-        return "N/A"
-    return value.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _build_delay_text(delay_days):
-    if delay_days is None:
-        return "N/A"
-    return f"{delay_days}天"
-
-
-def _join_display_values(values):
-    cleaned_values = [value for value in values if value and value != "N/A"]
-    if not cleaned_values:
-        return "N/A"
-    return " | ".join(cleaned_values)
-
-
-def _is_linger_status_name(status_name):
-    return bool(status_name) and status_name not in NON_LINGER_SHOE_STATUS_NAMES
-
-
-def _is_linger_order_status_name(status_name):
-    return bool(status_name) and status_name not in ORDER_LINGER_TERMINAL_STATUS_NAMES
 
 # 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
@@ -1335,6 +1096,7 @@ def get_display_orders_manager():
         return jsonify({"message": "invalid user role"}), 401
 
     q = base_q.filter(owner_col == current_staff_id)
+    q = q.filter(Order.order_type != "F")
 
     # --- 订单状态维度（进行中 <16 / 历史 >=16） ---
     is_history = bool(history_status)
@@ -1352,10 +1114,6 @@ def get_display_orders_manager():
         .all()
     )
     id_to_name = {s.staff_id: s.staff_name for s in department_staff}
-
-    # --- 批量计算生产状态 ---
-    order_shoe_ids = [order_shoe.order_shoe_id for _, order_shoe, *_ in entities]
-    prod_status_map = _batch_production_status(order_shoe_ids)
 
     # --- 结果组装 ---
     result = []
@@ -1375,6 +1133,7 @@ def get_display_orders_manager():
 
         result.append({
             "orderDbId": order.order_id,
+            "orderShoeId": order_shoe.order_shoe_id,
             "customerProductName": order_shoe.customer_product_name,
             "shoeRId": shoe.shoe_rid,
             "orderRid": order.order_rid,
@@ -1386,12 +1145,160 @@ def get_display_orders_manager():
             "orderEndDate": formatted_end_date,
             "orderStatus": order_status_message,
             "orderStatusVal": order_status.order_current_status if order_status else None,
-            "orderStatusValue": order_status.order_status_value if order_status else None,
-            "wrapRequirementUploaded": order.production_list_upload_status == PACKAGING_SPECS_UPLOADED,
             "orderSalesman": id_to_name.get(order.salesman_id, ""),
             "orderSupervisor": id_to_name.get(order.supervisor_id, ""),
-            "productionStatus": prod_status_map.get(order_shoe.order_shoe_id, "未排产"),
+            "productionStatus": "",
         })
+
+    # —— 补充生产/出库状态 ——
+    order_shoe_ids = [r["orderShoeId"] for r in result if r.get("orderShoeId")]
+    if order_shoe_ids:
+        prod_infos = {
+            pi.order_shoe_id: pi
+            for pi in db.session.query(OrderShoeProductionInfo)
+            .filter(OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids))
+            .all()
+        }
+        estimated_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(FinishedShoeStorage.finished_estimated_amount), 0
+                ).label("total_estimated"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        estimated_map = {
+            row.order_shoe_id: int(row.total_estimated)
+            for row in estimated_info
+        }
+        outbound_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(ShoeOutboundRecordDetail.outbound_amount), 0
+                ).label("total_outbound"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .join(
+                ShoeOutboundRecordDetail,
+                ShoeOutboundRecordDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        outbound_map = {
+            row.order_shoe_id: int(row.total_outbound)
+            for row in outbound_info
+        }
+        # 查询是否有入库完成的记录
+        inbound_done_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.count(FinishedShoeStorage.finished_shoe_id).label("done_count"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(
+                OrderShoe.order_shoe_id.in_(order_shoe_ids),
+                FinishedShoeStorage.finished_status >= 1,
+            )
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        inbound_done_map = {
+            row.order_shoe_id: int(row.done_count) > 0
+            for row in inbound_done_info
+        }
+        pending_apply_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.count(ShoeOutboundApply.apply_id.distinct()).label("pending_count"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .join(
+                ShoeOutboundApplyDetail,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .join(
+                ShoeOutboundApply,
+                ShoeOutboundApply.apply_id == ShoeOutboundApplyDetail.apply_id,
+            )
+            .filter(
+                OrderShoe.order_shoe_id.in_(order_shoe_ids),
+                ShoeOutboundApply.status.in_([1, 3]),
+            )
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        pending_apply_map = {
+            row.order_shoe_id: int(row.pending_count)
+            for row in pending_apply_info
+        }
+        for r in result:
+            os_id = r.get("orderShoeId")
+            if not os_id:
+                continue
+            pi = prod_infos.get(os_id)
+            if not pi:
+                r["productionStatus"] = "未排产"
+                continue
+            estimated_status = estimate_status_converter(pi)
+            if estimated_status != "生产已结束":
+                r["productionStatus"] = estimated_status
+                continue
+            # 生产已结束，检查是否入库完成
+            if not inbound_done_map.get(os_id, False):
+                r["productionStatus"] = "成型"
+                continue
+            estimated = estimated_map.get(os_id, 0)
+            outbound = outbound_map.get(os_id, 0)
+            has_pending_apply = pending_apply_map.get(os_id, 0) > 0
+            if outbound > 0 and outbound >= estimated and estimated > 0:
+                r["productionStatus"] = f"已全部出库 ({outbound}双)"
+            elif outbound > 0:
+                r["productionStatus"] = f"部分出库 (已出{outbound}/{estimated}双)"
+            elif has_pending_apply:
+                r["productionStatus"] = "出库审核中"
+            else:
+                r["productionStatus"] = "待成品出库"
 
     return jsonify(result)
 
@@ -1408,7 +1315,6 @@ def check_order_rid_exists():
 @order_bp.route("/order/getallorders", methods=["GET"])
 def get_all_orders():
     desc_symbol = request.args.get("descSymbol", None)
-    exclude_history = request.args.get("excludeHistory", None)
     entities = (
         db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -1419,9 +1325,8 @@ def get_all_orders():
             OrderStatusReference,
             OrderStatus.order_current_status == OrderStatusReference.order_status_id,
         )
+        .filter(Order.order_type != "F")
     )
-    if exclude_history:
-        entities = entities.filter(OrderStatus.order_current_status < ORDER_FINISH_SYMBOL)
     if desc_symbol:
         entities = entities.order_by(Order.order_rid.desc()).all()
     else:
@@ -1431,8 +1336,6 @@ def get_all_orders():
     staff_id_to_name_mapping = {}
     for staff in staff_entities:
         staff_id_to_name_mapping[staff.staff_id] = staff.staff_name
-    order_shoe_ids_all = [order_shoe.order_shoe_id for _, order_shoe, *_ in entities]
-    prod_status_map_all = _batch_production_status(order_shoe_ids_all)
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
@@ -1457,6 +1360,7 @@ def get_all_orders():
         result.append(
             {
                 "orderDbId": order.order_id,
+                "orderShoeId": order_shoe.order_shoe_id,
                 "customerProductName": order_shoe.customer_product_name,
                 "shoeRId": shoe.shoe_rid,
                 "orderRid": order.order_rid,
@@ -1471,14 +1375,168 @@ def get_all_orders():
                 "orderEndDate": formatted_end_date,
                 "orderStatus": order_status_message,
                 "orderStatusVal": order_status.order_current_status,
-                "orderStatusValue": order_status.order_status_value if order_status else None,
-                "wrapRequirementUploaded": order.production_list_upload_status == PACKAGING_SPECS_UPLOADED,
                 "orderPackagingStatus": order.packaging_status,
                 "orderLastStatus": order.last_status,
                 "orderCuttingModelStatus": order.cutting_model_status,
-                "productionStatus": prod_status_map_all.get(order_shoe.order_shoe_id, "未排产"),
+                "productionStatus": "",
             }
         )
+
+    # —— 补充生产/出库状态 ——
+    order_shoe_ids = [r["orderShoeId"] for r in result if r.get("orderShoeId")]
+    if order_shoe_ids:
+        # 查询生产排期信息
+        prod_infos = {
+            pi.order_shoe_id: pi
+            for pi in db.session.query(OrderShoeProductionInfo)
+            .filter(OrderShoeProductionInfo.order_shoe_id.in_(order_shoe_ids))
+            .all()
+        }
+        # 查询预计数量
+        estimated_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(FinishedShoeStorage.finished_estimated_amount), 0
+                ).label("total_estimated"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        estimated_map = {
+            row.order_shoe_id: int(row.total_estimated)
+            for row in estimated_info
+        }
+        # 查询出库数量
+        outbound_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.coalesce(
+                    func.sum(ShoeOutboundRecordDetail.outbound_amount), 0
+                ).label("total_outbound"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .join(
+                ShoeOutboundRecordDetail,
+                ShoeOutboundRecordDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        outbound_map = {
+            row.order_shoe_id: int(row.total_outbound)
+            for row in outbound_info
+        }
+        # 查询是否有入库完成的记录
+        inbound_done_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.count(FinishedShoeStorage.finished_shoe_id).label("done_count"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(
+                OrderShoe.order_shoe_id.in_(order_shoe_ids),
+                FinishedShoeStorage.finished_status >= 1,
+            )
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        inbound_done_map = {
+            row.order_shoe_id: int(row.done_count) > 0
+            for row in inbound_done_info
+        }
+        # 查询待审核的出库申请
+        pending_apply_info = (
+            db.session.query(
+                OrderShoe.order_shoe_id,
+                func.count(ShoeOutboundApply.apply_id.distinct()).label("pending_count"),
+            )
+            .join(
+                OrderShoeType,
+                OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+            )
+            .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .join(
+                ShoeOutboundApplyDetail,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .join(
+                ShoeOutboundApply,
+                ShoeOutboundApply.apply_id == ShoeOutboundApplyDetail.apply_id,
+            )
+            .filter(
+                OrderShoe.order_shoe_id.in_(order_shoe_ids),
+                ShoeOutboundApply.status.in_([1, 3]),
+            )
+            .group_by(OrderShoe.order_shoe_id)
+            .all()
+        )
+        pending_apply_map = {
+            row.order_shoe_id: int(row.pending_count)
+            for row in pending_apply_info
+        }
+
+        for r in result:
+            os_id = r.get("orderShoeId")
+            if not os_id:
+                continue
+            pi = prod_infos.get(os_id)
+            if not pi:
+                r["productionStatus"] = "未排产"
+                continue
+            estimated_status = estimate_status_converter(pi)
+            if estimated_status != "生产已结束":
+                r["productionStatus"] = estimated_status
+                continue
+            # 生产已结束，检查是否入库完成
+            if not inbound_done_map.get(os_id, False):
+                r["productionStatus"] = "成型"
+                continue
+            estimated = estimated_map.get(os_id, 0)
+            outbound = outbound_map.get(os_id, 0)
+            has_pending_apply = pending_apply_map.get(os_id, 0) > 0
+            if outbound > 0 and outbound >= estimated and estimated > 0:
+                r["productionStatus"] = f"已全部出库 ({outbound}双)"
+            elif outbound > 0:
+                r["productionStatus"] = f"部分出库 (已出{outbound}/{estimated}双)"
+            elif has_pending_apply:
+                r["productionStatus"] = "出库审核中"
+            else:
+                r["productionStatus"] = "待出库"
+
     return jsonify(result)
 
 
@@ -1639,254 +1697,6 @@ def get_order_doc_info():
     return jsonify(result)
 
 
-@order_bp.route("/order/getordershoestatusoptions", methods=["GET"])
-def get_order_shoe_status_options():
-    order_entities = (
-        db.session.query(OrderStatusReference)
-        .filter(~OrderStatusReference.order_status_name.in_(ORDER_LINGER_TERMINAL_STATUS_NAMES))
-        .order_by(OrderStatusReference.order_status_id.asc())
-        .all()
-    )
-    shoe_entities = (
-        db.session.query(OrderShoeStatusReference)
-        .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
-        .order_by(OrderShoeStatusReference.status_id.asc())
-        .all()
-    )
-    result = [
-        {
-            "value": f"order:{entity.order_status_id}",
-            "label": f"订单阶段 / {entity.order_status_name}",
-            "stageType": "order",
-            "stageId": entity.order_status_id,
-        }
-        for entity in order_entities
-    ]
-    result.extend(
-        [
-            {
-                "value": f"shoe:{entity.status_id}",
-                "label": f"鞋型阶段 / {entity.status_name}",
-                "stageType": "shoe",
-                "stageId": entity.status_id,
-            }
-            for entity in shoe_entities
-        ]
-    )
-    return jsonify({"options": result})
-
-
-def _parse_linger_stage_value(linger_stage_value):
-    linger_stage_type = None
-    linger_stage_id = None
-    if linger_stage_value and ":" in linger_stage_value:
-        linger_stage_type, linger_stage_id_text = linger_stage_value.split(":", 1)
-        try:
-            linger_stage_id = int(linger_stage_id_text)
-        except ValueError:
-            linger_stage_type = None
-            linger_stage_id = None
-    return linger_stage_type, linger_stage_id
-
-
-def _build_linger_dashboard_records(linger_stage_value="", min_stay_days=0):
-    now = datetime.now()
-    linger_stage_type, linger_stage_id = _parse_linger_stage_value(linger_stage_value)
-    threshold_time = now - timedelta(days=min_stay_days) if min_stay_days and min_stay_days > 0 else None
-    records = []
-
-    include_order_records = linger_stage_type in (None, "order")
-    include_shoe_records = linger_stage_type in (None, "shoe")
-
-    if include_order_records:
-        order_query = (
-            db.session.query(
-                Order.order_id,
-                Order.order_rid,
-                Customer.customer_name,
-                OrderStatus.order_current_status,
-                OrderStatus.update_time,
-                OrderStatusReference.order_status_name,
-            )
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
-            .join(
-                OrderStatusReference,
-                OrderStatus.order_current_status == OrderStatusReference.order_status_id,
-            )
-            .filter(OrderStatus.order_current_status != ORDER_IN_PROD_STATUS)
-            .filter(~OrderStatusReference.order_status_name.in_(ORDER_LINGER_TERMINAL_STATUS_NAMES))
-        )
-        if linger_stage_type == "order" and linger_stage_id is not None:
-            order_query = order_query.filter(OrderStatus.order_current_status == linger_stage_id)
-        if threshold_time is not None:
-            order_query = order_query.filter(OrderStatus.update_time <= threshold_time)
-
-        for order_id, order_rid, customer_name, order_status_id, update_time, status_name in order_query.all():
-            if not update_time or not _is_linger_order_status_name(status_name):
-                continue
-            delay_days = max(0, (now - update_time).days)
-            records.append({
-                "recordType": "order",
-                "recordKey": f"order:{order_id}",
-                "orderId": order_id,
-                "orderRid": order_rid,
-                "customerName": customer_name,
-                "shoeRid": "N/A",
-                "customerProductName": "N/A",
-                "lingerStage": status_name,
-                "lingerStageType": "订单阶段",
-                "lingerSince": _format_datetime_or_na(update_time),
-                "delayDays": delay_days,
-                "delayText": _build_delay_text(delay_days),
-                "orderStatusId": order_status_id,
-                "shoeStatusId": None,
-            })
-
-    order_ids_for_display = {
-        record["orderId"]
-        for record in records
-        if record.get("orderId") is not None
-    }
-    if order_ids_for_display:
-        order_shoe_rows = (
-            db.session.query(
-                OrderShoe.order_id,
-                Shoe.shoe_rid,
-                OrderShoe.customer_product_name,
-            )
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .filter(OrderShoe.order_id.in_(order_ids_for_display))
-            .all()
-        )
-        order_display_map = {}
-        for order_id, shoe_rid, customer_product_name in order_shoe_rows:
-            display_obj = order_display_map.setdefault(
-                order_id,
-                {"shoeRids": [], "customerProductNames": []},
-            )
-            if shoe_rid and shoe_rid not in display_obj["shoeRids"]:
-                display_obj["shoeRids"].append(shoe_rid)
-            if (
-                customer_product_name
-                and customer_product_name not in display_obj["customerProductNames"]
-            ):
-                display_obj["customerProductNames"].append(customer_product_name)
-
-        for record in records:
-            display_obj = order_display_map.get(record.get("orderId"))
-            if not display_obj:
-                continue
-            joined_shoe_rids = _join_display_values(display_obj["shoeRids"])
-            joined_customer_products = _join_display_values(
-                display_obj["customerProductNames"]
-            )
-            if joined_shoe_rids != "N/A":
-                record["shoeRid"] = joined_shoe_rids
-            if joined_customer_products != "N/A":
-                record["customerProductName"] = joined_customer_products
-
-    if include_shoe_records:
-        shoe_query = (
-            db.session.query(
-                Order.order_id,
-                Order.order_rid,
-                Customer.customer_name,
-                OrderShoe.order_shoe_id,
-                Shoe.shoe_rid,
-                OrderShoe.customer_product_name,
-                OrderShoeStatus.current_status,
-                OrderShoeStatusReference.status_name,
-                OrderShoeStatus.update_time,
-            )
-            .join(OrderStatus, Order.order_id == OrderStatus.order_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(OrderShoeStatus, OrderShoeStatus.order_shoe_id == OrderShoe.order_shoe_id)
-            .join(
-                OrderShoeStatusReference,
-                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
-            )
-            .filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
-            .filter(OrderShoeStatus.revert_info.is_(None))
-            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
-            .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
-            .order_by(OrderShoe.order_shoe_id.asc(), OrderShoeStatus.update_time.desc())
-        )
-        if linger_stage_type == "shoe" and linger_stage_id is not None:
-            shoe_query = shoe_query.filter(OrderShoeStatus.current_status == linger_stage_id)
-        if threshold_time is not None:
-            shoe_query = shoe_query.filter(OrderShoeStatus.update_time <= threshold_time)
-
-        for row in shoe_query.all():
-            (
-                order_id,
-                order_rid,
-                customer_name,
-                order_shoe_id,
-                shoe_rid,
-                customer_product_name,
-                shoe_status_id,
-                status_name,
-                update_time,
-            ) = row
-            if not update_time or not _is_linger_status_name(status_name):
-                continue
-            delay_days = max(0, (now - update_time).days)
-            records.append({
-                "recordType": "shoe",
-                "recordKey": f"shoe:{order_shoe_id}:{shoe_status_id}",
-                "orderId": order_id,
-                "orderRid": order_rid,
-                "customerName": customer_name,
-                "shoeRid": shoe_rid,
-                "customerProductName": customer_product_name,
-                "lingerStage": status_name,
-                "lingerStageType": "鞋型阶段",
-                "lingerSince": _format_datetime_or_na(update_time),
-                "delayDays": delay_days,
-                "delayText": _build_delay_text(delay_days),
-                "orderStatusId": ORDER_IN_PROD_STATUS,
-                "shoeStatusId": shoe_status_id,
-            })
-
-    records.sort(key=lambda item: (-item["delayDays"], item["orderRid"], item["shoeRid"]))
-    return records
-
-
-@order_bp.route("/order/getlingerdashboard", methods=["GET"])
-def get_linger_dashboard():
-    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
-    min_stay_days = request.args.get("minStayDays", 0, type=int)
-    records = _build_linger_dashboard_records(linger_stage_value, min_stay_days)
-
-    stage_counter = Counter(record["lingerStage"] for record in records)
-    type_counter = Counter(record["lingerStageType"] for record in records)
-    summary = [
-        {"title": "滞留总数", "value": len(records)},
-        {"title": "订单阶段滞留", "value": type_counter.get("订单阶段", 0)},
-        {"title": "鞋型阶段滞留", "value": type_counter.get("鞋型阶段", 0)},
-        {"title": "超7天", "value": sum(1 for record in records if record["delayDays"] >= 7)},
-    ]
-    stage_distribution = [
-        {"name": name, "value": value}
-        for name, value in stage_counter.most_common()
-    ]
-    type_distribution = [
-        {"name": name, "value": value}
-        for name, value in type_counter.items()
-    ]
-
-    return jsonify({
-        "summary": summary,
-        "stageDistribution": stage_distribution,
-        "typeDistribution": type_distribution,
-        "topRecords": records[:20],
-        "records": records,
-    })
-
-
 @order_bp.route("/order/getorderfullinfo", methods=["GET"])
 def get_order_full_info():
     page = request.args.get("page", 1, type=int)
@@ -1897,22 +1707,6 @@ def get_order_full_info():
     shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
     order_cid_search = request.args.get("orderCIdSearch", "", type=str)
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
-    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
-    min_stay_days = request.args.get("minStayDays", 0, type=int)
-    start_date_from = request.args.get("startDateFrom", "", type=str)
-    start_date_to = request.args.get("startDateTo", "", type=str)
-    end_date_from = request.args.get("endDateFrom", "", type=str)
-    end_date_to = request.args.get("endDateTo", "", type=str)
-
-    linger_stage_type = None
-    linger_stage_id = None
-    if linger_stage_value and ":" in linger_stage_value:
-        linger_stage_type, linger_stage_id_text = linger_stage_value.split(":", 1)
-        try:
-            linger_stage_id = int(linger_stage_id_text)
-        except ValueError:
-            linger_stage_type = None
-            linger_stage_id = None
 
     character, staff, department = current_user_info()
 
@@ -1942,21 +1736,10 @@ def get_order_full_info():
         .subquery()
     )
 
-    rate_map = _get_currency_to_rmb_rate_map()
-
     order_amount_subquery = (
         db.session.query(
             Order.order_id,
             func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
-            func.sum(
-                OrderShoeBatchInfo.total_amount * func.coalesce(OrderShoeType.unit_price, 0)
-            ).label("order_total_price"),
-            func.group_concat(func.distinct(OrderShoeType.currency_type)).label("order_currency"),
-            func.sum(
-                OrderShoeBatchInfo.total_amount
-                * func.coalesce(OrderShoeType.unit_price, 0)
-                * _build_currency_rate_case(rate_map)
-            ).label("order_total_price_rmb"),
         )
         .join(
             OrderShoe,
@@ -1970,56 +1753,22 @@ def get_order_full_info():
             OrderShoeBatchInfo,
             OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
-        .group_by(Order.order_id)
+        .group_by(OrderShoe.order_id)
         .subquery()
     )
 
-    matched_status_subquery = None
-    matched_order_status = None
-    if linger_stage_type == "shoe" and linger_stage_id is not None:
-        matched_status_query = (
-            db.session.query(
-                OrderShoeStatus.order_shoe_id.label("order_shoe_id"),
-                OrderShoeStatus.current_status.label("matched_status_id"),
-                OrderShoeStatusReference.status_name.label("matched_status_name"),
-                OrderShoeStatus.update_time.label("matched_status_update_time"),
-            )
-            .join(
-                OrderShoeStatusReference,
-                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
-            )
-            .filter(OrderShoeStatus.current_status == linger_stage_id)
-            .filter(OrderShoeStatus.revert_info.is_(None))
-            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
-            .filter(~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES))
-        )
-        if min_stay_days and min_stay_days > 0:
-            matched_status_query = matched_status_query.filter(
-                OrderShoeStatus.update_time
-                <= datetime.now() - timedelta(days=min_stay_days)
-            )
-        matched_status_subquery = matched_status_query.subquery()
-    elif linger_stage_type == "order" and linger_stage_id is not None:
-        matched_order_status = linger_stage_id
-
-    query_columns = [
-        Order,
-        OrderStatus,
-        OrderStatusReference,
-        OrderShoe,
-        order_shoe_status_reference.c.status_name.label(
-            "order_shoe_status_reference_names"
-        ),
-        Customer,
-        Shoe,
-        order_amount_subquery.c.order_amount,
-        order_amount_subquery.c.order_total_price,
-        order_amount_subquery.c.order_currency,
-        order_amount_subquery.c.order_total_price_rmb,
-    ]
-
     query = (
-        db.session.query(*query_columns)
+        db.session.query(
+            Order,
+            OrderStatusReference,
+            OrderShoe,
+            order_shoe_status_reference.c.status_name.label(
+                "order_shoe_status_reference_names"
+            ),
+            Customer,
+            Shoe,
+            order_amount_subquery.c.order_amount,
+        )
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(
             OrderStatusReference,
@@ -2051,28 +1800,6 @@ def get_order_full_info():
         .order_by(Order.order_id.desc())
     )
 
-    if start_date_from:
-        query = query.filter(Order.start_date >= start_date_from)
-    if start_date_to:
-        query = query.filter(Order.start_date <= start_date_to)
-    if end_date_from:
-        query = query.filter(Order.end_date >= end_date_from)
-    if end_date_to:
-        query = query.filter(Order.end_date <= end_date_to)
-
-    if matched_status_subquery is not None:
-        query = query.join(
-            matched_status_subquery,
-            OrderShoe.order_shoe_id == matched_status_subquery.c.order_shoe_id,
-        )
-        query = query.filter(OrderStatus.order_current_status == ORDER_IN_PROD_STATUS)
-    elif matched_order_status is not None:
-        query = query.filter(OrderStatus.order_current_status == matched_order_status)
-        if min_stay_days and min_stay_days > 0:
-            query = query.filter(
-                OrderStatus.update_time <= datetime.now() - timedelta(days=min_stay_days)
-            )
-
     if character.character_id == DEV_DEPARTMENT_MANAGER:
         query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
         query = query.filter(Shoe.shoe_department_id == department.department_name)
@@ -2101,84 +1828,19 @@ def get_order_full_info():
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
 
-    response_order_shoe_ids = [
-        row[3].order_shoe_id
-        for row in response
-        if len(row) > 3 and row[3] is not None
-    ]
-    active_status_by_shoe = {}
-    if response_order_shoe_ids:
-        active_status_query = (
-            db.session.query(
-                OrderShoeStatus.order_shoe_id,
-                OrderShoeStatusReference.status_name,
-                OrderShoeStatus.update_time,
-            )
-            .join(
-                OrderShoeStatusReference,
-                OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
-            )
-            .filter(OrderShoeStatus.order_shoe_id.in_(response_order_shoe_ids))
-            .filter(OrderShoeStatus.revert_info.is_(None))
-            .filter(OrderShoeStatus.current_status_value.in_([0, 1]))
-        )
-        active_status_query = active_status_query.filter(
-            ~OrderShoeStatusReference.status_name.in_(NON_LINGER_SHOE_STATUS_NAMES)
-        )
-        active_status_rows = (
-            active_status_query
-            .order_by(OrderShoeStatus.order_shoe_id.asc(), OrderShoeStatus.update_time.desc())
-            .all()
-        )
-        for order_shoe_id, status_name, update_time in active_status_rows:
-            active_status_by_shoe.setdefault(order_shoe_id, []).append({
-                "status_name": status_name or "N/A",
-                "update_time": update_time,
-            })
-
     # Initialize a dictionary to group orders
     orders_dict = {}
 
     # Loop through the query result
-    for row in response:
-        (
-            order,
-            order_status,
-            order_status_reference,
-            order_shoe,
-            order_shoe_status_reference_names,
-            customer,
-            shoe,
-            order_amount,
-            order_total_price,
-            order_currency,
-            order_total_price_rmb,
-        ) = row
-        active_status_entries = active_status_by_shoe.get(order_shoe.order_shoe_id, [])
-        display_stage_names = []
-        display_stage_times = []
-        display_stage_delay_days = []
-        is_production_flow_order = (
-            order_status_reference is not None
-            and order_status_reference.order_status_name == PRODUCTION_FLOW_ORDER_STATUS_NAME
-        )
-        if is_production_flow_order:
-            for active_status_info in active_status_entries:
-                status_name = active_status_info.get("status_name")
-                update_time = active_status_info.get("update_time")
-                if not _is_linger_status_name(status_name) or not update_time:
-                    continue
-                display_stage_names.append(status_name)
-                display_stage_times.append(_format_datetime_or_na(update_time))
-                display_stage_delay_days.append(max(0, (datetime.now() - update_time).days))
-        elif order_status_reference and _is_linger_order_status_name(
-            order_status_reference.order_status_name
-        ):
-            if order_status and order_status.update_time:
-                display_stage_names.append(order_status_reference.order_status_name)
-                display_stage_times.append(_format_datetime_or_na(order_status.update_time))
-                display_stage_delay_days.append(max(0, (datetime.now() - order_status.update_time).days))
-        matched_delay_days = max(display_stage_delay_days) if display_stage_delay_days else None
+    for (
+        order,
+        order_status_reference,
+        order_shoe,
+        order_shoe_status_reference_names,
+        customer,
+        shoe,
+        order_amount,
+    ) in response:
         formatted_start_date = (
             order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A"
         )
@@ -2203,12 +1865,6 @@ def get_order_full_info():
                 ),
                 "shoes": {},  # Using a dictionary to avoid duplicate shoes
                 "orderAmount": order_amount if order_amount else 0,
-                "orderTotalPrice": float(order_total_price) if order_total_price else 0,
-                "orderCurrency": order_currency or "",
-                "orderTotalPriceRmb": float(order_total_price_rmb) if order_total_price_rmb else 0,
-                "matchedStatusNames": "N/A",
-                "maxMatchedDelayDays": None,
-                "maxMatchedDelayText": "N/A",
             }
 
         # Use a unique key for each shoe to avoid duplicates
@@ -2234,7 +1890,6 @@ def get_order_full_info():
             orders_dict[order.order_id]["shoes"][shoe_key] = {
                 "shoeRid": shoe.shoe_rid if shoe else "N/A",
                 "customerId": order_shoe.customer_product_name if order_shoe else "N/A",
-                "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "N/A",
                 "firstBom": "N/A",
                 "secondBom": "N/A",
                 "firstOrder": "N/A",
@@ -2248,13 +1903,6 @@ def get_order_full_info():
                 "firstUsageInputIssueEventTime": "N/A",
                 "firstPurchaseOrderIssueEventTime": "N/A",
                 "secondPurchaseOrderIssueEventTime": "N/A",
-                "matchedStatusName": _join_display_values(display_stage_names),
-                "matchedStatusNames": display_stage_names,
-                "matchedStatusUpdateTime": _join_display_values(display_stage_times),
-                "matchedStatusDelayDays": matched_delay_days,
-                "matchedStatusDelayText": _join_display_values([
-                    _build_delay_text(delay_days) for delay_days in display_stage_delay_days
-                ]),
             }
 
         # # Assign BOM based on bom_type
@@ -2283,26 +1931,6 @@ def get_order_full_info():
         order_data["shoes"] = list(
             order_data["shoes"].values()
         )  # Convert shoe dict to list
-        matched_status_names = sorted(
-            {
-                status_name
-                for shoe in order_data["shoes"]
-                for status_name in shoe.get("matchedStatusNames", [])
-                if status_name != "N/A"
-            }
-        )
-        matched_delay_days = [
-            shoe["matchedStatusDelayDays"]
-            for shoe in order_data["shoes"]
-            if shoe["matchedStatusDelayDays"] is not None
-        ]
-        if matched_status_names:
-            order_data["matchedStatusNames"] = "、".join(matched_status_names)
-        if matched_delay_days:
-            order_data["maxMatchedDelayDays"] = max(matched_delay_days)
-            order_data["maxMatchedDelayText"] = _build_delay_text(
-                order_data["maxMatchedDelayDays"]
-            )
         all_order_event_times = (
             db.session.query(Event).join(
                 Order, Event.event_order_id == Order.order_id
@@ -2369,209 +1997,6 @@ def get_order_full_info():
         
 
     return jsonify({"result": result, "total": count_result})
-
-
-@order_bp.route("/order/getcurrencyrates", methods=["GET"])
-def get_currency_rates():
-    """获取最新汇率映射（currency_type → RMB 汇率）"""
-    rate_map = _get_currency_to_rmb_rate_map()
-    return jsonify({"rates": rate_map})
-
-
-@order_bp.route("/order/exportorderexcel", methods=["GET"])
-def export_order_excel():
-    """导出订单查询结果为 Excel"""
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, Border, Side
-    from io import BytesIO
-
-    order_search = request.args.get("orderSearch", "", type=str)
-    customer_search = request.args.get("customerSearch", "", type=str)
-    shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
-    start_date_from = request.args.get("startDateFrom", "", type=str)
-    start_date_to = request.args.get("startDateTo", "", type=str)
-    end_date_from = request.args.get("endDateFrom", "", type=str)
-    end_date_to = request.args.get("endDateTo", "", type=str)
-    convert_to_rmb = request.args.get("convertToRMB", "0", type=str) == "1"
-
-    rate_map = _get_currency_to_rmb_rate_map()
-
-    order_amount_subquery = (
-        db.session.query(
-            Order.order_id,
-            func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
-            func.sum(OrderShoeBatchInfo.total_amount * func.coalesce(OrderShoeType.unit_price, 0)).label("order_total_price"),
-            func.group_concat(func.distinct(OrderShoeType.currency_type)).label("order_currency"),
-            func.sum(
-                OrderShoeBatchInfo.total_amount
-                * func.coalesce(OrderShoeType.unit_price, 0)
-                * _build_currency_rate_case(rate_map)
-            ).label("order_total_price_rmb"),
-        )
-        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
-        .join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .group_by(Order.order_id)
-        .subquery()
-    )
-
-    order_shoe_status_reference = (
-        db.session.query(
-            OrderShoe.order_shoe_id,
-            func.group_concat(OrderShoeStatusReference.status_name).label("status_name"),
-        )
-        .join(OrderShoeStatus, OrderShoeStatusReference.status_id == OrderShoeStatus.current_status)
-        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
-        .group_by(OrderShoe.order_shoe_id)
-        .subquery()
-    )
-
-    query = (
-        db.session.query(
-            Order,
-            OrderStatus,
-            OrderStatusReference,
-            OrderShoe,
-            order_shoe_status_reference.c.status_name.label("shoe_status_names"),
-            Customer,
-            Shoe,
-            order_amount_subquery.c.order_amount,
-            order_amount_subquery.c.order_total_price,
-            order_amount_subquery.c.order_currency,
-            order_amount_subquery.c.order_total_price_rmb,
-        )
-        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
-        .join(OrderStatusReference, OrderStatus.order_current_status == OrderStatusReference.order_status_id)
-        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .join(order_shoe_status_reference, OrderShoe.order_shoe_id == order_shoe_status_reference.c.order_shoe_id)
-        .join(Customer, Order.customer_id == Customer.customer_id)
-        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .join(order_amount_subquery, Order.order_id == order_amount_subquery.c.order_id)
-        .filter(
-            Order.order_rid.like(f"%{order_search}%"),
-            Customer.customer_name.like(f"%{customer_search}%"),
-            Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
-        )
-        .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
-        .order_by(Order.order_id.desc())
-    )
-
-    if start_date_from:
-        query = query.filter(Order.start_date >= start_date_from)
-    if start_date_to:
-        query = query.filter(Order.start_date <= start_date_to)
-    if end_date_from:
-        query = query.filter(Order.end_date >= end_date_from)
-    if end_date_to:
-        query = query.filter(Order.end_date <= end_date_to)
-
-    rows = query.distinct().all()
-
-    # Build order dict
-    orders_dict = {}
-    for row in rows:
-        order, order_status, order_status_ref, order_shoe, shoe_status_names, customer, shoe, order_amount, order_total_price, order_currency, order_total_price_rmb = row
-        fmt_start = order.start_date.strftime("%Y-%m-%d") if order.start_date else ""
-        fmt_end = order.end_date.strftime("%Y-%m-%d") if order.end_date else ""
-
-        if order.order_id not in orders_dict:
-            orders_dict[order.order_id] = {
-                "orderRid": order.order_rid or "",
-                "customerName": customer.customer_name if customer else "",
-                "createTime": fmt_start,
-                "deadlineTime": fmt_end,
-                "status": order_status_ref.order_status_name if order_status_ref else "",
-                "orderAmount": order_amount or 0,
-                "orderTotalPrice": float(order_total_price) if order_total_price else 0,
-                "orderCurrency": order_currency or "",
-                "orderTotalPriceRmb": float(order_total_price_rmb) if order_total_price_rmb else 0,
-                "shoes": [],
-            }
-
-        orders_dict[order.order_id]["shoes"].append({
-            "shoeRid": shoe.shoe_rid if shoe else "",
-            "customerId": order_shoe.customer_product_name if order_shoe else "",
-            "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "",
-            "statuses": shoe_status_names or "",
-        })
-
-    # Create Excel
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "订单查询"
-
-    header_font = Font(bold=True, size=11)
-    thin_border = Border(
-        left=Side(style="thin"), right=Side(style="thin"),
-        top=Side(style="thin"), bottom=Side(style="thin"),
-    )
-    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-    price_header = "订单金额(RMB)" if convert_to_rmb else "订单金额"
-    headers = ["订单号", "客人名称", "工厂型号", "客户型号", "设计部门", "订单数量", price_header, "金额单位", "订单日期", "交货日期", "订单状态", "鞋型状态"]
-    for col_idx, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_idx, value=h)
-        cell.font = header_font
-        cell.border = thin_border
-        cell.alignment = center_align
-
-    row_idx = 2
-    for order_data in orders_dict.values():
-        shoe_rids = ", ".join(s["shoeRid"] for s in order_data["shoes"])
-        customer_ids = ", ".join(s["customerId"] for s in order_data["shoes"])
-        design_departments = ", ".join(s["designDepartment"] for s in order_data["shoes"])
-        statuses = ", ".join(s["statuses"] for s in order_data["shoes"])
-
-        total_price_val = ""
-        currency_unit = ""
-        if convert_to_rmb:
-            if order_data["orderTotalPriceRmb"]:
-                total_price_val = f"{order_data['orderTotalPriceRmb']:.2f}"
-            currency_unit = "RMB"
-        else:
-            if order_data["orderTotalPrice"]:
-                total_price_val = f"{order_data['orderTotalPrice']:.2f}"
-            currency_unit = order_data["orderCurrency"] or ""
-        values = [
-            order_data["orderRid"],
-            order_data["customerName"],
-            shoe_rids,
-            customer_ids,
-            design_departments,
-            order_data["orderAmount"],
-            total_price_val,
-            currency_unit,
-            order_data["createTime"],
-            order_data["deadlineTime"],
-            order_data["status"],
-            statuses,
-        ]
-        for col_idx, val in enumerate(values, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=val)
-            cell.border = thin_border
-            cell.alignment = Alignment(vertical="center", wrap_text=True)
-        row_idx += 1
-
-    # Auto-fit column widths
-    for col in ws.columns:
-        max_len = 0
-        col_letter = col[0].column_letter
-        for cell in col:
-            if cell.value:
-                max_len = max(max_len, len(str(cell.value)))
-        ws.column_dimensions[col_letter].width = min(max_len + 4, 40)
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    filename = f"订单查询_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
 
 
 @order_bp.route("/order/getorderpageinfo", methods=["GET"])
