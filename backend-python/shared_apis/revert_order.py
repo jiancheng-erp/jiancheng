@@ -341,6 +341,7 @@ def revert_order_save_for_order():
     revert_event = RevertEvent(
         order_id=order_id,
         revert_reason=revert_reason,
+        revert_detail=revert_detail,
         responsible_department=revert_depart,
         initialing_department=initialing_department,
         event_time=revert_time,
@@ -423,6 +424,7 @@ def revert_order_save():
     revert_event = RevertEvent(
         order_id=order_id,
         revert_reason=revert_reason,
+        revert_detail=revert_detail,
         responsible_department=revert_depart,
         initialing_department=initialing_department,
         event_time=revert_time,

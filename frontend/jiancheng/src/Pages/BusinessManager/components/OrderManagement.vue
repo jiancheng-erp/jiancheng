@@ -32,6 +32,7 @@
                 <el-radio-button label="全部订单" value="all" />
                 <el-radio-button label="已下发订单" value="已下发" />
                 <el-radio-button label="未下发订单" value="未下发" />
+                <el-radio-button label="退回订单" value="退回" />
             </el-radio-group>
         </el-col>
         <el-col :span="4">
