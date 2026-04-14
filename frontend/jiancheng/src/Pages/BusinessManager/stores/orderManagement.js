@@ -48,8 +48,11 @@ export const useOrderManagementStore = defineStore('orderManagement', {
             } else if (value === '已下发') {
                 this.orderInCurStatus = ''
                 this.orderNotInCurStatus = 'all'
-            } else {
+            } else if (value === '未下发') {
                 this.orderInCurStatus = 'all'
+                this.orderNotInCurStatus = ''
+            } else if (value === '退回') {
+                this.orderInCurStatus = ''
                 this.orderNotInCurStatus = ''
             }
             this.filterDisplayOrder()
@@ -125,10 +128,14 @@ export const useOrderManagementStore = defineStore('orderManagement', {
             this.displayData = this.unfilteredData
             this.indexToFilter.forEach((index) => this.filterOrderByFilterType(index + 1))
             this.filterOrderByStatus()
+            this.filterOrderByRevert()
             this.totalItems = this.displayData.length
             this.currentPage = 1
         },
         filterOrderByStatus() {
+            if (this.radio === '退回') {
+                return
+            }
             if (this.orderInCurStatus && this.orderNotInCurStatus) {
                 return
             }
@@ -138,6 +145,11 @@ export const useOrderManagementStore = defineStore('orderManagement', {
             } else if (this.orderNotInCurStatus) {
                 this.filterData = this.displayData.filter((task) => task.orderStatusVal != 6)
                 this.displayData = this.filterData
+            }
+        },
+        filterOrderByRevert() {
+            if (this.radio === '退回') {
+                this.displayData = this.displayData.filter((task) => task.hasRevertEvent === true)
             }
         },
         filterOrderByStartDate() {

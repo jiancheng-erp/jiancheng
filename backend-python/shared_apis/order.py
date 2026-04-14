@@ -722,6 +722,20 @@ def get_order_info_business():
         ),
         "orderShoeAllData": [],
     }
+    # Query the latest revert event for this order
+    latest_revert_event = (
+        db.session.query(RevertEvent)
+        .filter(RevertEvent.order_id == order_id)
+        .order_by(RevertEvent.event_time.desc())
+        .first()
+    )
+    if latest_revert_event:
+        result["revertInfo"] = {
+            "revertReason": latest_revert_event.revert_reason,
+            "revertDetail": latest_revert_event.revert_detail,
+            "revertTime": latest_revert_event.event_time.strftime("%Y-%m-%d %H:%M:%S") if latest_revert_event.event_time else "",
+            "initialingDepartment": latest_revert_event.initialing_department,
+        }
     if entity.Order.production_list_upload_status == "2":
         result["wrapRequirementUploadStatus"] = "已上传包装文件"
     else:
@@ -1300,6 +1314,22 @@ def get_display_orders_manager():
             else:
                 r["productionStatus"] = "待成品出库"
 
+    # —— 补充退回状态 ——
+    order_ids_in_result = list({r["orderDbId"] for r in result if r.get("orderDbId")})
+    if order_ids_in_result:
+        reverted_order_ids = {
+            row.order_id
+            for row in db.session.query(RevertEvent.order_id)
+            .filter(RevertEvent.order_id.in_(order_ids_in_result))
+            .distinct()
+            .all()
+        }
+        for r in result:
+            r["hasRevertEvent"] = r["orderDbId"] in reverted_order_ids
+    else:
+        for r in result:
+            r["hasRevertEvent"] = False
+
     return jsonify(result)
 
 @order_bp.route("/order/checkorderridexists", methods=["GET"])
@@ -1536,6 +1566,22 @@ def get_all_orders():
                 r["productionStatus"] = "出库审核中"
             else:
                 r["productionStatus"] = "待出库"
+
+    # —— 补充退回状态 ——
+    order_ids_in_result = list({r["orderDbId"] for r in result if r.get("orderDbId")})
+    if order_ids_in_result:
+        reverted_order_ids = {
+            row.order_id
+            for row in db.session.query(RevertEvent.order_id)
+            .filter(RevertEvent.order_id.in_(order_ids_in_result))
+            .distinct()
+            .all()
+        }
+        for r in result:
+            r["hasRevertEvent"] = r["orderDbId"] in reverted_order_ids
+    else:
+        for r in result:
+            r["hasRevertEvent"] = False
 
     return jsonify(result)
 
