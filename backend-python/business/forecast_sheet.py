@@ -30,6 +30,7 @@ forecast_sheet_bp = Blueprint("forecast_sheet_bp", __name__)
 
 FORECAST_STATUS_DRAFT = 0
 FORECAST_STATUS_DISPATCHED = 1
+FORECAST_STATUS_PARTIAL = 2
 
 FORECAST_PACKAGING_FILE_NAME = "包装资料.xlsx"
 
@@ -194,7 +195,7 @@ def list_forecast_sheets():
                 "startDate": sheet.start_date.strftime("%Y-%m-%d") if sheet.start_date else "",
                 "endDate": sheet.end_date.strftime("%Y-%m-%d") if sheet.end_date else "",
                 "status": sheet.status,
-                "statusText": "已下发" if sheet.status == FORECAST_STATUS_DISPATCHED else "草稿",
+                "statusText": "已下发" if sheet.status == FORECAST_STATUS_DISPATCHED else ("部分下发" if sheet.status == FORECAST_STATUS_PARTIAL else "草稿"),
                 "itemCount": item_count_map.get(sheet.forecast_sheet_id, 0),
                 "packagingUploaded": _is_forecast_packaging_uploaded(sheet.forecast_rid),
                 "createdOrderIds": ",".join([str(order_id) for order_id in created_order_ids]),
@@ -253,6 +254,7 @@ def get_forecast_sheet_items():
                 "packagingInfoQuantity": packaging_info_quantity,
                 "unitPrice": float(item.unit_price or 0),
                 "totalPairs": item.total_pairs,
+                "dispatchStatus": int(item.dispatch_status or 0),
             }
         )
     return jsonify(result), 200
@@ -490,8 +492,8 @@ def update_forecast_sheet():
     sheet = db.session.query(ForecastSheet).filter(ForecastSheet.forecast_sheet_id == sheet_id).first()
     if not sheet:
         return jsonify({"error": "forecast sheet not found"}), 404
-    if sheet.status == FORECAST_STATUS_DISPATCHED:
-        return jsonify({"error": "已下发预报单不允许编辑"}), 400
+    if sheet.status in (FORECAST_STATUS_DISPATCHED, FORECAST_STATUS_PARTIAL):
+        return jsonify({"error": "已下发（含部分下发）预报单不允许编辑"}), 400
 
     forecast_rid = (info.get("forecastRid") or "").strip()
     if not forecast_rid:
@@ -590,8 +592,8 @@ def delete_forecast_sheet():
     sheet = db.session.query(ForecastSheet).filter(ForecastSheet.forecast_sheet_id == sheet_id).first()
     if not sheet:
         return jsonify({"error": "forecast sheet not found"}), 404
-    if sheet.status == FORECAST_STATUS_DISPATCHED:
-        return jsonify({"error": "已下发预报单不允许删除"}), 400
+    if sheet.status in (FORECAST_STATUS_DISPATCHED, FORECAST_STATUS_PARTIAL):
+        return jsonify({"error": "已下发（含部分下发）预报单不允许删除"}), 400
 
     try:
         db.session.query(ForecastSheetItem).filter(ForecastSheetItem.forecast_sheet_id == sheet.forecast_sheet_id).delete()
@@ -614,12 +616,14 @@ def dispatch_forecast_sheet():
         return jsonify({"error": "forecastSheetId is required"}), 400
     if not start_date or not end_date:
         return jsonify({"error": "startDate and endDate are required"}), 400
+    if not order_rid_mappings:
+        return jsonify({"error": "请至少选择一个鞋型进行下发"}), 400
 
     sheet = db.session.query(ForecastSheet).filter(ForecastSheet.forecast_sheet_id == sheet_id).first()
     if not sheet:
         return jsonify({"error": "forecast sheet not found"}), 404
     if sheet.status == FORECAST_STATUS_DISPATCHED:
-        return jsonify({"error": "预报单已下发"}), 400
+        return jsonify({"error": "预报单已全部下发"}), 400
 
     items = (
         db.session.query(ForecastSheetItem)
@@ -630,9 +634,14 @@ def dispatch_forecast_sheet():
     if not items:
         return jsonify({"error": "预报单无鞋型，无法下发"}), 400
 
-    missing_packaging_items = [item.forecast_sheet_item_id for item in items if not (item.packaging_info_id and int(item.packaging_info_id) > 0)]
-    if missing_packaging_items:
-        return jsonify({"error": "请先在主页面完成鞋型配码编辑后再下发"}), 400
+    # Build set of selected group keys from frontend
+    selected_group_keys = set()
+    for entry in order_rid_mappings:
+        if not isinstance(entry, dict):
+            continue
+        key = str(entry.get("groupKey") or entry.get("shoeId") or entry.get("shoeRid") or "")
+        if key:
+            selected_group_keys.add(key)
 
     forecast_packaging_file_path = _resolve_forecast_packaging_file_path(sheet.forecast_rid)
     if not os.path.exists(forecast_packaging_file_path):
@@ -640,6 +649,7 @@ def dispatch_forecast_sheet():
 
     shoe_group_items = {}
     shoe_group_meta = {}
+    all_items_by_group = {}
     for item in items:
         shoe_type = db.session.query(ShoeType).filter(ShoeType.shoe_type_id == item.shoe_type_id).first()
         if not shoe_type:
@@ -649,6 +659,16 @@ def dispatch_forecast_sheet():
             return jsonify({"error": f"鞋基础信息不存在，item={item.forecast_sheet_item_id}"}), 400
 
         group_key = str(shoe.shoe_id)
+        all_items_by_group.setdefault(group_key, []).append(item)
+
+        # Only process selected (non-dispatched) groups
+        # Frontend may use shoeRid as groupKey, backend uses shoe_id
+        is_selected = group_key in selected_group_keys or str(shoe.shoe_rid or "") in selected_group_keys
+        if not is_selected:
+            continue
+        if int(item.dispatch_status or 0) == 1:
+            continue
+
         shoe_group_items.setdefault(group_key, []).append(item)
         customer_shoe_name = str(item.customer_shoe_name or "").strip()
         existing_customer_shoe_name = str((shoe_group_meta.get(group_key) or {}).get("customerShoeName") or "").strip()
@@ -657,6 +677,15 @@ def dispatch_forecast_sheet():
             "shoeRid": shoe.shoe_rid,
             "customerShoeName": existing_customer_shoe_name or customer_shoe_name,
         }
+
+    if not shoe_group_items:
+        return jsonify({"error": "所选鞋型均已下发或无有效鞋型"}), 400
+
+    # Only check packaging for selected items
+    for group_key, group_items in shoe_group_items.items():
+        for item in group_items:
+            if not (item.packaging_info_id and int(item.packaging_info_id) > 0):
+                return jsonify({"error": "请先在主页面完成鞋型配码编辑后再下发"}), 400
 
     order_rid_map = {}
     for entry in order_rid_mappings:
@@ -727,7 +756,7 @@ def dispatch_forecast_sheet():
             order_status = OrderStatus(
                 order_id=order.order_id,
                 order_current_status=6,
-                order_status_value=1,
+                order_status_value=0,
             )
             db.session.add(order_status)
 
@@ -822,8 +851,20 @@ def dispatch_forecast_sheet():
             created_order_ids.append(order.order_id)
             created_order_rids.append(order.order_rid)
 
-        sheet.status = FORECAST_STATUS_DISPATCHED
-        sheet.created_order_ids = ",".join([str(order_id) for order_id in created_order_ids])
+            # Mark dispatched items
+            for item in group_items:
+                item.dispatch_status = 1
+
+        # Determine if all items are dispatched or only partial
+        existing_order_ids = [int(x) for x in str(sheet.created_order_ids or "").split(",") if x.strip().isdigit()]
+        all_order_ids = existing_order_ids + created_order_ids
+        sheet.created_order_ids = ",".join([str(order_id) for order_id in all_order_ids])
+
+        all_dispatched = all(int(item.dispatch_status or 0) == 1 for item in items)
+        if all_dispatched:
+            sheet.status = FORECAST_STATUS_DISPATCHED
+        else:
+            sheet.status = FORECAST_STATUS_PARTIAL
         db.session.commit()
     except Exception as ex:
         db.session.rollback()
@@ -940,6 +981,7 @@ def update_forecast_sheet_packaging():
                         unit_price=unit_price_value,
                         total_pairs=fallback_total_pairs,
                         sort_index=base_entity.sort_index,
+                        dispatch_status=int(base_entity.dispatch_status or 0),
                     )
                 )
                 continue
@@ -987,6 +1029,7 @@ def update_forecast_sheet_packaging():
                         unit_price=unit_price_value,
                         total_pairs=total_pairs,
                         sort_index=base_entity.sort_index,
+                        dispatch_status=int(base_entity.dispatch_status or 0),
                     )
                 )
                 has_valid_packaging = True
@@ -1009,6 +1052,7 @@ def update_forecast_sheet_packaging():
                         unit_price=unit_price_value,
                         total_pairs=fallback_total_pairs,
                         sort_index=base_entity.sort_index,
+                        dispatch_status=int(base_entity.dispatch_status or 0),
                     )
                 )
 

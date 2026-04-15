@@ -473,6 +473,7 @@ class ForecastSheetItem(db.Model):
     unit_price = db.Column(db.DECIMAL(13, 4), nullable=False, default=0.0000)
     total_pairs = db.Column(db.Integer, nullable=False, default=0)
     sort_index = db.Column(db.Integer, nullable=False, default=0)
+    dispatch_status = db.Column(db.SmallInteger, nullable=False, default=0)
     create_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP'))
     update_time = db.Column(DATETIME, nullable=False, server_default=db.text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
