@@ -722,20 +722,25 @@ def get_order_info_business():
         ),
         "orderShoeAllData": [],
     }
-    # Query the latest revert event for this order
-    latest_revert_event = (
-        db.session.query(RevertEvent)
-        .filter(RevertEvent.order_id == order_id)
-        .order_by(RevertEvent.event_time.desc())
-        .first()
-    )
-    if latest_revert_event:
-        result["revertInfo"] = {
-            "revertReason": latest_revert_event.revert_reason,
-            "revertDetail": latest_revert_event.revert_detail,
-            "revertTime": latest_revert_event.event_time.strftime("%Y-%m-%d %H:%M:%S") if latest_revert_event.event_time else "",
-            "initialingDepartment": latest_revert_event.initialing_department,
-        }
+    # Query the latest revert event from 总经理, only show when order is still at status 6 (not yet re-submitted)
+    order_current_status = entity.OrderStatus.order_current_status if entity.OrderStatus else None
+    if order_current_status == ORDER_CREATION_STATUS:
+        latest_revert_event = (
+            db.session.query(RevertEvent)
+            .filter(
+                RevertEvent.order_id == order_id,
+                RevertEvent.initialing_department == "总经理",
+            )
+            .order_by(RevertEvent.event_time.desc())
+            .first()
+        )
+        if latest_revert_event:
+            result["revertInfo"] = {
+                "revertReason": latest_revert_event.revert_reason,
+                "revertDetail": latest_revert_event.revert_detail,
+                "revertTime": latest_revert_event.event_time.strftime("%Y-%m-%d %H:%M:%S") if latest_revert_event.event_time else "",
+                "initialingDepartment": latest_revert_event.initialing_department,
+            }
     if entity.Order.production_list_upload_status == "2":
         result["wrapRequirementUploadStatus"] = "已上传包装文件"
     else:
