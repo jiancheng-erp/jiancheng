@@ -27,6 +27,7 @@
       <el-select v-model="sheetFilters.status" clearable placeholder="状态">
         <el-option label="草稿" :value="0" />
         <el-option label="已下发" :value="1" />
+        <el-option label="部分下发" :value="2" />
       </el-select>
     </el-col>
     <el-col :span="3" style="text-align: right">
@@ -61,7 +62,7 @@
               >编辑预报单</el-button>
               <el-button
                 size="small"
-                :disabled="Number(scope.row.status) !== 0"
+                :disabled="Number(scope.row.status) === 1"
                 @click="openSheetPackagingDialog(scope.row)"
               >编辑配码</el-button>
               <el-dropdown @command="(command) => downloadForecastExcel(scope.row, command)">
@@ -76,13 +77,13 @@
               <el-button
                 size="small"
                 type="primary"
-                :disabled="Number(scope.row.status) !== 0"
+                :disabled="Number(scope.row.status) === 1"
                 @click="openPackagingUploadDialog(scope.row)"
               >上传包装资料</el-button>
               <el-button
                 size="small"
                 type="warning"
-                :disabled="Number(scope.row.status) !== 0"
+                :disabled="Number(scope.row.status) === 1"
                 @click="openDispatchDialog(scope.row)"
               >下发拆单</el-button>
               <el-button
@@ -522,7 +523,7 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="dispatchDialogVisible" title="下发拆单" width="760px" :close-on-click-modal="false">
+  <el-dialog v-model="dispatchDialogVisible" title="下发拆单" width="80%" :close-on-click-modal="false">
     <el-form label-width="110px">
       <el-form-item label="订单开始日期" required>
         <el-date-picker v-model="dispatchForm.startDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
@@ -531,12 +532,34 @@
         <el-date-picker v-model="dispatchForm.endDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
       </el-form-item>
       <el-form-item label="订单号" required>
-        <el-table :data="paginatedDispatchOrderRidRows" border style="width: 100%" height="300px">
-          <el-table-column prop="shoeRid" label="鞋型" min-width="160" />
-          <el-table-column prop="colorSummary" label="颜色" min-width="180" />
-          <el-table-column label="订单号" min-width="220">
+        <div style="margin-bottom: 8px">
+          <el-checkbox
+            :model-value="isDispatchAllSelected"
+            :indeterminate="isDispatchIndeterminate"
+            @change="toggleDispatchSelectAll"
+          >全选所有页</el-checkbox>
+        </div>
+        <el-table
+          ref="dispatchTable"
+          :data="paginatedDispatchOrderRidRows"
+          border
+          style="width: 100%"
+          height="50vh"
+          row-key="groupKey"
+          @selection-change="handleDispatchSelectionChange"
+        >
+          <el-table-column type="selection" width="50" :selectable="(row) => !row.dispatched" reserve-selection />
+          <el-table-column prop="shoeRid" label="鞋型" min-width="140" />
+          <el-table-column prop="colorSummary" label="颜色" min-width="160" />
+          <el-table-column label="状态" width="80">
             <template #default="scope">
-              <el-input v-model="scope.row.orderRid" placeholder="请输入订单号" />
+              <el-tag v-if="scope.row.dispatched" type="success" size="small">已下发</el-tag>
+              <el-tag v-else type="info" size="small">未下发</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="订单号" min-width="200">
+            <template #default="scope">
+              <el-input v-model="scope.row.orderRid" placeholder="请输入订单号" :disabled="scope.row.dispatched" />
             </template>
           </el-table-column>
         </el-table>
@@ -552,7 +575,7 @@
     </el-form>
     <template #footer>
       <el-button @click="dispatchDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="dispatchSheet">确认下发</el-button>
+      <el-button type="primary" @click="dispatchSheet">确认下发 ({{ dispatchSelectedRows.length }})</el-button>
     </template>
   </el-dialog>
 
@@ -709,6 +732,7 @@ export default {
       dispatchDialogVisible: false,
       dispatchTargetRow: null,
       dispatchOrderRidRows: [],
+      dispatchSelectedRows: [],
       packagingUploadDialogVisible: false,
       packagingUploadTarget: null,
       packagingUploadSubmitting: false,
@@ -840,6 +864,17 @@ export default {
       const start = (this.dispatchPage - 1) * this.dispatchPageSize
       const end = start + this.dispatchPageSize
       return (this.dispatchOrderRidRows || []).slice(start, end)
+    },
+    dispatchSelectableRows() {
+      return (this.dispatchOrderRidRows || []).filter((r) => !r.dispatched)
+    },
+    isDispatchAllSelected() {
+      const selectable = this.dispatchSelectableRows
+      return selectable.length > 0 && this.dispatchSelectedRows.length >= selectable.length
+    },
+    isDispatchIndeterminate() {
+      const count = this.dispatchSelectedRows.length
+      return count > 0 && count < this.dispatchSelectableRows.length
     }
   },
   watch: {
@@ -2189,10 +2224,14 @@ export default {
             groupKey: key,
             shoeRid: item?.shoeRid || '',
             colorSet: new Set(),
-            orderRid: ''
+            orderRid: '',
+            dispatched: false
           }
         }
         grouped[key].colorSet.add(String(item?.colorName || ''))
+        if (Number(item?.dispatchStatus) === 1) {
+          grouped[key].dispatched = true
+        }
       })
 
       this.dispatchTargetRow = row
@@ -2204,10 +2243,33 @@ export default {
         groupKey: entry.groupKey,
         shoeRid: entry.shoeRid,
         colorSummary: Array.from(entry.colorSet).filter((v) => v).join(' / '),
-        orderRid: ''
+        orderRid: '',
+        dispatched: entry.dispatched
       }))
+      this.dispatchSelectedRows = []
       this.dispatchPage = 1
       this.dispatchDialogVisible = true
+      this.$nextTick(() => {
+        this.$refs.dispatchTable?.clearSelection()
+      })
+    },
+
+    handleDispatchSelectionChange(selection) {
+      this.dispatchSelectedRows = selection
+    },
+
+    toggleDispatchSelectAll(checked) {
+      const table = this.$refs.dispatchTable
+      if (!table) return
+      if (checked) {
+        this.dispatchOrderRidRows.forEach((row) => {
+          if (!row.dispatched) {
+            table.toggleRowSelection(row, true)
+          }
+        })
+      } else {
+        table.clearSelection()
+      }
     },
 
     async dispatchSheet() {
@@ -2217,15 +2279,15 @@ export default {
         ElMessage.error('请填写起止日期')
         return
       }
-      if (!(this.dispatchOrderRidRows || []).length) {
-        ElMessage.error('未找到可下发鞋型')
+      if (!(this.dispatchSelectedRows || []).length) {
+        ElMessage.error('请至少勾选一个鞋型进行下发')
         return
       }
       const localRidSet = new Set()
-      for (let i = 0; i < this.dispatchOrderRidRows.length; i++) {
-        const rid = String(this.dispatchOrderRidRows[i]?.orderRid || '').trim()
+      for (let i = 0; i < this.dispatchSelectedRows.length; i++) {
+        const rid = String(this.dispatchSelectedRows[i]?.orderRid || '').trim()
         if (!rid) {
-          ElMessage.error(`请填写鞋型 ${this.dispatchOrderRidRows[i]?.shoeRid || ''} 的订单号`)
+          ElMessage.error(`请填写鞋型 ${this.dispatchSelectedRows[i]?.shoeRid || ''} 的订单号`)
           return
         }
         if (localRidSet.has(rid)) {
@@ -2235,7 +2297,7 @@ export default {
         localRidSet.add(rid)
       }
       await ElMessageBox.confirm(
-        `确认下发并拆分预报单 ${row.forecastRid} 吗？`,
+        `确认下发选中的 ${this.dispatchSelectedRows.length} 个鞋型吗？`,
         '提示',
         {
           confirmButtonText: '确定',
@@ -2243,25 +2305,30 @@ export default {
           type: 'warning'
         }
       )
-      const response = await axios.post(`${this.$apiBaseUrl}/forecastsheet/dispatch`, {
-        forecastSheetId: row.forecastSheetId,
-        staffId: Number(this.staffId),
-        startDate: this.dispatchForm.startDate,
-        endDate: this.dispatchForm.endDate,
-        orderRidMappings: (this.dispatchOrderRidRows || []).map((item) => ({
-          groupKey: item.groupKey,
-          shoeRid: item.shoeRid,
-          orderRid: String(item.orderRid || '').trim()
-        }))
-      })
-      const createdIds = response.data?.createdOrderIds || []
-      const createdRids = response.data?.createdOrderRids || []
-      const createdCount = Array.isArray(createdIds)
-        ? createdIds.length
-        : (Array.isArray(createdRids) ? createdRids.length : 0)
-      ElMessage.success(`下发成功，已拆分 ${createdCount} 个订单`)
-      this.dispatchDialogVisible = false
-      await this.loadForecastSheets()
+      try {
+        const response = await axios.post(`${this.$apiBaseUrl}/forecastsheet/dispatch`, {
+          forecastSheetId: row.forecastSheetId,
+          staffId: Number(this.staffId),
+          startDate: this.dispatchForm.startDate,
+          endDate: this.dispatchForm.endDate,
+          orderRidMappings: (this.dispatchSelectedRows || []).map((item) => ({
+            groupKey: item.groupKey,
+            shoeRid: item.shoeRid,
+            orderRid: String(item.orderRid || '').trim()
+          }))
+        })
+        const createdIds = response.data?.createdOrderIds || []
+        const createdRids = response.data?.createdOrderRids || []
+        const createdCount = Array.isArray(createdIds)
+          ? createdIds.length
+          : (Array.isArray(createdRids) ? createdRids.length : 0)
+        ElMessage.success(`下发成功，已拆分 ${createdCount} 个订单`)
+        this.dispatchDialogVisible = false
+        await this.loadForecastSheets()
+      } catch (err) {
+        const msg = err?.response?.data?.error || err?.message || '下发失败'
+        ElMessage.error(msg)
+      }
     },
 
     openPackagingUploadDialog(row) {
