@@ -24,7 +24,9 @@
                 <el-row :gutter="0">
                     <el-col :span="24" :offset="0">
                         <el-descriptions title="" :column="2" border>
-                            <el-descriptions-item label="订单编号" align="center">{{ orderData.orderRid }}</el-descriptions-item>
+                            <el-descriptions-item label="订单编号" align="center">
+                                <el-input style="width: 200px" v-model="orderData.orderRid" :disabled="editOrderInfoDisabled"> </el-input>
+                            </el-descriptions-item>
                             <el-descriptions-item label="客户订单" align="center">
                                 <el-input style="width: 200px" v-model="orderData.orderCid" :disabled="editOrderInfoDisabled"> </el-input>
                             </el-descriptions-item>
@@ -45,7 +47,7 @@
                             <el-descriptions-item label="包装资料上传状态" align="center"
                                 >{{ orderData.wrapRequirementUploadStatus }}
                                 <el-button v-if="allowEditInfo" type="primary" size="default" @click="openSubmitDialog()">上传</el-button>
-                                <el-button v-if="orderData.wrapRequirementUploadStatus === '已上传包装文件'" type="primary" size="default" @click="download(2)">查看</el-button>
+                                <el-button v-if="orderData.wrapRequirementUploadStatus === '已上传包装文件' && !isFinanceManager" type="primary" size="default" @click="download(2)">查看</el-button>
                             </el-descriptions-item>
                             <el-descriptions-item label="订单业务员" align="center">
                                 {{ orderData.orderStaffName }}
@@ -59,13 +61,13 @@
                                     转为普通单
                                 </el-button>
 
-                                <el-button v-if="orderClerkEditable" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
+                                <el-button v-if="orderClerkEditable && !isFinanceManager" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
                                 <el-button v-if="this.userIsManager && this.readyPending" type="warning" @click="sendOrderNext" :disabled="this.role == 21 ? true : false"> 下发 </el-button>
 
                                 <el-button v-if="this.userIsManager && this.orderManagerEditable" type="warning" @click="sendOrderPrevious" :disabled="this.role == 21 ? true : false">
                                     退回
                                 </el-button>
-                                <el-button v-if="allowSaveTemplate" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
+                                <el-button v-if="allowSaveTemplate && !isFinanceManager" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
                             </el-descriptions-item>
                         </el-descriptions>
                     </el-col>
@@ -204,10 +206,10 @@
 
                         <el-table-column label="备注">
                             <template #default="scope">
-                                <el-button v-if="!scope.row.orderShoeRemarkExist" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
+                                <el-button v-if="!scope.row.orderShoeRemarkExist && !isFinanceManager" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
 
                                 <el-text v-if="scope.row.orderShoeRemarkExist" style="display: inline-block">{{ scope.row.orderShoeRemarkRep }}</el-text>
-                                <el-button v-if="scope.row.orderShoeRemarkExist" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px"> 编辑备注 </el-button>
+                                <el-button v-if="scope.row.orderShoeRemarkExist && !isFinanceManager" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px"> 编辑备注 </el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -312,11 +314,14 @@ export default {
         orderManagerEditable() {
             return this.orderCurStatus == 6 && this.orderCurStatusVal == 1
         },
+        isFinanceManager() {
+            return this.role == 10 || this.role == 24
+        },
         userIsManager() {
             return this.role == 4
         },
         canViewPrice() {
-            return this.userIsManager
+            return this.userIsManager || this.isFinanceManager
         },
         canEditPrice() {
             return this.canViewPrice && !this.editOrderInfoDisabled
@@ -390,6 +395,7 @@ export default {
             role: localStorage.getItem('role'),
             staffId: localStorage.getItem('staffid'),
             orderData: {},
+            originalOrderRid: '',
             revertInfo: null,
             orderDBId: '',
             orderCurStatus: '',
@@ -515,6 +521,7 @@ export default {
             const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessorderinfo?orderid=${this.orderId}`)
             console.log(response.data)
             this.orderData = response.data
+            this.originalOrderRid = this.normalizeOrderRid(this.orderData.orderRid)
             this.orderShoeData = response.data.orderShoeAllData
             this.batchInfoType = response.data.batchInfoType
             this.orderDBId = this.orderData.orderId
@@ -543,6 +550,23 @@ export default {
             console.log(this.orderCurStatus == 6)
         },
         async submitOrderInfo() {
+            this.orderData.orderRid = this.normalizeOrderRid(this.orderData.orderRid)
+            if (this.orderData.orderRid !== this.originalOrderRid) {
+                const canUseRid = await this.validateOrderRidUnique(this.orderData.orderRid)
+                if (!canUseRid) {
+                    return
+                }
+                const ridResp = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateorderrid`, {
+                    orderId: this.orderId,
+                    orderNewRid: this.orderData.orderRid
+                })
+                if (ridResp.status !== 200) {
+                    ElMessage.error('订单号更新失败')
+                    return
+                }
+                this.originalOrderRid = this.orderData.orderRid
+            }
+
             const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordercid`, {
                 orderId: this.orderId,
                 orderCid: this.orderData.orderCid
@@ -675,7 +699,11 @@ export default {
             this.getOrderInfo()
             // #!TODO
         },
-        sendOrderNext() {
+        async sendOrderNext() {
+            const ridOk = await this.validateOrderRidForDispatch()
+            if (!ridOk) {
+                return
+            }
             if (this.orderData.wrapRequirementUploadStatus === '已上传包装文件') {
                 const priceValues = Object.values(this.orderShoeTypeIdToUnitPrice || {})
                 const currencyValues = Object.values(this.orderShoeTypeIdToCurrencyType || {})
@@ -713,6 +741,64 @@ export default {
                 ElMessage.error('包装文件未上传,请上传包装文件后再下发！')
                 return
             }
+        },
+        normalizeOrderRid(value) {
+            return (value || '').trim()
+        },
+        async validateOrderRidUnique(orderRid) {
+            const pendingRid = this.normalizeOrderRid(orderRid)
+            if (!pendingRid) {
+                return true
+            }
+            if (pendingRid === this.originalOrderRid) {
+                return true
+            }
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/order/checkorderridexists`, {
+                    params: {
+                        pendingRid
+                    }
+                })
+                const exists = response?.data?.exists === true
+                if (exists) {
+                    ElMessage.error(response?.data?.result || '订单号已存在')
+                    return false
+                }
+                return true
+            } catch (error) {
+                console.error('validateOrderRidUnique error:', error)
+                ElMessage.error('订单号校验失败，请稍后重试')
+                return false
+            }
+        },
+        async validateOrderRidForDispatch() {
+            this.orderData.orderRid = this.normalizeOrderRid(this.orderData.orderRid)
+            if (!this.orderData.orderRid) {
+                ElMessage.error('下发前请先填写订单号')
+                return false
+            }
+            const canUseRid = await this.validateOrderRidUnique(this.orderData.orderRid)
+            if (!canUseRid) {
+                return false
+            }
+            if (this.orderData.orderRid !== this.originalOrderRid) {
+                try {
+                    const response = await axios.post(`${this.$apiBaseUrl}/ordercreate/updateorderrid`, {
+                        orderId: this.orderId,
+                        orderNewRid: this.orderData.orderRid
+                    })
+                    if (response.status !== 200) {
+                        ElMessage.error('订单号保存失败，请先提交信息')
+                        return false
+                    }
+                    this.originalOrderRid = this.orderData.orderRid
+                } catch (error) {
+                    console.error('validateOrderRidForDispatch save rid error:', error)
+                    ElMessage.error('订单号保存失败，请先提交信息')
+                    return false
+                }
+            }
+            return true
         },
         expandOpen(row, expand) {
             console.log(this.expandedRowKeys)

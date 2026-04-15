@@ -1346,6 +1346,45 @@ def check_order_rid_exists():
     else:
         return jsonify({"result":"订单号未占用", "exists":False}), 200
 
+
+@order_bp.route("/order/getcurrencyrates", methods=["GET"])
+def get_currency_rates():
+    now = datetime.now()
+    year, month = now.year, now.month
+    # find RMB/CNY base unit
+    rmb_unit = (
+        db.session.query(AccountingCurrencyUnit)
+        .filter(AccountingCurrencyUnit.unit_name_cn == "人民币")
+        .first()
+    )
+    rates = {"RMB": 1.0, "CNY": 1.0}
+    if rmb_unit:
+        all_units = db.session.query(AccountingCurrencyUnit).all()
+        for unit in all_units:
+            if unit.unit_id == rmb_unit.unit_id:
+                continue
+            row = (
+                db.session.query(AccountingUnitConversionTable)
+                .filter(
+                    AccountingUnitConversionTable.unit_from == rmb_unit.unit_id,
+                    AccountingUnitConversionTable.unit_to == unit.unit_id,
+                    AccountingUnitConversionTable.rate_year * 100
+                    + AccountingUnitConversionTable.rate_month
+                    <= year * 100 + month,
+                )
+                .order_by(
+                    (
+                        AccountingUnitConversionTable.rate_year * 100
+                        + AccountingUnitConversionTable.rate_month
+                    ).desc()
+                )
+                .first()
+            )
+            if row and row.rate:
+                rates[unit.unit_name_en] = float(row.rate)
+    return jsonify({"rates": rates}), 200
+
+
 # TODO delete
 @order_bp.route("/order/getallorders", methods=["GET"])
 def get_all_orders():
@@ -1808,6 +1847,22 @@ def get_order_full_info():
         .subquery()
     )
 
+    order_price_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeType.unit_price * OrderShoeBatchInfo.total_amount).label("order_total_price"),
+            func.max(OrderShoeType.currency_type).label("order_currency"),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
     query = (
         db.session.query(
             Order,
@@ -1819,6 +1874,8 @@ def get_order_full_info():
             Customer,
             Shoe,
             order_amount_subquery.c.order_amount,
+            order_price_subquery.c.order_total_price,
+            order_price_subquery.c.order_currency,
         )
         .join(OrderStatus, Order.order_id == OrderStatus.order_id)
         .join(
@@ -1839,6 +1896,10 @@ def get_order_full_info():
         .join(
             order_amount_subquery,
             Order.order_id == order_amount_subquery.c.order_id,
+        )
+        .outerjoin(
+            order_price_subquery,
+            Order.order_id == order_price_subquery.c.order_id,
         )
         .filter(
             Order.order_rid.like(f"%{order_search}%"),
@@ -1879,6 +1940,42 @@ def get_order_full_info():
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
 
+    # Build currency -> RMB rate map for orderTotalPriceRmb conversion
+    _currency_rmb_rates = {"RMB": 1.0, "CNY": 1.0}
+    try:
+        _rmb_unit = (
+            db.session.query(AccountingCurrencyUnit)
+            .filter(AccountingCurrencyUnit.unit_name_cn == "人民币")
+            .first()
+        )
+        if _rmb_unit:
+            _now = datetime.now()
+            _all_units = db.session.query(AccountingCurrencyUnit).all()
+            for _u in _all_units:
+                if _u.unit_id == _rmb_unit.unit_id:
+                    continue
+                _row = (
+                    db.session.query(AccountingUnitConversionTable)
+                    .filter(
+                        AccountingUnitConversionTable.unit_from == _rmb_unit.unit_id,
+                        AccountingUnitConversionTable.unit_to == _u.unit_id,
+                        AccountingUnitConversionTable.rate_year * 100
+                        + AccountingUnitConversionTable.rate_month
+                        <= _now.year * 100 + _now.month,
+                    )
+                    .order_by(
+                        (
+                            AccountingUnitConversionTable.rate_year * 100
+                            + AccountingUnitConversionTable.rate_month
+                        ).desc()
+                    )
+                    .first()
+                )
+                if _row and _row.rate:
+                    _currency_rmb_rates[_u.unit_name_en] = float(_row.rate)
+    except Exception:
+        pass
+
     # Initialize a dictionary to group orders
     orders_dict = {}
 
@@ -1891,6 +1988,8 @@ def get_order_full_info():
         customer,
         shoe,
         order_amount,
+        order_total_price,
+        order_currency,
     ) in response:
         formatted_start_date = (
             order.start_date.strftime("%Y-%m-%d") if order.start_date else "N/A"
@@ -1916,6 +2015,12 @@ def get_order_full_info():
                 ),
                 "shoes": {},  # Using a dictionary to avoid duplicate shoes
                 "orderAmount": order_amount if order_amount else 0,
+                "orderTotalPrice": float(order_total_price) if order_total_price else None,
+                "orderCurrency": order_currency or "",
+                "orderTotalPriceRmb": (
+                    round(float(order_total_price) * _currency_rmb_rates.get(order_currency, 1.0), 2)
+                    if order_total_price else None
+                ),
             }
 
         # Use a unique key for each shoe to avoid duplicates
@@ -1941,6 +2046,7 @@ def get_order_full_info():
             orders_dict[order.order_id]["shoes"][shoe_key] = {
                 "shoeRid": shoe.shoe_rid if shoe else "N/A",
                 "customerId": order_shoe.customer_product_name if order_shoe else "N/A",
+                "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "",
                 "firstBom": "N/A",
                 "secondBom": "N/A",
                 "firstOrder": "N/A",
@@ -2048,6 +2154,177 @@ def get_order_full_info():
         
 
     return jsonify({"result": result, "total": count_result})
+
+
+@order_bp.route("/order/exportorderexcel", methods=["GET"])
+def export_order_excel():
+    """Export filtered orders as an Excel file (same filters as getorderfullinfo)."""
+    import io
+    from openpyxl import Workbook
+
+    order_search = request.args.get("orderSearch", "", type=str)
+    customer_search = request.args.get("customerSearch", "", type=str)
+    shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
+    convert_to_rmb = request.args.get("convertToRMB", "0") == "1"
+    view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
+
+    # Build currency -> RMB rate map
+    _currency_rmb_rates = {"RMB": 1.0, "CNY": 1.0}
+    try:
+        _rmb_unit = (
+            db.session.query(AccountingCurrencyUnit)
+            .filter(AccountingCurrencyUnit.unit_name_cn == "人民币")
+            .first()
+        )
+        if _rmb_unit:
+            _now = datetime.now()
+            for _u in db.session.query(AccountingCurrencyUnit).all():
+                if _u.unit_id == _rmb_unit.unit_id:
+                    continue
+                _row = (
+                    db.session.query(AccountingUnitConversionTable)
+                    .filter(
+                        AccountingUnitConversionTable.unit_from == _rmb_unit.unit_id,
+                        AccountingUnitConversionTable.unit_to == _u.unit_id,
+                        AccountingUnitConversionTable.rate_year * 100
+                        + AccountingUnitConversionTable.rate_month
+                        <= _now.year * 100 + _now.month,
+                    )
+                    .order_by(
+                        (
+                            AccountingUnitConversionTable.rate_year * 100
+                            + AccountingUnitConversionTable.rate_month
+                        ).desc()
+                    )
+                    .first()
+                )
+                if _row and _row.rate:
+                    _currency_rmb_rates[_u.unit_name_en] = float(_row.rate)
+    except Exception:
+        pass
+
+    order_price_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeType.unit_price * OrderShoeBatchInfo.total_amount).label("order_total_price"),
+            func.max(OrderShoeType.currency_type).label("order_currency"),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    order_amount_subquery = (
+        db.session.query(
+            Order.order_id,
+            func.sum(OrderShoeBatchInfo.total_amount).label("order_amount"),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(OrderShoeBatchInfo, OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+    query = (
+        db.session.query(
+            Order,
+            Customer,
+            OrderStatusReference,
+            Shoe,
+            OrderShoe,
+            order_amount_subquery.c.order_amount,
+            order_price_subquery.c.order_total_price,
+            order_price_subquery.c.order_currency,
+        )
+        .join(OrderStatus, Order.order_id == OrderStatus.order_id)
+        .join(OrderStatusReference, OrderStatus.order_current_status == OrderStatusReference.order_status_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(order_amount_subquery, Order.order_id == order_amount_subquery.c.order_id)
+        .outerjoin(order_price_subquery, Order.order_id == order_price_subquery.c.order_id)
+        .filter(
+            Order.order_rid.like(f"%{order_search}%"),
+            Customer.customer_name.like(f"%{customer_search}%"),
+            Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
+        )
+        .group_by(Order.order_id, OrderShoe.order_shoe_id)
+        .order_by(Order.order_id.desc())
+    )
+
+    rows = query.all()
+
+    # Group by order
+    orders_dict = {}
+    for order, customer, status_ref, shoe, order_shoe, amount, total_price, currency in rows:
+        if order.order_id not in orders_dict:
+            orders_dict[order.order_id] = {
+                "orderRid": order.order_rid or "",
+                "customerName": customer.customer_name if customer else "",
+                "createTime": order.start_date.strftime("%Y-%m-%d") if order.start_date else "",
+                "deadlineTime": order.end_date.strftime("%Y-%m-%d") if order.end_date else "",
+                "status": status_ref.order_status_name if status_ref else "",
+                "orderAmount": amount or 0,
+                "orderTotalPrice": float(total_price) if total_price else 0,
+                "orderCurrency": currency or "",
+                "shoes": [],
+            }
+        orders_dict[order.order_id]["shoes"].append({
+            "shoeRid": shoe.shoe_rid if shoe else "",
+            "customerId": order_shoe.customer_product_name if order_shoe else "",
+            "designDepartment": shoe.shoe_department_id if shoe and shoe.shoe_department_id else "",
+        })
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "订单查询"
+
+    if convert_to_rmb:
+        headers = ["订单号", "客人名称", "工厂型号", "客户型号", "设计部门", "订单数量",
+                    "订单金额(RMB)", "订单日期", "交货日期", "订单状态"]
+    else:
+        headers = ["订单号", "客人名称", "工厂型号", "客户型号", "设计部门", "订单数量",
+                    "订单金额", "金额单位", "订单日期", "交货日期", "订单状态"]
+    ws.append(headers)
+
+    for oid in sorted(orders_dict.keys(), reverse=True):
+        od = orders_dict[oid]
+        shoe_rids = ", ".join(s["shoeRid"] for s in od["shoes"])
+        customer_ids = ", ".join(s["customerId"] for s in od["shoes"])
+        departments = ", ".join(filter(None, (s["designDepartment"] for s in od["shoes"])))
+
+        price = od["orderTotalPrice"]
+        currency = od["orderCurrency"]
+
+        if convert_to_rmb:
+            rmb_price = round(price * _currency_rmb_rates.get(currency, 1.0), 2) if price else ""
+            ws.append([
+                od["orderRid"], od["customerName"], shoe_rids, customer_ids,
+                departments, od["orderAmount"], rmb_price,
+                od["createTime"], od["deadlineTime"], od["status"],
+            ])
+        else:
+            ws.append([
+                od["orderRid"], od["customerName"], shoe_rids, customer_ids,
+                departments, od["orderAmount"],
+                round(price, 2) if price else "",
+                currency,
+                od["createTime"], od["deadlineTime"], od["status"],
+            ])
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="订单查询.xlsx",
+    )
 
 
 @order_bp.route("/order/getorderpageinfo", methods=["GET"])
