@@ -346,7 +346,7 @@
       <el-descriptions-item label="商标">{{ previewTarget?.customerBrand || '-' }}</el-descriptions-item>
       <el-descriptions-item label="日期">{{ `${previewTarget?.startDate || '-'} 至 ${previewTarget?.endDate || '-'}` }}</el-descriptions-item>
     </el-descriptions>
-    <el-table :data="paginatedPreviewItems" border style="margin-top: 12px; max-height: 50vh">
+    <el-table :data="paginatedPreviewItems" border style="margin-top: 12px" height="50vh">
       <el-table-column prop="shoeRid" label="鞋型" min-width="130" />
       <el-table-column prop="colorName" label="颜色" min-width="110" />
       <el-table-column prop="customerShoeName" label="客户型号" min-width="130" />
@@ -531,7 +531,7 @@
         <el-date-picker v-model="dispatchForm.endDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
       </el-form-item>
       <el-form-item label="订单号" required>
-        <el-table :data="paginatedDispatchOrderRidRows" border style="width: 100%; max-height: 300px">
+        <el-table :data="paginatedDispatchOrderRidRows" border style="width: 100%" height="300px">
           <el-table-column prop="shoeRid" label="鞋型" min-width="160" />
           <el-table-column prop="colorSummary" label="颜色" min-width="180" />
           <el-table-column label="订单号" min-width="220">
