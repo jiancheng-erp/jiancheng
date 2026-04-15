@@ -212,6 +212,19 @@
                         </el-table-column>
                     </el-table>
                 </div>
+                <el-row :gutter="20" style="margin-top: 12px">
+                    <el-col :span="24" :offset="0">
+                        <el-descriptions :column="2" border>
+                            <el-descriptions-item label="总数量（全部鞋型/颜色 ）" align="center">
+                                {{ overallTotalAmount }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="总金额（全部鞋型/颜色 ）" align="center">
+                                <template v-if="canViewPrice">{{ overallTotalPriceText }}</template>
+                                <template v-else>***</template>
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </el-col>
+                </el-row>
             </el-main>
         </el-container>
     </el-container>
@@ -340,6 +353,35 @@ export default {
         },
         customerColorBtnVis() {
             return Object.values(this.customerColorAccessMapping).includes(true)
+        },
+        allOrderShoeTypes() {
+            return (this.orderShoeData || []).flatMap((orderShoe) => orderShoe.orderShoeTypes || [])
+        },
+        overallTotalAmount() {
+            return this.allOrderShoeTypes.reduce((sum, shoeType) => {
+                const amount = Number(shoeType?.shoeTypeBatchData?.totalAmount || 0)
+                return sum + (Number.isFinite(amount) ? amount : 0)
+            }, 0)
+        },
+        overallTotalPrice() {
+            return this.allOrderShoeTypes.reduce((sum, shoeType) => {
+                const price = Number(shoeType?.shoeTypeBatchData?.totalPrice || 0)
+                return sum + (Number.isFinite(price) ? price : 0)
+            }, 0)
+        },
+        overallCurrencyText() {
+            const currencySet = new Set(
+                this.allOrderShoeTypes
+                    .map((shoeType) => shoeType?.shoeTypeBatchData?.currencyType)
+                    .filter((currency) => !!currency)
+            )
+            if (!currencySet.size) return ''
+            if (currencySet.size === 1) return [...currencySet][0]
+            return '多币种'
+        },
+        overallTotalPriceText() {
+            const amountText = this.overallTotalPrice.toFixed(2)
+            return this.overallCurrencyText ? `${amountText} ${this.overallCurrencyText}` : amountText
         }
     },
     data() {
