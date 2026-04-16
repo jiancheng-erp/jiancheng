@@ -26,7 +26,6 @@ class Config:
     FILE_STORAGE_PATH = os.environ.get('FILE_STORAGE_PATH')
     IMAGE_STORAGE_PATH = os.environ.get('IMAGE_STORAGE_PATH')
     IMAGE_UPLOAD_PATH = os.environ.get('IMAGE_UPLOAD_PATH')
-    print(FILE_STORAGE_PATH,IMAGE_STORAGE_PATH,IMAGE_UPLOAD_PATH)
 
 class DevelopmentConfig(Config):
     """Development environment configuration"""
@@ -51,24 +50,25 @@ class ProductionConfig(Config):
     # In production, all secrets MUST be set via environment variables
     SECRET_KEY = os.environ.get('SECRET_KEY')
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-    
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable must be set in production!")
-    if not JWT_SECRET_KEY:
-        raise ValueError("JWT_SECRET_KEY environment variable must be set in production!")
-    
+
     # Database - Must use environment variables
     db_username = os.environ.get('DB_USERNAME')
     db_password = os.environ.get('DB_PASSWORD')
     db_name = os.environ.get('DB_NAME')
     db_host = os.environ.get('DB_HOST')
     
-    if not all([db_username, db_password, db_name, db_host]):
-        raise ValueError("Database environment variables must be set in production!")
+    
     
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{db_username}:{db_password}@{db_host}/{db_name}"
     SQLALCHEMY_ECHO = False
-
+    
+    def __init__(self):
+        if not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY environment variable must be set in production!")
+        if not self.JWT_SECRET_KEY:
+            raise ValueError("JWT_SECRET_KEY environment variable must be set in production!")
+        if not all([db_username, db_password, db_name, db_host]):
+            raise ValueError("Database environment variables must be set in production!")    
 
 class TestingConfig(Config):
     """Testing environment configuration - uses in-memory SQLite"""
