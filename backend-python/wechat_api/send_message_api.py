@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import requests
-from app_config import WECHAT_TEST_MODE
+from config import config
 
 TEMPLATE_STORE = Path(__file__).with_name("wechat_templates.json")
 
@@ -53,7 +53,7 @@ def _render(content: str, context: Optional[Dict] = None) -> str:
 
 
 def send_massage_to_users(message, users="SunHaoZheng"):
-    if WECHAT_TEST_MODE:
+    if config.WECHAT_TEST_MODE:
         # In test mode, we use a different URL for sending messages.
         users = "SunHaoZheng"
     url = f"http://121.43.33.97:8067/send_wechat"
