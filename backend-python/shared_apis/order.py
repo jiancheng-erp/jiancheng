@@ -1389,6 +1389,7 @@ def get_currency_rates():
 @order_bp.route("/order/getallorders", methods=["GET"])
 def get_all_orders():
     desc_symbol = request.args.get("descSymbol", None)
+    exclude_history = request.args.get("excludeHistory", None)
     entities = (
         db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -1401,6 +1402,13 @@ def get_all_orders():
         )
         .filter(Order.order_type != "F")
     )
+    if exclude_history:
+        entities = entities.filter(
+            or_(
+                OrderStatus.order_current_status.is_(None),
+                OrderStatus.order_current_status < ORDER_FINISH_SYMBOL,
+            )
+        )
     if desc_symbol:
         entities = entities.order_by(Order.order_rid.desc()).all()
     else:
