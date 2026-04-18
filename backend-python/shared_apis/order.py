@@ -2259,7 +2259,7 @@ def export_order_excel():
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
         )
-        .group_by(Order.order_id, OrderShoe.order_shoe_id)
+        .group_by(Order.order_id, OrderShoe.order_shoe_id, OrderStatusReference.order_status_id)
         .order_by(Order.order_id.desc())
     )
 
