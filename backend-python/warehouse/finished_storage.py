@@ -3333,3 +3333,230 @@ def execute_outbound_apply():
             "quantityDiff": total_amount - expected_total_amount,
         }
     )
+
+
+@finished_storage_bp.route(
+    "/warehouse/outbound-apply/warehouse-outbound", methods=["POST"]
+)
+def warehouse_direct_outbound():
+    """
+    仓库一步式出库：创建申请单(apply_type=1) + 立即执行出库
+    不走总经理审核流程，直接 status=4。
+    """
+    data = request.get_json(silent=True) or {}
+    order_id = data.get("orderId")
+    picker = data.get("picker") or ""
+    remark = data.get("remark") or ""
+    details = data.get("details") or []
+
+    if not order_id:
+        return jsonify({"message": "缺少 orderId"}), 400
+    if not isinstance(details, list) or not details:
+        return jsonify({"message": "明细不能为空"}), 400
+    if not picker:
+        return jsonify({"message": "缺少拣货人"}), 400
+
+    staff_id = _get_current_staff_id()
+    if not staff_id:
+        return jsonify({"message": "无法获取当前登录员工信息"}), 401
+
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    # ====== 解析并校验明细 ======
+    parsed_details = []
+    for row in details:
+        try:
+            storage_id = int(row["finishedShoeStorageId"])
+            order_shoe_type_id = int(row["orderShoeTypeId"])
+        except Exception:
+            return jsonify({"message": "明细中 finishedShoeStorageId / orderShoeTypeId 不合法"}), 400
+
+        try:
+            carton_count = Decimal(str(row.get("cartonCount") or "0"))
+            pairs_per_carton = Decimal(str(row.get("pairsPerCarton") or "0"))
+        except Exception:
+            return jsonify({"message": "明细中 cartonCount / pairsPerCarton 非法"}), 400
+
+        total_pairs_raw = row.get("totalPairs")
+        if total_pairs_raw is not None:
+            try:
+                total_pairs_dec = Decimal(str(total_pairs_raw))
+            except Exception:
+                return jsonify({"message": "明细中 totalPairs 非法"}), 400
+        else:
+            total_pairs_dec = carton_count * pairs_per_carton
+
+        total_pairs_dec = total_pairs_dec.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        total_pairs = int(total_pairs_dec)
+
+        if total_pairs <= 0:
+            continue  # 跳过出库数为0的明细
+        parsed_details.append({
+            "storage_id": storage_id,
+            "order_shoe_type_id": order_shoe_type_id,
+            "order_shoe_batch_info_id": row.get("orderShoeBatchInfoId"),
+            "packaging_info_id": row.get("packagingInfoId"),
+            "carton_count": carton_count,
+            "pairs_per_carton": int(pairs_per_carton),
+            "total_pairs": total_pairs,
+            "remark": row.get("remark"),
+        })
+
+    if not parsed_details:
+        return jsonify({"message": "没有有效的出库明细（所有要出库数为0）"}), 400
+
+    # ====== 库存校验 ======
+    storage_ids = [d["storage_id"] for d in parsed_details]
+    storages = (
+        db.session.query(FinishedShoeStorage)
+        .filter(FinishedShoeStorage.finished_shoe_id.in_(storage_ids))
+        .all()
+    )
+    storage_map = {s.finished_shoe_id: s for s in storages}
+    if len(storage_map) != len(set(storage_ids)):
+        return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
+
+    for d in parsed_details:
+        s = storage_map[d["storage_id"]]
+        if (s.finished_amount or 0) < d["total_pairs"]:
+            return jsonify({
+                "message": f"仓库编号 {s.finished_shoe_id} 库存不足（库存{s.finished_amount}，出库{d['total_pairs']}）"
+            }), 400
+
+    # ====== 创建申请单（apply_type=1, status=4 直接完成） ======
+    now_dt = datetime.now()
+    timestamp = format_datetime(now_dt)
+    rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    customer_index = data.get("customerIndex", 0)
+    apply_rid = "SOA" + rid_suffix + "T" + str(customer_index)
+
+    apply_obj = ShoeOutboundApply(
+        apply_rid=apply_rid,
+        order_id=order_id,
+        business_staff_id=staff_id,
+        warehouse_staff_id=staff_id,
+        status=4,
+        apply_type=1,
+        remark=remark,
+        actual_outbound_datetime=now_dt,
+    )
+    db.session.add(apply_obj)
+    db.session.flush()
+
+    # ====== 写入申请明细 ======
+    for d in parsed_details:
+        detail_obj = ShoeOutboundApplyDetail(
+            apply_id=apply_obj.apply_id,
+            finished_shoe_storage_id=d["storage_id"],
+            order_shoe_type_id=d["order_shoe_type_id"],
+            order_shoe_batch_info_id=d["order_shoe_batch_info_id"],
+            packaging_info_id=d["packaging_info_id"],
+            carton_count=d["carton_count"],
+            pairs_per_carton=d["pairs_per_carton"],
+            total_pairs=d["total_pairs"],
+            actual_outbound_pairs=d["total_pairs"],
+            remark=d["remark"],
+        )
+        db.session.add(detail_obj)
+
+    # ====== 创建出库记录 ======
+    outbound_rid = "FOR" + rid_suffix + "T0"
+    outbound_record = ShoeOutboundRecord(
+        shoe_outbound_rid=outbound_rid,
+        outbound_datetime=timestamp,
+        outbound_type=0,
+        apply_id=apply_obj.apply_id,
+        remark=remark,
+        picker=picker,
+    )
+    db.session.add(outbound_record)
+    db.session.flush()
+
+    total_amount = 0
+
+    # ====== 获取涉及的订单 ======
+    order_id_rows = (
+        db.session.query(Order.order_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(FinishedShoeStorage, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .filter(FinishedShoeStorage.finished_shoe_id.in_(storage_ids))
+        .distinct()
+        .all()
+    )
+    unique_order_ids = {row.order_id for row in order_id_rows}
+
+    # ====== 扣减库存 + 写出库明细 ======
+    for d in parsed_details:
+        s = storage_map[d["storage_id"]]
+        qty = d["total_pairs"]
+
+        s.finished_amount = (s.finished_amount or 0) - qty
+        if s.finished_amount < 0:
+            return jsonify({"message": f"仓库编号{s.finished_shoe_id}出库数量超过库存"}), 400
+
+        record_detail = ShoeOutboundRecordDetail(
+            shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
+            outbound_amount=qty,
+            finished_shoe_storage_id=d["storage_id"],
+            remark=d["remark"],
+        )
+        db.session.add(record_detail)
+        db.session.flush()
+
+        if _determine_outbound_status(s):
+            s.finished_status = 2
+
+        total_amount += qty
+
+    outbound_record.outbound_amount = total_amount
+    apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
+
+    # ====== 推订单事件 ======
+    processor: EventProcessor = current_app.config.get("event_processor")
+    if processor and unique_order_ids:
+        orders = (
+            db.session.query(Order, FinishedShoeStorage)
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(FinishedShoeStorage, FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+            .filter(Order.order_id.in_(unique_order_ids))
+            .all()
+        )
+        storage_map_by_order = {}
+        order_map = {}
+        for order_row, storage in orders:
+            storage_map_by_order.setdefault(order_row.order_id, []).append(storage)
+            order_map[order_row.order_id] = order_row
+
+        for oid, storages_per_order in storage_map_by_order.items():
+            if all(s.finished_status == 2 for s in storages_per_order):
+                order_row = order_map[oid]
+                order_row.order_actual_end_date = datetime.now().date()
+                try:
+                    for operation in range(22, 36):
+                        event = Event(
+                            staff_id=staff_id,
+                            handle_time=datetime.now(),
+                            operation_id=operation,
+                            event_order_id=order_row.order_id,
+                        )
+                        processor.processEvent(event)
+                except Exception as e:
+                    logger.debug(e)
+                    db.session.rollback()
+                    return jsonify({"message": "推进流程失败"}), 500
+
+    db.session.commit()
+    return jsonify({
+        "message": "success",
+        "applyId": apply_obj.apply_id,
+        "applyRId": apply_obj.apply_rid,
+        "outboundRecordId": outbound_record.shoe_outbound_record_id,
+        "outboundRId": outbound_record.shoe_outbound_rid,
+        "status": 4,
+        "statusLabel": "已完成出库",
+        "actualTotalPairs": total_amount,
+    })
