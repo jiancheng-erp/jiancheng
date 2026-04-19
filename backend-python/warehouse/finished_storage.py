@@ -268,6 +268,7 @@ def get_product_overview():
     order_cid = request.args.get("orderCId")
     customer_name = request.args.get("customerName")
     customer_brand = request.args.get("customerBrand")
+    customer_product_name = request.args.get("customerProductName")
     audit_status_num = request.args.get("auditStatusNum", type=int)
     storage_status_num = request.args.get("storageStatusNum", type=int)
 
@@ -424,6 +425,8 @@ def get_product_overview():
         query = query.filter(Customer.customer_name.ilike(f"%{customer_name}%"))
     if customer_brand:
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+    if customer_product_name:
+        query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
 
     # 审核状态筛选（基于 audit_level）
     if audit_status_num is not None and audit_status_num > -1:
@@ -730,6 +733,17 @@ def get_product_overview():
                 "batchInfos": batch_infos,
             }
             order_obj["orderShoeTable"].append(color_obj)
+
+    # ====== 聚合鞋型信息到订单级别 ======
+    for order_obj in result:
+        shoe_rids = list(dict.fromkeys(
+            s["shoeRId"] for s in order_obj["orderShoeTable"] if s.get("shoeRId")
+        ))
+        customer_names = list(dict.fromkeys(
+            s["customerProductName"] for s in order_obj["orderShoeTable"] if s.get("customerProductName")
+        ))
+        order_obj["shoeRIds"] = ", ".join(shoe_rids)
+        order_obj["customerProductNames"] = ", ".join(customer_names)
 
     return jsonify({"result": result, "total": count_result})
 
