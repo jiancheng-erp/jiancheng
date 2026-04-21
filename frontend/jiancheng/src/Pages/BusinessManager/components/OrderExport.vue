@@ -71,16 +71,16 @@ onMounted(() => {
 async function filterOrders() {
     let filteredData = tableData.value
     if (filters.orderNumberSearch) {
-        filteredData = filteredData.filter(order => order.orderRid.includes(filters.orderNumberSearch))
+        filteredData = filteredData.filter(order => order.orderRid.toLowerCase().includes(filters.orderNumberSearch.toLowerCase()))
     }
     if (filters.customerNameSearch) {
-        filteredData = filteredData.filter(order => order.customerName.includes(filters.customerNameSearch))
+        filteredData = filteredData.filter(order => order.customerName.toLowerCase().includes(filters.customerNameSearch.toLowerCase()))
     }
     if (filters.orderCIdSearch) {
-        filteredData = filteredData.filter(order => order.orderCid.includes(filters.orderCIdSearch))
+        filteredData = filteredData.filter(order => order.orderCid && order.orderCid.toLowerCase().includes(filters.orderCIdSearch.toLowerCase()))
     }
     if (filters.customerBrandSearch) {
-        filteredData = filteredData.filter(order => order.customerBrand.includes(filters.customerBrandSearch))
+        filteredData = filteredData.filter(order => order.customerBrand.toLowerCase().includes(filters.customerBrandSearch.toLowerCase()))
     }
     currentTableData.value = filteredData
     currentTotalRows.value = filteredData.length
