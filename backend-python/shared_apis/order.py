@@ -8,6 +8,7 @@ from api_utility import to_snake, to_camel, estimate_status_converter
 from login.login import current_user, current_user_info
 import math
 import os
+import shutil
 from datetime import datetime
 from event_processor import EventProcessor
 
@@ -1657,13 +1658,7 @@ def delete_order():
         return jsonify({"message": "delete failed"}), 404
     order_local_path = os.path.join(FILE_STORAGE_PATH, order_entity.order_rid)
     if os.path.exists(order_local_path):
-        for file_name in os.listdir(order_local_path):
-            file_path = os.path.join(order_local_path, file_name)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            else:
-                os.rmdir(file_path)
-        os.rmdir(order_local_path)
+        shutil.rmtree(order_local_path)
     else:
         logger.debug("path doesnt exist in server")
     order_shoe_entities = db.session.query(OrderShoe).filter_by(order_id=order_id).all()

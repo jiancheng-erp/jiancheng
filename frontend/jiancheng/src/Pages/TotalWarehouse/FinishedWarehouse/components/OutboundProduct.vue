@@ -215,9 +215,9 @@
                     <el-input-number v-model="row.applyCartons" :min="0" :step="0.05" :precision="2" @change="updateBusinessPairs(row)" />
                 </template>
             </el-table-column>
-            <el-table-column label="申请双数">
+            <el-table-column label="申请双数" min-width="160">
                 <template #default="{ row }">
-                    {{ row.applyPairs }}
+                    <el-input-number v-model="row.applyPairs" :min="0" :step="1" :precision="0" @change="updateBusinessCartons(row)" />
                 </template>
             </el-table-column>
 
@@ -297,9 +297,9 @@
                     <el-input-number v-model="row.applyCartons" :min="0" :step="0.05" :precision="2" @change="updateWarehouseDirectPairs(row)" />
                 </template>
             </el-table-column>
-            <el-table-column label="出库双数">
+            <el-table-column label="出库双数" min-width="160">
                 <template #default="{ row }">
-                    {{ row.applyPairs }}
+                    <el-input-number v-model="row.applyPairs" :min="0" :step="1" :precision="0" @change="updateWarehouseDirectCartons(row)" />
                 </template>
             </el-table-column>
 
@@ -1045,12 +1045,18 @@ export default {
             row.applyPairs = cartons * perCarton
         },
 
+        updateBusinessCartons(row) {
+            const pairs = Number(row.applyPairs || 0)
+            const perCarton = Number(row.pairsPerCarton || 0)
+            row.applyCartons = perCarton > 0 ? Number((pairs / perCarton).toFixed(2)) : 0
+        },
+
         // ====== 业务：提交出库申请（新建 / 编辑） => /warehouse/outbound-apply/save ======
         async submitBusinessForm() {
             if (this.isBusinessSubmitting) return
-            const hasPositive = this.businessForm.items.some((it) => it.applyCartons > 0)
+            const hasPositive = this.businessForm.items.some((it) => it.applyPairs > 0)
             if (!hasPositive) {
-                ElMessage.error('请至少为一个配码填写申请箱数')
+                ElMessage.error('请至少为一个配码填写申请箱数或双数')
                 return
             }
 
@@ -1068,7 +1074,7 @@ export default {
                     remark: this.businessForm.remark,
                     expectedOutboundTime: this.businessForm.expectedOutboundTime || null,
                     details: this.businessForm.items
-                        .filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+                        .filter((it) => it.applyPairs > 0)
                         .map((it) => ({
                             applyDetailId: it.applyDetailId,
                             finishedShoeStorageId: it.storageId,
@@ -1082,7 +1088,7 @@ export default {
                         }))
                 }
                 if (!payload.details.length) {
-                    ElMessage.error('请至少为一条明细填写有效的申请箱数')
+                    ElMessage.error('请至少为一条明细填写有效的申请箱数或双数')
                     return
                 }
                 this.isBusinessSubmitting = true
@@ -1105,9 +1111,9 @@ export default {
             }
 
             // 新建模式：按客户名称分组，每个客户生成一个申请单
-            const validItems = this.businessForm.items.filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+            const validItems = this.businessForm.items.filter((it) => it.applyPairs > 0)
             if (!validItems.length) {
-                ElMessage.error('请至少为一条明细填写有效的申请箱数')
+                ElMessage.error('请至少为一条明细填写有效的申请箱数或双数')
                 return
             }
 
@@ -1325,15 +1331,21 @@ export default {
             row.applyPairs = cartons * perCarton
         },
 
+        updateWarehouseDirectCartons(row) {
+            const pairs = Number(row.applyPairs || 0)
+            const perCarton = Number(row.pairsPerCarton || 0)
+            row.applyCartons = perCarton > 0 ? Number((pairs / perCarton).toFixed(2)) : 0
+        },
+
         async submitWarehouseDirectOutbound() {
             if (this.isWarehouseDirectSubmitting) return
             if (!this.warehouseDirectForm.picker) {
                 ElMessage.error('请填写拣货人')
                 return
             }
-            const hasPositive = this.warehouseDirectForm.items.some((it) => it.applyCartons > 0)
+            const hasPositive = this.warehouseDirectForm.items.some((it) => it.applyPairs > 0)
             if (!hasPositive) {
-                ElMessage.error('请至少为一个配码填写出库箱数')
+                ElMessage.error('请至少为一个配码填写出库箱数或双数')
                 return
             }
 
@@ -1347,7 +1359,7 @@ export default {
             this.isWarehouseDirectSubmitting = true
             try {
                 const details = this.warehouseDirectForm.items
-                    .filter((it) => it.applyCartons > 0)
+                    .filter((it) => it.applyPairs > 0)
                     .map((it) => ({
                         finishedShoeStorageId: it.storageId,
                         orderShoeTypeId: it.orderShoeTypeId,
