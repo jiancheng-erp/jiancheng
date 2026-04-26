@@ -360,12 +360,47 @@ def create_missing_purchase_request():
     db.session.add(rec)
     db.session.flush()  # 得到 rec.id
 
+    # 预解析厂家名 -> supplier_id（一次性查询）
+    supplier_names = {
+        (it.get("supplierName") or "").strip()
+        for it in items
+        if (it.get("supplierName") or "").strip()
+    }
+    supplier_name_to_id: Dict[str, int] = {}
+    if supplier_names:
+        srows = (
+            db.session.query(Supplier.supplier_id, Supplier.supplier_name)
+            .filter(Supplier.supplier_name.in_(list(supplier_names)))
+            .all()
+        )
+        supplier_name_to_id = {name: int(sid) for (sid, name) in srows}
+
     # 明细：数量/单位前端未传，unit_usage/approval_usage/purchase_amount 先置空
     for it in items:
+        sup_name = (it.get("supplierName") or "").strip()
+        sup_id = supplier_name_to_id.get(sup_name) if sup_name else None
+
+        # 根据（材料名, 厂家）重新解析 material_id，
+        # 避免前端 getmaterialdetail 只按 materialName 查、默认到“询价”厂家那条记录。
+        material_name = (it.get("name") or "").strip() or None
+        resolved_material_id = it.get("materialId")
+        if material_name and sup_id:
+            mrow = (
+                db.session.query(Material.material_id)
+                .filter(
+                    Material.material_name == material_name,
+                    Material.material_supplier == sup_id,
+                )
+                .order_by(Material.material_id.asc())
+                .first()
+            )
+            if mrow:
+                resolved_material_id = int(mrow[0])
+
         item = WMRItem(
             record_id=rec.id,
             material_type=_convert_material_type(it),  # 必填字段，后端自动推断
-            material_id=it.get("materialId"),
+            material_id=resolved_material_id,
             material_model=it.get("model"),
             material_specification=it.get("spec"),
             color=(it.get("color") or None),
@@ -824,21 +859,40 @@ def usage_form():
             color_map[ost_id] = getattr(col, "color_name", "") or ""
             qty_map[ost_id] = _get_order_qty_from_ost(ost)  # 你现有的获取逻辑
 
-    # 可选：材料名映射
+    # 可选：材料名 + 厂家映射
     mat_name_map = {}
+    mat_supplier_map = {}  # material_id -> supplier_id
     try:
         from models import Material
 
         mat_ids = {it.material_id for it in items if it.material_id}
         if mat_ids:
             mrows = (
-                db.session.query(Material.material_id, Material.material_name)
+                db.session.query(
+                    Material.material_id,
+                    Material.material_name,
+                    Material.material_supplier,
+                )
                 .filter(Material.material_id.in_(mat_ids))
                 .all()
             )
-            mat_name_map = {int(mid): name for (mid, name) in mrows}
+            for mid, name, sup_id in mrows:
+                mat_name_map[int(mid)] = name
+                if sup_id is not None:
+                    mat_supplier_map[int(mid)] = int(sup_id)
     except Exception:
         pass
+
+    # 厂家名映射
+    supplier_name_map = {}
+    sup_ids = set(mat_supplier_map.values())
+    if sup_ids:
+        srows = (
+            db.session.query(Supplier.supplier_id, Supplier.supplier_name)
+            .filter(Supplier.supplier_id.in_(sup_ids))
+            .all()
+        )
+        supplier_name_map = {int(sid): name for (sid, name) in srows}
 
     type_text = {
         "S": "面料",
@@ -852,6 +906,9 @@ def usage_form():
     out_items = []
     for it in items:
         ost_id = int(it.order_shoe_type_id) if it.order_shoe_type_id else None
+        sup_id = (
+            mat_supplier_map.get(int(it.material_id)) if it.material_id else None
+        )
         row = {
             "id": int(it.id),
             "orderShoeTypeId": ost_id,
@@ -866,6 +923,8 @@ def usage_form():
             "unitUsage": _to_float4(it.unit_usage),
             "approvalUsage": _to_float4(it.approval_usage),
             "materialType": type_text.get(it.material_type, ""),
+            "supplierId": sup_id,
+            "supplierName": supplier_name_map.get(sup_id, "") if sup_id else "",
         }
 
         if _is_size_based(it.material_type):
@@ -948,6 +1007,13 @@ def usage_save():
 
         updated += 1
 
+    # 全部明细已填写核定用量 → 推进到 “等待采购用量” 阶段
+    all_items = db.session.query(WMRItem).filter(WMRItem.record_id == record_id).all()
+    if all_items and all(it.approval_usage is not None for it in all_items):
+        if rec.status == "0":
+            rec.status = "1"
+            db.session.add(rec)
+
     db.session.commit()
     return jsonify({"success": True, "updated": updated})
 
@@ -1010,19 +1076,39 @@ def purchase_form():
 
     out_items = []
     mat_name_map = {}
+    mat_supplier_map = {}  # material_id -> supplier_id
     try:
         from models import Material
 
         mat_ids = {it.material_id for it in items if it.material_id}
         if mat_ids:
             mrows = (
-                db.session.query(Material.material_id, Material.material_name)
+                db.session.query(
+                    Material.material_id,
+                    Material.material_name,
+                    Material.material_supplier,
+                )
                 .filter(Material.material_id.in_(mat_ids))
                 .all()
             )
-            mat_name_map = {int(mid): name for (mid, name) in mrows}
+            for mid, name, sup_id in mrows:
+                mat_name_map[int(mid)] = name
+                if sup_id is not None:
+                    mat_supplier_map[int(mid)] = int(sup_id)
     except Exception:
         pass
+
+    # 厂家名映射
+    supplier_name_map = {}
+    sup_ids = set(mat_supplier_map.values())
+    if sup_ids:
+        srows = (
+            db.session.query(Supplier.supplier_id, Supplier.supplier_name)
+            .filter(Supplier.supplier_id.in_(sup_ids))
+            .all()
+        )
+        supplier_name_map = {int(sid): name for (sid, name) in srows}
+
     for it in items:
         ost_id = int(it.order_shoe_type_id) if it.order_shoe_type_id else None
         shoe_color = color_map.get(ost_id or -1, "")
@@ -1030,6 +1116,9 @@ def purchase_form():
 
         mat_type_name = MAT_TYPE_NAME.get(it.material_type, "")
         is_size_based = it.material_type in SIZE_BASED_TYPES
+        sup_id = (
+            mat_supplier_map.get(int(it.material_id)) if it.material_id else None
+        )
 
         # 基本字段
         row = {
@@ -1040,6 +1129,8 @@ def purchase_form():
             "materialName": (
                 mat_name_map.get(int(it.material_id), "") if it.material_id else ""
             ),
+            "supplierId": sup_id,
+            "supplierName": supplier_name_map.get(sup_id, "") if sup_id else "",
             "materialModel": it.material_model or "",
             "materialSpecification": it.material_specification or "",
             "color": it.color or "",
@@ -1138,7 +1229,7 @@ def resolve_supplier_id(item: WMRItem) -> Optional[int]:
                 .filter(Material.material_id == item.material_id)
                 .first()
             )
-            if m and getattr(m, "supplier_id", None):
+            if m and getattr(m, "material_supplier", None):
                 return int(m.material_supplier)
     except Exception:
         pass
