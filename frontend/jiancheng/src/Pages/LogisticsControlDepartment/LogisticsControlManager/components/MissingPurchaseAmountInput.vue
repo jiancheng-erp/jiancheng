@@ -165,6 +165,7 @@
             </template>
           </el-table-column>
           <el-table-column prop="materialName" label="材料名称" width="160" />
+          <el-table-column prop="supplierName" label="厂家" width="140" show-overflow-tooltip />
           <el-table-column prop="materialModel" label="型号" min-width="160" />
           <el-table-column prop="materialSpecification" label="规格" min-width="200" />
           <el-table-column prop="color" label="材料颜色" width="120" />
@@ -408,6 +409,8 @@ type RowItem = {
   shoeColorName:string
   materialType:string
   materialName:string
+  supplierName?:string
+  supplierId?:number|null
   materialModel:string
   materialSpecification:string
   color?:string
@@ -426,7 +429,7 @@ let currentRecordId:number|null = null
 const filteredRows = computed(()=>{
   const k = keyword.value.trim().toLowerCase()
   if(!k) return rows.value
-  return rows.value.filter(r => [r.shoeColorName,r.materialName,r.materialModel,r.materialSpecification,r.color]
+  return rows.value.filter(r => [r.shoeColorName,r.materialName,r.supplierName,r.materialModel,r.materialSpecification,r.color]
     .filter(Boolean).some(t => String(t).toLowerCase().includes(k)))
 })
 const totalPurchase = computed(()=> fix4(filteredRows.value.reduce((s,r)=>s + Number(r.purchaseUsage||0), 0)))
@@ -476,6 +479,8 @@ async function loadPurchaseForm(){
         shoeColorName: it.shoeColorName || '',
         materialType: it.materialType || '',
         materialName: it.materialName || '',
+        supplierName: it.supplierName || '',
+        supplierId: it.supplierId ?? null,
         materialModel: it.materialModel || '',
         materialSpecification: it.materialSpecification || '',
         color: it.color || '',
