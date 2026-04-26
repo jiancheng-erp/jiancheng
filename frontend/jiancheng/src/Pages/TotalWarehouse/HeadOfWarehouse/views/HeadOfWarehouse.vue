@@ -23,7 +23,7 @@
                         <span>订单查询</span>
                     </el-menu-item>
                     <el-menu-item index="14" @click="handleMenuClick(14)">
-                        <span>按订单出库</span>
+                        <span>未出库材料查看</span>
                     </el-menu-item>
                     <el-menu-item index="9" @click="handleMenuClick(9)">
                         <span>出入库审核</span>
@@ -95,7 +95,7 @@ import SupplierManagement from '@/Pages/LogisticsControlDepartment/LogisticsCont
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import MakeInventory from '../components/MakeInventory.vue'
 import PurchaseOrderInfo from '../components/PurchaseOrderInfo.vue'
-import OutboundByOrder from '../components/OutboundByOrder.vue'
+import OtherWarehouseOutboundView from '../components/UncompletedOutboundMaterialsView.vue'
 import MissingPurchaseAmountInput from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MissingPurchaseAmountInput.vue'
 
 export default {
@@ -116,7 +116,7 @@ export default {
         FinancialWarehouseDetail,
         MakeInventory,
         PurchaseOrderInfo,
-        OutboundByOrder,
+        OtherWarehouseOutboundView,
         MissingPurchaseAmountInput
     },
     data() {
@@ -178,7 +178,7 @@ export default {
                     this.currentComponent = 'OrderSearch'
                     break
                 case 14:
-                    this.currentComponent = 'OutboundByOrder'
+                    this.currentComponent = 'OtherWarehouseOutboundView'
                     break
                 case 15:
                     this.currentComponent = 'SupplierManagement'

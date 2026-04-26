@@ -1544,6 +1544,18 @@ def get_material_outbound_records():
     status = request.args.get("status", type=int, default=0)
     destination = request.args.get("destination")
     outbound_type = request.args.get("outboundType", type=int, default=0)
+    # 可选：按操作人员（仓库文员）staff_id 过滤；用逗号分隔
+    staff_ids_raw = request.args.get("staffIds") or ""
+    staff_ids_filter = []
+    if staff_ids_raw:
+        for token in str(staff_ids_raw).split(","):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                staff_ids_filter.append(int(token))
+            except ValueError:
+                continue
 
     query = (
         db.session.query(OutboundRecord, OutsourceFactory, Department, Supplier)
@@ -1594,6 +1606,8 @@ def get_material_outbound_records():
         )
     if outbound_type and outbound_type in OUTBOUND_TYPE_MAPPING:
         query = query.filter(OutboundRecord.outbound_type == outbound_type)
+    if staff_ids_filter:
+        query = query.filter(OutboundRecord.staff_id.in_(staff_ids_filter))
 
     query = query.order_by(desc(OutboundRecord.outbound_datetime))
     count_result = query.distinct().count()
@@ -1634,6 +1648,100 @@ def get_material_outbound_records():
         }
         result.append(obj)
     return {"result": result, "total": count_result}
+
+
+@material_storage_bp.route("/warehouse/getuncompletedoutboundmaterials", methods=["GET"])
+def get_uncompleted_outbound_materials():
+    """查询尚未完成出库的材料(MaterialStorage 维度)。
+    口径(默认): 当前剩余库存 current_amount > 0 (尚未全部出库)
+    可选参数 onlyNeverOutbound=1 时, 仅返回从未出过库 (outbound_amount = 0) 的记录。
+    支持的过滤参数:
+      materialTypes : 材料类型名(逗号分隔, 例如 面料,里料,复合)
+      materialName  : 材料名称模糊搜索
+      supplierName  : 厂家名称模糊搜索
+      onlyNeverOutbound : 0/1, 是否仅看从未出过库
+      page, pageSize
+    """
+    page = int(request.args.get("page", 1))
+    number = int(request.args.get("pageSize", 20))
+    material_name = request.args.get("materialName")
+    supplier_name = request.args.get("supplierName")
+    only_never_outbound = request.args.get("onlyNeverOutbound", "0") in ("1", "true", "True")
+    types_raw = request.args.get("materialTypes") or ""
+    type_names = [t.strip() for t in types_raw.split(",") if t.strip()]
+
+    query = (
+        db.session.query(
+            MaterialStorage,
+            SPUMaterial,
+            Material,
+            MaterialType,
+            Supplier,
+            Order,
+            Shoe,
+        )
+        .join(SPUMaterial, SPUMaterial.spu_material_id == MaterialStorage.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .outerjoin(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .outerjoin(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .outerjoin(OrderShoe, OrderShoe.order_shoe_id == MaterialStorage.order_shoe_id)
+        .outerjoin(Order, Order.order_id == OrderShoe.order_id)
+        .outerjoin(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+    )
+
+    if only_never_outbound:
+        query = query.filter(
+            (MaterialStorage.outbound_amount == 0) | (MaterialStorage.outbound_amount.is_(None))
+        )
+        query = query.filter(MaterialStorage.inbound_amount > 0)
+    else:
+        query = query.filter(MaterialStorage.current_amount > 0)
+
+    if type_names:
+        query = query.filter(MaterialType.material_type_name.in_(type_names))
+    if material_name:
+        query = query.filter(Material.material_name.ilike(f"%{material_name}%"))
+    if supplier_name:
+        query = query.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+
+    query = query.order_by(
+        Material.material_name.asc(),
+        MaterialStorage.material_storage_id.desc(),
+    )
+    total_count = query.distinct().count()
+    rows = query.distinct().limit(number).offset((page - 1) * number).all()
+
+    result = []
+    for ms, spu, material, mtype, supplier, order, shoe in rows:
+        inbound_amt = float(ms.inbound_amount or 0)
+        outbound_amt = float(ms.outbound_amount or 0)
+        current_amt = float(ms.current_amount or 0)
+        ever_outbound = outbound_amt > 0
+        result.append(
+            {
+                "materialStorageId": ms.material_storage_id,
+                "materialName": material.material_name if material else None,
+                "materialTypeName": mtype.material_type_name if mtype else None,
+                "supplierName": supplier.supplier_name if supplier else None,
+                "materialModel": spu.material_model if spu else None,
+                "materialSpecification": spu.material_specification if spu else None,
+                "materialColor": spu.color if spu else None,
+                "actualInboundUnit": ms.actual_inbound_unit,
+                "inboundAmount": inbound_amt,
+                "outboundAmount": outbound_amt,
+                "currentAmount": current_amt,
+                "everOutbound": ever_outbound,
+                "outboundStatus": (
+                    "未出库" if not ever_outbound else ("部分出库" if current_amt > 0 else "已全部出库")
+                ),
+                "orderRId": order.order_rid if order else None,
+                "shoeRId": shoe.shoe_rid if shoe else None,
+                "estimatedArrivalDate": format_date(ms.material_estimated_arrival_date)
+                if ms.material_estimated_arrival_date
+                else None,
+            }
+        )
+    return {"result": result, "total": total_count}
 
 
 @material_storage_bp.route("/warehouse/getoutboundrecordbyrecordid", methods=["GET"])
