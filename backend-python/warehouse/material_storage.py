@@ -23,6 +23,37 @@ def _role_allowed_typenames(staff_id: int | None) -> list[str]:
     return STAFF_OUTBOUND_PERMISSIONS.get(int(staff_id), [])
 
 
+def _current_role_id() -> int | None:
+    try:
+        character, _staff, _dept = current_user_info()
+        return int(getattr(character, "character_id", None)) if character else None
+    except Exception:
+        return None
+
+
+def _role_typenames_for(map_obj: dict, role_id: int | None):
+    """返回 (allowed_or_none, has_permission)。
+    allowed_or_none: None 表示不限制；list 表示限制到这些类型名。
+    has_permission: 角色是否在权限表中（False 时调用方应直接拒绝）。
+    """
+    if role_id is None:
+        return None, False
+    if role_id not in map_obj:
+        return None, False
+    return map_obj[role_id], True
+
+
+def _intersect_typenames(*lists):
+    """对多个允许列表求交集；None 视为不限。最终返回 list 或 None。"""
+    effective = None
+    for lst in lists:
+        if lst is None:
+            continue
+        s = set(lst)
+        effective = s if effective is None else (effective & s)
+    return None if effective is None else sorted(effective)
+
+
 def _get_material_storage_size_details(
     msids: list[int],
 ) -> dict[int, list[MaterialStorageSizeDetail]]:
@@ -1169,6 +1200,38 @@ def _handle_admin_outbound(data):
     return outbound_record
 
 
+def _handle_general_outbound(data):
+    """通用材料出库：用于无订单绑定的材料 (order_shoe_id IS NULL)。
+    出库类型由 outboundType 指定 (1=废料处理, 6=行政出库)，与行政出库相比
+    不要求材料必须来源于 inbound_type=3 的入库；但要求所有 storage 的
+    order_shoe_id 必须为 NULL。
+    """
+    items = data.get("items", [])
+    storage_ids = [it.get("materialStorageId") for it in items if it.get("materialStorageId")]
+    if not storage_ids:
+        abort(Response(json.dumps({"message": "请选择要出库的材料"}), 400))
+    bound_rows = (
+        db.session.query(MaterialStorage.material_storage_id)
+        .filter(
+            MaterialStorage.material_storage_id.in_(storage_ids),
+            MaterialStorage.order_shoe_id.isnot(None),
+        )
+        .all()
+    )
+    if bound_rows:
+        abort(
+            Response(
+                json.dumps({"message": "存在绑定订单的材料，无法在通用出库中处理"}),
+                400,
+            )
+        )
+    data["supplierId"] = None
+    data["outsourceInfoId"] = None
+    outbound_record = _create_outbound_record(data, 1)
+    _create_outbound_record_details(items, outbound_record)
+    return outbound_record
+
+
 def _outbound_material_helper(data, staff_id=None):
     outbound_type = data.get("outboundType", 0)
     # 工厂使用
@@ -2178,9 +2241,35 @@ def get_order_outbound_materials():
     order_rids_raw = request.args.get("orderRIds")
     shoe_rid = (request.args.get("shoeRId") or "").strip()
     material_type_id = request.args.get("materialTypeId", type=int)
+    material_type_ids_raw = request.args.get("materialTypeIds") or ""
+    material_type_ids: list[int] = []
+    for token in str(material_type_ids_raw).split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            material_type_ids.append(int(token))
+        except ValueError:
+            continue
     include_general = request.args.get("includeGeneral", type=int, default=0)
     staff_id = request.args.get("staffId", type=int)  # ← 新增
     allowed_type_names = _role_allowed_typenames(staff_id)
+
+    # 角色级限制：总仓文员(23) 不允许按订单出库；成品仓(20) 仅限包材
+    _role_id = _current_role_id()
+    if _role_id == 23:
+        return jsonify({"result": [], "total": 0})
+    role_extra_typenames, _has = _role_typenames_for(
+        ROLE_ORDER_OUTBOUND_TYPENAMES, _role_id
+    )
+    if role_extra_typenames is not None:
+        allowed_type_names = (
+            list(set(allowed_type_names) & set(role_extra_typenames))
+            if allowed_type_names
+            else list(role_extra_typenames)
+        )
+        if not allowed_type_names:
+            return jsonify({"result": [], "total": 0})
 
     filters = {
         "material_name": request.args.get("materialName", ""),
@@ -2271,6 +2360,9 @@ def get_order_outbound_materials():
     # ===== 前端下拉选中的 material_type_id 再叠加（交集）=====
     if material_type_id:
         q = q.filter(Material.material_type_id == material_type_id)
+    # ===== 前端按分类 tab 选中的多 material_type_ids（OR 关系，再与单选取交集）=====
+    if material_type_ids:
+        q = q.filter(Material.material_type_id.in_(material_type_ids))
 
     # like 筛选
     material_filter_map = {
@@ -2463,12 +2555,40 @@ def list_order_have_available_materials():
     page = request.args.get("page", type=int, default=1)
     page_size = request.args.get("pageSize", type=int, default=10)
     staff_id = request.args.get("staffId", type=int)  # ← 新增
+    type_names_raw = request.args.get("materialTypeNames") or ""
+    extra_type_names = [t.strip() for t in type_names_raw.split(",") if t.strip()]
 
     allowed_type_names = _role_allowed_typenames(staff_id)
+
+    # 角色级限制：总仓文员(23) 不允许按订单出库；成品仓(20) 仅限包材
+    _role_id = _current_role_id()
+    if _role_id == 23:
+        return jsonify({"result": [], "total": 0})
+    role_extra_typenames, _has = _role_typenames_for(
+        ROLE_ORDER_OUTBOUND_TYPENAMES, _role_id
+    )
+    if role_extra_typenames is not None:
+        allowed_type_names = (
+            list(set(allowed_type_names) & set(role_extra_typenames))
+            if allowed_type_names
+            else list(role_extra_typenames)
+        )
+        if not allowed_type_names:
+            return jsonify({"result": [], "total": 0})
 
     # 如果传了 staffId 但映射不到任何类型，直接返回空
     if staff_id is not None and not allowed_type_names:
         return jsonify({"result": [], "total": 0})
+
+    # 综合身份限制 + 前端按 tab 选中的分类（取交集）
+    if allowed_type_names and extra_type_names:
+        effective_type_names = [t for t in extra_type_names if t in allowed_type_names]
+        if not effective_type_names:
+            return jsonify({"result": [], "total": 0})
+    elif allowed_type_names:
+        effective_type_names = allowed_type_names
+    else:
+        effective_type_names = extra_type_names
 
     # ===== EXISTS 子查询：有可用库存，且（如有）材料类型属于身份范围 =====
     ms_exists = exists().where(
@@ -2483,8 +2603,8 @@ def list_order_have_available_materials():
             # 如果没有身份限制，就不加 in_ 条件（用 True() 兜底）
             (
                 True
-                if not allowed_type_names
-                else MaterialType.material_type_name.in_(allowed_type_names)
+                if not effective_type_names
+                else MaterialType.material_type_name.in_(effective_type_names)
             ),
         )
     )
@@ -2561,3 +2681,230 @@ def list_order_have_available_materials():
             )
 
     return jsonify({"result": result, "total": total})
+
+
+@material_storage_bp.route("/warehouse/generaloutbound/materials", methods=["GET"])
+def list_general_outbound_materials():
+    """无订单绑定 (order_shoe_id IS NULL) 的可出库材料列表。
+    支持参数：page, pageSize, materialName, supplierName, materialTypeNames(逗号),
+    materialTypeIds(逗号), staffId, materialModel, materialSpec, materialColor。
+    """
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=10)
+    material_name = (request.args.get("materialName") or "").strip()
+    supplier_name = (request.args.get("supplierName") or "").strip()
+    material_model = (request.args.get("materialModel") or "").strip()
+    material_spec = (request.args.get("materialSpec") or "").strip()
+    material_color = (request.args.get("materialColor") or "").strip()
+    type_names_raw = request.args.get("materialTypeNames") or ""
+    type_names = [t.strip() for t in type_names_raw.split(",") if t.strip()]
+    type_ids_raw = request.args.get("materialTypeIds") or ""
+    type_ids: list[int] = []
+    for tok in str(type_ids_raw).split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            type_ids.append(int(tok))
+        except ValueError:
+            continue
+    staff_id = request.args.get("staffId", type=int)
+    allowed = _role_allowed_typenames(staff_id)
+
+    # 角色级权限（通用材料出库白名单）
+    _role_id = _current_role_id()
+    role_typenames, has_role = _role_typenames_for(
+        ROLE_GENERAL_OUTBOUND_TYPENAMES, _role_id
+    )
+    if not has_role:
+        return jsonify({"result": [], "total": 0})
+    # 仅当 staff 映射存在时才与之求交；否则忽略 staff 限制（如成品仓员工 staff 不在 STAFF_OUTBOUND_PERMISSIONS 内）
+    if staff_id is not None and not allowed:
+        allowed = []  # 不强制空列表语义，下面用角色级覆盖
+    base_allowed = role_typenames  # None=不限
+    if allowed:
+        base_allowed = (
+            list(set(allowed) & set(role_typenames))
+            if role_typenames is not None
+            else allowed
+        )
+        if not base_allowed:
+            return jsonify({"result": [], "total": 0})
+
+    if base_allowed and type_names:
+        effective_type_names = [t for t in type_names if t in base_allowed]
+        if not effective_type_names:
+            return jsonify({"result": [], "total": 0})
+    elif base_allowed:
+        effective_type_names = base_allowed
+    else:
+        effective_type_names = type_names
+
+    q = (
+        db.session.query(
+            MaterialStorage,
+            SPUMaterial,
+            Material,
+            MaterialType,
+            Supplier,
+        )
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .filter(MaterialStorage.order_shoe_id.is_(None))
+        .filter(MaterialStorage.current_amount > 0)
+    )
+
+    if effective_type_names:
+        q = q.filter(MaterialType.material_type_name.in_(effective_type_names))
+    if type_ids:
+        q = q.filter(Material.material_type_id.in_(type_ids))
+    if material_name:
+        q = q.filter(Material.material_name.ilike(f"%{material_name}%"))
+    if supplier_name:
+        q = q.filter(Supplier.supplier_name.ilike(f"%{supplier_name}%"))
+    if material_model:
+        q = q.filter(SPUMaterial.material_model.ilike(f"%{material_model}%"))
+    if material_spec:
+        q = q.filter(SPUMaterial.material_specification.ilike(f"%{material_spec}%"))
+    if material_color:
+        q = q.filter(SPUMaterial.color.ilike(f"%{material_color}%"))
+
+    total = (
+        q.with_entities(func.count(func.distinct(MaterialStorage.material_storage_id)))
+        .order_by(None)
+        .scalar()
+    )
+    rows = (
+        q.order_by(Material.material_name.asc(), MaterialStorage.material_storage_id.desc())
+        .distinct()
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+        .all()
+    )
+    msids = [r.MaterialStorage.material_storage_id for r in rows]
+    size_details_map = _get_material_storage_size_details(msids)
+
+    result = []
+    for storage, spu, material, mtype, supplier in rows:
+        obj = {
+            "materialStorageId": storage.material_storage_id,
+            "materialId": spu.material_id,
+            "materialType": mtype.material_type_name,
+            "materialName": material.material_name,
+            "materialModel": spu.material_model or "",
+            "materialSpecification": spu.material_specification or "",
+            "materialColor": spu.color or "",
+            "materialCategory": material.material_category,
+            "supplierName": supplier.supplier_name,
+            "allowedOutboundAmount": float(
+                (storage.current_amount or 0) - (storage.pending_outbound or 0)
+            ),
+            "currentAmount": float(storage.current_amount or 0),
+            "unitPrice": float(storage.unit_price or 0),
+            "actualInboundUnit": storage.actual_inbound_unit,
+            "shoeSizeColumns": storage.shoe_size_columns or [],
+        }
+        size_detail = size_details_map.get(storage.material_storage_id, [])
+        for i in range(len(storage.shoe_size_columns or [])):
+            if i < len(size_detail):
+                obj[f"currentAmount{i}"] = size_detail[i].current_amount
+                obj[f"allowedOutboundAmount{i}"] = (
+                    size_detail[i].current_amount - size_detail[i].pending_outbound
+                )
+            else:
+                obj[f"currentAmount{i}"] = 0
+                obj[f"allowedOutboundAmount{i}"] = 0
+        result.append(obj)
+    return {"result": result, "total": total}
+
+
+@material_storage_bp.route("/warehouse/generaloutbound/create", methods=["POST"])
+def create_general_outbound():
+    """通用材料出库提交。
+    body: {
+        outboundType: 1|6 (默认 6 行政出库),
+        items: [{materialStorageId, outboundQuantity, remark, amount0..n}],
+        departmentId?: int,
+        picker?: str,
+        remark?: str
+    }
+    """
+    data = request.get_json() or {}
+    outbound_type = int(data.get("outboundType", 6))
+    if outbound_type not in (1, 6):
+        return jsonify({"message": "通用出库仅支持 行政出库(6) 或 废料处理(1)"}), 400
+
+    items = data.get("items", [])
+    if not items:
+        return jsonify({"message": "请选择要出库的材料"}), 400
+
+    # 角色级权限校验
+    _role_id = _current_role_id()
+    role_typenames, has_role = _role_typenames_for(
+        ROLE_GENERAL_OUTBOUND_TYPENAMES, _role_id
+    )
+    if not has_role:
+        return jsonify({"message": "无通用材料出库权限"}), 403
+    if role_typenames is not None:
+        # 校验所选材料的类型必须落在角色允许范围内
+        ms_ids = [it.get("materialStorageId") for it in items if it.get("materialStorageId")]
+        if ms_ids:
+            type_rows = (
+                db.session.query(MaterialType.material_type_name)
+                .join(Material, Material.material_type_id == MaterialType.material_type_id)
+                .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
+                .join(
+                    MaterialStorage,
+                    MaterialStorage.spu_material_id == SPUMaterial.spu_material_id,
+                )
+                .filter(MaterialStorage.material_storage_id.in_(ms_ids))
+                .distinct()
+                .all()
+            )
+            bad = [
+                r.material_type_name
+                for r in type_rows
+                if r.material_type_name not in role_typenames
+            ]
+            if bad:
+                return (
+                    jsonify({"message": f"以下材料类型不在权限范围内：{','.join(bad)}"}),
+                    403,
+                )
+
+    # 通用出库不允许传 orderRId
+    for it in items:
+        it.pop("orderRId", None)
+        it.pop("orderId", None)
+        total = Decimal(it.get("outboundQuantity", 0))
+        if total <= 0:
+            return jsonify({"message": "出库数量必须大于 0"}), 400
+        sized_sum = 0
+        for i, _ in enumerate(SHOESIZERANGE):
+            val = it.get(f"amount{i}")
+            if val is None:
+                break
+            sized_sum += int(val)
+        if sized_sum and Decimal(sized_sum) != total:
+            return (
+                jsonify({"message": f"尺码明细之和({sized_sum})与总数({total})不一致"}),
+                400,
+            )
+
+    data["outboundType"] = outbound_type
+    data["currentDateTime"] = format_datetime(datetime.now())
+
+    record = _handle_general_outbound(data)
+    record.staff_id = current_user_info()[1].staff_id
+    db.session.commit()
+    return jsonify(
+        {
+            "message": "success",
+            "outboundRId": record.outbound_rid,
+            "outboundTime": data["currentDateTime"],
+        }
+    ), 200
+
+

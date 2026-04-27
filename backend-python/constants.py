@@ -170,6 +170,20 @@ STAFF_OUTBOUND_PERMISSIONS = {
     11: ['辅料', '饰品'],
 }
 
+# 按订单出库 — 角色级权限（None 表示不限制）。仅用于额外按角色限制订单/材料的可见类型，
+# 与 STAFF_OUTBOUND_PERMISSIONS 取交集。未列出的角色不在按订单出库范围内。
+ROLE_ORDER_OUTBOUND_TYPENAMES = {
+    8: None,            # 总仓经理 -> 不限
+    20: ['包材'],        # 成品仓 -> 仅包材
+}
+
+# 通用材料出库 — 角色级权限（None 表示不限制）。未列出的角色不允许通用材料出库。
+ROLE_GENERAL_OUTBOUND_TYPENAMES = {
+    8: None,                                   # 总仓经理 -> 不限
+    20: ['包材'],                               # 成品仓 -> 仅包材
+    23: ['生产工具', '办公后勤', '开发样品'],     # 总仓文员
+}
+
 MISSING_FLOW_ACTIVE_STATUSES = ["0", "1", "2"]  # 0-已提交, 1-审批中, 2-执行中
 
 FIRST_PURCHASE_FINISH_STATUS = 8
