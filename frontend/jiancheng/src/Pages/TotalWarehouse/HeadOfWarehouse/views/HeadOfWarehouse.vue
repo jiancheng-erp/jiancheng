@@ -25,6 +25,12 @@
                     <el-menu-item index="14" @click="handleMenuClick(14)">
                         <span>未出库材料查看</span>
                     </el-menu-item>
+                    <el-menu-item index="19" @click="handleMenuClick(19)">
+                        <span>按订单出库</span>
+                    </el-menu-item>
+                    <el-menu-item index="20" @click="handleMenuClick(20)">
+                        <span>通用材料出库</span>
+                    </el-menu-item>
                     <el-menu-item index="9" @click="handleMenuClick(9)">
                         <span>出入库审核</span>
                     </el-menu-item>
@@ -96,6 +102,8 @@ import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/Financ
 import MakeInventory from '../components/MakeInventory.vue'
 import PurchaseOrderInfo from '../components/PurchaseOrderInfo.vue'
 import OtherWarehouseOutboundView from '../components/UncompletedOutboundMaterialsView.vue'
+import OutboundByOrder from '../components/OutboundByOrder.vue'
+import GeneralMaterialOutbound from '../components/GeneralMaterialOutbound.vue'
 import MissingPurchaseAmountInput from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MissingPurchaseAmountInput.vue'
 
 export default {
@@ -117,6 +125,8 @@ export default {
         MakeInventory,
         PurchaseOrderInfo,
         OtherWarehouseOutboundView,
+        OutboundByOrder,
+        GeneralMaterialOutbound,
         MissingPurchaseAmountInput
     },
     data() {
@@ -191,6 +201,12 @@ export default {
                     break
                 case 18:
                     this.currentComponent = 'MissingPurchaseAmountInput'
+                    break
+                case 19:
+                    this.currentComponent = 'OutboundByOrder'
+                    break
+                case 20:
+                    this.currentComponent = 'GeneralMaterialOutbound'
                     break
             }
         }

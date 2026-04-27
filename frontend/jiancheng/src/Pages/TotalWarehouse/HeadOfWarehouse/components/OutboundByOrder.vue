@@ -2,6 +2,12 @@
     <div class="page p-4">
         <!-- ========== 场景 1：订单选择（初始） ========== -->
         <template v-if="mode === 'order'">
+            <el-card v-if="!isRoleRestricted" shadow="never" class="mb-3 category-tabs-card">
+                <el-tabs v-model="activeCategoryKey" type="card" @tab-change="onCategoryTabChange">
+                    <el-tab-pane v-for="t in categoryTabs" :key="t.key" :label="t.label" :name="t.key" />
+                </el-tabs>
+            </el-card>
+
             <el-card shadow="never" class="mb-3">
                 <el-form :inline="true">
                     <el-form-item label="订单搜索">
@@ -82,6 +88,7 @@
                         <template v-else>
                             <el-tag type="info">未选择</el-tag>
                         </template>
+                        <el-tag v-if="!isRoleRestricted && activeCategoryLabel" size="small" type="warning">分类：{{ activeCategoryLabel }}</el-tag>
                     </div>
                     <div class="flex items-center gap-3">
                         <el-button @click="backToOrderSelection">返回订单选择</el-button>
@@ -95,7 +102,7 @@
                 <el-form :inline="true">
                     <el-form-item label="材料类型">
                         <el-select v-model="query.materialTypeId" clearable placeholder="全部" style="width: 220px">
-                            <el-option v-for="t in materialTypes" :key="t.id" :label="t.name" :value="t.id" />
+                            <el-option v-for="t in materialTypesForActiveCategory" :key="t.id" :label="t.name" :value="t.id" />
                         </el-select>
                     </el-form-item>
                     <el-form-item label="含非订单库存">
@@ -455,19 +462,54 @@ const ROLE_TYPE_MAP: Record<number, string[]> = {
     11: ['辅料', '饰品'] // 辅料及饰品
 }
 
+// 按订单出库 — 角色级权限映射（与后端 ROLE_ORDER_OUTBOUND_TYPENAMES 对齐）。
+// null 表示不限；未列出的角色按现有 staff-id 规则处理；role 23（总仓文员）已被后端拒绝。
+const ORDER_OUTBOUND_ROLE_TYPES: Record<number, string[] | null> = {
+    8: null,
+    20: ['包材']
+}
+
 const staffId = ref<number | null>(null)
+const userRole = ref<number | null>(null)
+// 总仓经理 character role = 8，拥有所有出库权限，按 tab 分类查看，不受 ROLE_TYPE_MAP 限制
+const HEAD_OF_WAREHOUSE_ROLE = 8
 const allowedTypeNames = computed<string[]>(() => {
+    if (userRole.value != null && userRole.value in ORDER_OUTBOUND_ROLE_TYPES) {
+        const t = ORDER_OUTBOUND_ROLE_TYPES[userRole.value]
+        return t === null ? [] : t
+    }
     if (staffId.value == null) return []
     return ROLE_TYPE_MAP[staffId.value] ?? []
 })
 const isRoleRestricted = computed(() => allowedTypeNames.value.length > 0)
 
+// 总仓经理（无身份限制）：按子仓库分类的 tab
+interface CategoryTab { key: string; label: string; typeNames: string[] }
+const categoryTabs: CategoryTab[] = [
+    { key: 'fabric', label: '面料/里料/复合仓', typeNames: ['面料', '里料', '复合'] },
+    { key: 'sole', label: '底材仓', typeNames: ['底材'] },
+    { key: 'package', label: '包材仓', typeNames: ['包材'] },
+    { key: 'aux', label: '辅料及饰品仓', typeNames: ['辅料', '饰品'] }
+]
+const activeCategoryKey = ref<string>(categoryTabs[0].key)
+const activeCategoryTypeNames = computed<string[]>(() => {
+    const t = categoryTabs.find((x) => x.key === activeCategoryKey.value)
+    return t ? t.typeNames : []
+})
+const activeCategoryLabel = computed<string>(() => {
+    const t = categoryTabs.find((x) => x.key === activeCategoryKey.value)
+    return t ? t.label : ''
+})
+
 function loadStaffIdFromLocalStorage() {
     try {
         const v = localStorage.getItem('staffid')
         staffId.value = v != null && v !== '' ? Number(v) : null
+        const r = localStorage.getItem('role')
+        userRole.value = r != null && r !== '' ? Number(r) : null
     } catch {
         staffId.value = null
+        userRole.value = null
     }
 }
 // ===== 新增：预览/确认模式标记 =====
@@ -599,7 +641,10 @@ async function loadOrders() {
                 keyword: orderQuery.keyword,
                 page: orderQuery.page,
                 pageSize: orderQuery.pageSize,
-                staffId: staffId.value ?? undefined // ← 新增
+                staffId: (userRole.value != null && userRole.value in ORDER_OUTBOUND_ROLE_TYPES) ? undefined : (staffId.value ?? undefined), // 角色级权限优先，不传 staffId
+                materialTypeNames: !isRoleRestricted.value && activeCategoryTypeNames.value.length
+                    ? activeCategoryTypeNames.value.join(",")
+                    : undefined
             }
         })
         orderRows.value = data?.result || []
@@ -677,6 +722,39 @@ const loadMaterialTypes = async () => {
         }
     } catch (err) {
         console.error('获取物料类型失败', err)
+    }
+}
+
+// 当前 tab 内允许的 materialType id 列表 / 下拉选项
+const materialTypeIdsForActiveCategory = computed<number[]>(() => {
+    if (isRoleRestricted.value) return []
+    const names = activeCategoryTypeNames.value
+    if (!names.length) return []
+    return materialTypes.value
+        .filter((t) => names.includes(t.name))
+        .map((t) => t.id)
+})
+const materialTypesForActiveCategory = computed<MaterialType[]>(() => {
+    if (isRoleRestricted.value) return materialTypes.value
+    const names = activeCategoryTypeNames.value
+    if (!names.length) return materialTypes.value
+    return materialTypes.value.filter((t) => names.includes(t.name))
+})
+
+function onCategoryTabChange() {
+    // 切换分类时重置筛选与分页/已选订单/已选材料
+    query.materialTypeId = undefined
+    query.page = 1
+    selectedIdSet.value.clear()
+    displayCache.clear()
+    selectedItems.value = []
+    if (mode.value === 'order') {
+        // 在订单选择阶段切换分类：重置已选订单并重新加载订单列表
+        selectedOrders.value = []
+        orderQuery.page = 1
+        loadOrders()
+    } else if (query.orderRIds.length) {
+        reload(false)
     }
 }
 
@@ -945,10 +1023,13 @@ async function reload(preserveOriginal = true) {
                 orderRIds: query.orderRIds.join(","),
                 orderRId: query.orderRIds[0],
                 materialTypeId: query.materialTypeId,
+                materialTypeIds: !isRoleRestricted.value && materialTypeIdsForActiveCategory.value.length
+                    ? materialTypeIdsForActiveCategory.value.join(",")
+                    : undefined,
                 includeGeneral: includeGeneral.value,
                 page: query.page,
                 pageSize: query.pageSize,
-                staffId: staffId.value ?? undefined // ? ??
+                staffId: (userRole.value != null && userRole.value in ORDER_OUTBOUND_ROLE_TYPES) ? undefined : (staffId.value ?? undefined) // 角色级权限优先，不传 staffId
             }
         })
         const processed = (data?.result || []).map(normalizeRow)
