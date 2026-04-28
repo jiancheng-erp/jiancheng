@@ -31,6 +31,28 @@ def _current_role_id() -> int | None:
         return None
 
 
+def _current_staff_id() -> int | None:
+    try:
+        _character, staff, _dept = current_user_info()
+        return int(getattr(staff, "staff_id", None)) if staff else None
+    except Exception:
+        return None
+
+
+def _resolve_general_outbound_typenames():
+    """通用材料出库类型权限解析。
+    返回 (allowed_or_none, has_permission)。
+    优先使用服务端 staff_id：如果在 STAFF_OUTBOUND_PERMISSIONS 中，说明是专仓文员
+    （面料/底材/包材/辅料），出库类型与其订单出库保持一致；
+    否则退回角色级映射（总仓文员/总仓经理/成品仓等）。
+    """
+    cur_staff_id = _current_staff_id()
+    if cur_staff_id is not None and cur_staff_id in STAFF_OUTBOUND_PERMISSIONS:
+        return list(STAFF_OUTBOUND_PERMISSIONS[cur_staff_id]), True
+    role_id = _current_role_id()
+    return _role_typenames_for(ROLE_GENERAL_OUTBOUND_TYPENAMES, role_id)
+
+
 def _role_typenames_for(map_obj: dict, role_id: int | None):
     """返回 (allowed_or_none, has_permission)。
     allowed_or_none: None 表示不限制；list 表示限制到这些类型名。
@@ -2707,11 +2729,8 @@ def list_general_outbound_materials():
     staff_id = request.args.get("staffId", type=int)
     allowed = _role_allowed_typenames(staff_id)
 
-    # 角色级权限（通用材料出库白名单）
-    _role_id = _current_role_id()
-    role_typenames, has_role = _role_typenames_for(
-        ROLE_GENERAL_OUTBOUND_TYPENAMES, _role_id
-    )
+    # 角色/员工级权限（通用材料出库白名单）
+    role_typenames, has_role = _resolve_general_outbound_typenames()
     if not has_role:
         return jsonify({"result": [], "total": 0})
     # 仅当 staff 映射存在时才与之求交；否则忽略 staff 限制（如成品仓员工 staff 不在 STAFF_OUTBOUND_PERMISSIONS 内）
@@ -2836,11 +2855,8 @@ def create_general_outbound():
     if not items:
         return jsonify({"message": "请选择要出库的材料"}), 400
 
-    # 角色级权限校验
-    _role_id = _current_role_id()
-    role_typenames, has_role = _role_typenames_for(
-        ROLE_GENERAL_OUTBOUND_TYPENAMES, _role_id
-    )
+    # 角色/员工级权限校验
+    role_typenames, has_role = _resolve_general_outbound_typenames()
     if not has_role:
         return jsonify({"message": "无通用材料出库权限"}), 403
     if role_typenames is not None:

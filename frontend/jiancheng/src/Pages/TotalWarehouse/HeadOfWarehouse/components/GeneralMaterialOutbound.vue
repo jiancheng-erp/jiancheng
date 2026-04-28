@@ -148,6 +148,14 @@ const GENERAL_OUTBOUND_ROLE_TYPES: Record<number, string[] | null> = {
     20: ['包材'],                                   // 成品仓
     23: ['生产工具', '办公后勤', '开发样品']         // 总仓文员
 }
+// 专仓文员 staff_id -> 可出库类型（与按订单出库保持一致）。
+// role=23 同时命中专仓 staff 时，优先使用这个映射；总仓文员不在里面，仍走角色映射。
+const STAFF_GENERAL_OUTBOUND_TYPES: Record<number, string[]> = {
+    40: ['面料', '里料', '复合'],
+    41: ['底材'],
+    42: ['包材'],
+    11: ['辅料', '饰品']
+}
 const HEAD_OF_WAREHOUSE_ROLE = 8
 
 const staffId = ref<number | null>(null)
@@ -166,6 +174,10 @@ function loadIdentity() {
 
 const allowedRoleTypes = computed<string[] | null>(() => {
     if (userRole.value == null) return []
+    // role=23 下，专仓文员优先使用 staff 映射（与按订单出库保持一致）
+    if (staffId.value != null && staffId.value in STAFF_GENERAL_OUTBOUND_TYPES) {
+        return STAFF_GENERAL_OUTBOUND_TYPES[staffId.value]
+    }
     if (!(userRole.value in GENERAL_OUTBOUND_ROLE_TYPES)) return []
     return GENERAL_OUTBOUND_ROLE_TYPES[userRole.value]
 })
@@ -260,11 +272,8 @@ async function reload() {
             materialTypeNames: activeTypeNames.value.length
                 ? activeTypeNames.value.join(',')
                 : undefined,
-            // 对于已有角色级权限映射的用户，不发送 staffId（避免与 STAFF_OUTBOUND_PERMISSIONS 求交后变空）
-            staffId:
-                userRole.value != null && userRole.value in GENERAL_OUTBOUND_ROLE_TYPES
-                    ? undefined
-                    : staffId.value ?? undefined
+            // 后端会优先以服务端 staff_id 判断专仓文员权限，前端不再需要传 staffId
+            staffId: undefined
         }
         const { data } = await axios.get(
             `${apiBaseUrl}/warehouse/generaloutbound/materials`,

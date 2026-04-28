@@ -418,6 +418,55 @@
   }
 }
 
+/* 720p 及以下极小高度屏幕超紧凑模式 */
+@media (max-height: 760px) {
+  :root {
+    --header-h: 40px;
+    --el-menu-item-height: 32px;
+  }
+  .app-header {
+    font-size: 16px;
+    margin: 2px 8px;
+  }
+  .app-body {
+    gap: 6px;
+    padding: 0 8px 8px;
+    height: calc(100vh - var(--header-h) - 4px);
+  }
+  .app-aside,
+  .el-aside,
+  .el-main {
+    padding: 8px;
+  }
+  /* 头像、名字水平摆放，压缩头部区高度 */
+  .profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 6px;
+    text-align: left;
+  }
+  .profile .el-avatar {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 14px !important;
+    margin-bottom: 0 !important;
+  }
+  .profile-name {
+    font-size: 12px;
+  }
+  .app-menu {
+    padding: 0;
+  }
+  .el-menu-item {
+    font-size: 12px !important;
+    margin: 2px 0 !important;
+    padding: 0 .35rem !important;
+    border-radius: 8px;
+  }
+}
+
 /* 更窄的低分屏（1366x768 / 1280x720）：进一步收窄侧栏 */
 @media (max-width: 1440px) {
   :root { --aside-w: clamp(180px, 16vw, 220px); }
