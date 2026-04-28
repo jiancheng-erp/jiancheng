@@ -244,6 +244,11 @@
         </el-row>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ businessTotals.rows }}</b> 行</span>
+                <span>合计申请箱数：<b>{{ businessTotals.cartons }}</b> 箱</span>
+                <span>合计申请双数：<b>{{ businessTotals.pairs }}</b> 双</span>
+            </div>
             <span>
                 <el-button @click="isBusinessDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="submitBusinessForm" :loading="isBusinessSubmitting" :disabled="isBusinessSubmitting">
@@ -325,6 +330,11 @@
         </el-row>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ warehouseDirectTotals.rows }}</b> 行</span>
+                <span>合计出库箱数：<b>{{ warehouseDirectTotals.cartons }}</b> 箱</span>
+                <span>合计出库双数：<b>{{ warehouseDirectTotals.pairs }}</b> 双</span>
+            </div>
             <span>
                 <el-button @click="isWarehouseDirectDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="submitWarehouseDirectOutbound" :loading="isWarehouseDirectSubmitting" :disabled="isWarehouseDirectSubmitting">
@@ -360,6 +370,10 @@
         </el-table>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ outboundFormTotals.rows }}</b> 行</span>
+                <span>合计出库数量：<b>{{ outboundFormTotals.qty }}</b></span>
+            </div>
             <span>
                 <el-button @click="isOutboundDialogVisible = false">返回</el-button>
                 <el-button type="primary" @click="submitOperationForm"> 出库 </el-button>
@@ -769,6 +783,54 @@ export default {
         applyDetailPageData() {
             const start = (this.applyDetailCurrentPage - 1) * this.applyDetailPageSize
             return this.applyDetailPackingList.slice(start, start + this.applyDetailPageSize)
+        },
+        // ===== 对话框合计 =====
+        businessTotals() {
+            const items = this.businessForm?.items || []
+            let cartons = 0
+            let pairs = 0
+            let rows = 0
+            for (const it of items) {
+                const p = Number(it.applyPairs || 0)
+                const c = Number(it.applyCartons || 0)
+                if (p > 0 || c > 0) rows += 1
+                cartons += c
+                pairs += p
+            }
+            return {
+                rows,
+                cartons: Number(cartons.toFixed(2)),
+                pairs: Math.round(pairs)
+            }
+        },
+        warehouseDirectTotals() {
+            const items = this.warehouseDirectForm?.items || []
+            let cartons = 0
+            let pairs = 0
+            let rows = 0
+            for (const it of items) {
+                const p = Number(it.applyPairs || 0)
+                const c = Number(it.applyCartons || 0)
+                if (p > 0 || c > 0) rows += 1
+                cartons += c
+                pairs += p
+            }
+            return {
+                rows,
+                cartons: Number(cartons.toFixed(2)),
+                pairs: Math.round(pairs)
+            }
+        },
+        outboundFormTotals() {
+            const items = this.outboundForm?.items || []
+            let qty = 0
+            let rows = 0
+            for (const it of items) {
+                const q = Number(it.outboundQuantity || 0)
+                if (q > 0) rows += 1
+                qty += q
+            }
+            return { rows, qty: Math.round(qty) }
         }
     },
     async mounted() {
@@ -1671,6 +1733,23 @@ export default {
 }
 .mt-3 {
     margin-top: 12px;
+}
+.dialog-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #606266;
+    text-align: left;
+    justify-content: flex-start;
+}
+.dialog-totals b {
+    color: #409eff;
+    margin: 0 2px;
 }
 .search-row :deep(.el-col) {
     display: flex;
