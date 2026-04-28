@@ -269,7 +269,7 @@
       >
         <el-table-column label="选择" width="60" align="center">
           <template #default="{ row }">
-            <el-checkbox v-model="row._selected" :disabled="!canSelectExecuteDetail(row)" />
+            <el-checkbox v-model="row._selected" :disabled="!canSelectExecuteDetail(row)" @change="recalcExecuteSummary" />
           </template>
         </el-table-column>
         <el-table-column prop="customerName" label="客户名称" width="120" />
@@ -345,6 +345,13 @@
       </p> -->
 
       <template #footer>
+        <div class="dialog-totals" v-if="executeDetails.length">
+          <span>已选明细：<b>{{ executeTotalSelectedRows }}</b> 行</span>
+          <span>合计出库箱数：<b>{{ executeTotalActualCartons }}</b> 箱</span>
+          <span>合计出库双数：<b>{{ executeTotalActual }}</b> 双</span>
+          <span>预计双数：<b>{{ executeTotalExpected }}</b> 双</span>
+          <span>差异：<b :style="{ color: (executeTotalActual - executeTotalExpected) === 0 ? '#67c23a' : '#e6a23c' }">{{ executeTotalActual - executeTotalExpected }}</b> 双</span>
+        </div>
         <span>
           <el-button @click="executeDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="submitExecute">确认出库</el-button>
@@ -408,6 +415,8 @@ export default {
       executeTotalAllPending: 0,
       executeTotalExpected: 0,
       executeTotalActual: 0,
+      executeTotalActualCartons: 0,
+      executeTotalSelectedRows: 0,
       executeFilterShoeRId: '',
       executeCurrentPage: 1,
       executePageSize: 20
@@ -733,11 +742,13 @@ export default {
       this.executeDetails.forEach((item) => {
         if (this.canSelectExecuteDetail(item)) item._selected = true
       })
+      this.recalcExecuteSummary()
     },
     deselectAll() {
       this.executeDetails.forEach((item) => {
         item._selected = false
       })
+      this.recalcExecuteSummary()
     },
     onExecuteShoeFilter() {
       // 仅用于联动「选中该鞋型」按钮，不自动勾选
@@ -749,6 +760,7 @@ export default {
           item._selected = true
         }
       })
+      this.recalcExecuteSummary()
     },
     canSelectExecuteDetail(item) {
       return !!item?.inboundFinished && Number(item?.currentStock) > 0
@@ -759,6 +771,7 @@ export default {
           item._selected = false
         }
       })
+      this.recalcExecuteSummary()
     },
     onCartonChange(row) {
       const pairsPerCarton = Number(row.pairsPerCarton) || 0
@@ -786,19 +799,28 @@ export default {
       let allPending = 0
       let expected = 0
       let actual = 0
+      let actualCartons = 0
+      let selectedRows = 0
       this.executeDetails.forEach((item) => {
         const exp = Number(item.totalPairs) || 0
         const act = Number(item.actualPairs) || 0
+        const actC = Number(item.actualCartonCount) || 0
         item._diff = act - exp
         allPending += exp
         if (this.canSelectExecuteDetail(item)) {
           expected += exp
         }
         actual += act
+        if (item._selected && actC > 0) {
+          actualCartons += actC
+          selectedRows += 1
+        }
       })
       this.executeTotalAllPending = allPending
       this.executeTotalExpected = expected
       this.executeTotalActual = actual
+      this.executeTotalActualCartons = Number(actualCartons.toFixed(2))
+      this.executeTotalSelectedRows = selectedRows
     }
   }
 }
@@ -807,6 +829,23 @@ export default {
 <style scoped>
 .page {
   background: #f8f8f8;
+}
+.dialog-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #606266;
+  text-align: left;
+  justify-content: flex-start;
+}
+.dialog-totals b {
+  color: #409eff;
+  margin: 0 2px;
 }
 .mb-2 {
   margin-bottom: 8px;
