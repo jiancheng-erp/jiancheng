@@ -370,6 +370,59 @@
   .app-aside, .el-main { padding: 1rem; border-radius: 12px; }
   .el-menu-item { font-size: 13px !important; height: 46px !important; }
 }
+
+/* ============================== */
+/* 低分辨率（720p / 768p 等）紧凑化 */
+/* 针对 1280x720 等小高度屏幕：压缩头部、头像区与菜单项，让侧栏菜单尽量完整显示 */
+/* ============================== */
+@media (max-height: 820px) {
+  :root {
+    --header-h: 48px;
+    --el-menu-item-height: 40px;
+  }
+  .app-header {
+    font-size: 18px;
+    margin: 4px 12px;
+  }
+  .app-body {
+    gap: 8px;
+    padding: 0 12px 12px;
+    height: calc(100vh - var(--header-h) - 8px);
+  }
+  .app-aside,
+  .el-aside,
+  .el-main {
+    padding: 10px;
+  }
+  /* 头像区紧凑 */
+  .profile {
+    padding: 6px 6px;
+  }
+  .profile .el-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    margin-bottom: 4px;
+  }
+  .profile-name {
+    font-size: 13px;
+  }
+  /* 菜单项紧凑 */
+  .app-menu {
+    padding: 2px 0;
+  }
+  .el-menu-item {
+    font-size: 13px !important;
+    margin: 3px 0 !important;
+    padding: 0 .5rem !important;
+  }
+}
+
+/* 更窄的低分屏（1366x768 / 1280x720）：进一步收窄侧栏 */
+@media (max-width: 1440px) {
+  :root { --aside-w: clamp(180px, 16vw, 220px); }
+}
+
 /* ============================== */
 /* Fix: 下拉类 Popper 被裁切/遮挡  */
 /* ============================== */

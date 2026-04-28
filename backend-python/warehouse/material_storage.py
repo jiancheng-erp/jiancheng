@@ -2255,10 +2255,8 @@ def get_order_outbound_materials():
     staff_id = request.args.get("staffId", type=int)  # ← 新增
     allowed_type_names = _role_allowed_typenames(staff_id)
 
-    # 角色级限制：总仓文员(23) 不允许按订单出库；成品仓(20) 仅限包材
+    # 角色级限制：成品仓(20) 仅限包材；总仓文员(role 23) 未在 STAFF_OUTBOUND_PERMISSIONS 中的默认为空
     _role_id = _current_role_id()
-    if _role_id == 23:
-        return jsonify({"result": [], "total": 0})
     role_extra_typenames, _has = _role_typenames_for(
         ROLE_ORDER_OUTBOUND_TYPENAMES, _role_id
     )
@@ -2560,10 +2558,8 @@ def list_order_have_available_materials():
 
     allowed_type_names = _role_allowed_typenames(staff_id)
 
-    # 角色级限制：总仓文员(23) 不允许按订单出库；成品仓(20) 仅限包材
+    # 角色级限制：成品仓(20) 仅限包材；其他角色依 staff_id 来判定
     _role_id = _current_role_id()
-    if _role_id == 23:
-        return jsonify({"result": [], "total": 0})
     role_extra_typenames, _has = _role_typenames_for(
         ROLE_ORDER_OUTBOUND_TYPENAMES, _role_id
     )

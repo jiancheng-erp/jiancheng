@@ -33,6 +33,10 @@
           </el-menu-item>
 
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>按订单出库</span>
+          </el-menu-item>
+
+          <el-menu-item index="14" @click="handleMenuClick(14)">
             <span>通用材料出库</span>
           </el-menu-item>
 
@@ -136,6 +140,9 @@ export default {
                     this.currentComponent = 'InboundOutboundHistory'
                     break
                 case 6:
+                    this.currentComponent = 'OutboundByOrder'
+                    break
+                case 14:
                     this.currentComponent = 'GeneralMaterialOutbound'
                     break
                 case 9:
