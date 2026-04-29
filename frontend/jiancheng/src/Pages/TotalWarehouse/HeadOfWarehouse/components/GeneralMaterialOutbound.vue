@@ -77,7 +77,8 @@
                 <el-pagination background layout="total, prev, pager, next, jumper" :total="total"
                     :page-size="pageSize" :current-page="currentPage" @current-change="(p) => { currentPage = p; reload() }" />
                 <div class="flex items-center gap-3 footer-actions">
-                    <el-select size="small" v-model="form.outboundType" style="width: 130px">
+                    <el-select size="small" v-model="form.outboundType" style="width: 150px">
+                        <el-option label="通用材料出库" :value="7" />
                         <el-option label="行政出库" :value="6" />
                         <el-option label="废料处理" :value="1" />
                     </el-select>
@@ -93,25 +94,94 @@
             </div>
         </el-card>
 
-        <el-dialog v-model="dialogVisible" title="确认出库" width="60%">
-            <el-table :data="previewItems" border stripe size="small">
-                <el-table-column prop="materialName" label="材料" min-width="140" show-overflow-tooltip />
-                <el-table-column prop="supplierName" label="厂家" min-width="120" show-overflow-tooltip />
-                <el-table-column prop="materialModel" label="型号" min-width="100" show-overflow-tooltip />
-                <el-table-column prop="materialSpecification" label="规格" min-width="100" show-overflow-tooltip />
-                <el-table-column prop="materialColor" label="颜色" min-width="60" />
-                <el-table-column prop="actualInboundUnit" label="单位" width="60" />
-                <el-table-column prop="outboundQuantity" label="出库数量" min-width="100" />
-                <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
-            </el-table>
-            <div class="dialog-summary">
-                出库类型：{{ form.outboundType === 1 ? '废料处理' : '行政出库' }}
-                <span style="margin-left: 16px;">合计件数：{{ previewItems.length }}</span>
-                <span style="margin-left: 16px;">合计数量：{{ previewTotal }}</span>
+        <el-dialog v-model="dialogVisible" title="出库单详情" width="80%">
+            <div id="generalPrintView">
+                <table style="width: 100%; border-collapse: collapse">
+                    <thead>
+                        <tr>
+                            <td>
+                                <div style="position: relative; padding: 5px">
+                                    <h1 style="margin: 0; text-align: center">健诚鞋业出库单</h1>
+                                    <span
+                                        style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); font-weight: bolder; font-size: 16px">
+                                        单据编号: {{ currentRow.outboundRId }}
+                                    </span>
+                                </div>
+                                <table border="0" cellspacing="0" align="left" width="100%"
+                                    style="font-size: 16px; margin-bottom: 10px; table-layout: fixed; word-wrap: break-word; word-break: break-all">
+                                    <tr>
+                                        <td style="padding: 5px; width: 200px" align="left">出库至:
+                                            {{ currentRow.destination }}</td>
+                                        <td style="padding: 5px; width: 300px" align="left">出库时间:
+                                            {{ currentRow.timestamp }}</td>
+                                        <td style="padding: 5px; width: 150px" align="left">出库类型:
+                                            {{ currentRow.outboundType }}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table border="1" cellspacing="0" align="center" width="100%"
+                                    style="table-layout: fixed; word-wrap: break-word; word-break: break-all">
+                                    <thead>
+                                        <tr>
+                                            <th width="100">材料名</th>
+                                            <th width="100">厂家</th>
+                                            <th width="80">材料类型</th>
+                                            <th width="100">型号</th>
+                                            <th width="120">规格</th>
+                                            <th width="80">颜色</th>
+                                            <th width="55">单位</th>
+                                            <th width="100">数量</th>
+                                            <th width="100">单价</th>
+                                            <th width="100">金额</th>
+                                            <th>备注</th>
+                                        </tr>
+                                    </thead>
+                                    <tr v-for="(item, index) in previewRecord" :key="index" align="center">
+                                        <td>{{ item.materialName }}</td>
+                                        <td>{{ item.supplierName }}</td>
+                                        <td>{{ item.materialType }}</td>
+                                        <td>{{ item.materialModel }}</td>
+                                        <td>{{ item.materialSpecification }}</td>
+                                        <td>{{ item.materialColor }}</td>
+                                        <td>{{ item.actualInboundUnit }}</td>
+                                        <td>{{ item.outboundQuantity }}</td>
+                                        <td>{{ item.unitPrice }}</td>
+                                        <td>{{ item.itemTotalPrice }}</td>
+                                        <td>{{ item.remark }}</td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>
+                                <div style="margin-top: 20px; font-size: 16px; font-weight: bold; display: flex; flex-wrap: wrap; gap: 16px">
+                                    <span>合计件数: <span style="text-decoration: underline">{{ previewRecord.length }}</span></span>
+                                    <span>合计数量: <span style="text-decoration: underline">{{ previewTotal }}</span></span>
+                                    <span>合计金额: <span style="text-decoration: underline">{{ currentRow.totalPrice }}</span></span>
+                                    <span>领料人: <span style="text-decoration: underline">{{ currentRow.picker }}</span></span>
+                                    <span>备注: <span style="text-decoration: underline">{{ currentRow.remark }}</span></span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
             <template #footer>
-                <el-button @click="dialogVisible = false">取消</el-button>
-                <el-button type="primary" :loading="submitting" @click="submit">确认提交</el-button>
+                <template v-if="isPreviewConfirm">
+                    <el-button @click="dialogVisible = false">返回修改</el-button>
+                    <el-button type="primary" :loading="submitting" @click="submit">确认提交</el-button>
+                </template>
+                <template v-else>
+                    <el-button @click="dialogVisible = false">返回</el-button>
+                    <el-button type="primary" v-print="'#generalPrintView'">打印</el-button>
+                </template>
             </template>
         </el-dialog>
     </div>
@@ -214,7 +284,7 @@ const filters = reactive({
     materialSpec: ''
 })
 const form = reactive({
-    outboundType: 6 as 1 | 6,
+    outboundType: 7 as 1 | 6 | 7,
     departmentId: undefined as number | undefined,
     picker: '',
     remark: ''
@@ -243,6 +313,53 @@ const previewItems = computed(() =>
 const previewTotal = computed(() =>
     previewItems.value.reduce((s, r) => s + (Number(r.outboundQuantity) || 0), 0)
 )
+
+// 出库单预览/提交后详情状态
+const isPreviewConfirm = ref(true)
+const currentRow = reactive<{
+    outboundRId: string
+    destination: string
+    timestamp: string
+    outboundType: string
+    picker: string
+    remark: string
+    totalPrice: string
+}>({
+    outboundRId: '',
+    destination: '',
+    timestamp: '',
+    outboundType: '',
+    picker: '',
+    remark: '',
+    totalPrice: ''
+})
+const previewRecord = ref<any[]>([])
+const selectedDepartmentName = computed(() => {
+    const id = form.departmentId
+    if (id == null) return ''
+    const d = departments.value.find((x: any) => x.value === id)
+    return d?.label || ''
+})
+function buildPreviewRecord() {
+    return selectedRows.value.map((r) => {
+        const qty = Number(r._outboundQuantity) || 0
+        const unitPriceNum = Number(r.unitPrice || 0)
+        const itemTotal = unitPriceNum * qty
+        return {
+            materialName: r.materialName || '',
+            supplierName: r.supplierName || '',
+            materialType: r.materialType || '',
+            materialModel: r.materialModel || '',
+            materialSpecification: r.materialSpecification || '',
+            materialColor: r.materialColor || '',
+            actualInboundUnit: r.actualInboundUnit || '',
+            outboundQuantity: qty,
+            unitPrice: Number.isFinite(unitPriceNum) ? unitPriceNum.toFixed(2) : '',
+            itemTotalPrice: Number.isFinite(itemTotal) ? itemTotal.toFixed(2) : '0.00',
+            remark: r._remark || ''
+        }
+    })
+}
 
 function onSelectionChange(list: any[]) {
     selectedRows.value = list
@@ -315,6 +432,22 @@ function openConfirm() {
     if (!form.remark || !form.remark.trim()) {
         return ElMessage.warning('请填写用途说明（remark）')
     }
+    // 初始化出库单预览头部
+    previewRecord.value = buildPreviewRecord()
+    const totalPrice = previewRecord.value.reduce(
+        (s, it) => s + (Number(it.itemTotalPrice) || 0), 0
+    )
+    currentRow.outboundRId = '（提交后生成）'
+    currentRow.destination = selectedDepartmentName.value || ''
+    currentRow.timestamp = '（提交后生成）'
+    currentRow.outboundType =
+        form.outboundType === 1 ? '废料处理'
+            : form.outboundType === 6 ? '行政出库'
+            : '通用材料出库'
+    currentRow.picker = form.picker || ''
+    currentRow.remark = form.remark || ''
+    currentRow.totalPrice = totalPrice.toFixed(2)
+    isPreviewConfirm.value = true
     dialogVisible.value = true
 }
 async function submit() {
@@ -337,7 +470,11 @@ async function submit() {
             payload
         )
         ElMessage.success(`出库成功，单号 ${data.outboundRId}`)
-        dialogVisible.value = false
+        // 提交后切换为“详情/可打印”模式，填入后端返回的单号/时间
+        currentRow.outboundRId = data.outboundRId || currentRow.outboundRId
+        currentRow.timestamp = data.outboundTime || currentRow.timestamp
+        isPreviewConfirm.value = false
+        // 重置选择但保留对话框供打印
         selectedRows.value = []
         if (tableRef.value) tableRef.value.clearSelection()
         await reload()

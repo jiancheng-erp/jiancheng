@@ -2839,7 +2839,7 @@ def list_general_outbound_materials():
 def create_general_outbound():
     """通用材料出库提交。
     body: {
-        outboundType: 1|6 (默认 6 行政出库),
+        outboundType: 1|6|7 (默认 7 通用材料出库),
         items: [{materialStorageId, outboundQuantity, remark, amount0..n}],
         departmentId?: int,
         picker?: str,
@@ -2847,9 +2847,9 @@ def create_general_outbound():
     }
     """
     data = request.get_json() or {}
-    outbound_type = int(data.get("outboundType", 6))
-    if outbound_type not in (1, 6):
-        return jsonify({"message": "通用出库仅支持 行政出库(6) 或 废料处理(1)"}), 400
+    outbound_type = int(data.get("outboundType", 7))
+    if outbound_type not in (1, 6, 7):
+        return jsonify({"message": "通用出库仅支持 通用材料出库(7)、行政出库(6) 或 废料处理(1)"}), 400
 
     items = data.get("items", [])
     if not items:
