@@ -234,6 +234,7 @@ def get_finished_in_out_overview():
             "endDate": format_date(order.end_date),
             "colorName": color.color_name,
             "batchType": batch_type,
+            "isOutsourced": order.is_outsourced,
             "shoeSizeColumns": [],
         }
 
@@ -758,6 +759,7 @@ def _determine_status(storage):
 def inbound_finished():
     data = request.get_json()
     remark = data.get("remark")
+    is_outsourced = data.get("isOutsourced")
     items = data.get("items", [])
     timestamp = format_datetime(datetime.now())
     formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
@@ -795,6 +797,8 @@ def inbound_finished():
             return jsonify({"message": "无成品记录"}), 400
 
         order, order_shoe, storage = response
+        if is_outsourced is not None:
+            order.is_outsourced = 1 if is_outsourced else 0
         storage.finished_actual_amount += inbound_quantity
         storage.finished_amount += inbound_quantity
         # for i in range(len(amount_list)):
@@ -1182,6 +1186,7 @@ def get_finished_inbound_records():
             "customerProductName": customer_product_name,
             "customerBrand": customer.customer_brand,
             "orderCId": order.order_cid,
+            "isOutsourced": order.is_outsourced,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -1303,6 +1308,7 @@ def get_finished_outbound_records():
             "customerBrand": customer.customer_brand,
             "applyIds": apply_ids,
             "applyId": apply_ids[0] if len(apply_ids) == 1 else None,
+            "isOutsourced": order.is_outsourced,
         }
         result.append(obj)
     return {"result": result, "total": count_result}
@@ -1705,6 +1711,7 @@ def get_shoe_inoutbound_detail():
             BatchInfoType.batch_info_type_name.label(
                 "batch_type_name"
             ),  # 用于判定男女童
+            Order.is_outsourced.label("is_outsourced"),
         )
         .select_from(ShoeInboundRecord)
         .join(
@@ -1720,6 +1727,7 @@ def get_shoe_inoutbound_detail():
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
         .join(Color, Color.color_id == ShoeType.color_id)
         # —— 批次链路（外连接，避免无批次被过滤）——
         .outerjoin(
@@ -1760,6 +1768,7 @@ def get_shoe_inoutbound_detail():
             BatchInfoType.batch_info_type_name.label(
                 "batch_type_name"
             ),  # 用于判定男女童
+            Order.is_outsourced.label("is_outsourced"),
         )
         .select_from(ShoeOutboundRecord)
         .join(
@@ -1775,6 +1784,7 @@ def get_shoe_inoutbound_detail():
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
         .join(Color, Color.color_id == ShoeType.color_id)
         # —— 批次链路（外连接）——
         .outerjoin(
@@ -1890,6 +1900,7 @@ def get_shoe_inoutbound_detail():
                 "currency": currency_norm,
                 "remark": r.remark or "",
                 "picker": r.picker or "",
+                "isOutsourced": r.is_outsourced,
             }
         )
 
@@ -3045,6 +3056,7 @@ def execute_outbound_apply():
     apply_id = data.get("applyId")
     picker = data.get("picker") or ""
     extra_remark = data.get("remark") or ""
+    actual_outbound_date_str = data.get("actualOutboundDate")
     detail_payloads = data.get("details")
 
     if not apply_id:
@@ -3184,13 +3196,20 @@ def execute_outbound_apply():
 
     # 创建出库主记录
     now_dt = datetime.now()
-    timestamp = format_datetime(datetime.now())
+    if actual_outbound_date_str:
+        try:
+            from datetime import date as _date
+            parsed_date = datetime.strptime(actual_outbound_date_str, "%Y-%m-%d")
+            now_dt = parsed_date
+        except ValueError:
+            return jsonify({"message": "actualOutboundDate 格式不正确，应为 YYYY-MM-DD"}), 400
+    timestamp = format_datetime(now_dt)
     rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
     shoe_outbound_rid = "FOR" + rid_suffix + "T0"
 
     outbound_record = ShoeOutboundRecord(
         shoe_outbound_rid=shoe_outbound_rid,
-        outbound_datetime=timestamp,
+        outbound_datetime=now_dt,
         outbound_type=0,
         remark=(apply_obj.remark or ""),
         picker=picker,
@@ -3347,6 +3366,7 @@ def warehouse_direct_outbound():
     order_id = data.get("orderId")
     picker = data.get("picker") or ""
     remark = data.get("remark") or ""
+    actual_outbound_date_str = data.get("actualOutboundDate")
     details = data.get("details") or []
 
     if not order_id:
@@ -3427,6 +3447,11 @@ def warehouse_direct_outbound():
 
     # ====== 创建申请单（apply_type=1, status=4 直接完成） ======
     now_dt = datetime.now()
+    if actual_outbound_date_str:
+        try:
+            now_dt = datetime.strptime(actual_outbound_date_str, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"message": "actualOutboundDate 格式不正确，应为 YYYY-MM-DD"}), 400
     timestamp = format_datetime(now_dt)
     rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
     customer_index = data.get("customerIndex", 0)
@@ -3465,7 +3490,7 @@ def warehouse_direct_outbound():
     outbound_rid = "FOR" + rid_suffix + "T0"
     outbound_record = ShoeOutboundRecord(
         shoe_outbound_rid=outbound_rid,
-        outbound_datetime=timestamp,
+        outbound_datetime=now_dt,
         outbound_type=0,
         apply_id=apply_obj.apply_id,
         remark=remark,
