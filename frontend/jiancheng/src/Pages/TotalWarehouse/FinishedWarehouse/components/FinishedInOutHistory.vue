@@ -43,6 +43,13 @@
             <el-table-column prop="estimatedInboundAmount" label="计划入库数量" />
             <el-table-column prop="actualInboundAmount" label="实际入库数量" />
             <el-table-column prop="currentAmount" label="鞋型库存" />
+            <el-table-column prop="isOutsourced" label="外加工" width="80">
+                <template #default="{ row }">
+                    <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+                        {{ row.isOutsourced ? '是' : '否' }}
+                    </el-tag>
+                </template>
+            </el-table-column>
             <el-table-column prop="storageStatusLabel" label="状态" width="100" />
             <el-table-column prop="finishedTime" label="完成时间" width="110" />
         </el-table>

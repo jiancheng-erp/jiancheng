@@ -263,11 +263,22 @@
         <el-form :model="warehouseDirectForm" label-width="120px" class="mb-2">
             <el-row :gutter="20">
                 <el-col :span="8">
+                    <el-form-item label="实际出库日期">
+                        <el-date-picker
+                            v-model="warehouseDirectForm.actualOutboundDate"
+                            type="date"
+                            placeholder="默认为当天"
+                            value-format="YYYY-MM-DD"
+                            clearable
+                        />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
                     <el-form-item label="拣货人" required>
                         <el-input v-model="warehouseDirectForm.picker" placeholder="必填：拣货人姓名" />
                     </el-form-item>
                 </el-col>
-                <el-col :span="16">
+                <el-col :span="8">
                     <el-form-item label="备注">
                         <el-input v-model="warehouseDirectForm.remark" type="textarea" :rows="2" placeholder="出库备注（可选）" />
                     </el-form-item>
@@ -645,6 +656,7 @@ export default {
             warehouseDirectForm: {
                 picker: '',
                 remark: '',
+                actualOutboundDate: '',
                 items: [],
                 sizeColumns: []
             },
@@ -1438,6 +1450,7 @@ export default {
                     customerIndex: this.warehouseDirectForm._customerIndex || 0,
                     picker: this.warehouseDirectForm.picker,
                     remark: this.warehouseDirectForm.remark,
+                    actualOutboundDate: this.warehouseDirectForm.actualOutboundDate || undefined,
                     details
                 }
 

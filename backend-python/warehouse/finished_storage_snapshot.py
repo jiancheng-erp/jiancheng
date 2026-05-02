@@ -467,6 +467,7 @@ def _normalize_row(snapshot_row, order, order_shoe, shoe, color, customer, delta
         "finishedAmount": final_current,
         "finishedStatus": final_status,
         "finishedStatusLabel": FINISHED_STORAGE_STATUS.get(final_status, ""),
+        "isOutsourced": order.is_outsourced,
         "sizeColumns": size_breakdown,
     }
 
@@ -684,6 +685,7 @@ def _query_inventory_period(filters: dict, paginate: bool = True):
             "customerProductName": order_shoe.customer_product_name,
             "colorName": color.color_name,
             "batchType": normalize_category_by_batch_type(batch_type_name),
+            "isOutsourced": order.is_outsourced,
             "openingAmount": opening_amount,
             "periodInbound": period_inbound,
             "periodOutbound": period_outbound,

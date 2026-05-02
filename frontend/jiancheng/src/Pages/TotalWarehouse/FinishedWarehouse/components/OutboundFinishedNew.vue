@@ -204,6 +204,15 @@
       width="90%"
     >
       <el-form :model="executeForm" label-width="80px">
+        <el-form-item label="实际出库日期">
+          <el-date-picker
+            v-model="executeForm.actualOutboundDate"
+            type="date"
+            placeholder="默认为当天"
+            value-format="YYYY-MM-DD"
+            clearable
+          />
+        </el-form-item>
         <el-form-item label="拣货人">
           <el-input v-model="executeForm.picker" placeholder="必填：拣货人姓名" />
         </el-form-item>
@@ -409,7 +418,8 @@ export default {
       currentExecuteRow: null,
       executeForm: {
         picker: '',
-        remark: ''
+        remark: '',
+        actualOutboundDate: ''
       },
       executeDetails: [],
       executeTotalAllPending: 0,
@@ -655,7 +665,8 @@ export default {
       this.recalcExecuteSummary()
       this.executeForm = {
         picker: '',
-        remark: ''
+        remark: '',
+        actualOutboundDate: ''
       }
       this.executeDialogVisible = true
     },
@@ -713,6 +724,7 @@ export default {
         applyId: this.currentExecuteRow.applyId,
         picker: this.executeForm.picker,
         remark: this.executeForm.remark,
+        actualOutboundDate: this.executeForm.actualOutboundDate || undefined,
         details: detailPayload
       }
 

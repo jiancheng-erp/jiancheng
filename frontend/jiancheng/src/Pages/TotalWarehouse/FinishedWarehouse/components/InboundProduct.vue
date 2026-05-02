@@ -48,6 +48,13 @@
         <el-table-column prop="actualInboundAmount" label="实际入库数量" />
         <el-table-column prop="currentAmount" label="成品库存" />
         <el-table-column prop="remainingAmount" label="欠数" />
+        <el-table-column prop="isOutsourced" label="外加工" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+              {{ row.isOutsourced ? '是' : '否' }}
+            </el-tag>
+          </template>
+        </el-table-column>
       </el-table>
     </el-col>
   </el-row>
@@ -69,6 +76,9 @@
   <!-- 批量入库对话框 -->
   <el-dialog :title="operationLabels.dialogTitle" v-model="isMultiInboundDialogVisible" width="70%" destroy-on-close>
     <el-form>
+      <el-form-item prop="isOutsourced" label="外加工订单">
+        <el-switch v-model="inboundForm.isOutsourced" active-text="是" inactive-text="否" />
+      </el-form-item>
       <el-form-item prop="remark" label="备注">
         <el-input v-model="inboundForm.remark" type="textarea" show-word-limit :maxlength="commentLength" />
       </el-form-item>
@@ -151,7 +161,8 @@ export default {
         inboundAmount: 0,
         outsourceInfo: [],
         orderShoeItems: [],
-        remark: null
+        remark: null,
+        isOutsourced: false
       },
       inboundForm: {},
       currentPage: 1,
@@ -361,6 +372,7 @@ export default {
     async submitOperationForm() {
       let data = {
         remark: this.inboundForm.remark,
+        isOutsourced: this.inboundForm.isOutsourced,
         items: []
       }
       for (let orderShoeItem of this.inboundForm.orderShoeItems) {
