@@ -76,6 +76,15 @@
   <!-- 批量入库对话框 -->
   <el-dialog :title="operationLabels.dialogTitle" v-model="isMultiInboundDialogVisible" width="70%" destroy-on-close>
     <el-form>
+      <el-form-item prop="actualInboundDate" label="实际入库日期">
+        <el-date-picker
+          v-model="inboundForm.actualInboundDate"
+          type="date"
+          placeholder="默认为当天"
+          value-format="YYYY-MM-DD"
+          clearable
+        />
+      </el-form-item>
       <el-form-item prop="isOutsourced" label="外加工订单">
         <el-switch v-model="inboundForm.isOutsourced" active-text="是" inactive-text="否" />
       </el-form-item>
@@ -162,7 +171,8 @@ export default {
         outsourceInfo: [],
         orderShoeItems: [],
         remark: null,
-        isOutsourced: false
+        isOutsourced: false,
+        actualInboundDate: null
       },
       inboundForm: {},
       currentPage: 1,
@@ -373,6 +383,7 @@ export default {
       let data = {
         remark: this.inboundForm.remark,
         isOutsourced: this.inboundForm.isOutsourced,
+        actualInboundDate: this.inboundForm.actualInboundDate || null,
         items: []
       }
       for (let orderShoeItem of this.inboundForm.orderShoeItems) {
