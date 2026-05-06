@@ -87,7 +87,7 @@
                         <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                     </el-select>
                     <el-input size="small" v-model.trim="form.picker" placeholder="领料人" style="width: 130px" />
-                    <el-input size="small" v-model.trim="form.remark" placeholder="用途说明（建议必填）" style="width: 220px" />
+                    <el-input size="small" v-model.trim="form.remark" placeholder="用途说明（可选）" style="width: 220px" />
                     <el-button size="small" type="primary" :loading="submitting"
                         :disabled="selectedRows.length === 0" @click="openConfirm">提交出库</el-button>
                 </div>
@@ -428,9 +428,6 @@ function openConfirm() {
         if (q > Number(r.allowedOutboundAmount)) {
             return ElMessage.error(`材料 [${r.materialName}] 的出库数量超出可用库存`)
         }
-    }
-    if (!form.remark || !form.remark.trim()) {
-        return ElMessage.warning('请填写用途说明（remark）')
     }
     // 初始化出库单预览头部
     previewRecord.value = buildPreviewRecord()

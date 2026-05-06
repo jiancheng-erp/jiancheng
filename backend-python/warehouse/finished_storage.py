@@ -761,12 +761,19 @@ def inbound_finished():
     remark = data.get("remark")
     is_outsourced = data.get("isOutsourced")
     items = data.get("items", [])
-    timestamp = format_datetime(datetime.now())
+    actual_inbound_date_str = data.get("actualInboundDate")
+    now_dt = datetime.now()
+    if actual_inbound_date_str:
+        try:
+            now_dt = datetime.strptime(actual_inbound_date_str, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"message": "actualInboundDate 格式不正确，应为 YYYY-MM-DD"}), 400
+    timestamp = format_datetime(now_dt)
     formatted_timestamp = timestamp.replace("-", "").replace(" ", "").replace(":", "")
     rid = "FIR" + formatted_timestamp + "T0"
     inbound_record = ShoeInboundRecord(
         shoe_inbound_rid=rid,
-        inbound_datetime=timestamp,
+        inbound_datetime=now_dt,
         inbound_type=0,
         remark=remark,
     )

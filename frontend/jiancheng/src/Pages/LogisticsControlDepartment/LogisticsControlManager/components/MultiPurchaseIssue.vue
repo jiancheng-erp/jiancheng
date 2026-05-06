@@ -555,6 +555,18 @@ export default {
             }
         },
         async submitTotalPurchaseOrder() {
+            // 验证采购数量：线材（材料名含"线"）可以为0，其余不可
+            const isThread = (name) => typeof name === 'string' && name.includes('线')
+            const currentTabData = this.tabPlaneData.find(t => t.totalPurchaseOrderId === this.activeTab)
+            if (currentTabData) {
+                for (const item of currentTabData.assetsItems || []) {
+                    const qty = Number(item.adjustPurchaseAmount ?? item.purchaseAmount ?? item.amount ?? 0)
+                    if (qty === 0 && !isThread(item.materialName)) {
+                        this.$message({ type: 'error', message: `材料 [${item.materialName}] 的采购数量不能为0` })
+                        return
+                    }
+                }
+            }
             try {
                 await axios.post(`${this.$apiBaseUrl}/multiissue/submittotalpurchaseorder`, {
                     totalPurchaseOrderId: this.activeTab
