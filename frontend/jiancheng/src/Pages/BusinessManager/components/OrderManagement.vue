@@ -17,7 +17,7 @@
                 >
                     <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
                 </el-select>
-                <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.switchRadio(orderStore.radio)">
+                <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.filterDisplayOrder()">
                     <el-radio-button label="全部订单" value="all" />       
                     <el-radio-button label="已下发订单" value="已下发" /> 
                     <el-radio-button label="未下发订单" value="未下发" />   
@@ -63,13 +63,7 @@
             style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
             <el-table-column type="selection" width="55" :selectable="isBatchOperableRow" />
             <el-table-column prop="orderRid" label="订单号" sortable />
-            <el-table-column label="订单类型" width="120">
-                <template #default="scope">
-                    <el-tag :type="scope.row.orderType === 'F' ? 'warning' : 'success'">
-                        {{ formatOrderType(scope.row.orderType) }}
-                    </el-tag>
-                </template>
-            </el-table-column>
+            <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
             <el-table-column prop="orderSalesman" label="创建业务员" />
             <el-table-column prop="orderSupervisor" label="审核" />
             <el-table-column prop="orderCid" label="客户订单号" />
