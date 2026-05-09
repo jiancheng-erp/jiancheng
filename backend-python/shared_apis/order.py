@@ -1336,6 +1336,30 @@ def get_display_orders_manager():
         for r in result:
             r["hasRevertEvent"] = False
 
+    # —— 补充每单总双数 ——
+    if order_ids_in_result:
+        order_total_pairs_rows = (
+            db.session.query(
+                Order.order_id,
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("total_pairs"),
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeBatchInfo,
+                OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(Order.order_id.in_(order_ids_in_result))
+            .group_by(Order.order_id)
+            .all()
+        )
+        order_total_pairs_map = {row.order_id: int(row.total_pairs or 0) for row in order_total_pairs_rows}
+        for r in result:
+            r["orderTotalPairs"] = order_total_pairs_map.get(r["orderDbId"], 0)
+    else:
+        for r in result:
+            r["orderTotalPairs"] = 0
+
     return jsonify(result)
 
 @order_bp.route("/order/checkorderridexists", methods=["GET"])
@@ -1635,6 +1659,30 @@ def get_all_orders():
     else:
         for r in result:
             r["hasRevertEvent"] = False
+
+    # —— 补充每单总双数 ——
+    if order_ids_in_result:
+        order_total_pairs_rows = (
+            db.session.query(
+                Order.order_id,
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("total_pairs"),
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeBatchInfo,
+                OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(Order.order_id.in_(order_ids_in_result))
+            .group_by(Order.order_id)
+            .all()
+        )
+        order_total_pairs_map = {row.order_id: int(row.total_pairs or 0) for row in order_total_pairs_rows}
+        for r in result:
+            r["orderTotalPairs"] = order_total_pairs_map.get(r["orderDbId"], 0)
+    else:
+        for r in result:
+            r["orderTotalPairs"] = 0
 
     return jsonify(result)
 
