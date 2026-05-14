@@ -69,9 +69,9 @@ export const useOrderManagementStore = defineStore('orderManagement', {
                 }
 
                 // Radio filter (dispatch / revert status)
-                // orderStatusVal === 6 means 已下发
-                if (this.radio === '已下发' && row.orderStatusVal !== 6) return false
-                if (this.radio === '未下发' && row.orderStatusVal === 6) return false
+                // orderStatusVal === 6 means 未下发 (production order created, awaiting dispatch)
+                if (this.radio === '已下发' && row.orderStatusVal === 6) return false
+                if (this.radio === '未下发' && row.orderStatusVal !== 6) return false
                 if (this.radio === '退回' && !row.hasRevertEvent) return false
 
                 return true
