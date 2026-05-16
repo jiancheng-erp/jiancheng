@@ -10,7 +10,10 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
     sheet["E2"] = supplier_name if supplier_name else "全部"
     sheet["G2"] = material_model if material_model else "全部"
     sheet["J2"] = time_range if time_range else "全部"
-    
+
+    # 结算方式列表头（模板中未预留时由代码补齐）
+    if not sheet["O7"].value:
+        sheet["O7"] = "结算方式"
 
     # Insert materials data starting from row 3
     start_row = 8
@@ -29,6 +32,7 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         order_rid = data.get("orderRid", "")
         shoe_rid = data.get("shoeRid", "")
         remark = data.get("remark", "")
+        pay_method = data.get("payMethod", "")
         
         # Fill the cells
         sheet[f"A{index}"] = str(inbound_rid)
@@ -45,6 +49,7 @@ def generate_accounting_inbound_excel(template_path, save_path, warehouse_name, 
         sheet[f"L{index}"] = str(inbound_amount)
         sheet[f"M{index}"] = str(item_total_price)
         sheet[f"N{index}"] = remark
+        sheet[f"O{index}"] = pay_method if pay_method else ""
 
     # Save the modified file
     workbook.save(save_path)

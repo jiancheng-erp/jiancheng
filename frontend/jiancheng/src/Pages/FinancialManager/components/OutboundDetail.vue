@@ -47,7 +47,7 @@
                     :label="statusOption.label"
                     :value="statusOption.key"></el-option>
                 </el-select>
-                <!-- <el-button type="primary" @click="createAndDownloadOutboundExcel">生成并下载excel</el-button> -->
+                <el-button type="primary" @click="createAndDownloadOutboundExcel">生成并下载excel</el-button>
             </div>
 
         </el-col>
@@ -253,6 +253,34 @@ async function filterByDate() {
     console.log(dateRangeFilter.value)
     const apiParams = getCurrentPageInfo()
     console.log(apiParams)
+}
+
+async function createAndDownloadOutboundExcel() {
+    const apiParams = getCurrentPageInfo();
+    try {
+        const res = await axios.get($api_baseUrl + `/accounting/createoutboundexcelanddownload`, {
+            params: apiParams,
+            responseType: 'blob',
+        });
+        const blob = new Blob([res.data], { type: res.headers['content-type'] });
+        const disposition = res.headers['content-disposition'];
+        let filename = '财务部出库明细单.xlsx';
+        if (disposition && disposition.includes('filename=')) {
+            const match = disposition.match(/filename="?(.+?)"?$/);
+            if (match && match.length > 1) {
+                filename = decodeURIComponent(match[1]);
+            }
+        }
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error("Failed to download Excel:", error);
+    }
 }
 </script>
 <style></style>
