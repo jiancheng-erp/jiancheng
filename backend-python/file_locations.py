@@ -1,3 +1,4 @@
-FILE_STORAGE_PATH = "/home/desktop/jc-dev/file_server"
-IMAGE_STORAGE_PATH = "http://localhost:12667/"
-IMAGE_UPLOAD_PATH = "/home/desktop/jc-dev/img_server"
+from config import config
+FILE_STORAGE_PATH = config.FILE_STORAGE_PATH
+IMAGE_STORAGE_PATH = config.IMAGE_STORAGE_PATH
+IMAGE_UPLOAD_PATH = config.IMAGE_UPLOAD_PATH
