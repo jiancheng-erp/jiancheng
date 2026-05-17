@@ -23,6 +23,13 @@
                 <el-table-column prop="customerBrand" label="客户商标"></el-table-column>
                 <el-table-column prop="colorName" label="颜色"></el-table-column>
                 <el-table-column prop="detailAmount" label="数量"></el-table-column>
+                <el-table-column prop="isOutsourced" label="外加工" width="80">
+                    <template #default="{ row }">
+                        <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+                            {{ row.isOutsourced ? '是' : '否' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
                 <el-table-column label="操作" width="100">
                     <template #default="scope">
                         <el-button type="danger" @click="deleteRecord(scope.row)">删除</el-button>

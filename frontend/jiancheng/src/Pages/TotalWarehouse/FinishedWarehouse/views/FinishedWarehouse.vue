@@ -29,6 +29,12 @@
           <el-menu-item index="8" @click="handleMenuClick(8)">
             <span>出库申请记录</span>
           </el-menu-item>
+          <el-menu-item index="9" @click="handleMenuClick(9)">
+            <span>按订单出库（包材）</span>
+          </el-menu-item>
+          <el-menu-item index="10" @click="handleMenuClick(10)">
+            <span>通用材料出库（包材）</span>
+          </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
             <span>入\出库单</span>
           </el-menu-item>
@@ -67,6 +73,8 @@ import InOutboundRecords from '../components/InOutboundRecords.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import OutboundProduct from '../components/OutboundProduct.vue'
 import OutboundFinishedNew from '../components/OutboundFinishedNew.vue'
+import OutboundByOrder from '../../HeadOfWarehouse/components/OutboundByOrder.vue'
+import GeneralMaterialOutbound from '../../HeadOfWarehouse/components/GeneralMaterialOutbound.vue'
 export default {
     components: {
         AllHeader,
@@ -76,7 +84,9 @@ export default {
         InOutboundRecords,
         PersonalInfo,
         OutboundProduct,
-        OutboundFinishedNew
+        OutboundFinishedNew,
+        OutboundByOrder,
+        GeneralMaterialOutbound
     },
     data() {
         return {
@@ -117,6 +127,12 @@ export default {
                     break
                 case 8:
                     this.currentComponent = 'OutboundFinishedNew'
+                    break
+                case 9:
+                    this.currentComponent = 'OutboundByOrder'
+                    break
+                case 10:
+                    this.currentComponent = 'GeneralMaterialOutbound'
                     break
             }
         }

@@ -215,9 +215,9 @@
                     <el-input-number v-model="row.applyCartons" :min="0" :step="0.05" :precision="2" @change="updateBusinessPairs(row)" />
                 </template>
             </el-table-column>
-            <el-table-column label="申请双数">
+            <el-table-column label="申请双数" min-width="160">
                 <template #default="{ row }">
-                    {{ row.applyPairs }}
+                    <el-input-number v-model="row.applyPairs" :min="0" :step="1" :precision="0" @change="updateBusinessCartons(row)" />
                 </template>
             </el-table-column>
 
@@ -244,6 +244,11 @@
         </el-row>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ businessTotals.rows }}</b> 行</span>
+                <span>合计申请箱数：<b>{{ businessTotals.cartons }}</b> 箱</span>
+                <span>合计申请双数：<b>{{ businessTotals.pairs }}</b> 双</span>
+            </div>
             <span>
                 <el-button @click="isBusinessDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="submitBusinessForm" :loading="isBusinessSubmitting" :disabled="isBusinessSubmitting">
@@ -258,11 +263,22 @@
         <el-form :model="warehouseDirectForm" label-width="120px" class="mb-2">
             <el-row :gutter="20">
                 <el-col :span="8">
+                    <el-form-item label="实际出库日期">
+                        <el-date-picker
+                            v-model="warehouseDirectForm.actualOutboundDate"
+                            type="date"
+                            placeholder="默认为当天"
+                            value-format="YYYY-MM-DD"
+                            clearable
+                        />
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
                     <el-form-item label="拣货人" required>
                         <el-input v-model="warehouseDirectForm.picker" placeholder="必填：拣货人姓名" />
                     </el-form-item>
                 </el-col>
-                <el-col :span="16">
+                <el-col :span="8">
                     <el-form-item label="备注">
                         <el-input v-model="warehouseDirectForm.remark" type="textarea" :rows="2" placeholder="出库备注（可选）" />
                     </el-form-item>
@@ -297,9 +313,9 @@
                     <el-input-number v-model="row.applyCartons" :min="0" :step="0.05" :precision="2" @change="updateWarehouseDirectPairs(row)" />
                 </template>
             </el-table-column>
-            <el-table-column label="出库双数">
+            <el-table-column label="出库双数" min-width="160">
                 <template #default="{ row }">
-                    {{ row.applyPairs }}
+                    <el-input-number v-model="row.applyPairs" :min="0" :step="1" :precision="0" @change="updateWarehouseDirectCartons(row)" />
                 </template>
             </el-table-column>
 
@@ -325,6 +341,11 @@
         </el-row>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ warehouseDirectTotals.rows }}</b> 行</span>
+                <span>合计出库箱数：<b>{{ warehouseDirectTotals.cartons }}</b> 箱</span>
+                <span>合计出库双数：<b>{{ warehouseDirectTotals.pairs }}</b> 双</span>
+            </div>
             <span>
                 <el-button @click="isWarehouseDirectDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="submitWarehouseDirectOutbound" :loading="isWarehouseDirectSubmitting" :disabled="isWarehouseDirectSubmitting">
@@ -360,6 +381,10 @@
         </el-table>
 
         <template #footer>
+            <div class="dialog-totals">
+                <span>有效明细：<b>{{ outboundFormTotals.rows }}</b> 行</span>
+                <span>合计出库数量：<b>{{ outboundFormTotals.qty }}</b></span>
+            </div>
             <span>
                 <el-button @click="isOutboundDialogVisible = false">返回</el-button>
                 <el-button type="primary" @click="submitOperationForm"> 出库 </el-button>
@@ -631,6 +656,7 @@ export default {
             warehouseDirectForm: {
                 picker: '',
                 remark: '',
+                actualOutboundDate: '',
                 items: [],
                 sizeColumns: []
             },
@@ -769,6 +795,54 @@ export default {
         applyDetailPageData() {
             const start = (this.applyDetailCurrentPage - 1) * this.applyDetailPageSize
             return this.applyDetailPackingList.slice(start, start + this.applyDetailPageSize)
+        },
+        // ===== 对话框合计 =====
+        businessTotals() {
+            const items = this.businessForm?.items || []
+            let cartons = 0
+            let pairs = 0
+            let rows = 0
+            for (const it of items) {
+                const p = Number(it.applyPairs || 0)
+                const c = Number(it.applyCartons || 0)
+                if (p > 0 || c > 0) rows += 1
+                cartons += c
+                pairs += p
+            }
+            return {
+                rows,
+                cartons: Number(cartons.toFixed(2)),
+                pairs: Math.round(pairs)
+            }
+        },
+        warehouseDirectTotals() {
+            const items = this.warehouseDirectForm?.items || []
+            let cartons = 0
+            let pairs = 0
+            let rows = 0
+            for (const it of items) {
+                const p = Number(it.applyPairs || 0)
+                const c = Number(it.applyCartons || 0)
+                if (p > 0 || c > 0) rows += 1
+                cartons += c
+                pairs += p
+            }
+            return {
+                rows,
+                cartons: Number(cartons.toFixed(2)),
+                pairs: Math.round(pairs)
+            }
+        },
+        outboundFormTotals() {
+            const items = this.outboundForm?.items || []
+            let qty = 0
+            let rows = 0
+            for (const it of items) {
+                const q = Number(it.outboundQuantity || 0)
+                if (q > 0) rows += 1
+                qty += q
+            }
+            return { rows, qty: Math.round(qty) }
         }
     },
     async mounted() {
@@ -1045,12 +1119,18 @@ export default {
             row.applyPairs = cartons * perCarton
         },
 
+        updateBusinessCartons(row) {
+            const pairs = Number(row.applyPairs || 0)
+            const perCarton = Number(row.pairsPerCarton || 0)
+            row.applyCartons = perCarton > 0 ? Number((pairs / perCarton).toFixed(2)) : 0
+        },
+
         // ====== 业务：提交出库申请（新建 / 编辑） => /warehouse/outbound-apply/save ======
         async submitBusinessForm() {
             if (this.isBusinessSubmitting) return
-            const hasPositive = this.businessForm.items.some((it) => it.applyCartons > 0)
+            const hasPositive = this.businessForm.items.some((it) => it.applyPairs > 0)
             if (!hasPositive) {
-                ElMessage.error('请至少为一个配码填写申请箱数')
+                ElMessage.error('请至少为一个配码填写申请箱数或双数')
                 return
             }
 
@@ -1068,7 +1148,7 @@ export default {
                     remark: this.businessForm.remark,
                     expectedOutboundTime: this.businessForm.expectedOutboundTime || null,
                     details: this.businessForm.items
-                        .filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+                        .filter((it) => it.applyPairs > 0)
                         .map((it) => ({
                             applyDetailId: it.applyDetailId,
                             finishedShoeStorageId: it.storageId,
@@ -1082,7 +1162,7 @@ export default {
                         }))
                 }
                 if (!payload.details.length) {
-                    ElMessage.error('请至少为一条明细填写有效的申请箱数')
+                    ElMessage.error('请至少为一条明细填写有效的申请箱数或双数')
                     return
                 }
                 this.isBusinessSubmitting = true
@@ -1105,9 +1185,9 @@ export default {
             }
 
             // 新建模式：按客户名称分组，每个客户生成一个申请单
-            const validItems = this.businessForm.items.filter((it) => it.applyCartons > 0 && it.applyPairs > 0)
+            const validItems = this.businessForm.items.filter((it) => it.applyPairs > 0)
             if (!validItems.length) {
-                ElMessage.error('请至少为一条明细填写有效的申请箱数')
+                ElMessage.error('请至少为一条明细填写有效的申请箱数或双数')
                 return
             }
 
@@ -1325,15 +1405,21 @@ export default {
             row.applyPairs = cartons * perCarton
         },
 
+        updateWarehouseDirectCartons(row) {
+            const pairs = Number(row.applyPairs || 0)
+            const perCarton = Number(row.pairsPerCarton || 0)
+            row.applyCartons = perCarton > 0 ? Number((pairs / perCarton).toFixed(2)) : 0
+        },
+
         async submitWarehouseDirectOutbound() {
             if (this.isWarehouseDirectSubmitting) return
             if (!this.warehouseDirectForm.picker) {
                 ElMessage.error('请填写拣货人')
                 return
             }
-            const hasPositive = this.warehouseDirectForm.items.some((it) => it.applyCartons > 0)
+            const hasPositive = this.warehouseDirectForm.items.some((it) => it.applyPairs > 0)
             if (!hasPositive) {
-                ElMessage.error('请至少为一个配码填写出库箱数')
+                ElMessage.error('请至少为一个配码填写出库箱数或双数')
                 return
             }
 
@@ -1347,7 +1433,7 @@ export default {
             this.isWarehouseDirectSubmitting = true
             try {
                 const details = this.warehouseDirectForm.items
-                    .filter((it) => it.applyCartons > 0)
+                    .filter((it) => it.applyPairs > 0)
                     .map((it) => ({
                         finishedShoeStorageId: it.storageId,
                         orderShoeTypeId: it.orderShoeTypeId,
@@ -1364,6 +1450,7 @@ export default {
                     customerIndex: this.warehouseDirectForm._customerIndex || 0,
                     picker: this.warehouseDirectForm.picker,
                     remark: this.warehouseDirectForm.remark,
+                    actualOutboundDate: this.warehouseDirectForm.actualOutboundDate || undefined,
                     details
                 }
 
@@ -1659,6 +1746,23 @@ export default {
 }
 .mt-3 {
     margin-top: 12px;
+}
+.dialog-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #f5f7fa;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #606266;
+    text-align: left;
+    justify-content: flex-start;
+}
+.dialog-totals b {
+    color: #409eff;
+    margin: 0 2px;
 }
 .search-row :deep(.el-col) {
     display: flex;

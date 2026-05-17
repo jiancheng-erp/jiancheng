@@ -370,6 +370,70 @@
   .app-aside, .el-main { padding: 1rem; border-radius: 12px; }
   .el-menu-item { font-size: 13px !important; height: 46px !important; }
 }
+
+/* ============================== */
+/* 低分辨率（720p / 768p 等）紧凑化 */
+/* 针对 1280x720 等小高度屏幕：仅压缩头部、头像区与菜单项高度，
+   不缩小菜单字号、不缩小主区 padding，避免主区显示过小。 */
+/* ============================== */
+@media (max-height: 820px) {
+  :root {
+    --header-h: 48px;
+    --el-menu-item-height: 40px;
+  }
+  .app-header {
+    font-size: 18px;
+    margin: 4px 12px;
+  }
+  .app-body {
+    gap: 8px;
+    padding: 0 12px 12px;
+    height: calc(100vh - var(--header-h) - 8px);
+  }
+  /* 头像区紧凑 */
+  .profile {
+    padding: 6px 6px;
+  }
+  .profile .el-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    margin-bottom: 4px;
+  }
+  .profile-name {
+    font-size: 13px;
+  }
+  /* 菜单项仅紧凑高度，字号保持默认 */
+  .app-menu {
+    padding: 2px 0;
+  }
+  .el-menu-item {
+    margin: 3px 0 !important;
+  }
+}
+
+/* 720p 及以下极小高度屏幕：仅压缩头像区，避免侧栏整体被压扁；
+   不再缩小侧栏宽度、不再缩小菜单字号，保持主区原大小。 */
+@media (max-height: 760px) {
+  .profile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 6px;
+    text-align: left;
+  }
+  .profile .el-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+    margin-bottom: 0 !important;
+  }
+  .profile-name {
+    font-size: 13px;
+  }
+}
+
 /* ============================== */
 /* Fix: 下拉类 Popper 被裁切/遮挡  */
 /* ============================== */

@@ -203,6 +203,14 @@ export default {
         loadReject: {
             type: Boolean,
             default: false
+        },
+        staffIdsFilter: {
+            type: Array,
+            default: () => []
+        },
+        defaultStatus: {
+            type: Number,
+            default: null
         }
     },
     data() {
@@ -219,7 +227,7 @@ export default {
             outboundRIdSearch: null,
             destinationSearch: null,
             outboundTypeSearch: null,
-            statusSearch: this.loadReject ? 2 : 0,
+            statusSearch: this.defaultStatus !== null ? this.defaultStatus : (this.loadReject ? 2 : 0),
             rejectDialogVisible: false,
             rejectText: '',
             selectedRow: null,
@@ -256,6 +264,9 @@ export default {
                     destination: this.destinationSearch,
                     outboundType: this.outboundTypeSearch,
                     status: this.statusSearch
+                }
+                if (Array.isArray(this.staffIdsFilter) && this.staffIdsFilter.length > 0) {
+                    params.staffIds = this.staffIdsFilter.join(',')
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getmaterialoutboundrecords`, { params })
                 this.tableData = response.data.result

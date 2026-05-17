@@ -1253,6 +1253,17 @@ export default {
             this.getAllShoeListInfo()
         },
         confirmPurchaseDivideOrderSubmit() {
+            // 验证采购数量：线材（材料名含"线"）可以为0，其余不可
+            const isThread = (name) => typeof name === 'string' && name.includes('线')
+            for (const divideOrder of this.tabPlaneData) {
+                for (const item of divideOrder.assetsItems || []) {
+                    const qty = Number(item.purchaseAmount ?? item.amount ?? 0)
+                    if (qty === 0 && !isThread(item.materialName)) {
+                        this.$message({ type: 'error', message: `材料 [${item.materialName}] 的采购数量不能为0` })
+                        return
+                    }
+                }
+            }
             this.$confirm('确定提交此分采购订单吗？', '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',

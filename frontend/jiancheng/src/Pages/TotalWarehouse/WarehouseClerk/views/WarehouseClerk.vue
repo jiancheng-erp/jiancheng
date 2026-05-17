@@ -36,6 +36,10 @@
             <span>按订单出库</span>
           </el-menu-item>
 
+          <el-menu-item index="14" @click="handleMenuClick(14)">
+            <span>通用材料出库</span>
+          </el-menu-item>
+
           <el-menu-item index="9" @click="handleMenuClick(9)">
             <span>出入库审核</span>
           </el-menu-item>
@@ -83,6 +87,7 @@ import GeneralOrderSearch from '@/components/GeneralOrderSearch.vue'
 import OutboundMaterial from '../../HeadOfWarehouse/components/OutboundMaterial.vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import OutboundByOrder from '../../HeadOfWarehouse/components/OutboundByOrder.vue'
+import GeneralMaterialOutbound from '../../HeadOfWarehouse/components/GeneralMaterialOutbound.vue'
 
 export default {
     components: {
@@ -94,7 +99,8 @@ export default {
         GeneralOrderSearch,
         OutboundMaterial,
         FinancialWarehouseDetail,
-        OutboundByOrder
+        OutboundByOrder,
+        GeneralMaterialOutbound
     },
     data() {
         return {
@@ -135,6 +141,9 @@ export default {
                     break
                 case 6:
                     this.currentComponent = 'OutboundByOrder'
+                    break
+                case 14:
+                    this.currentComponent = 'GeneralMaterialOutbound'
                     break
                 case 9:
                     this.currentComponent = 'InOutboundRecords'

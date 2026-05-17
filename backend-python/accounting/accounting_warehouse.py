@@ -7,6 +7,7 @@ from sqlalchemy import func, and_, or_
 from general_document.accounting_inbound_excel import generate_accounting_inbound_excel
 from general_document.accounting_summary_excel import generate_accounting_summary_excel
 from general_document.accounting_warehouse_excel import generate_accounting_warehouse_excel
+from general_document.accounting_outbound_excel import generate_accounting_outbound_excel
 from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 import time
 from datetime import datetime, timedelta
@@ -28,7 +29,7 @@ OUTBOUND_MATERIAL_SELECTABLE_TABLE_ATTRNAMES = ["material_name", "material_unit"
 INBOUND_RECORD_SUBQUERY_SUMMARY_COLUMNS = ["unit_price", "total_amount"]
 INBOUND_SUMMARY_MATERIAL_COLUMNS = ["material_name","material_unit"]
 
-INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","approval_status"]
+INBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES = ["inbound_rid", "inbound_datetime","approval_status","pay_method"]
 INBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES = ["unit_price", "inbound_amount","item_total_price","composite_unit_cost","remark"]
 
 # inventory attrnames
@@ -83,6 +84,7 @@ name_en_cn_mapping_inbound = {
     "actual_inbound_unit":"单位",
     "inbound_amount":"入库数量",
     "item_total_price":"总价",
+    "pay_method":"结算方式",
     "approval_status":"审批状态",
     "spu_rid":"SPU",
     "remark":"备注",
@@ -101,6 +103,7 @@ col_width_mapping = {
     "actual_inbound_unit":"60px",
     "inbound_amount":"90px",
     "item_total_price":"80px",
+    "pay_method":"100px",
     "approval_status":"85px",
     "spu_rid":"180px",
     "remark":"85px"
@@ -158,19 +161,24 @@ def get_warehouse_info():
 
 @accounting_warehouse_bp.route("/accounting/get_warehouse_outbound_record", methods=["GET"])
 def get_warehouse_outbound_record():
-    page_num = request.args.get('pageNumber',type=int)
-    page_size = request.args.get('pageSize', type=int)
-    warehouse_filter = request.args.get('selectedWarehouse')
-    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
-    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
-    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
-    material_name_filter = request.args.get('materialNameFilter', type=str)
-    material_model_filter = request.args.get('materialModelFilter', type=str)
-    material_specification_filter = request.args.get('materialSpecificationFilter', type=str)
-    material_color_filter = request.args.get('materialColorFilter', type=str)
-    outbound_type_filter = request.args.getlist('outboundTypeFilter[]')
-    outbound_rid_filter = request.args.get('outboundRIdFilter', type=str)
-    audit_status_filter = request.args.getlist('auditStatusFilter[]')
+    outbound_records, total_count = _get_warehouse_outbound_record_query(request.args)
+    return jsonify({'outboundRecords': outbound_records, "total": total_count}), 200
+
+
+def _get_warehouse_outbound_record_query(data, all_records=False):
+    page_num = data.get('pageNumber', type=int)
+    page_size = data.get('pageSize', type=int)
+    warehouse_filter = data.get('selectedWarehouse')
+    supplier_name_filter = data.get('supplierNameFilter', type=str)
+    date_range_filter_start = data.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = data.get('dateRangeFilterEnd', type=str)
+    material_name_filter = data.get('materialNameFilter', type=str)
+    material_model_filter = data.get('materialModelFilter', type=str)
+    material_specification_filter = data.get('materialSpecificationFilter', type=str)
+    material_color_filter = data.get('materialColorFilter', type=str)
+    outbound_type_filter = data.getlist('outboundTypeFilter[]')
+    outbound_rid_filter = data.get('outboundRIdFilter', type=str)
+    audit_status_filter = data.getlist('auditStatusFilter[]')
     query = (
         db.session.query(OutboundRecord, OutboundRecordDetail, MaterialStorage, SPUMaterial, Material, Supplier)
         .join(OutboundRecordDetail, OutboundRecord.outbound_record_id == OutboundRecordDetail.outbound_record_id)
@@ -209,24 +217,27 @@ def get_warehouse_outbound_record():
         query = query.filter(OutboundRecord.outbound_rid.ilike(f"%{outbound_rid_filter}%"))
     if audit_status_filter != []:
         query = query.filter(OutboundRecord.approval_status.in_(audit_status_filter))
-    
+
     total_count = query.distinct().count()
-    response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
+    if all_records:
+        response_entities = query.distinct().all()
+    else:
+        response_entities = query.distinct().limit(page_size).offset((page_num - 1) * page_size).all()
     outbound_records = []
-    department_mapping = {entity.department_id:entity.department_name for entity in db.session.query(Department).all()}
+    department_mapping = {entity.department_id: entity.department_name for entity in db.session.query(Department).all()}
     for outbound_record, outbound_record_detail, material_storage, spu, material, supplier in response_entities:
         res = db_obj_to_res(outbound_record, OutboundRecord, attr_name_list=OUTBOUND_RECORD_SELECTABLE_TABLE_ATTRNAMES)
-        res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res = db_obj_to_res(outbound_record_detail, OutboundRecordDetail, attr_name_list=OUTBOUND_RECORD_DETAIL_SELECTABLE_TABLE_ATTRNAMES, initial_res=res)
         res = db_obj_to_res(spu, SPUMaterial, attr_name_list=SPU_MATERIAL_TABLE_ATTRNAMES, initial_res=res)
-        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
-        res = db_obj_to_res(supplier, Supplier,attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES,initial_res=res)
+        res = db_obj_to_res(material, Material, attr_name_list=MATERIAL_SELECTABLE_TABLE_ATTRNAMES, initial_res=res)
+        res = db_obj_to_res(supplier, Supplier, attr_name_list=SUPPLIER_SELECTABLE_TABLE_ATTRNAMES, initial_res=res)
         res[to_camel('actual_inbound_unit')] = material_storage.actual_inbound_unit
         res[to_camel('outbound_datetime')] = format_datetime(outbound_record.outbound_datetime)
         res[to_camel('outbound_type')] = format_outbound_type(outbound_record.outbound_type)
         res[to_camel('outbound_department')] = department_mapping[outbound_record.outbound_department] if outbound_record.outbound_department else ''
         res[to_camel('approval_status')] = accounting_audit_status_converter(outbound_record.approval_status)
         outbound_records.append(res)
-    return jsonify({'outboundRecords':outbound_records, "total":total_count}), 200
+    return outbound_records, total_count
 
 def _get_warehouse_inventory_query(data: dict, all_records=False):
     page_num = data.get('pageNumber',type=int)
@@ -640,7 +651,46 @@ def create_excel_and_download():
     time_range_string = date_range_filter_start + "至" + date_range_filter_end if date_range_filter_start and date_range_filter_end else "全部"
     generate_accounting_inbound_excel(template_path, save_path, warehouse_name, supplier_name_filter, material_model_filter,time_range_string ,inbound_records)
     return send_file(save_path, as_attachment=True, download_name=new_file_name)
-    
+
+
+@accounting_warehouse_bp.route("/accounting/createoutboundexcelanddownload", methods=["GET"])
+def create_outbound_excel_and_download():
+    warehouse_filter = request.args.get('selectedWarehouse')
+    supplier_name_filter = request.args.get('supplierNameFilter', type=str)
+    date_range_filter_start = request.args.get('dateRangeFilterStart', type=str)
+    date_range_filter_end = request.args.get('dateRangeFilterEnd', type=str)
+    material_model_filter = request.args.get('materialModelFilter', type=str)
+    outbound_records, _total_count = _get_warehouse_outbound_record_query(request.args, all_records=True)
+
+    warehouse_name = None
+    if warehouse_filter:
+        warehouse_name = (
+            db.session.query(MaterialWarehouse.material_warehouse_name)
+            .filter(MaterialWarehouse.material_warehouse_id == warehouse_filter)
+            .scalar()
+        )
+
+    timestamp = str(time.time())
+    new_file_name = f"财务出库单总单输出_{timestamp}.xlsx"
+    target_folder = os.path.join(FILE_STORAGE_PATH, "财务部文件", "出库总单")
+    os.makedirs(target_folder, exist_ok=True)
+    save_path = os.path.join(target_folder, new_file_name)
+    time_range_string = (
+        f"{date_range_filter_start}至{date_range_filter_end}"
+        if date_range_filter_start and date_range_filter_end
+        else "全部"
+    )
+    generate_accounting_outbound_excel(
+        save_path,
+        warehouse_name,
+        supplier_name_filter,
+        material_model_filter,
+        time_range_string,
+        outbound_records,
+    )
+    return send_file(save_path, as_attachment=True, download_name=new_file_name)
+
+
 @accounting_warehouse_bp.route("/accounting/createinboundsummaryexcelanddownload", methods=["GET"])
 def create_inbound_summary_excel_and_download():
     warehouse_filter = request.args.get('selectedWarehouse')

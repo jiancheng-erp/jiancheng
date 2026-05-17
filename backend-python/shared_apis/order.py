@@ -8,6 +8,7 @@ from api_utility import to_snake, to_camel, estimate_status_converter
 from login.login import current_user, current_user_info
 import math
 import os
+import shutil
 from datetime import datetime
 from event_processor import EventProcessor
 
@@ -1335,6 +1336,30 @@ def get_display_orders_manager():
         for r in result:
             r["hasRevertEvent"] = False
 
+    # —— 补充每单总双数 ——
+    if order_ids_in_result:
+        order_total_pairs_rows = (
+            db.session.query(
+                Order.order_id,
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("total_pairs"),
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeBatchInfo,
+                OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(Order.order_id.in_(order_ids_in_result))
+            .group_by(Order.order_id)
+            .all()
+        )
+        order_total_pairs_map = {row.order_id: int(row.total_pairs or 0) for row in order_total_pairs_rows}
+        for r in result:
+            r["orderTotalPairs"] = order_total_pairs_map.get(r["orderDbId"], 0)
+    else:
+        for r in result:
+            r["orderTotalPairs"] = 0
+
     return jsonify(result)
 
 @order_bp.route("/order/checkorderridexists", methods=["GET"])
@@ -1389,6 +1414,7 @@ def get_currency_rates():
 @order_bp.route("/order/getallorders", methods=["GET"])
 def get_all_orders():
     desc_symbol = request.args.get("descSymbol", None)
+    exclude_history = request.args.get("excludeHistory", None)
     entities = (
         db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus, OrderStatusReference)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -1401,6 +1427,13 @@ def get_all_orders():
         )
         .filter(Order.order_type != "F")
     )
+    if exclude_history:
+        entities = entities.filter(
+            or_(
+                OrderStatus.order_current_status.is_(None),
+                OrderStatus.order_current_status < ORDER_FINISH_SYMBOL,
+            )
+        )
     if desc_symbol:
         entities = entities.order_by(Order.order_rid.desc()).all()
     else:
@@ -1627,6 +1660,30 @@ def get_all_orders():
         for r in result:
             r["hasRevertEvent"] = False
 
+    # —— 补充每单总双数 ——
+    if order_ids_in_result:
+        order_total_pairs_rows = (
+            db.session.query(
+                Order.order_id,
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label("total_pairs"),
+            )
+            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeBatchInfo,
+                OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(Order.order_id.in_(order_ids_in_result))
+            .group_by(Order.order_id)
+            .all()
+        )
+        order_total_pairs_map = {row.order_id: int(row.total_pairs or 0) for row in order_total_pairs_rows}
+        for r in result:
+            r["orderTotalPairs"] = order_total_pairs_map.get(r["orderDbId"], 0)
+    else:
+        for r in result:
+            r["orderTotalPairs"] = 0
+
     return jsonify(result)
 
 
@@ -1649,13 +1706,7 @@ def delete_order():
         return jsonify({"message": "delete failed"}), 404
     order_local_path = os.path.join(FILE_STORAGE_PATH, order_entity.order_rid)
     if os.path.exists(order_local_path):
-        for file_name in os.listdir(order_local_path):
-            file_path = os.path.join(order_local_path, file_name)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-            else:
-                os.rmdir(file_path)
-        os.rmdir(order_local_path)
+        shutil.rmtree(order_local_path)
     else:
         logger.debug("path doesnt exist in server")
     order_shoe_entities = db.session.query(OrderShoe).filter_by(order_id=order_id).all()
@@ -2251,7 +2302,7 @@ def export_order_excel():
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
         )
-        .group_by(Order.order_id, OrderShoe.order_shoe_id)
+        .group_by(Order.order_id, OrderShoe.order_shoe_id, OrderStatusReference.order_status_id)
         .order_by(Order.order_id.desc())
     )
 

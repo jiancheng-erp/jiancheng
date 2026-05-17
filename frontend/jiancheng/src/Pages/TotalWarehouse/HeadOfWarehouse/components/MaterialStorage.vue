@@ -30,7 +30,8 @@
     <div class="transfer-tables">
         <!-- Top Table -->
         <el-table v-if="readonly === false" ref="topTableData" :data="topTableData"
-            style="width: 100%; margin-bottom: 20px; height: 20vh" @selection-change="handleTopSelectionChange" border
+            style="width: 100%; margin-bottom: 20px; height: 20vh" @selection-change="handleTopSelectionChange"
+            @row-dblclick="handleTopRowDblClick" border
             stripe>
             <el-table-column type="selection" width="55" />
             <el-table-column prop="supplierName" label="供应商"></el-table-column>
@@ -73,7 +74,8 @@
         </div>
     </div>
     <el-table ref="bottomTableData" :data="bottomTableData" border stripe style="height: 70vh; width: 100%"
-        @selection-change="handleBottomSelectionChange">
+        @selection-change="handleBottomSelectionChange"
+        @row-dblclick="handleBottomRowDblClick">
         <el-table-column v-if="readonly === false" type="selection" width="55" />
         <el-table-column prop="supplierName" label="供应商"></el-table-column>
         <el-table-column prop="warehouseName" label="仓库名" width="100"></el-table-column>
@@ -300,6 +302,22 @@ export default {
     methods: {
         getSelectedData() {
             return this.topTableData;
+        },
+        // 双击下表某行：选择（移动到上表）
+        handleBottomRowDblClick(row) {
+            if (this.readonly !== false) return;
+            this.topTableData = this.topTableData.concat([row]);
+            this.bottomTableData = this.bottomTableData.filter(item => item !== row);
+            this.$refs.bottomTableData?.clearSelection?.();
+            this.bottomSelected = [];
+        },
+        // 双击上表某行：移除（移动到下表）
+        handleTopRowDblClick(row) {
+            if (this.readonly !== false) return;
+            this.bottomTableData = this.bottomTableData.concat([row]);
+            this.topTableData = this.topTableData.filter(item => item !== row);
+            this.$refs.topTableData?.clearSelection?.();
+            this.topSelected = [];
         },
         // Move selected items from bottom to top
         moveUp() {

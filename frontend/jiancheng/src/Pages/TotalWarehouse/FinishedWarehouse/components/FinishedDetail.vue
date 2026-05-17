@@ -144,6 +144,13 @@
             <el-table-column prop="occurTime" label="时间" width="200">
                 <template #default="{ row }">{{ formatTime(row.occurTime) }}</template>
             </el-table-column>
+            <el-table-column prop="isOutsourced" label="外加工" width="80">
+                <template #default="{ row }">
+                    <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+                        {{ row.isOutsourced ? '是' : '否' }}
+                    </el-tag>
+                </template>
+            </el-table-column>
             <el-table-column prop="currency" label="币种" />
         </el-table>
 

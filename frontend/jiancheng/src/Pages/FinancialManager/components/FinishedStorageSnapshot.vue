@@ -63,6 +63,13 @@
             <el-table-column prop="finishedEstimatedAmount" label="计划入库" />
             <el-table-column prop="finishedActualAmount" label="实际入库" />
             <el-table-column prop="finishedAmount" label="当前库存" />
+            <el-table-column prop="isOutsourced" label="外加工" width="80">
+                <template #default="{ row }">
+                    <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+                        {{ row.isOutsourced ? '是' : '否' }}
+                    </el-tag>
+                </template>
+            </el-table-column>
             <el-table-column prop="finishedStatusLabel" label="状态" />
         </el-table>
 
@@ -99,6 +106,13 @@
             <el-table-column prop="closingAmount" label="期末数">
                 <template #default="{ row }">
                     <strong>{{ row.closingAmount }}</strong>
+                </template>
+            </el-table-column>
+            <el-table-column prop="isOutsourced" label="外加工" width="80">
+                <template #default="{ row }">
+                    <el-tag :type="row.isOutsourced ? 'warning' : 'info'" size="small">
+                        {{ row.isOutsourced ? '是' : '否' }}
+                    </el-tag>
                 </template>
             </el-table-column>
         </el-table>

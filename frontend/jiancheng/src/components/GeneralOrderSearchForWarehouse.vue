@@ -17,6 +17,12 @@
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 10px">
+        <el-col :span="6" :offset="0" style="white-space: nowrap">
+            客户型号搜索：
+            <el-input v-model="shoeCIdSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20" style="margin-top: 10px">
         <el-col :span="7" :offset="0" style="white-space: nowrap">
             订单日期：
             <el-date-picker v-model="startDateRange" type="daterange" range-separator="至"
@@ -112,6 +118,7 @@ export default {
             Search,
             orderSearch: '',
             shoeRIdSearch: '',
+            shoeCIdSearch: '',
             orderData: [],
             orderFilterData: [],
             customerSearch: '',
@@ -149,6 +156,7 @@ export default {
                 orderSearch: this.orderSearch,
                 customerSearch: this.customerSearch,
                 shoeRIdSearch: this.shoeRIdSearch,
+                shoeCIdSearch: this.shoeCIdSearch,
                 viewPastTasks: this.viewPastTasks
             }
             if (this.startDateRange && this.startDateRange.length === 2) {
@@ -204,6 +212,7 @@ export default {
             this.orderSearch = ''
             this.customerSearch = ''
             this.shoeRIdSearch = ''
+            this.shoeCIdSearch = ''
             this.startDateRange = null
             this.endDateRange = null
             this.tableFilter()

@@ -432,6 +432,7 @@ class Order(db.Model):
     )
     color_card_confirm_status = db.Column(db.String(1), nullable=False, default="0")
     is_paid = db.Column(db.SmallInteger, nullable=False, default=0)
+    is_outsourced = db.Column(db.SmallInteger, nullable=False, default=0)
     order_actual_end_date = db.Column(db.Date, nullable=True)
     create_time, update_time = portable_timestamp_columns()
     def __repr__(self):
