@@ -633,6 +633,10 @@ export default {
             let newData = data.map(item => {
                 let newItem = { ...item }
                 newItem.id = XEUtils.uniqueId()
+                // 兼容字段：搜索表格中颜色为 colorName，本页表格使用 materialColor
+                if ((newItem.materialColor == null || newItem.materialColor === '') && newItem.colorName != null) {
+                    newItem.materialColor = newItem.colorName
+                }
                 newItem.itemTotalPrice = (newItem.outboundQuantity * newItem.unitPrice).toFixed(4)
                 return newItem
             })

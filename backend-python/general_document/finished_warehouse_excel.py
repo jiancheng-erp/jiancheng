@@ -314,6 +314,7 @@ def build_finished_inbound_excel(filters: dict):
     header = [
         "订单号",
         "客户订单号",
+        "是否外加工",
         "客户名",
         "客户商标",
         "客户型号",
@@ -331,7 +332,7 @@ def build_finished_inbound_excel(filters: dict):
     _write_header(ws, header_row, header, widths)
 
     data_start_row = header_row + 1
-    center_cols = {9, 10}  # 入库时间、入库数量 居中
+    center_cols = {10, 11}  # 入库时间、入库数量 居中
     r = data_start_row
 
     # 修改：使用 all_time_inbound 计算未入库数量（全时段总和）
@@ -353,6 +354,7 @@ def build_finished_inbound_excel(filters: dict):
             [
                 order.order_rid,
                 order.order_cid,
+                "是" if getattr(order, "is_outsourced", 0) else "否",
                 customer.customer_name,
                 customer.customer_brand,
                 cust_prod_name,
@@ -466,6 +468,7 @@ def build_finished_outbound_excel(filters: dict):
     header = [
         "订单号",
         "客户订单号",
+        "是否外加工",
         "客户名",
         "客户商标",
         "客户型号",
@@ -488,7 +491,7 @@ def build_finished_outbound_excel(filters: dict):
     _write_header(ws, header_row, header, widths)
 
     data_start_row = header_row + 1
-    center_cols = {9, 10}  # 出库时间、出库数量
+    center_cols = {10, 11}  # 出库时间、出库数量
     r = data_start_row
     # 根据查询的结束月份（或当前月份）获取对应月度汇率
     rate_ref_dt = end_dt if end_dt else datetime.now()
@@ -532,6 +535,7 @@ def build_finished_outbound_excel(filters: dict):
             [
                 order.order_rid,
                 order.order_cid,
+                "是" if getattr(order, "is_outsourced", 0) else "否",
                 customer.customer_name,
                 customer.customer_brand,
                 cust_prod_name,
@@ -673,6 +677,7 @@ def build_finished_inout_excel(filters: dict):
         "方向",
         "订单号",
         "客户订单号",
+        "是否外加工",
         "客户名",
         "客户商标",
         "客户型号",
@@ -688,7 +693,7 @@ def build_finished_inout_excel(filters: dict):
     _write_header(ws, header_row, header, widths)
 
     data_start_row = header_row + 1
-    center_cols = {10, 11}  # 时间、数量
+    center_cols = {11, 12}  # 时间、数量
     r = data_start_row
 
     for (
@@ -707,6 +712,7 @@ def build_finished_inout_excel(filters: dict):
                 "入库",
                 order.order_rid,
                 order.order_cid,
+                "是" if getattr(order, "is_outsourced", 0) else "否",
                 customer.customer_name,
                 customer.customer_brand,
                 cust_prod_name,
@@ -742,6 +748,7 @@ def build_finished_inout_excel(filters: dict):
                 "出库",
                 order.order_rid,
                 order.order_cid,
+                "是" if getattr(order, "is_outsourced", 0) else "否",
                 customer.customer_name,
                 customer.customer_brand,
                 cust_prod_name,
