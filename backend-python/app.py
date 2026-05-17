@@ -106,7 +106,7 @@ def create_app(config=None):
         if not app.redis_client:
             return False  # Can't revoke without Redis, allow token
         token_in_redis = app.redis_client.get(jti)
-        return token_in_redis is not None  # True if token is revoked
+        return token_in_redis is None  # True if token is NOT in Redis (revoked/expired)
     
     @app.before_request
     def authenticate():
