@@ -36,7 +36,7 @@ class DevelopmentConfig(Config):
     db_username = os.environ.get('DB_USERNAME', 'jiancheng_dev1')
     db_password = os.environ.get('DB_PASSWORD', '123456Ab')
     db_name = os.environ.get('DB_NAME', 'jiancheng')
-    db_host = os.environ.get('DB_HOST', 'rm-wz9e6065n2281l3i56o.mysql.rds.aliyuncs.com')
+    db_host = os.environ.get('DB_HOST', 'rm-bp1ok4lv4965v7x262o.mysql.rds.aliyuncs.com')
     
     SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{db_username}:{db_password}@{db_host}/{db_name}"
     SQLALCHEMY_ECHO = False
