@@ -314,7 +314,7 @@ def build_finished_inbound_excel(filters: dict):
     header = [
         "订单号",
         "客户订单号",
-        "是否外加工",
+        "外加工标识",
         "客户名",
         "客户商标",
         "客户型号",
@@ -468,7 +468,7 @@ def build_finished_outbound_excel(filters: dict):
     header = [
         "订单号",
         "客户订单号",
-        "是否外加工",
+        "外加工标识",
         "客户名",
         "客户商标",
         "客户型号",
@@ -677,7 +677,7 @@ def build_finished_inout_excel(filters: dict):
         "方向",
         "订单号",
         "客户订单号",
-        "是否外加工",
+        "外加工标识",
         "客户名",
         "客户商标",
         "客户型号",
@@ -709,7 +709,6 @@ def build_finished_inout_excel(filters: dict):
             ws,
             r,
             [
-                "入库",
                 order.order_rid,
                 order.order_cid,
                 "是" if getattr(order, "is_outsourced", 0) else "否",
@@ -745,7 +744,6 @@ def build_finished_inout_excel(filters: dict):
             ws,
             r,
             [
-                "出库",
                 order.order_rid,
                 order.order_cid,
                 "是" if getattr(order, "is_outsourced", 0) else "否",
