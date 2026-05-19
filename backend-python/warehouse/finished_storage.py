@@ -1167,6 +1167,10 @@ def get_finished_inbound_records():
     if customer_brand and customer_brand != "":
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     count_result = query.distinct().count()
+    # 全筛选条件下的入库数量合计（不分页）
+    total_detail_amount = query.with_entities(
+        func.sum(ShoeInboundRecordDetail.inbound_amount)
+    ).scalar() or 0
     response = query.distinct().limit(number).offset((page - 1) * number).all()
     result = []
     for row in response:
@@ -1196,7 +1200,7 @@ def get_finished_inbound_records():
             "isOutsourced": order.is_outsourced,
         }
         result.append(obj)
-    return {"result": result, "total": count_result}
+    return {"result": result, "total": count_result, "totalDetailAmount": total_detail_amount}
 
 
 @finished_storage_bp.route("/warehouse/getfinishedoutboundrecords", methods=["GET"])
@@ -1270,6 +1274,11 @@ def get_finished_outbound_records():
     if customer_brand and customer_brand != "":
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     count_result = query.distinct().count()
+    total_detail_amount = int(
+        query.with_entities(
+            func.sum(ShoeOutboundRecordDetail.outbound_amount)
+        ).scalar() or 0
+    )
     response = query.distinct().limit(number).offset((page - 1) * number).all()
 
     outbound_ids = [row[5] for row in response]
@@ -1318,7 +1327,7 @@ def get_finished_outbound_records():
             "isOutsourced": order.is_outsourced,
         }
         result.append(obj)
-    return {"result": result, "total": count_result}
+    return {"result": result, "total": count_result, "totalDetailAmount": total_detail_amount}
 
 
 @finished_storage_bp.route(
@@ -1698,6 +1707,18 @@ def get_shoe_inoutbound_detail():
         _sum_size_cols(ShoeOutboundRecordDetail),
     )
 
+    # 每个 order_shoe_type_id 只取一条 batch_info_type_name，避免多批次 JOIN 行膨胀
+    batch_type_subq = (
+        db.session.query(
+            OrderShoeBatchInfo.order_shoe_type_id,
+            func.min(BatchInfoType.batch_info_type_name).label("batch_info_type_name"),
+        )
+        .join(PackagingInfo, PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id)
+        .join(BatchInfoType, BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id)
+        .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+        .subquery()
+    )
+
     # ========= 入库明细（含批次链路与 batch_type_name） =========
     inbound_detail_q = (
         db.session.query(
@@ -1715,7 +1736,7 @@ def get_shoe_inoutbound_detail():
             OrderShoeType.currency_type.label("currency"),  # 工单币种
             ShoeInboundRecord.remark.label("remark"),
             literal(None).label("picker"),
-            BatchInfoType.batch_info_type_name.label(
+            batch_type_subq.c.batch_info_type_name.label(
                 "batch_type_name"
             ),  # 用于判定男女童
             Order.is_outsourced.label("is_outsourced"),
@@ -1727,27 +1748,23 @@ def get_shoe_inoutbound_detail():
             == ShoeInboundRecord.shoe_inbound_record_id,
         )
         .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.finished_shoe_id
+            == ShoeInboundRecordDetail.finished_shoe_storage_id,
+        )
+        .join(
             OrderShoeType,
             OrderShoeType.order_shoe_type_id
-            == ShoeInboundRecordDetail.finished_shoe_storage_id,
+            == FinishedShoeStorage.order_shoe_type_id,
         )
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
         .join(Order, Order.order_id == OrderShoe.order_id)
         .join(Color, Color.color_id == ShoeType.color_id)
-        # —— 批次链路（外连接，避免无批次被过滤）——
         .outerjoin(
-            OrderShoeBatchInfo,
-            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
-        )
-        .outerjoin(
-            PackagingInfo,
-            PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
-        )
-        .outerjoin(
-            BatchInfoType,
-            BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id,
+            batch_type_subq,
+            batch_type_subq.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .filter(
             ShoeInboundRecord.inbound_datetime >= start_dt,
@@ -1772,7 +1789,7 @@ def get_shoe_inoutbound_detail():
             OrderShoeType.currency_type.label("currency"),  # 工单币种
             ShoeOutboundRecord.remark.label("remark"),
             ShoeOutboundRecord.picker.label("picker"),
-            BatchInfoType.batch_info_type_name.label(
+            batch_type_subq.c.batch_info_type_name.label(
                 "batch_type_name"
             ),  # 用于判定男女童
             Order.is_outsourced.label("is_outsourced"),
@@ -1784,27 +1801,23 @@ def get_shoe_inoutbound_detail():
             == ShoeOutboundRecord.shoe_outbound_record_id,
         )
         .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.finished_shoe_id
+            == ShoeOutboundRecordDetail.finished_shoe_storage_id,
+        )
+        .join(
             OrderShoeType,
             OrderShoeType.order_shoe_type_id
-            == ShoeOutboundRecordDetail.finished_shoe_storage_id,
+            == FinishedShoeStorage.order_shoe_type_id,
         )
         .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
         .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
         .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
         .join(Order, Order.order_id == OrderShoe.order_id)
         .join(Color, Color.color_id == ShoeType.color_id)
-        # —— 批次链路（外连接）——
         .outerjoin(
-            OrderShoeBatchInfo,
-            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
-        )
-        .outerjoin(
-            PackagingInfo,
-            PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
-        )
-        .outerjoin(
-            BatchInfoType,
-            BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id,
+            batch_type_subq,
+            batch_type_subq.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
         )
         .filter(
             ShoeOutboundRecord.outbound_datetime >= start_dt,
@@ -1999,6 +2012,18 @@ def _collect_shoe_inout_summary(filters: Dict[str, Any]):
         _sum_size_cols(ShoeOutboundRecordDetail),
     )
 
+    # 每个 order_shoe_type_id 只取一条 batch_info_type_name，避免多批次 JOIN 行膨胀
+    batch_type_subq = (
+        db.session.query(
+            OrderShoeBatchInfo.order_shoe_type_id,
+            func.min(BatchInfoType.batch_info_type_name).label("batch_info_type_name"),
+        )
+        .join(PackagingInfo, PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id)
+        .join(BatchInfoType, BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id)
+        .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+        .subquery()
+    )
+
     def _build_inbound_query(range_start: datetime | None, range_end: datetime | None):
         query = (
             db.session.query(
@@ -2012,7 +2037,7 @@ def _collect_shoe_inout_summary(filters: Dict[str, Any]):
                 OrderShoeType.currency_type.label("currency"),
                 ShoeInboundRecord.shoe_inbound_rid.label("rid"),
                 ShoeInboundRecord.inbound_datetime.label("occur_time"),
-                BatchInfoType.batch_info_type_name.label("batch_type_name"),
+                batch_type_subq.c.batch_info_type_name.label("batch_type_name"),
             )
             .select_from(ShoeInboundRecord)
             .join(
@@ -2021,26 +2046,22 @@ def _collect_shoe_inout_summary(filters: Dict[str, Any]):
                 == ShoeInboundRecord.shoe_inbound_record_id,
             )
             .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.finished_shoe_id
+                == ShoeInboundRecordDetail.finished_shoe_storage_id,
+            )
+            .join(
                 OrderShoeType,
                 OrderShoeType.order_shoe_type_id
-                == ShoeInboundRecordDetail.finished_shoe_storage_id,
+                == FinishedShoeStorage.order_shoe_type_id,
             )
             .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
             .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
             .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
             .join(Color, Color.color_id == ShoeType.color_id)
             .outerjoin(
-                OrderShoeBatchInfo,
-                OrderShoeBatchInfo.order_shoe_type_id
-                == OrderShoeType.order_shoe_type_id,
-            )
-            .outerjoin(
-                PackagingInfo,
-                PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
-            )
-            .outerjoin(
-                BatchInfoType,
-                BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id,
+                batch_type_subq,
+                batch_type_subq.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
             )
         )
         if range_start:
@@ -2062,7 +2083,7 @@ def _collect_shoe_inout_summary(filters: Dict[str, Any]):
                 OrderShoeType.currency_type.label("currency"),
                 ShoeOutboundRecord.shoe_outbound_rid.label("rid"),
                 ShoeOutboundRecord.outbound_datetime.label("occur_time"),
-                BatchInfoType.batch_info_type_name.label("batch_type_name"),
+                batch_type_subq.c.batch_info_type_name.label("batch_type_name"),
             )
             .select_from(ShoeOutboundRecord)
             .join(
@@ -2071,26 +2092,22 @@ def _collect_shoe_inout_summary(filters: Dict[str, Any]):
                 == ShoeOutboundRecord.shoe_outbound_record_id,
             )
             .join(
+                FinishedShoeStorage,
+                FinishedShoeStorage.finished_shoe_id
+                == ShoeOutboundRecordDetail.finished_shoe_storage_id,
+            )
+            .join(
                 OrderShoeType,
                 OrderShoeType.order_shoe_type_id
-                == ShoeOutboundRecordDetail.finished_shoe_storage_id,
+                == FinishedShoeStorage.order_shoe_type_id,
             )
             .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
             .join(Shoe, Shoe.shoe_id == ShoeType.shoe_id)
             .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
             .join(Color, Color.color_id == ShoeType.color_id)
             .outerjoin(
-                OrderShoeBatchInfo,
-                OrderShoeBatchInfo.order_shoe_type_id
-                == OrderShoeType.order_shoe_type_id,
-            )
-            .outerjoin(
-                PackagingInfo,
-                PackagingInfo.packaging_info_id == OrderShoeBatchInfo.packaging_info_id,
-            )
-            .outerjoin(
-                BatchInfoType,
-                BatchInfoType.batch_info_type_id == PackagingInfo.batch_info_type_id,
+                batch_type_subq,
+                batch_type_subq.c.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
             )
         )
         if range_start:
