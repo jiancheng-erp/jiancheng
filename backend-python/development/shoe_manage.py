@@ -191,18 +191,18 @@ def add_shoe():
 @shoe_manage_bp.route("/shoemanage/editshoe", methods=["POST"])
 def edit_shoe():
     shoe_id = request.json.get("shoeId")
-    shoe_rid = request.json.get("shoeRid")
+    new_shoe_rid = request.json.get("shoeRid")
     shoe_designer = request.json.get("shoeDesigner")
     shoe_department_id = request.json.get("shoeDepartmentId")
     existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
-    if existing_shoe:
-        existing_shoe.shoe_rid = shoe_rid
-        existing_shoe.shoe_designer = shoe_designer
-        existing_shoe.shoe_department_id = shoe_department_id
-        db.session.commit()
-        return jsonify({"message": "edit shoe OK"}), 200
-    else:
+    if not existing_shoe:
         return jsonify({"error": "shoe not found given shoe_id"}), 400
+    if new_shoe_rid and new_shoe_rid != existing_shoe.shoe_rid:
+        return jsonify({"error": "工厂型号不可在此处修改，请使用「编辑鞋型号」功能，以确保文件路径同步更新"}), 400
+    existing_shoe.shoe_designer = shoe_designer
+    existing_shoe.shoe_department_id = shoe_department_id
+    db.session.commit()
+    return jsonify({"message": "edit shoe OK"}), 200
     
 @shoe_manage_bp.route("/shoemanage/getorderassociation", methods=["GET"])
 def get_order_association():
@@ -260,7 +260,7 @@ def confirm_edit_shoe_rid():
                 db.session.flush()
             old_pic_note_img_path = craft_sheet.pic_note_img_path
             if old_pic_note_img_path:
-                new_pic_note_img_path = 'http://192.168.16.100:12667/'+ order.order_rid + '/' + shoe_rid + '/图样备注/' + old_cut_die_img_path.split('/')[-1]
+                new_pic_note_img_path = 'http://192.168.16.100:12667/'+ order.order_rid + '/' + shoe_rid + '/图样备注/' + old_pic_note_img_path.split('/')[-1]
                 craft_sheet.pic_note_img_path = new_pic_note_img_path
                 db.session.flush()
         for order_name in order_name_list:
