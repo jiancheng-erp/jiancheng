@@ -1119,6 +1119,16 @@ def _create_outbound_record_details(items, outbound_record):
             .order_by(MaterialStorageSizeDetail.order_number.asc())
             .all()
         )
+        # Build a descriptive label for this storage row (used in error messages)
+        _spu = db.session.get(SPUMaterial, storage.spu_material_id)
+        _mat = db.session.get(Material, _spu.material_id) if _spu else None
+        _mat_label = "、".join(filter(None, [
+            _mat.material_name if _mat else None,
+            _spu.material_model if _spu else None,
+            _spu.material_specification if _spu else None,
+            _spu.color if _spu else None,
+        ])) or f"库存ID={storage_id}"
+
         if outbound_record.outbound_type == 4:
             storage.pending_outbound += outbound_quantity
             for i, shoe_size in enumerate(SHOESIZERANGE):
@@ -1131,7 +1141,10 @@ def _create_outbound_record_details(items, outbound_record):
                 setattr(record_detail, column_name, size_outbound_amount)
         else:
             if outbound_quantity > storage.current_amount - storage.pending_outbound:
-                error_message = json.dumps({"message": "出库数量大于库存数量"})
+                available = storage.current_amount - storage.pending_outbound
+                error_message = json.dumps({
+                    "message": f"【{_mat_label}】出库数量({outbound_quantity})大于库存数量({available})"
+                })
                 abort(Response(error_message, 400))
             storage.outbound_amount += outbound_quantity
             storage.current_amount -= outbound_quantity
@@ -1143,7 +1156,10 @@ def _create_outbound_record_details(items, outbound_record):
                     size_outbound_amount
                     > size_detail[i].current_amount - size_detail[i].pending_outbound
                 ):
-                    error_message = json.dumps({"message": "出库数量大于库存数量"})
+                    available_size = size_detail[i].current_amount - size_detail[i].pending_outbound
+                    error_message = json.dumps({
+                        "message": f"【{_mat_label}】尺码{shoe_size}出库数量({size_outbound_amount})大于库存数量({available_size})"
+                    })
                     abort(Response(error_message, 400))
                 size_detail[i].outbound_amount += size_outbound_amount
                 size_detail[i].current_amount -= size_outbound_amount

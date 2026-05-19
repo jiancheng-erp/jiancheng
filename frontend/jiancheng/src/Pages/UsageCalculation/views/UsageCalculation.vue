@@ -38,6 +38,9 @@
           <el-menu-item index="3" @click="handleMenuClick(3)">
             <span>订单查询</span>
           </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick(6)">
+            <span>材料单价查询</span>
+          </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick(8)">
             <span>个人信息</span>
           </el-menu-item>
@@ -65,6 +68,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue';
 import SecondBOMListView from '../components/SecondBOMListView.vue';
 import RevertDashboard from '@/components/RevertDashboard.vue';
 import MissingPurchaseUsageInput from '../components/MissingPurchaseUsageInput.vue';
+import MaterialPriceView from '../components/MaterialPriceView.vue';
 import axios from 'axios'
 
 
@@ -77,7 +81,8 @@ export default {
         PersonalInfo,
         SecondBOMListView,
         RevertDashboard,
-        MissingPurchaseUsageInput
+        MissingPurchaseUsageInput,
+        MaterialPriceView
     },
     data() {
         return {
@@ -112,6 +117,9 @@ export default {
                     break
                 case 5:
                     this.currentComponent = 'MissingPurchaseUsageInput'
+                    break
+                case 6:
+                    this.currentComponent = 'MaterialPriceView'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

@@ -113,6 +113,13 @@
                 </vxe-column>
                 <vxe-column field="actualInboundUnit" title="计量单位" width="120">
                 </vxe-column>
+                <vxe-column field="allowedOutboundAmount" title="库存数量" width="100">
+                    <template #default="{ row }">
+                        <span :style="row.allowedOutboundAmount != null && row.outboundQuantity > row.allowedOutboundAmount ? 'color: red; font-weight: bold;' : ''">
+                            {{ row.allowedOutboundAmount ?? '—' }}
+                        </span>
+                    </template>
+                </vxe-column>
                 <vxe-column field="outboundQuantity" title="出库数量" :edit-render="{ autoFocus: 'input' }" width="120">
                     <template #edit="{ row }">
                         <vxe-number-input v-model="row.outboundQuantity" :digits="3" :step="0.001" :min="0"

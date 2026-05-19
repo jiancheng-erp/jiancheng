@@ -6,7 +6,7 @@ import shutil
 from app_config import db
 from constants import BOM_STATUS, BOM_STATUS_TO_INT
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from models import *
 from event_processor import EventProcessor
 from general_document.bom import generate_excel_file
@@ -254,6 +254,7 @@ def get_shoe_bom_items():
         .order_id
     )
     shoe_size_names = get_order_batch_type_helper(order_id)
+
     for entity in entities:
         bom_item, material, material_type, supplier, production_instruction = entity
         sizeInfo = []
@@ -926,3 +927,134 @@ def get_all_bom_items():
         }
         result.append(obj)
     return {"result": result, "totalLength": count_result}
+
+
+@usage_calculation_bp.route("/usagecalculation/getmaterialpricefilters", methods=["GET"])
+def get_material_price_filters():
+    """Return distinct supplier / material-type / material-name values that have storage prices."""
+    base = (
+        db.session.query(SPUMaterial.spu_material_id)
+        .join(MaterialStorage, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .filter(MaterialStorage.average_price > 0)
+        .subquery()
+    )
+    supplier_rows = (
+        db.session.query(Supplier.supplier_name)
+        .join(Material, Material.material_supplier == Supplier.supplier_id)
+        .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
+        .join(base, base.c.spu_material_id == SPUMaterial.spu_material_id)
+        .distinct()
+        .order_by(Supplier.supplier_name)
+        .all()
+    )
+    type_rows = (
+        db.session.query(MaterialType.material_type_name)
+        .join(Material, Material.material_type_id == MaterialType.material_type_id)
+        .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
+        .join(base, base.c.spu_material_id == SPUMaterial.spu_material_id)
+        .distinct()
+        .order_by(MaterialType.material_type_name)
+        .all()
+    )
+    name_rows = (
+        db.session.query(Material.material_name)
+        .join(SPUMaterial, SPUMaterial.material_id == Material.material_id)
+        .join(base, base.c.spu_material_id == SPUMaterial.spu_material_id)
+        .distinct()
+        .order_by(Material.material_name)
+        .all()
+    )
+    return jsonify({
+        "suppliers": [r.supplier_name for r in supplier_rows],
+        "materialTypes": [r.material_type_name for r in type_rows],
+        "materialNames": [r.material_name for r in name_rows],
+    })
+
+
+@usage_calculation_bp.route("/usagecalculation/getmaterialprices", methods=["GET"])
+def get_material_prices():
+    """Return paginated material variants with their average purchase price from storage."""
+    page = request.args.get("page", type=int, default=1)
+    page_size = request.args.get("pageSize", type=int, default=20)
+    material_name = request.args.get("materialName", "")
+    supplier_name = request.args.get("supplierName", "")
+    material_type = request.args.get("materialType", "")
+    material_model = request.args.get("materialModel", "")
+    search = request.args.get("search", "")
+
+    # Subquery: aggregate price per spu_material_id first (much faster than joining then grouping)
+    price_subq = (
+        db.session.query(
+            MaterialStorage.spu_material_id,
+            func.avg(MaterialStorage.average_price).label("avg_price"),
+        )
+        .filter(MaterialStorage.average_price > 0)
+        .group_by(MaterialStorage.spu_material_id)
+        .subquery()
+    )
+
+    query = (
+        db.session.query(
+            MaterialType.material_type_name,
+            Supplier.supplier_name,
+            Material.material_name,
+            SPUMaterial.material_model,
+            SPUMaterial.material_specification,
+            SPUMaterial.color,
+            Material.material_unit,
+            price_subq.c.avg_price,
+        )
+        .select_from(SPUMaterial)
+        .join(price_subq, price_subq.c.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, Material.material_id == SPUMaterial.material_id)
+        .join(MaterialType, MaterialType.material_type_id == Material.material_type_id)
+        .join(Supplier, Supplier.supplier_id == Material.material_supplier)
+    )
+
+    # Dropdown filters use exact match
+    if material_name:
+        query = query.filter(Material.material_name == material_name)
+    if supplier_name:
+        query = query.filter(Supplier.supplier_name == supplier_name)
+    if material_type:
+        query = query.filter(MaterialType.material_type_name == material_type)
+    # Model is a free-text input
+    if material_model:
+        query = query.filter(SPUMaterial.material_model.ilike(f"%{material_model}%"))
+    # General search across all text fields
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            or_(
+                Material.material_name.ilike(like),
+                Supplier.supplier_name.ilike(like),
+                MaterialType.material_type_name.ilike(like),
+                SPUMaterial.material_model.ilike(like),
+                SPUMaterial.material_specification.ilike(like),
+                SPUMaterial.color.ilike(like),
+            )
+        )
+
+    query = query.order_by(
+        MaterialType.material_type_name,
+        Supplier.supplier_name,
+        Material.material_name,
+    )
+
+    total_count = query.count()
+    rows = query.limit(page_size).offset((page - 1) * page_size).all()
+
+    result = [
+        {
+            "materialType": row.material_type_name,
+            "supplierName": row.supplier_name,
+            "materialName": row.material_name,
+            "materialModel": row.material_model or "",
+            "materialSpecification": row.material_specification or "",
+            "color": row.color or "",
+            "unit": row.material_unit,
+            "unitPrice": float(row.avg_price or 0),
+        }
+        for row in rows
+    ]
+    return jsonify({"result": result, "totalLength": total_count})
