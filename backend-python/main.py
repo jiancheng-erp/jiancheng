@@ -67,6 +67,7 @@ load_dotenv()
 from app import create_app
 from blueprints import register_blueprints
 from event_processor import EventProcessor
+from schedules.scheduler import start_scheduler
 
 
 def create_application():
@@ -74,6 +75,7 @@ def create_application():
     app = create_app()
     register_blueprints(app)
     app.config['event_processor'] = EventProcessor()
+    start_scheduler(app)
     return app
 
 

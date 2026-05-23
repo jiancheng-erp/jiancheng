@@ -8,11 +8,13 @@ load_dotenv()
 # Import after environment is loaded
 from app import create_app
 from blueprints import register_blueprints
+from schedules.scheduler import start_scheduler
 
 def create_application():
     """Create and configure the Flask application for WSGI servers"""
     app = create_app()
     register_blueprints(app)
+    start_scheduler(app)
     return app
 
 # Create the WSGI application
