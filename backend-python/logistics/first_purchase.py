@@ -1573,13 +1573,230 @@ def get_selected_material_storage():
 def download_purchase_order_zip():
     order_rid = request.args.get("orderrid")
     order_shoe_rid = request.args.get("ordershoerid")
-    zip_file_path = os.path.join(
-        FILE_STORAGE_PATH,
-        order_rid,
-        order_shoe_rid,
-        "purchase_order",
-        "一次采购订单.zip",
+
+    # Find the submitted purchase order for this order+shoe
+    order_shoe_info = (
+        db.session.query(PurchaseOrder, OrderShoe, Order, Shoe)
+        .join(OrderShoe, OrderShoe.order_shoe_id == PurchaseOrder.order_shoe_id)
+        .join(Order, Order.order_id == PurchaseOrder.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .filter(Order.order_rid == order_rid, Shoe.shoe_rid == order_shoe_rid)
+        .filter(PurchaseOrder.purchase_order_type == "F")
+        .first()
     )
+    if not order_shoe_info:
+        return jsonify({"message": "采购订单未找到"}), 404
+
+    purchase_order_rid = order_shoe_info.PurchaseOrder.purchase_order_rid
+    order_id = order_shoe_info.Order.order_id
+
+    # Regenerate Excel files from current database data
+    purchase_divide_orders = (
+        db.session.query(
+            PurchaseDivideOrder,
+            PurchaseOrderItem,
+            PurchaseOrder,
+            BomItem,
+            ProductionInstructionItem,
+            Material,
+            Supplier,
+        )
+        .join(
+            PurchaseOrderItem,
+            PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id,
+        )
+        .join(
+            PurchaseOrder,
+            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+        )
+        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(
+            ProductionInstructionItem,
+            ProductionInstructionItem.production_instruction_item_id == BomItem.production_instruction_item_id,
+        )
+        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
+        .all()
+    )
+
+    purchase_divide_order_dict = {}
+    size_purchase_divide_order_dict = {}
+    os.makedirs(
+        os.path.join(FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order"),
+        exist_ok=True,
+    )
+    customer_name = (
+        db.session.query(Order, Customer)
+        .join(Customer, Order.customer_id == Customer.customer_id)
+        .filter(Order.order_id == order_id)
+        .first()
+        .Customer.customer_name
+    )
+
+    for (
+        purchase_divide_order,
+        purchase_order_item,
+        purchase_order,
+        bom_item,
+        production_instruction_item,
+        material,
+        supplier,
+    ) in purchase_divide_orders:
+        pdo_rid = purchase_divide_order.purchase_divide_order_rid
+        if purchase_divide_order.purchase_divide_order_type == "N":
+            if pdo_rid not in purchase_divide_order_dict:
+                purchase_divide_order_dict[pdo_rid] = {
+                    "供应商": supplier.supplier_name,
+                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "备注": purchase_divide_order.purchase_order_remark,
+                    "环保要求": purchase_divide_order.purchase_order_environmental_request,
+                    "发货地址": purchase_divide_order.shipment_address,
+                    "交货期限": purchase_divide_order.shipment_deadline,
+                    "客户名": customer_name,
+                    "订单信息": order_rid,
+                    "seriesData": [],
+                }
+            purchase_divide_order_dict[pdo_rid]["seriesData"].append(
+                {
+                    "物品名称": (
+                        material.material_name
+                        + " "
+                        + (purchase_order_item.material_model if purchase_order_item.material_model else "")
+                        + " "
+                        + (purchase_order_item.material_specification if purchase_order_item.material_specification else "")
+                        + " "
+                        + (purchase_order_item.color if purchase_order_item.color else "")
+                    ),
+                    "型号": (
+                        material.material_name + " " + purchase_order_item.material_model
+                        if purchase_order_item.material_model
+                        else ""
+                    ),
+                    "类别": (
+                        purchase_order_item.material_specification
+                        if purchase_order_item.material_specification
+                        else ""
+                    ),
+                    "数量": purchase_order_item.purchase_amount,
+                    "单位": material.material_unit,
+                    "备注": purchase_order_item.remark,
+                    "用途说明": "",
+                }
+            )
+        elif purchase_divide_order.purchase_divide_order_type == "S":
+            order_size_table = (
+                db.session.query(Order)
+                .filter(Order.order_id == order_id)
+                .first()
+                .order_size_table
+            )
+            order_size_table = json.loads(order_size_table) if order_size_table else {}
+            batch_info_type = (
+                db.session.query(BatchInfoType, Order)
+                .join(Order, Order.batch_info_type_id == BatchInfoType.batch_info_type_id)
+                .filter(Order.order_id == order_id)
+                .first()
+            )
+            customer_size_map = {}
+            for i in SHOESIZERANGE:
+                size_name = getattr(batch_info_type.BatchInfoType, f"size_{i}_name", None)
+                if size_name:
+                    customer_size_map[size_name] = i
+            if "客人码" not in order_size_table or not order_size_table["客人码"]:
+                order_size_table["客人码"] = list(customer_size_map.keys())
+            if "大底" in material.material_name or "烫底" in material.material_name:
+                size_values = order_size_table.get("大底", order_size_table["客人码"])
+            elif "中底" in material.material_name:
+                size_values = order_size_table.get("中底", order_size_table["客人码"])
+            elif "楦头" in material.material_name:
+                size_values = order_size_table.get("楦头", order_size_table["客人码"])
+            else:
+                size_values = order_size_table["客人码"]
+            if "烫底" in material.material_name:
+                obj = {
+                    "物品名称": material.material_name,
+                    "使用材料": bom_item.material_specification,
+                    "工厂型号": order_shoe_rid,
+                    "鞋面颜色": bom_item.bom_item_color,
+                    "工艺说明": bom_item.craft_name,
+                    "备注": bom_item.remark,
+                }
+                for index, size_value in enumerate(size_values):
+                    customer_value = order_size_table["客人码"][index]
+                    if customer_value in customer_size_map:
+                        actual_size = customer_size_map[customer_value]
+                        obj[size_value] = getattr(purchase_order_item, f"size_{actual_size}_purchase_amount", 0)
+            else:
+                obj = {
+                    "物品名称": (
+                        material.material_name
+                        + " "
+                        + (bom_item.material_model if bom_item.material_model else "")
+                        + " "
+                        + (bom_item.material_specification if bom_item.material_specification else "")
+                        + " "
+                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                    ),
+                    "型号": (
+                        material.material_name + " " + purchase_order_item.material_model
+                        if purchase_order_item.material_model
+                        else ""
+                    ),
+                    "类别": (
+                        purchase_order_item.material_specification
+                        if purchase_order_item.material_specification
+                        else ""
+                    ),
+                    "备注": bom_item.remark,
+                }
+                for index, size_value in enumerate(size_values):
+                    customer_value = order_size_table["客人码"][index]
+                    if customer_value in customer_size_map:
+                        actual_size = customer_size_map[customer_value]
+                        obj[size_value] = getattr(purchase_order_item, f"size_{actual_size}_purchase_amount", 0)
+            if pdo_rid not in size_purchase_divide_order_dict:
+                size_purchase_divide_order_dict[pdo_rid] = {
+                    "供应商": supplier.supplier_name,
+                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "备注": purchase_divide_order.purchase_order_remark,
+                    "客户名": customer_name,
+                    "环保要求": purchase_divide_order.purchase_order_environmental_request,
+                    "发货地址": purchase_divide_order.shipment_address,
+                    "交货期限": purchase_divide_order.shipment_deadline,
+                    "订单信息": order_rid,
+                    "seriesData": [],
+                }
+            size_purchase_divide_order_dict[pdo_rid]["seriesData"].append(obj)
+
+    generated_files = []
+    template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
+    size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
+    for pdo_rid, data in purchase_divide_order_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
+            pdo_rid + "_" + data["供应商"] + ".xlsx",
+        )
+        generate_excel_file(template_path, new_file_path, data)
+        generated_files.append(new_file_path)
+    shoe_size_names = get_order_batch_type_helper(order_id)
+    for pdo_rid, data in size_purchase_divide_order_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
+            pdo_rid + "_" + data["供应商"] + ".xlsx",
+        )
+        data["shoe_size_names"] = shoe_size_names
+        generate_size_excel_file(size_template_path, new_file_path, data)
+        generated_files.append(new_file_path)
+    zip_file_path = os.path.join(
+        FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order", "一次采购订单.zip",
+    )
+    with zipfile.ZipFile(zip_file_path, "w") as zipf:
+        for file in generated_files:
+            filename = os.path.basename(file)
+            pdo_rid = filename.split("_")[0]
+            if len(pdo_rid) >= 5 and pdo_rid[-5] == "F":
+                zipf.write(file, filename)
     new_name = order_rid + "_" + order_shoe_rid + "_一次采购订单.zip"
     return send_file(zip_file_path, as_attachment=True, download_name=new_name)
 
