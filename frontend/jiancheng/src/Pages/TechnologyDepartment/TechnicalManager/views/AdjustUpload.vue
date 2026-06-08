@@ -80,6 +80,7 @@
                                     </div>
                                     <div v-else-if="scope.row.status === '已上传'">
                                         <el-button v-if="isEditor()" type="primary" @click="openEditDialog(scope.row)">编辑工艺单</el-button>
+                                        <el-button v-if="isEditor()" type="warning" @click="openModifyPIDialog(scope.row)">修改投产指令单</el-button>
                                         <el-button v-if="isEditor()" type="success" @click="openPreviewDialog(scope.row)">预览工艺单</el-button>
                                     </div>
                                     <div v-else-if="scope.row.status === '完成用量填写'">
@@ -88,7 +89,8 @@
                                     <div v-else-if="scope.row.status === '等待用量填写' || scope.row.status === '已审核并下发'">
                                         <el-button type="primary" @click="openPreviewDialog(scope.row)">查看</el-button>
                                     </div>
-                                    <div v-if="scope.row.status === '已审核并下发'">
+                                    <div v-if="['已审核并下发','等待用量填写','完成用量填写'].includes(scope.row.status)">
+                                        <el-button v-if="isEditor()" type="danger" @click="openManagerModifyDialog(scope.row)">修改工艺单</el-button>
                                         <el-button type="success" @click="downloadCraftSheet(scope.row)">下载工艺单EXCEL</el-button>
                                         <el-button type="warning" @click="downloadProductionInstructionImage(scope.row)">下载备注图片 </el-button>
                                     </div>
@@ -1030,7 +1032,7 @@
                     </span>
                 </template>
             </el-dialog>
-            <el-dialog :title="`编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%" :close-on-click-modal="false">
+            <el-dialog :title="isManagerModifyMode ? `修改工艺单（同步下游）${newcraftSheetId}` : isModifyPIMode ? `修改投产指令单 ${newcraftSheetId}` : `编辑生产工艺单 ${newcraftSheetId}`" v-model="isEditDialogVisible" width="90%" :close-on-click-modal="false" @closed="isManagerModifyMode = false; isModifyPIMode = false">
                 <el-button type="primary" size="default" @click="confirmloadPastCraftSheet">加载过往工艺单信息</el-button>
                 <el-descriptions title="工艺单公用信息" border :column="2">
                     <el-descriptions-item label="调版员">
@@ -1078,7 +1080,7 @@
                 <template #footer>
                     <span>
                         <el-button @click="isEditDialogVisible = false">取消</el-button>
-                        <el-button type="primary" @click="editProductionInstrucion">确认</el-button>
+                        <el-button type="primary" @click="isManagerModifyMode ? managerModifyCraftSheet() : isModifyPIMode ? modifyProductionInstructions() : editProductionInstrucion()">{{ isManagerModifyMode ? '确认修改并同步下游' : isModifyPIMode ? '确认修改投产指令单' : '确认' }}</el-button>
                     </span>
                 </template>
             </el-dialog>
@@ -1222,6 +1224,8 @@ export default {
             isUploadProcessSheetVisable: false,
             isUniversalMaterialCraftVisDialog: false,
             isEditDialogVisible: false,
+            isManagerModifyMode: false,
+            isModifyPIMode: false,
             isProductionOrderCreateDialogVisible: false,
             isUploadImageNoteDialogVisible: false,
             isMaterialCraftVisDialog: false,
@@ -1846,6 +1850,7 @@ export default {
             this.currentOrderShoeRow = row
             this.newcraftSheetId = ''
             this.currentShoeId = row.inheritId
+            this.isManagerModifyMode = false
             await this.getCraftSheetData(row)
             this.tabcolor = row.typeInfos.map((info) => info.color)
             if (this.materialWholeData.length === 0) {
@@ -1866,6 +1871,127 @@ export default {
             }
             this.activeTab = this.tabcolor[0]
             this.isEditDialogVisible = true
+        },
+        async openManagerModifyDialog(row) {
+            this.currentOrderShoeRow = row
+            this.newcraftSheetId = ''
+            this.currentShoeId = row.inheritId
+            this.isManagerModifyMode = true
+            this.isModifyPIMode = false
+            await this.getCraftSheetData(row)
+            this.tabcolor = row.typeInfos.map((info) => info.color)
+            if (this.materialWholeData.length === 0) {
+                this.tabcolor.forEach((colorName) => {
+                    this.materialWholeData.push({
+                        color: colorName,
+                        surfaceMaterialData: [],
+                        insideMaterialData: [],
+                        accessoryMaterialData: [],
+                        outsoleMaterialData: [],
+                        midsoleMaterialData: [],
+                        lastMaterialData: [],
+                        hotsoleMaterialData: []
+                    })
+                })
+            }
+            this.activeTab = this.tabcolor[0]
+            this.isEditDialogVisible = true
+        },
+        async openModifyPIDialog(row) {
+            this.currentOrderShoeRow = row
+            this.newcraftSheetId = ''
+            this.currentShoeId = row.inheritId
+            this.isManagerModifyMode = false
+            this.isModifyPIMode = true
+            await this.getCraftSheetData(row)
+            this.tabcolor = row.typeInfos.map((info) => info.color)
+            if (this.materialWholeData.length === 0) {
+                this.tabcolor.forEach((colorName) => {
+                    this.materialWholeData.push({
+                        color: colorName,
+                        surfaceMaterialData: [],
+                        insideMaterialData: [],
+                        accessoryMaterialData: [],
+                        outsoleMaterialData: [],
+                        midsoleMaterialData: [],
+                        lastMaterialData: [],
+                        hotsoleMaterialData: []
+                    })
+                })
+            }
+            this.activeTab = this.tabcolor[0]
+            this.isEditDialogVisible = true
+        },
+        async modifyProductionInstructions() {
+            for (const materialData of this.materialWholeData) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
+                    for (const item of materialData[materialType]) {
+                        if (!item.supplierName || !item.materialName) {
+                            this.$message({ type: 'error', message: '所有材料的供应商名称和材料名称不能为空' })
+                            return
+                        }
+                    }
+                }
+            }
+            const loadingInstance = this.$loading({
+                lock: true,
+                text: '正在修改投产指令单，请稍后...',
+                background: 'rgba(0, 0, 0, 0.7)'
+            })
+            try {
+                await axios.post(`${this.$apiBaseUrl}/craftsheet/modifyproductioninstructions`, {
+                    orderId: this.orderData.orderId,
+                    craftSheetId: this.newcraftSheetId,
+                    orderShoeId: this.currentShoeId,
+                    uploadData: this.materialWholeData,
+                    craftSheetDetail: this.craftSheetDetail
+                })
+                ElMessage.success('修改成功，已同步至投产指令单')
+            } catch (error) {
+                console.log(error)
+                ElMessage.error('修改失败')
+            }
+            loadingInstance.close()
+            this.isEditDialogVisible = false
+            this.isModifyPIMode = false
+            this.getAllShoeListInfo()
+        },
+        async managerModifyCraftSheet() {
+            for (const materialData of this.materialWholeData) {
+                for (const materialType of ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'hotsoleMaterialData']) {
+                    for (const item of materialData[materialType]) {
+                        if (!item.supplierName || !item.materialName) {
+                            this.$message({ type: 'error', message: '所有材料的供应商名称和材料名称不能为空' })
+                            return
+                        }
+                    }
+                }
+            }
+            const loadingInstance = this.$loading({
+                lock: true,
+                text: '正在修改并同步下游数据，请稍后...',
+                background: 'rgba(0, 0, 0, 0.7)'
+            })
+            try {
+                this.uploadCutDieImg()
+                this.uploadPicNote()
+                this.uploadProcessSheet()
+                await axios.post(`${this.$apiBaseUrl}/craftsheet/managermodifycraftsheet`, {
+                    orderId: this.orderData.orderId,
+                    craftSheetId: this.newcraftSheetId,
+                    orderShoeId: this.currentShoeId,
+                    uploadData: this.materialWholeData,
+                    craftSheetDetail: this.craftSheetDetail
+                })
+                ElMessage.success('修改成功，已同步至投产指令单、BOM及采购订单')
+            } catch (error) {
+                console.log(error)
+                ElMessage.error('修改失败')
+            }
+            loadingInstance.close()
+            this.isEditDialogVisible = false
+            this.isManagerModifyMode = false
+            this.getAllShoeListInfo()
         },
         getMaterialDataByType(type) {
             const activeData = this.materialWholeData.find((item) => item.color === this.activeTab)

@@ -18,6 +18,7 @@
                     <el-menu-item index="4" @click="handleMenuClick(4)">生产BOM用量填写审核</el-menu-item>
                     <el-menu-item index="5" @click="handleMenuClick(5)">退回任务列表</el-menu-item>
                     <el-menu-item index="3" @click="handleMenuClick(3)">订单查询</el-menu-item>
+                    <el-menu-item index="6" @click="handleMenuClick(6)">工艺单修改管理</el-menu-item>
                     <el-menu-item index="8" @click="handleMenuClick(8)">个人信息</el-menu-item>
                     <el-menu-item index="9" @click="logout">退出系统</el-menu-item>
                 </el-menu>
@@ -39,6 +40,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue'
 import AdjustList from '../components/AdjustList.vue'
 import BOMReviewList from '../components/BOMReviewList.vue'
 import RevertDashboard from '@/components/RevertDashboard.vue'
+import CraftSheetModifyList from '../components/CraftSheetModifyList.vue'
 import axios from 'axios'
 export default {
     components: {
@@ -48,7 +50,8 @@ export default {
         PersonalInfo,
         AdjustList,
         BOMReviewList,
-        RevertDashboard
+        RevertDashboard,
+        CraftSheetModifyList
     },
     data() {
         return {
@@ -84,6 +87,9 @@ export default {
                     break
                 case 5:
                     this.currentComponent = 'RevertDashboard'
+                    break
+                case 6:
+                    this.currentComponent = 'CraftSheetModifyList'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

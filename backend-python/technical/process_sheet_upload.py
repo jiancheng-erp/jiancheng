@@ -2647,4 +2647,596 @@ def get_past_craft_sheet_material():
         }
         return jsonify(fin_result)
 
-    
+
+@process_sheet_upload_bp.route("/craftsheet/managermodifycraftsheet", methods=["POST"])
+def manager_modify_craft_sheet():
+    """
+    技术部经理修改已下发工艺单，并同步至：
+    - CraftSheetItem（工艺单明细）
+    - ProductionInstructionItem（投产指令单）
+    - BomItem bom_type=0 add_type='0'（一次BOM）
+    - PurchaseOrderItem 关联一次BOM（一次采购订单）
+    - BomItem bom_type=1 add_type='1'（二次BOM，按工艺名对账）
+    - PurchaseOrderItem 关联二次BOM（二次采购订单）
+    """
+    order_id = request.json.get("orderId")
+    order_shoe_rid = request.json.get("orderShoeId")
+    craft_sheet_rid = request.json.get("craftSheetId")
+    upload_data = request.json.get("uploadData")
+    craft_sheet_detail = request.json.get("craftSheetDetail")
+
+    order_shoe = (
+        db.session.query(Order, OrderShoe, Shoe)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
+        .first()
+        .OrderShoe
+    )
+    order_shoe_id = order_shoe.order_shoe_id
+
+    craft_sheet = (
+        db.session.query(CraftSheet)
+        .filter(CraftSheet.craft_sheet_rid == craft_sheet_rid)
+        .first()
+    )
+    craft_sheet_id = craft_sheet.craft_sheet_id
+    craft_sheet.cut_die_staff = craft_sheet_detail.get("cutDie")
+    craft_sheet.production_remark = craft_sheet_detail.get("productionRemark")
+    craft_sheet.cutting_special_process = craft_sheet_detail.get("cuttingSpecialCraft")
+    craft_sheet.sewing_special_process = craft_sheet_detail.get("sewingSpecialCraft")
+    craft_sheet.molding_special_process = craft_sheet_detail.get("moldingSpecialCraft")
+    craft_sheet.post_processing_comment = craft_sheet_detail.get("postProcessing")
+    craft_sheet.oily_glue = craft_sheet_detail.get("oilyGlue")
+    craft_sheet.cut_die_img_path = craft_sheet_detail.get("cutDieImgPath")
+    craft_sheet.pic_note_img_path = craft_sheet_detail.get("picNoteImgPath")
+    craft_sheet.reviewer = craft_sheet_detail.get("reviewer")
+    db.session.flush()
+
+    # ── Phase 1: 重写 CraftSheetItem ─────────────────────────────────────────
+    old_items = (
+        db.session.query(CraftSheetItem)
+        .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
+        .all()
+    )
+    for item in old_items:
+        db.session.delete(item)
+    db.session.flush()
+
+    # material_type 字母 → 前端 key 映射
+    MATERIAL_SECTIONS = [
+        ("surfaceMaterialData",   "S", 0),
+        ("insideMaterialData",    "I", 0),
+        ("accessoryMaterialData", "A", 0),
+        ("outsoleMaterialData",   "O", 1),
+        ("midsoleMaterialData",   "M", 1),
+        ("hotsoleMaterialData",   "H", None),  # category 由 materialType 决定
+    ]
+
+    # 用于下游同步的收集列表
+    sync_list = []  # list of dict
+
+    for data in upload_data:
+        shoe_color = data.get("color")
+        shoe_type_id = (
+            db.session.query(Shoe, ShoeType, Color)
+            .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
+            .join(Color, ShoeType.color_id == Color.color_id)
+            .filter(Shoe.shoe_rid == order_shoe_rid, Color.color_name == shoe_color)
+            .first()
+            .ShoeType.shoe_type_id
+        )
+        order_shoe_type_id = (
+            db.session.query(OrderShoeType)
+            .filter(
+                OrderShoeType.order_shoe_id == order_shoe_id,
+                OrderShoeType.shoe_type_id == shoe_type_id,
+            )
+            .first()
+            .order_shoe_type_id
+        )
+
+        for section_key, material_type, default_category in MATERIAL_SECTIONS:
+            for material_data in data.get(section_key, []):
+                # ── 解析/创建 Material ────────────────────────────────────────
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
+                        .filter(Supplier.supplier_name == material_data.get("supplierName"))
+                        .first()
+                    )
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
+                    else:
+                        supplier = Supplier(supplier_name=material_data.get("supplierName"))
+                        db.session.add(supplier)
+                        db.session.flush()
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    if default_category is None:
+                        category = 1 if material_data.get("materialType") == "烫底" else 0
+                    else:
+                        category = default_category
+                    new_material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=category,
+                    )
+                    db.session.add(new_material)
+                    db.session.flush()
+                    material_id = new_material.material_id
+
+                material_model = material_data.get("materialModel") or None
+                material_spec = material_data.get("materialSpecification") or None
+                material_color = material_data.get("color") or None
+                remark = material_data.get("comment") or None
+                processing_remark = material_data.get("processingRemark") or None
+                department_id = material_data.get("useDepart") or None
+                material_second_type = material_data.get("materialDetailType") or None
+                material_source = material_data.get("materialSource") or "C"
+                pi_id = material_data.get("productionInstructionItemId")
+                craft_name_list = material_data.get("materialCraftNameList") or []
+                craft_name = "@".join(craft_name_list) if craft_name_list else ""
+
+                csi = CraftSheetItem(
+                    craft_sheet_id=craft_sheet_id,
+                    material_id=material_id,
+                    material_model=material_model,
+                    material_specification=material_spec,
+                    color=material_color,
+                    remark=remark,
+                    department_id=department_id,
+                    material_type=material_type,
+                    material_source=material_source,
+                    order_shoe_type_id=order_shoe_type_id,
+                    material_second_type=material_second_type,
+                    craft_name=craft_name,
+                    after_usage_symbol=0,
+                    processing_remark=processing_remark,
+                    production_instruction_item_id=pi_id,
+                )
+                db.session.add(csi)
+
+                sync_list.append({
+                    "pi_id": pi_id,
+                    "material_id": material_id,
+                    "spec": material_spec,
+                    "model": material_model,
+                    "color": material_color,
+                    "craft_name": craft_name,
+                    "order_shoe_type_id": order_shoe_type_id,
+                    "department_id": department_id,
+                    "remark": remark,
+                    "material_second_type": material_second_type,
+                })
+
+    db.session.flush()
+
+    # ── Phase 2: 批量预查询下游记录 ────────────────────────────────────────────
+    pi_ids = [t["pi_id"] for t in sync_list if t["pi_id"]]
+
+    pi_map = {}
+    first_bom_map = {}  # pi_id → BomItem(type=0, add='0')
+    first_po_map = {}   # bom_item_id → PurchaseOrderItem
+
+    if pi_ids:
+        pi_items = (
+            db.session.query(ProductionInstructionItem)
+            .filter(ProductionInstructionItem.production_instruction_item_id.in_(pi_ids))
+            .all()
+        )
+        pi_map = {p.production_instruction_item_id: p for p in pi_items}
+
+        first_bom_items = (
+            db.session.query(BomItem)
+            .filter(
+                BomItem.production_instruction_item_id.in_(pi_ids),
+                BomItem.bom_item_add_type == "0",
+            )
+            .all()
+        )
+        for bi in first_bom_items:
+            if bi.production_instruction_item_id not in first_bom_map:
+                first_bom_map[bi.production_instruction_item_id] = bi
+
+        first_bom_ids = [bi.bom_item_id for bi in first_bom_map.values()]
+        if first_bom_ids:
+            first_poi_items = (
+                db.session.query(PurchaseOrderItem)
+                .filter(PurchaseOrderItem.bom_item_id.in_(first_bom_ids))
+                .all()
+            )
+            for poi in first_poi_items:
+                first_po_map[poi.bom_item_id] = poi
+
+    # 二次BOM: order_shoe_type_id → 最新 Bom(type=1)
+    ost_ids = list({t["order_shoe_type_id"] for t in sync_list})
+    second_bom_map = {}  # ost_id → Bom
+    for ost_id in ost_ids:
+        second_bom = (
+            db.session.query(Bom)
+            .filter(Bom.order_shoe_type_id == ost_id, Bom.bom_type == 1)
+            .order_by(Bom.bom_id.desc())
+            .first()
+        )
+        if second_bom:
+            second_bom_map[ost_id] = second_bom
+
+    # 二次BomItem: (bom_id, pi_id, craft_name) → BomItem（全量获取，不过滤pi_id，自动去重）
+    second_bi_map = {}  # (bom_id, pi_id, craft_name) → BomItem
+    second_bom_ids = [b.bom_id for b in second_bom_map.values()]
+    if second_bom_ids:
+        second_bom_items = (
+            db.session.query(BomItem)
+            .filter(
+                BomItem.bom_id.in_(second_bom_ids),
+                BomItem.bom_item_add_type == "1",
+            )
+            .all()
+        )
+        # 按 key 分组，检测同一 key 存在多条（历史重复写入导致的脏数据）
+        grouped_bi = {}
+        for bi in second_bom_items:
+            key = (bi.bom_id, bi.production_instruction_item_id, bi.craft_name or "")
+            grouped_bi.setdefault(key, []).append(bi)
+        # 同一 key 只保留 bom_item_id 最大（最新）的一条，其余立即删除
+        extra_bi_ids = []
+        for key, items in grouped_bi.items():
+            items.sort(key=lambda x: x.bom_item_id, reverse=True)
+            second_bi_map[key] = items[0]
+            for extra in items[1:]:
+                extra_bi_ids.append(extra.bom_item_id)
+                db.session.delete(extra)
+        if extra_bi_ids:
+            extra_pois = (
+                db.session.query(PurchaseOrderItem)
+                .filter(PurchaseOrderItem.bom_item_id.in_(extra_bi_ids))
+                .all()
+            )
+            for poi in extra_pois:
+                db.session.delete(poi)
+            db.session.flush()
+
+    # 二次采购订单: bom_item_id → PurchaseOrderItem
+    second_po_map = {}
+    if second_bi_map:
+        all_second_bi_ids = [bi.bom_item_id for bi in second_bi_map.values()]
+        second_poi_items = (
+            db.session.query(PurchaseOrderItem)
+            .filter(PurchaseOrderItem.bom_item_id.in_(all_second_bi_ids))
+            .all()
+        )
+        for poi in second_poi_items:
+            second_po_map[poi.bom_item_id] = poi
+
+    # ── Phase 3: 更新下游记录，并全量对账二次BOM ─────────────────────────────────
+
+    # 预计算所有需要存在的二次BOM条目: (bom_id, pi_id, craft_name) → sync数据
+    needed_second_keys = {}
+    for t in sync_list:
+        ost_id = t["order_shoe_type_id"]
+        second_bom = second_bom_map.get(ost_id)
+        if not second_bom:
+            continue
+        craft_name_str = t["craft_name"]
+        new_crafts = [c for c in craft_name_str.split("@") if c] if craft_name_str else [""]
+        for craft in new_crafts:
+            key = (second_bom.bom_id, t["pi_id"], craft)
+            needed_second_keys[key] = t
+
+    modified_bom_ids = set(b.bom_id for b in second_bom_map.values())
+
+    # ①② 更新 PI 及一次BOM（仅限有 pi_id 的条目）
+    for t in sync_list:
+        pi_id = t["pi_id"]
+        if not pi_id:
+            continue
+        material_id = t["material_id"]
+        spec = t["spec"]
+        model = t["model"]
+        color = t["color"]
+        craft_name_str = t["craft_name"]
+
+        pi = pi_map.get(pi_id)
+        if pi:
+            pi.material_id = material_id
+            pi.material_specification = spec
+            pi.material_model = model
+            pi.color = color
+
+        first_bi = first_bom_map.get(pi_id)
+        if first_bi:
+            first_bi.material_id = material_id
+            first_bi.material_specification = spec
+            first_bi.material_model = model
+            first_bi.bom_item_color = color
+            first_bi.craft_name = craft_name_str
+            first_poi = first_po_map.get(first_bi.bom_item_id)
+            if first_poi:
+                first_poi.material_id = material_id
+                first_poi.inbound_material_id = material_id
+                first_poi.material_specification = spec
+                first_poi.material_model = model
+
+    # ③ 二次BOM全量对账（覆盖含 NULL pi_id 的旧条目）
+    for key, t in needed_second_keys.items():
+        bom_id, pi_id, craft = key
+        material_id = t["material_id"]
+        spec = t["spec"]
+        model = t["model"]
+        color = t["color"]
+
+        if key in second_bi_map:
+            # 更新现有条目
+            bi = second_bi_map[key]
+            bi.material_id = material_id
+            bi.material_specification = spec
+            bi.material_model = model
+            bi.bom_item_color = color
+            second_poi = second_po_map.get(bi.bom_item_id)
+            if second_poi:
+                second_poi.material_id = material_id
+                second_poi.inbound_material_id = material_id
+                second_poi.material_specification = spec
+                second_poi.material_model = model
+        else:
+            # 尝试复用同工艺的 NULL-pi_id 旧条目（保留已填写的用量）
+            null_key = (bom_id, None, craft)
+            if null_key in second_bi_map and null_key not in needed_second_keys:
+                bi = second_bi_map.pop(null_key)
+                bi.material_id = material_id
+                bi.material_specification = spec
+                bi.material_model = model
+                bi.bom_item_color = color
+                bi.production_instruction_item_id = pi_id
+                second_bi_map[key] = bi
+                second_poi = second_po_map.get(bi.bom_item_id)
+                if second_poi:
+                    second_poi.material_id = material_id
+                    second_poi.inbound_material_id = material_id
+                    second_poi.material_specification = spec
+                    second_poi.material_model = model
+            else:
+                new_bi = BomItem(
+                    bom_id=bom_id,
+                    material_id=material_id,
+                    material_model=model,
+                    material_specification=spec,
+                    bom_item_color=color,
+                    remark=t["remark"],
+                    department_id=t["department_id"],
+                    size_type="E",
+                    bom_item_add_type="1",
+                    unit_usage=0.0,
+                    total_usage=0,
+                    material_second_type=t["material_second_type"],
+                    craft_name=craft,
+                    production_instruction_item_id=pi_id,
+                )
+                db.session.add(new_bi)
+
+    # 删除不再需要的旧二次BOM条目（含 NULL-pi_id 孤儿条目）
+    for key, bi in list(second_bi_map.items()):
+        bom_id = key[0]
+        if bom_id in modified_bom_ids and key not in needed_second_keys:
+            second_poi = second_po_map.get(bi.bom_item_id)
+            if second_poi:
+                db.session.delete(second_poi)
+            db.session.delete(bi)
+
+    order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
+    db.session.commit()
+    return jsonify({"message": "Craft sheet modified and synced successfully"}), 200
+
+
+@process_sheet_upload_bp.route("/craftsheet/modifyproductioninstructions", methods=["POST"])
+def modify_production_instructions():
+    """
+    技术部经理修改未下发工艺单，同步至投产指令单（不触及BOM及采购订单）：
+    - 重写 CraftSheetItem（工艺单明细）
+    - 同步更新 ProductionInstructionItem（材料字段）
+    """
+    order_id = request.json.get("orderId")
+    order_shoe_rid = request.json.get("orderShoeId")
+    craft_sheet_rid = request.json.get("craftSheetId")
+    upload_data = request.json.get("uploadData")
+    craft_sheet_detail = request.json.get("craftSheetDetail")
+
+    order_shoe = (
+        db.session.query(Order, OrderShoe, Shoe)
+        .join(OrderShoe, Order.order_id == OrderShoe.order_id)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(Order.order_rid == order_id, Shoe.shoe_rid == order_shoe_rid)
+        .first()
+        .OrderShoe
+    )
+    order_shoe_id = order_shoe.order_shoe_id
+
+    craft_sheet = (
+        db.session.query(CraftSheet)
+        .filter(CraftSheet.craft_sheet_rid == craft_sheet_rid)
+        .first()
+    )
+    craft_sheet_id = craft_sheet.craft_sheet_id
+    craft_sheet.cut_die_staff = craft_sheet_detail.get("cutDie")
+    craft_sheet.production_remark = craft_sheet_detail.get("productionRemark")
+    craft_sheet.cutting_special_process = craft_sheet_detail.get("cuttingSpecialCraft")
+    craft_sheet.sewing_special_process = craft_sheet_detail.get("sewingSpecialCraft")
+    craft_sheet.molding_special_process = craft_sheet_detail.get("moldingSpecialCraft")
+    craft_sheet.post_processing_comment = craft_sheet_detail.get("postProcessing")
+    craft_sheet.oily_glue = craft_sheet_detail.get("oilyGlue")
+    craft_sheet.cut_die_img_path = craft_sheet_detail.get("cutDieImgPath")
+    craft_sheet.pic_note_img_path = craft_sheet_detail.get("picNoteImgPath")
+    craft_sheet.reviewer = craft_sheet_detail.get("reviewer")
+    db.session.flush()
+
+    # Phase 1: 重写 CraftSheetItem
+    old_items = (
+        db.session.query(CraftSheetItem)
+        .filter(CraftSheetItem.craft_sheet_id == craft_sheet_id)
+        .all()
+    )
+    for item in old_items:
+        db.session.delete(item)
+    db.session.flush()
+
+    MATERIAL_SECTIONS = [
+        ("surfaceMaterialData",   "S", 0),
+        ("insideMaterialData",    "I", 0),
+        ("accessoryMaterialData", "A", 0),
+        ("outsoleMaterialData",   "O", 1),
+        ("midsoleMaterialData",   "M", 1),
+        ("hotsoleMaterialData",   "H", None),
+    ]
+
+    pi_sync_list = []
+
+    for data in upload_data:
+        shoe_color = data.get("color")
+        shoe_type_id = (
+            db.session.query(Shoe, ShoeType, Color)
+            .join(ShoeType, Shoe.shoe_id == ShoeType.shoe_id)
+            .join(Color, ShoeType.color_id == Color.color_id)
+            .filter(Shoe.shoe_rid == order_shoe_rid, Color.color_name == shoe_color)
+            .first()
+            .ShoeType.shoe_type_id
+        )
+        order_shoe_type_id = (
+            db.session.query(OrderShoeType)
+            .filter(
+                OrderShoeType.order_shoe_id == order_shoe_id,
+                OrderShoeType.shoe_type_id == shoe_type_id,
+            )
+            .first()
+            .order_shoe_type_id
+        )
+
+        for section_key, material_type, default_category in MATERIAL_SECTIONS:
+            for material_data in data.get(section_key, []):
+                is_material_exist = (
+                    db.session.query(Material, Supplier)
+                    .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                    .filter(
+                        Material.material_name == material_data.get("materialName"),
+                        Supplier.supplier_name == material_data.get("supplierName"),
+                    )
+                    .first()
+                )
+                if is_material_exist:
+                    material_id = is_material_exist.Material.material_id
+                else:
+                    is_supplier_exist = (
+                        db.session.query(Supplier)
+                        .filter(Supplier.supplier_name == material_data.get("supplierName"))
+                        .first()
+                    )
+                    if is_supplier_exist:
+                        supplier_id = is_supplier_exist.supplier_id
+                    else:
+                        supplier = Supplier(supplier_name=material_data.get("supplierName"))
+                        db.session.add(supplier)
+                        db.session.flush()
+                        supplier_id = supplier.supplier_id
+                    material_type_id = (
+                        db.session.query(MaterialType)
+                        .filter(MaterialType.material_type_name == material_data.get("materialType"))
+                        .first()
+                        .material_type_id
+                    )
+                    if default_category is None:
+                        category = 1 if material_data.get("materialType") == "烫底" else 0
+                    else:
+                        category = default_category
+                    new_material = Material(
+                        material_name=material_data.get("materialName"),
+                        material_supplier=supplier_id,
+                        material_unit=material_data.get("unit"),
+                        material_creation_date=datetime.datetime.now(),
+                        material_type_id=material_type_id,
+                        material_category=category,
+                    )
+                    db.session.add(new_material)
+                    db.session.flush()
+                    material_id = new_material.material_id
+
+                material_model = material_data.get("materialModel") or None
+                material_spec = material_data.get("materialSpecification") or None
+                material_color = material_data.get("color") or None
+                remark = material_data.get("comment") or None
+                processing_remark = material_data.get("processingRemark") or None
+                department_id = material_data.get("useDepart") or None
+                material_second_type = material_data.get("materialDetailType") or None
+                material_source = material_data.get("materialSource") or "C"
+                pi_id = material_data.get("productionInstructionItemId")
+                craft_name_list = material_data.get("materialCraftNameList") or []
+                craft_name = "@".join(craft_name_list) if craft_name_list else ""
+
+                csi = CraftSheetItem(
+                    craft_sheet_id=craft_sheet_id,
+                    material_id=material_id,
+                    material_model=material_model,
+                    material_specification=material_spec,
+                    color=material_color,
+                    remark=remark,
+                    department_id=department_id,
+                    material_type=material_type,
+                    material_source=material_source,
+                    order_shoe_type_id=order_shoe_type_id,
+                    material_second_type=material_second_type,
+                    craft_name=craft_name,
+                    after_usage_symbol=0,
+                    processing_remark=processing_remark,
+                    production_instruction_item_id=pi_id,
+                )
+                db.session.add(csi)
+
+                if pi_id:
+                    pi_sync_list.append({
+                        "pi_id": pi_id,
+                        "material_id": material_id,
+                        "spec": material_spec,
+                        "model": material_model,
+                        "color": material_color,
+                    })
+
+    db.session.flush()
+
+    # Phase 2: 更新 ProductionInstructionItem（仅材料字段，不触及BOM/PO）
+    if pi_sync_list:
+        pi_ids = [t["pi_id"] for t in pi_sync_list]
+        pi_items = (
+            db.session.query(ProductionInstructionItem)
+            .filter(ProductionInstructionItem.production_instruction_item_id.in_(pi_ids))
+            .all()
+        )
+        pi_map = {p.production_instruction_item_id: p for p in pi_items}
+        for t in pi_sync_list:
+            pi = pi_map.get(t["pi_id"])
+            if pi:
+                pi.material_id = t["material_id"]
+                pi.material_specification = t["spec"]
+                pi.material_model = t["model"]
+                pi.color = t["color"]
+
+    order_shoe.adjust_staff = craft_sheet_detail.get("adjuster")
+    db.session.commit()
+    return jsonify({"message": "Production instructions modified successfully"}), 200
