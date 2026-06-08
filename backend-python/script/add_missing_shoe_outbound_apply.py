@@ -14,7 +14,6 @@ from models import (
     OrderShoeBatchInfo,
     PackagingInfo,
 )
-from sqlalchemy import or_, func
 
 
 def _generate_apply_rid_from_record(record: ShoeOutboundRecord) -> str:
@@ -87,7 +86,7 @@ def backfill_outbound_apply_from_records(
     """
     从历史的 ShoeOutboundRecord / Detail 自动补一张 ShoeOutboundApply / Detail：
 
-    - 只处理没有 apply_id 的出库记录；
+    - 只处理还没有关联申请单的出库记录；
     - 每张出库单 => 一张申请单（状态 = 4 已完成出库）；
     - 明细 total_pairs = outbound_amount（整数，保持你的约束）；
     - carton_count 允许为小数：
@@ -100,11 +99,13 @@ def backfill_outbound_apply_from_records(
     with app.app_context():
         q = (
             db.session.query(ShoeOutboundRecord)
+            .outerjoin(
+                ShoeOutboundApply,
+                ShoeOutboundApply.outbound_record_id
+                == ShoeOutboundRecord.shoe_outbound_record_id,
+            )
             .filter(
-                or_(
-                    ShoeOutboundRecord.apply_id == None,
-                    ShoeOutboundRecord.apply_id == 0,
-                ),
+                ShoeOutboundApply.apply_id.is_(None),
                 ShoeOutboundRecord.shoe_outbound_rid.like("%FOR%"),
             )
             .order_by(ShoeOutboundRecord.shoe_outbound_record_id)
@@ -232,9 +233,6 @@ def backfill_outbound_apply_from_records(
                 )
                 db.session.add(detail_obj)
                 created_detail_count += 1
-
-            # 出库记录反向关联申请单
-            record.apply_id = apply_obj.apply_id
 
             created_apply_count += 1
 
