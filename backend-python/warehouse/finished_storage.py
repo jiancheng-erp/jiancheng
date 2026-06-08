@@ -2632,7 +2632,7 @@ def save_outbound_apply():
         ShoeOutboundApplyDetail.query.filter_by(apply_id=apply_obj.apply_id).delete()
     else:
         timestamp = format_datetime(datetime.now())
-        rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
+        rid_suffix = datetime.now().strftime("%Y%m%d%H%M%S%f")
         apply_rid = "SOA" + rid_suffix + "T0"
 
         apply_obj = ShoeOutboundApply(
@@ -3477,7 +3477,7 @@ def warehouse_direct_outbound():
         except ValueError:
             return jsonify({"message": "actualOutboundDate 格式不正确，应为 YYYY-MM-DD"}), 400
     timestamp = format_datetime(now_dt)
-    rid_suffix = timestamp.replace("-", "").replace(" ", "").replace(":", "")
+    rid_suffix = datetime.now().strftime("%Y%m%d%H%M%S%f")
     customer_index = data.get("customerIndex", 0)
     apply_rid = "SOA" + rid_suffix + "T" + str(customer_index)
 
