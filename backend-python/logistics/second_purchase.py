@@ -1191,10 +1191,46 @@ def submit_purchase_divide_orders():
                         )
                         .all()
                     )
+                    # 通过 order_shoe_type_id 关联同鞋型的一次BOM（bom_type=0），
+                    # 找到烫底大类（material_type='H'）中非烫底加工的材料作为「使用材料」
+                    ost_to_second_bom_id = {
+                        bom.order_shoe_type_id: bi.bom_id
+                        for bi, bom, _ in hotsole_bom_rows
+                    }
+                    use_material_map = {}
+                    if ost_to_second_bom_id:
+                        use_material_rows = (
+                            db.session.query(BomItem, Material, Bom, Supplier)
+                            .join(Bom, BomItem.bom_id == Bom.bom_id)
+                            .join(Material, BomItem.material_id == Material.material_id)
+                            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                            .join(
+                                ProductionInstructionItem,
+                                BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+                            )
+                            .filter(
+                                Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
+                                Bom.bom_type == 0,
+                                BomItem.material_id != material.material_id,
+                                BomItem.bom_item_add_type == "0",
+                                ProductionInstructionItem.material_type == "H",
+                            )
+                            .all()
+                        )
+                        for um_bi, um_mat, um_bom, um_sup in use_material_rows:
+                            second_bom_id = ost_to_second_bom_id.get(um_bom.order_shoe_type_id)
+                            if second_bom_id and second_bom_id not in use_material_map:
+                                use_material_map[second_bom_id] = (
+                                    um_sup.supplier_name
+                                    + um_mat.material_name
+                                    + (" " + um_bi.material_model if um_bi.material_model else "")
+                                    + (" " + um_bi.material_specification if um_bi.material_specification else "")
+                                    + (" " + um_bi.bom_item_color if um_bi.bom_item_color else "")
+                                )
                     for hotsole_bi, _, color_row in hotsole_bom_rows:
                         obj = {
                             "物品名称": material.material_name,
-                            "使用材料": hotsole_bi.material_specification,
+                            "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
                             "工艺说明": hotsole_bi.craft_name,
@@ -1746,10 +1782,46 @@ def download_purchase_order_zip():
                         )
                         .all()
                     )
+                    # 通过 order_shoe_type_id 关联同鞋型的一次BOM（bom_type=0），
+                    # 找到烫底大类（material_type='H'）中非烫底加工的材料作为「使用材料」
+                    ost_to_second_bom_id = {
+                        bom.order_shoe_type_id: bi.bom_id
+                        for bi, bom, _ in hotsole_bom_rows
+                    }
+                    use_material_map = {}
+                    if ost_to_second_bom_id:
+                        use_material_rows = (
+                            db.session.query(BomItem, Material, Bom, Supplier)
+                            .join(Bom, BomItem.bom_id == Bom.bom_id)
+                            .join(Material, BomItem.material_id == Material.material_id)
+                            .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+                            .join(
+                                ProductionInstructionItem,
+                                BomItem.production_instruction_item_id == ProductionInstructionItem.production_instruction_item_id,
+                            )
+                            .filter(
+                                Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
+                                Bom.bom_type == 0,
+                                BomItem.material_id != material.material_id,
+                                BomItem.bom_item_add_type == "0",
+                                ProductionInstructionItem.material_type == "H",
+                            )
+                            .all()
+                        )
+                        for um_bi, um_mat, um_bom, um_sup in use_material_rows:
+                            second_bom_id = ost_to_second_bom_id.get(um_bom.order_shoe_type_id)
+                            if second_bom_id and second_bom_id not in use_material_map:
+                                use_material_map[second_bom_id] = (
+                                    um_sup.supplier_name
+                                    + um_mat.material_name
+                                    + (" " + um_bi.material_model if um_bi.material_model else "")
+                                    + (" " + um_bi.material_specification if um_bi.material_specification else "")
+                                    + (" " + um_bi.bom_item_color if um_bi.bom_item_color else "")
+                                )
                     for hotsole_bi, _, color_row in hotsole_bom_rows:
                         obj = {
                             "物品名称": material.material_name,
-                            "使用材料": hotsole_bi.material_specification,
+                            "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
                             "工艺说明": hotsole_bi.craft_name,
