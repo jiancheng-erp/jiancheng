@@ -2835,8 +2835,8 @@ def manager_modify_craft_sheet():
     pi_ids = [t["pi_id"] for t in sync_list if t["pi_id"]]
 
     pi_map = {}
-    first_bom_map = {}  # pi_id → BomItem(type=0, add='0')
-    first_po_map = {}   # bom_item_id → PurchaseOrderItem
+    first_bom_list_map = {}  # pi_id → [BomItem, ...] (all colors, type=0, add='0')
+    first_po_map = {}        # pi_id → PurchaseOrderItem
 
     if pi_ids:
         pi_items = (
@@ -2854,22 +2854,55 @@ def manager_modify_craft_sheet():
             )
             .all()
         )
+        # Group all BomItems by pi_id (one per shoe-type/color)
         for bi in first_bom_items:
-            if bi.production_instruction_item_id not in first_bom_map:
-                first_bom_map[bi.production_instruction_item_id] = bi
+            first_bom_list_map.setdefault(bi.production_instruction_item_id, []).append(bi)
 
-        first_bom_ids = [bi.bom_item_id for bi in first_bom_map.values()]
-        if first_bom_ids:
+        all_first_bom_ids = [bi.bom_item_id for bi in first_bom_items]
+        if all_first_bom_ids:
+            # Build a lookup: bom_item_id → pi_id so we can key first_po_map by pi_id
+            bom_id_to_pi = {bi.bom_item_id: bi.production_instruction_item_id for bi in first_bom_items}
             first_poi_items = (
                 db.session.query(PurchaseOrderItem)
-                .filter(PurchaseOrderItem.bom_item_id.in_(first_bom_ids))
+                .filter(PurchaseOrderItem.bom_item_id.in_(all_first_bom_ids))
                 .all()
             )
             for poi in first_poi_items:
-                first_po_map[poi.bom_item_id] = poi
+                pi = bom_id_to_pi.get(poi.bom_item_id)
+                if pi and pi not in first_po_map:
+                    first_po_map[pi] = poi
 
     # 二次BOM: order_shoe_type_id → 最新 Bom(type=1)
     ost_ids = list({t["order_shoe_type_id"] for t in sync_list})
+
+    # ── 一次BOM/POI 的 material_id 匹配备用图（覆盖PI为空或POI不经PI-BomItem链接的情形）
+    first_bom_mat_map = {}   # material_id → [BomItem, ...]  (first BOM, add_type='0')
+    first_po_mat_map = {}    # material_id → PurchaseOrderItem
+    _first_bom_ost_rows = (
+        db.session.query(BomItem, Bom)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .filter(
+            Bom.order_shoe_type_id.in_(ost_ids),
+            Bom.bom_type == 0,
+            BomItem.bom_item_add_type == "0",
+        )
+        .all()
+    )
+    for _bi, _bom in _first_bom_ost_rows:
+        first_bom_mat_map.setdefault(_bi.material_id, []).append(_bi)
+    _all_ost_first_bom_ids = [_bi.bom_item_id for _bi, _ in _first_bom_ost_rows]
+    if _all_ost_first_bom_ids:
+        _bom_id_to_mat = {_bi.bom_item_id: _bi.material_id for _bi, _ in _first_bom_ost_rows}
+        _mat_pois = (
+            db.session.query(PurchaseOrderItem)
+            .filter(PurchaseOrderItem.bom_item_id.in_(_all_ost_first_bom_ids))
+            .all()
+        )
+        for _poi in _mat_pois:
+            _mid = _bom_id_to_mat.get(_poi.bom_item_id)
+            if _mid and _mid not in first_po_mat_map:
+                first_po_mat_map[_mid] = _poi
+    # ─────────────────────────────────────────────────────────────────────────
     second_bom_map = {}  # ost_id → Bom
     for ost_id in ost_ids:
         second_bom = (
@@ -2963,19 +2996,53 @@ def manager_modify_craft_sheet():
             pi.material_model = model
             pi.color = color
 
-        first_bi = first_bom_map.get(pi_id)
-        if first_bi:
-            first_bi.material_id = material_id
-            first_bi.material_specification = spec
-            first_bi.material_model = model
-            first_bi.bom_item_color = color
-            first_bi.craft_name = craft_name_str
-            first_poi = first_po_map.get(first_bi.bom_item_id)
+        first_bis = first_bom_list_map.get(pi_id, [])
+        if first_bis:
+            # Update ALL first BOM items for this PI (one per shoe-type/color)
+            for first_bi in first_bis:
+                first_bi.material_id = material_id
+                first_bi.material_specification = spec
+                first_bi.material_model = model
+                first_bi.bom_item_color = color
+                first_bi.craft_name = craft_name_str
+            # PurchaseOrderItem is one per material (across colors), keyed by pi_id
+            first_poi = first_po_map.get(pi_id)
             if first_poi:
                 first_poi.material_id = material_id
                 first_poi.inbound_material_id = material_id
                 first_poi.material_specification = spec
                 first_poi.material_model = model
+                first_poi.color = color
+
+    # ①-extra 一次采购订单 POI 更新：按 material_id 匹配（覆盖PI-id路径未找到 / PI为空 的情况）
+    _updated_poi_mats = set()
+    for t in sync_list:
+        mid = t["material_id"]
+        if mid in _updated_poi_mats:
+            continue
+        _updated_poi_mats.add(mid)
+        first_poi = first_po_mat_map.get(mid)
+        if first_poi:
+            first_poi.material_id = mid
+            first_poi.inbound_material_id = mid
+            first_poi.material_specification = t["spec"]
+            first_poi.material_model = t["model"]
+            first_poi.color = t["color"]
+
+    # ①-extra 一次BOM BomItem 更新（PI为空的手动添加材料，不覆盖工艺名）
+    _updated_bom_mats = set()
+    for t in sync_list:
+        if t["pi_id"]:
+            continue  # PI-id路径已处理
+        mid = t["material_id"]
+        if mid in _updated_bom_mats:
+            continue
+        _updated_bom_mats.add(mid)
+        for _bi in first_bom_mat_map.get(mid, []):
+            _bi.material_id = mid
+            _bi.material_specification = t["spec"]
+            _bi.material_model = t["model"]
+            _bi.bom_item_color = t["color"]
 
     # ③ 二次BOM全量对账（覆盖含 NULL pi_id 的旧条目）
     for key, t in needed_second_keys.items():
@@ -2998,6 +3065,7 @@ def manager_modify_craft_sheet():
                 second_poi.inbound_material_id = material_id
                 second_poi.material_specification = spec
                 second_poi.material_model = model
+                second_poi.color = color
         else:
             # 尝试复用同工艺的 NULL-pi_id 旧条目（保留已填写的用量）
             null_key = (bom_id, None, craft)
@@ -3015,6 +3083,7 @@ def manager_modify_craft_sheet():
                     second_poi.inbound_material_id = material_id
                     second_poi.material_specification = spec
                     second_poi.material_model = model
+                    second_poi.color = color
             else:
                 new_bi = BomItem(
                     bom_id=bom_id,

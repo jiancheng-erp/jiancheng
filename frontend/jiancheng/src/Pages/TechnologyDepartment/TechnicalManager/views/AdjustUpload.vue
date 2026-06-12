@@ -216,6 +216,7 @@
                                     :edit-config="{ mode: 'row', trigger: 'click' }"
                                     :column-config="{ resizable: true }"
                                     :row-config="{ resizable: true, isHover: true }"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55" row-resize></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -318,6 +319,7 @@
                                         isDblclickAutoWidth: true,
                                         isDblclickAutoHeight: true
                                     }"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -424,6 +426,7 @@
                                         isDblclickAutoHeight: true
                                     }"
                                     max-height="350"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -527,6 +530,7 @@
                                         isDblclickAutoWidth: true,
                                         isDblclickAutoHeight: true
                                     }"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -630,6 +634,7 @@
                                         isDblclickAutoWidth: true,
                                         isDblclickAutoHeight: true
                                     }"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -733,6 +738,7 @@
                                         isDblclickAutoWidth: true,
                                         isDblclickAutoHeight: true
                                     }"
+                                    @edit-closed="handleCellEditClosed"
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
@@ -2279,10 +2285,45 @@ export default {
             }
         },
         async handleMaterialNameSelect(row, selectedItem) {
+            const oldMaterialId = row.materialId
             const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`)
             row.materialId = response.data.materialId
             row.unit = response.data.unit
             row.materialType = response.data.materialType
+            if (this.isManagerModifyMode) {
+                this.syncMaterialSiblings(row, oldMaterialId)
+            }
+        },
+        // 将材料身份字段同步到所有共享同一 productionInstructionItemId 的行（二次BOM拆分后的同源行）
+        // matchId: materialId to match against. Defaults to row.materialId.
+        // Pass oldMaterialId when the material itself is being changed (name-select case).
+        syncMaterialSiblings(row, matchId) {
+            const targetId = (matchId !== undefined) ? matchId : row.materialId
+            if (!targetId) return
+            const allTypes = ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'lastMaterialData', 'hotsoleMaterialData']
+            for (const colorData of this.materialWholeData) {
+                for (const type of allTypes) {
+                    for (const item of colorData[type] || []) {
+                        if (item !== row && item.materialId === targetId) {
+                            item.supplierName = row.supplierName
+                            item.materialId = row.materialId
+                            item.materialName = row.materialName
+                            item.materialSpecification = row.materialSpecification
+                            item.materialModel = row.materialModel
+                            item.color = row.color
+                            item.unit = row.unit
+                            item.materialType = row.materialType
+                        }
+                    }
+                }
+            }
+        },
+        // 当表格单元格编辑结束时，若在管理员修改模式下则同步同源行的材料字段
+        handleCellEditClosed({ row, column }) {
+            const syncFields = ['supplierName', 'materialName', 'materialModel', 'materialSpecification', 'color']
+            if (!this.isManagerModifyMode || !row.materialId) return
+            if (!syncFields.includes(column.field)) return
+            this.syncMaterialSiblings(row)
         },
         openCraftDialog(row) {
             this.currentRow = row
@@ -2485,6 +2526,10 @@ export default {
         trimField(row, field) {
             if (row[field] && typeof row[field] === 'string') {
                 row[field] = row[field].trim()
+            }
+            const syncFields = ['supplierName', 'materialName', 'materialModel', 'materialSpecification', 'color']
+            if (this.isManagerModifyMode && syncFields.includes(field)) {
+                this.syncMaterialSiblings(row)
             }
         },
         // Special color validation rule: no ending with '色'
