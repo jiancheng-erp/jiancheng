@@ -2301,7 +2301,10 @@ export default {
             const targetId = (matchId !== undefined) ? matchId : row.materialId
             if (!targetId) return
             const allTypes = ['surfaceMaterialData', 'insideMaterialData', 'accessoryMaterialData', 'outsoleMaterialData', 'midsoleMaterialData', 'lastMaterialData', 'hotsoleMaterialData']
-            for (const colorData of this.materialWholeData) {
+            // Only sync within the currently active color tab
+            const activeColorData = this.materialWholeData.find(cd => cd.color === this.activeTab)
+            if (!activeColorData) return
+            for (const colorData of [activeColorData]) {
                 for (const type of allTypes) {
                     for (const item of colorData[type] || []) {
                         if (item !== row && item.materialId === targetId) {
