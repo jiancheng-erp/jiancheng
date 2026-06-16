@@ -1,112 +1,173 @@
-import shutil
-from openpyxl import load_workbook
 import os
-from openpyxl.styles import Border, Side, Alignment
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import get_column_letter
 from logger import logger
-# Function to load the Excel template and prepare for modification
-def load_template(template_path, new_file_path):
-    # Copy the template to a new file
-    shutil.copy(template_path, new_file_path)
-    # Load the new workbook
-    wb = load_workbook(new_file_path)
+
+
+def generate_excel_file(template_path, new_file_path, order_data):
+    """
+    从零生成标准采购订单 Excel（不依赖模板文件）。
+
+    order_data keys:
+        供应商, 客户名, 订单信息, 日期, 备注,
+        环保要求, 发货地址, 交货期限,
+        seriesData: list of {物品名称, 单位, 数量, 单价, 用途说明, 备注}
+    """
+    logger.debug(f"Generating Excel file for order {order_data.get('订单信息', '')}")
+
+    wb = Workbook()
     ws = wb.active
-    return wb, ws
-def add_borders(ws, start_cell, end_cell):
+    ws.title = "采购订单"
+
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-    for row in ws[start_cell:end_cell]:
-        for cell in row:
-            cell.border = border  # Apply border
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)  # Center text
+    # ── Row 1: title ─────────────────────────────────────────────────────────
+    ws.merge_cells("A1:F1")
+    ws["A1"] = "采  购  订  单"
+    ws["A1"].font = Font(bold=True, size=16)
+    ws["A1"].alignment = center
 
-# Function to insert series data starting from row 4
-def merge_cells(ws, row):
-    ws.merge_cells(f"A{row+1}:D{row+1}")
-    ws.merge_cells(f"B{row+2}:H{row+2}")
-    ws.merge_cells(f"B{row+3}:H{row+3}")
-    ws.merge_cells(f"B{row+4}:D{row+4}")
-    ws.merge_cells(f"E{row+4}:H{row+4}")
-    ws.merge_cells(f"A3:A{row}")
-    add_borders(ws, f"A3", f"H{row+1}")
-def insert_series_data(ws, series_data, start_row=4):
-    required_rows = 5  # Minimum rows to keep
-    row = start_row - 1  # To calculate the last row after loop
+    ws.merge_cells("G1:H1")
+    ws["G1"] = order_data.get("客户名", "")
+    ws["G1"].font = Font(bold=True, size=12)
+    ws["G1"].alignment = center
+    ws.row_dimensions[1].height = 32
 
-    for i, item in enumerate(series_data):
-        row = start_row + i
-        logger.debug(f"Inserting series data into row {row}")
-        logger.debug(item)
-
-        ws[f"B{row}"] = i + 1
-        ws[f"C{row}"] = item.get("物品名称", "")
-        ws[f"D{row}"] = item.get("单位", "")
-        ws[f"E{row}"] = item.get("数量", "")
-        ws[f"F{row}"] = item.get("单价", "")
-        ws[f"G{row}"] = item.get("用途说明", "")
-        ws[f"H{row}"] = item.get("备注", "")
-
-        # Ensure alignment for each cell in the row
-        for col in "BCDEFGH":
-            ws[f"{col}{row}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-    for i in range(len(series_data), required_rows):
-        row = start_row + i
-        logger.debug(f"Adding empty row at {row}")
-        ws[f"B{row}"] = i + 1  # Continue numbering for empty rows
-
-        # Ensure alignment for each empty row
-        for col in "BCDEFGH":
-            ws[f"{col}{row}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-    return row
-
-# Function to save the workbook after modification
-def save_workbook(wb, new_file_path):
-    wb.save(new_file_path)
-
-# Main function to generate the Excel file
-def generate_excel_file(template_path, new_file_path, order_data):
-    logger.debug(f"Generating Excel file for order {order_data.get('订单信息', '')}")
-    wb, ws = load_template(template_path, new_file_path)
-
-    # Insert order details
-    ws["D2"] = order_data.get("订单信息", "")
+    # ── Row 2: supplier / order / date ────────────────────────────────────────
+    ws["A2"] = "供应商："
+    ws["A2"].alignment = center
+    ws.merge_cells("B2:C2")
     ws["B2"] = order_data.get("供应商", "")
+    ws["B2"].alignment = center
+
+    ws["D2"] = "订单信息："
+    ws["D2"].alignment = center
+    ws.merge_cells("E2:F2")
+    ws["E2"] = order_data.get("订单信息", "")
+    ws["E2"].alignment = center
+
+    ws["G2"] = "日期："
+    ws["G2"].alignment = center
     ws["H2"] = order_data.get("日期", "")
-    ws["H1"] = order_data.get("客户名", "")
+    ws["H2"].alignment = center
+    ws.row_dimensions[2].height = 20
 
-    # Insert series data from row 4 onwards
-    row = insert_series_data(ws, order_data.get("seriesData", []))
+    # ── Row 3: column headers ─────────────────────────────────────────────────
+    headers = ["序号", "物品名称", "单位", "数量", "单价", "用途说明", "备注", ""]
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=col_idx, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = center
+        cell.border = border
+    ws.row_dimensions[3].height = 20
 
-    # Summary Section
-    ws[f"A{row+1}"] = "合计"
-    total_sum = sum(ws[f"E{r}"].value for r in range(5, row, 2) if ws[f"E{r}"].value)
-    ws[f"E{row+1}"] = total_sum
-    ws[f"F{row+1}"] = order_data.get("备注", "")
-    ws[f"A{row+2}"] = "环境要求:"
-    ws[f"A{row+3}"] = "发货地址:"
-    ws[f"A{row+4}"] = "交货期限:"
-    ws[f"B{row+2}"] = order_data.get("环保要求", "")
-    ws[f"B{row+3}"] = order_data.get("发货地址", "")
-    ws[f"B{row+4}"] = order_data.get("交货期限", "")
-    ws[f"E{row+4}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
-    ws[f"A{row+5}"] = "制表:"
-    ws[f"E{row+5}"] = "审核:"
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    series = order_data.get("seriesData", [])
+    # Ensure at least 5 rows
+    min_rows = max(len(series), 5)
+    total_qty = 0
+    for i in range(min_rows):
+        row = 4 + i
+        item = series[i] if i < len(series) else {}
+        qty = item.get("数量", "") if item else ""
+        if isinstance(qty, (int, float)):
+            total_qty += qty
+        values = [
+            i + 1,
+            item.get("物品名称", ""),
+            item.get("单位", ""),
+            qty,
+            item.get("单价", ""),
+            item.get("用途说明", ""),
+            item.get("备注", ""),
+            "",
+        ]
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row, column=col_idx, value=value)
+            cell.border = border
+            cell.alignment = center
+        ws.row_dimensions[row].height = 20
 
-    # Ensure summary section is also centered
-    for col in "ABCDEFGH":
-        for r in range(row+1, row+6):
-            ws[f"{col}{r}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    last_data_row = 3 + min_rows
 
-    # Merge and apply borders
-    merge_cells(ws, row)
-    add_borders(ws, "A3", f"H{row+1}")
+    # ── Footer rows ──────────────────────────────────────────────────────────
+    r = last_data_row + 1
 
-    # Save the workbook
-    save_workbook(wb, new_file_path)
+    # 合计 row
+    ws.merge_cells(f"A{r}:D{r}")
+    ws[f"A{r}"] = "合计"
+    ws[f"A{r}"].font = Font(bold=True)
+    ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].border = border
+    ws[f"E{r}"] = total_qty if total_qty else ""
+    ws[f"E{r}"].alignment = center
+    ws[f"E{r}"].border = border
+    ws.merge_cells(f"F{r}:H{r}")
+    ws[f"F{r}"] = order_data.get("备注", "")
+    ws[f"F{r}"].alignment = center
+    ws[f"F{r}"].border = border
+    ws.row_dimensions[r].height = 20
 
-    logger.debug(f"Workbook saved as {new_file_path}")
+    # 环保要求
+    r += 1
+    ws[f"A{r}"] = "环境要求:"
+    ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].border = border
+    ws.merge_cells(f"B{r}:H{r}")
+    ws[f"B{r}"] = order_data.get("环保要求", "")
+    ws[f"B{r}"].alignment = left
+    ws[f"B{r}"].border = border
+    ws.row_dimensions[r].height = 20
+
+    # 发货地址
+    r += 1
+    ws[f"A{r}"] = "发货地址:"
+    ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].border = border
+    ws.merge_cells(f"B{r}:H{r}")
+    ws[f"B{r}"] = order_data.get("发货地址", "")
+    ws[f"B{r}"].alignment = left
+    ws[f"B{r}"].border = border
+    ws.row_dimensions[r].height = 20
+
+    # 交货期限
+    r += 1
+    ws[f"A{r}"] = "交货期限:"
+    ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].border = border
+    ws.merge_cells(f"B{r}:D{r}")
+    ws[f"B{r}"] = order_data.get("交货期限", "")
+    ws[f"B{r}"].alignment = center
+    ws[f"B{r}"].border = border
+    ws.merge_cells(f"E{r}:H{r}")
+    ws[f"E{r}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
+    ws[f"E{r}"].font = Font(color="FF0000")
+    ws[f"E{r}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws[f"E{r}"].border = border
+    ws.row_dimensions[r].height = 35
+
+    # 制表 / 审核
+    r += 1
+    ws.merge_cells(f"A{r}:D{r}")
+    ws[f"A{r}"] = "制表："
+    ws[f"A{r}"].alignment = center
+    ws.merge_cells(f"E{r}:H{r}")
+    ws[f"E{r}"] = "审核："
+    ws[f"E{r}"].alignment = center
+    ws.row_dimensions[r].height = 30
+
+    # ── Column widths ─────────────────────────────────────────────────────────
+    col_widths = [8, 30, 8, 10, 10, 20, 15, 5]
+    for col_idx, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
+    wb.save(new_file_path)
+    logger.debug(f"采购订单 saved: {new_file_path}")
 
 
 # def test_case_1():

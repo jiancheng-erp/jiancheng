@@ -18,6 +18,11 @@ from flask import Blueprint, jsonify, request, send_file, current_app
 from general_document.material_statistics import generate_material_statistics_file
 from general_document.purchase_divide_order import generate_excel_file
 from general_document.size_purchase_divide_order import generate_size_excel_file
+from general_document.accessory_purchase_order import (
+    generate_accessory_purchase_order,
+    split_zipper_orders,
+    split_second_purchase_orders,
+)
 from general_document.hotsole_purchase_order import generate_hotsole_excel_file
 from general_document.cutmodel_purchase_divide_order import (
     generate_cut_model_excel_file,
@@ -1013,6 +1018,7 @@ def submit_purchase_divide_orders():
             ProductionInstructionItem,
             Material,
             Supplier,
+            Color,
         )
         .join(
             PurchaseOrderItem,
@@ -1031,6 +1037,10 @@ def submit_purchase_divide_orders():
         )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
         .all()
     )
@@ -1066,6 +1076,7 @@ def submit_purchase_divide_orders():
         production_instruction_item,
         material,
         supplier,
+        color,
     ) in purchase_divide_orders:
         purchase_order_id = purchase_divide_order.purchase_divide_order_rid
         if purchase_divide_order.purchase_divide_order_type == "N":
@@ -1078,6 +1089,7 @@ def submit_purchase_divide_orders():
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
                     "客户名": customer_name,
+                    "商标": customer_brand,
                     "订单信息": order_rid,
                     "seriesData": [],
                 }
@@ -1122,6 +1134,14 @@ def submit_purchase_divide_orders():
                     "单位": material.material_unit,
                     "备注": purchase_order_item.remark,
                     "用途说明": "",
+                    # Internal fields used by split_zipper_orders (stripped before Excel output)
+                    "_material_name": material.material_name,
+                    "_shoe_color": color.color_name or "",
+                    "_material_color": purchase_order_item.color or "",
+                    "_model": purchase_order_item.material_model or "",
+                    "_spec": purchase_order_item.material_specification or "",
+                    "_factory_no": order_shoe_rid,
+                    "_material_type_id": material.material_type_id,
                 }
             )
         elif purchase_divide_order.purchase_divide_order_type == "S":
@@ -1335,13 +1355,16 @@ def submit_purchase_divide_orders():
         materials_data=materials_data,
     )
     generated_files = []
-    # Convert the dictionary to a list
+    # Split into 辅料订购单 and standard formats based on material type
+    standard_pdo_dict, zipper_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(
         FILE_STORAGE_PATH, "烫底标准采购订单.xlsx"
     )
-    for purchase_order_id, data in purchase_divide_order_dict.items():
+    for purchase_order_id, data in standard_pdo_dict.items():
+        if not data["seriesData"]:
+            continue
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             order_rid,
@@ -1350,6 +1373,16 @@ def submit_purchase_divide_orders():
             purchase_order_id + "_" + data["供应商"] + ".xlsx",
         )
         generate_excel_file(template_path, new_file_path, data)
+        generated_files.append(new_file_path)
+    for purchase_order_id, data in zipper_pdo_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH,
+            order_rid,
+            order_shoe_rid,
+            "purchase_order",
+            purchase_order_id + "_" + data["供应商"] + "_辅料.xlsx",
+        )
+        generate_accessory_purchase_order(new_file_path, data)
         generated_files.append(new_file_path)
     shoe_size_names = get_order_batch_type_helper(order_id)
     for purchase_order_id, data in size_purchase_divide_order_dict.items():
@@ -1651,6 +1684,7 @@ def download_purchase_order_zip():
             ProductionInstructionItem,
             Material,
             Supplier,
+            Color,
         )
         .join(
             PurchaseOrderItem,
@@ -1667,6 +1701,10 @@ def download_purchase_order_zip():
         )
         .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
         .all()
     )
@@ -1695,6 +1733,7 @@ def download_purchase_order_zip():
         production_instruction_item,
         material,
         supplier,
+        color,
     ) in purchase_divide_orders:
         pdo_rid = purchase_divide_order.purchase_divide_order_rid
         if purchase_divide_order.purchase_divide_order_type == "N":
@@ -1707,6 +1746,7 @@ def download_purchase_order_zip():
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
                     "客户名": customer_name,
+                    "商标": customer_brand,
                     "订单信息": order_rid,
                     "seriesData": [],
                 }
@@ -1735,6 +1775,14 @@ def download_purchase_order_zip():
                     "单位": material.material_unit,
                     "备注": purchase_order_item.remark,
                     "用途说明": "",
+                    # Internal fields used by split_zipper_orders (stripped before Excel output)
+                    "_material_name": material.material_name,
+                    "_shoe_color": color.color_name or "",
+                    "_material_color": purchase_order_item.color or "",
+                    "_model": purchase_order_item.material_model or "",
+                    "_spec": purchase_order_item.material_specification or "",
+                    "_factory_no": order_shoe_rid,
+                    "_material_type_id": material.material_type_id,
                 }
             )
         elif purchase_divide_order.purchase_divide_order_type == "S":
@@ -1891,15 +1939,26 @@ def download_purchase_order_zip():
             size_purchase_divide_order_dict[pdo_rid]["seriesData"].append(obj)
 
     generated_files = []
+    # Split into 辅料订购单 and standard formats based on material type
+    standard_pdo_dict, zipper_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(FILE_STORAGE_PATH, "烫底标准采购订单.xlsx")
-    for pdo_rid, data in purchase_divide_order_dict.items():
+    for pdo_rid, data in standard_pdo_dict.items():
+        if not data["seriesData"]:
+            continue
         new_file_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
             pdo_rid + "_" + data["供应商"] + ".xlsx",
         )
         generate_excel_file(template_path, new_file_path, data)
+        generated_files.append(new_file_path)
+    for pdo_rid, data in zipper_pdo_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
+            pdo_rid + "_" + data["供应商"] + "_辅料.xlsx",
+        )
+        generate_accessory_purchase_order(new_file_path, data)
         generated_files.append(new_file_path)
     shoe_size_names = get_order_batch_type_helper(order_id)
     for pdo_rid, data in size_purchase_divide_order_dict.items():
