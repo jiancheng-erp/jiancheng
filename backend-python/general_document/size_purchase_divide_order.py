@@ -53,11 +53,11 @@ def insert_series_data(ws, series_data, start_row=4):
 
         # Insert sizes and amounts
         for chunk in size_chunks:
-            # Insert sizes in the current row
+            # Insert sizes in the current row (bold)
             column = "C"
             for size in chunk:
                 ws[f"{column}{current_row}"] = size
-                ws[f"{column}{current_row}"].font = Font(bold=True)  # Make sizes bold
+                ws[f"{column}{current_row}"].font = Font(bold=True)
                 column = get_next_column_name(column)
 
             # Insert corresponding amounts in the next row
@@ -73,7 +73,6 @@ def insert_series_data(ws, series_data, start_row=4):
 
             # Insert row total in column K
             ws[f"K{current_row}"] = row_total
-            ws[f"K{current_row}"].font = Font(bold=True)  # Bold the total
 
             current_row += 1  # Prepare for the next chunk
 
@@ -81,8 +80,10 @@ def insert_series_data(ws, series_data, start_row=4):
         merge_start_row = current_row - len(size_chunks) * 2  # Calculate merge start
         ws.merge_cells(start_row=merge_start_row, start_column=1, end_row=current_row - 1, end_column=1)
         ws.merge_cells(start_row=merge_start_row, start_column=2, end_row=current_row - 1, end_column=2)
-        ws[f"A{merge_start_row}"] = item.get("型号", "")  # Set value in merged cell
-        ws[f"B{merge_start_row}"] = item.get("类别", "")  # Set value in merged cell
+        ws[f"A{merge_start_row}"] = item.get("型号", "")  # Set value in merged cell, not bold
+        ws[f"B{merge_start_row}"] = item.get("类别", "")  # Set value in merged cell, not bold
+        ws[f"A{merge_start_row}"].font = Font(bold=False)
+        ws[f"B{merge_start_row}"].font = Font(bold=False)
 
         ws.merge_cells(start_row=merge_start_row + 1, start_column=12, end_row=current_row - 1, end_column=12)
         ws[f"L{merge_start_row + 1}"] = item.get("备注", "")  # Set `备注` value in merged cell
@@ -106,6 +107,7 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     ws["B2"] = order_data.get("供应商", "")
     ws["H2"] = order_data.get("日期", "")
     ws["K2"] = order_data.get("客户名", "")
+    ws.row_dimensions[2].height = 18
 
     # Insert series data
     row = insert_series_data(ws, order_data.get("seriesData", []))
@@ -117,22 +119,70 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     ws[f"K{row + 1}"] = total_sum
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=12)
     ws[f"A{row}"] = order_data.get("备注", "")
-    ws[f"A{row + 2}"] = "环境要求:"
-    ws[f"B{row + 2}"] = order_data.get("环保要求", "")
-    ws[f"A{row + 3}"] = "发货地址:"
-    ws[f"B{row + 3}"] = order_data.get("发货地址", "")
-    ws[f"A{row + 4}"] = "交货期限:"
-    ws[f"B{row + 4}"] = order_data.get("交货期限", "")
-    ws[f"G{row + 4}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
-    ws[f"A{row + 5}"] = "制表:"
-    ws[f"G{row + 5}"] = "审核:"
 
-    # Apply formatting to only data region
+    # ── Footer rows (same style as 普通订单) ─────────────────────────────────
+    thin = Side(border_style="thin", color="000000")
+    left_align_footer = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    font9 = Font(size=9)
+
+    # 发货地址 / 联系人
+    r_footer = row + 2
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    ws[f"A{r_footer}"] = "发货地址：" + order_data.get("发货地址", "")
+    ws[f"A{r_footer}"].alignment = left_align_footer
+    ws[f"A{r_footer}"].font = font9
+    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
+    ws[f"G{r_footer}"] = "联系人：范先生-13868846816"
+    ws[f"G{r_footer}"].alignment = left_align_footer
+    ws[f"G{r_footer}"].font = font9
+    ws.row_dimensions[r_footer].height = 22
+
+    # 交货周期 / 责任条款
+    r_footer += 1
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    ws[f"A{r_footer}"] = "交货周期：" + order_data.get("交货期限", "")
+    ws[f"A{r_footer}"].alignment = left_align_footer
+    ws[f"A{r_footer}"].font = Font(color="0070C0", size=9)
+    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
+    ws[f"G{r_footer}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
+    ws[f"G{r_footer}"].alignment = left_align_footer
+    ws[f"G{r_footer}"].font = font9
+    ws.row_dimensions[r_footer].height = 22
+
+    # 制表 / 审核
+    r_footer += 1
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    ws[f"A{r_footer}"] = "制表："
+    ws[f"A{r_footer}"].alignment = left_align_footer
+    ws[f"A{r_footer}"].font = font9
+    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
+    ws[f"G{r_footer}"] = "审核："
+    ws[f"G{r_footer}"].alignment = left_align_footer
+    ws[f"G{r_footer}"].font = font9
+    ws.row_dimensions[r_footer].height = 22
+
+    # Apply formatting to only header region
     bold_cells = {"A2", "B2", "F2", "A3", "C3", "K3", "L3"}
-    format_cells(ws, "A1", f"L{row - 1}", center=True, bold_cells=bold_cells)  # 只居中数据部分
+    format_cells(ws, "A1", "L3", center=True, bold_cells=bold_cells)
 
-    # Add borders
-    add_borders(ws, "A1", f"L{row - 1}")  # 只添加边框到数据部分
+    # Apply left alignment, row height 28 and font size 11 to data rows
+    left_align_data = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    font11 = Font(size=11)
+    for r_data in range(4, row):
+        ws.row_dimensions[r_data].height = 28
+        for col_idx in range(1, 13):
+            cell = ws.cell(row=r_data, column=col_idx)
+            cell.alignment = left_align_data
+            if not cell.font or not cell.font.bold:
+                cell.font = font11
+
+    # Clear borders from supplier row 2
+    no_border = Border()
+    for col_idx in range(1, 13):
+        ws.cell(row=2, column=col_idx).border = no_border
+
+    # Add borders (skip title row 1 and supplier row 2)
+    add_borders(ws, "A3", f"L{row - 1}")
 
     wb.save(new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
