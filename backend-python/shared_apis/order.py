@@ -1934,17 +1934,17 @@ def get_order_full_info():
             OrderStatus.order_current_status == OrderStatusReference.order_status_id,
         )
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-        .join(
+        .outerjoin(
             order_shoe_status,
             OrderShoe.order_shoe_id == order_shoe_status.c.order_shoe_id,
         )
-        .join(
+        .outerjoin(
             order_shoe_status_reference,
             OrderShoe.order_shoe_id == order_shoe_status_reference.c.order_shoe_id,
         )
         .join(Customer, Order.customer_id == Customer.customer_id)
         .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .join(
+        .outerjoin(
             order_amount_subquery,
             Order.order_id == order_amount_subquery.c.order_id,
         )
@@ -1956,8 +1956,8 @@ def get_order_full_info():
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
-            OrderShoe.customer_product_name.like(f"%{shoe_cid_search}%"),
-            Order.order_cid.like(f"%{order_cid_search}%"),
+            func.coalesce(OrderShoe.customer_product_name, "").like(f"%{shoe_cid_search}%"),
+            func.coalesce(Order.order_cid, "").like(f"%{order_cid_search}%"),
         )
         .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_id.desc())
@@ -2082,15 +2082,16 @@ def get_order_full_info():
             if order_status_reference.order_status_name == "生产订单创建":
                 purchase_status_string = "业务部正在处理中"
             else:
-                if "一次采购入库" in order_shoe_status_reference_names:
+                _status_names = order_shoe_status_reference_names or ""
+                if "一次采购入库" in _status_names:
                     purchase_status_string += "一次采购已完成, 等待入库 | "
-                if "二次采购入库" in order_shoe_status_reference_names:
+                if "二次采购入库" in _status_names:
                     purchase_status_string += "二次采购已完成，等待入库 | "
-                if "投产指令单创建" in order_shoe_status_reference_names or "面料单位用量计算" in order_shoe_status_reference_names:
+                if "投产指令单创建" in _status_names or "面料单位用量计算" in _status_names:
                     purchase_status_string += "技术部正在处理中 | "
-                if "一次采购订单创建" in order_shoe_status_reference_names:
+                if "一次采购订单创建" in _status_names:
                     purchase_status_string += "物控经理正在处理中 | "
-                if "总仓采购订单创建" in order_shoe_status_reference_names:
+                if "总仓采购订单创建" in _status_names:
                     purchase_status_string += "总仓经理正在处理中 | "
                 
             # Prepare shoe information for the first occurrence
@@ -2103,7 +2104,7 @@ def get_order_full_info():
                 "firstOrder": "N/A",
                 "secondOrder": "N/A",
                 "statuses": "".join(
-                    order_shoe_status_reference_names.split(" | ")
+                    (order_shoe_status_reference_names or "").split(" | ")
                 ),  # To hold the combined statuses as a string
                 "purchaseStatus": purchase_status_string.strip(" | "),  # Clean up trailing separator
                 "bussinessEventTime": "N/A",
