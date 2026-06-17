@@ -206,7 +206,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     sc   = z.get("_shoe_color", "")
                     head = head_map.get(sc) or head_map.get("") or first_head
                     accessory_series.append({
-                        "工厂货号": z.get("_factory_no", ""),
+                        "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
                         "颜色": _item_color_desc(head),
                         "单位": z.get("单位", ""),
@@ -217,7 +217,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                 # 拉链无对应拉链头 — 直接输出
                 for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
                     accessory_series.append({
-                        "工厂货号": z.get("_factory_no", ""),
+                        "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
                         "颜色": "",  # 拉链头缺失时无拉头颜色
                         "单位": z.get("单位", ""),
@@ -235,7 +235,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     washer_map.get(sc) or washer_map.get("") or first_washer
                     mat_desc = (e.get("物品名称", "") or _item_display_name(e)) + "+垫片"
                     accessory_series.append({
-                        "工厂货号": e.get("_factory_no", ""),
+                        "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
                         "材料货号": mat_desc,
                         "颜色": e.get("_material_color", ""),
                         "单位": e.get("单位", ""),
@@ -341,7 +341,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 sc   = z.get("_shoe_color", "")
                 head = head_map.get(sc) or head_map.get("") or first_head
                 accessory_series.append({
-                    "工厂货号": z.get("_factory_no", ""),
+                    "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
                     "颜色": _item_color_desc(head) if head else "",
                     "单位": z.get("单位", ""),
@@ -359,7 +359,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 if washer_map or first_washer:
                     mat_desc += "+垫片"
                 accessory_series.append({
-                    "工厂货号": e.get("_factory_no", ""),
+                    "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
                     "材料货号": mat_desc,
                     "颜色": e.get("_material_color", ""),
                     "单位": e.get("单位", ""),
@@ -370,7 +370,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         # All other accessory items (饰品, 底材, 包材, etc.)
         for item in other_items:
             accessory_series.append({
-                "工厂货号": item.get("_factory_no", ""),
+                "工厂货号": (item.get("_factory_no", "") + " " + item.get("_shoe_color", "")).strip(),
                 "材料货号": item.get("物品名称", "") or _item_display_name(item),
                 "颜色": item.get("_material_color", ""),
                 "单位": item.get("单位", ""),

@@ -4,7 +4,7 @@ import os
 import zipfile
 from itertools import groupby
 from operator import itemgetter
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 import json
 
@@ -35,6 +35,50 @@ from sqlalchemy.sql.expression import or_, and_
 from sqlalchemy.sql.expression import case
 
 second_purchase_bp = Blueprint("second_purrchase_bp", __name__)
+
+# Material type IDs that stay in standard (fabric/lining/chemical) format
+# 1=面料, 2=里料, 4=化工 — these are NOT split by shoe color in the accessory Excel
+_ACCESSORY_SPLIT_EXCLUDE_TYPES = {1, 2, 4}
+
+
+def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
+    """
+    For accessory (non-standard) materials, split *purchase_amount* across shoe
+    colors proportionally to each color's BOM total_usage.
+
+    Returns a list of (shoe_color_name: str, amount: Decimal).
+    Falls back to [(None, purchase_amount)] when only one color exists or
+    BOM usage data is unavailable.
+    """
+    color_rows = (
+        db.session.query(BomItem, Color)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
+        .filter(
+            Bom.total_bom_id == total_bom_id,
+            BomItem.material_id == material_id,
+        )
+        .all()
+    )
+    if not color_rows or len(color_rows) <= 1:
+        shoe_color = color_rows[0].Color.color_name if color_rows else None
+        return [(shoe_color, purchase_amount)]
+    total_usage = sum(
+        Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
+        for r in color_rows
+    )
+    if total_usage == 0:
+        return [(r.Color.color_name, purchase_amount) for r in color_rows[:1]]
+    results = []
+    purchase_dec = Decimal(str(purchase_amount))
+    for r in color_rows:
+        usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
+        proportion = usage / total_usage
+        color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        results.append((r.Color.color_name, color_amount))
+    return results
 
 material_order = case(
     (ProductionInstructionItem.material_type == "S", 1),
@@ -1094,56 +1138,68 @@ def submit_purchase_divide_orders():
                     "seriesData": [],
                 }
 
-            # Append the current PurchaseOrderItem to the 'seriesData' list of the relevant order
-            purchase_divide_order_dict[purchase_order_id]["seriesData"].append(
-                {
-                    "物品名称": (
-                        material.material_name
-                        + " "
-                        + (
-                            purchase_order_item.material_model
-                            if purchase_order_item.material_model
-                            else ""
-                        )
-                        + " "
-                        + (
-                            purchase_order_item.material_specification
-                            if purchase_order_item.material_specification
-                            else ""
-                        )
-                        + " "
-                        + (
-                            purchase_order_item.color
-                            if purchase_order_item.color
-                            else ""
-                        )
-                    ),
-                    "型号": (
-                        material.material_name
-                        + " "
-                        + purchase_order_item.material_model
+            # Build the base item dict for this PurchaseOrderItem
+            _base_item = {
+                "物品名称": (
+                    material.material_name
+                    + " "
+                    + (
+                        purchase_order_item.material_model
                         if purchase_order_item.material_model
                         else ""
-                    ),
-                    "类别": (
+                    )
+                    + " "
+                    + (
                         purchase_order_item.material_specification
                         if purchase_order_item.material_specification
                         else ""
-                    ),
-                    "数量": purchase_order_item.purchase_amount,
-                    "单位": material.material_unit,
-                    "备注": purchase_order_item.remark,
-                    "用途说明": "",
-                    # Internal fields used by split_zipper_orders (stripped before Excel output)
-                    "_material_name": material.material_name,
-                    "_shoe_color": color.color_name or "",
-                    "_material_color": purchase_order_item.color or "",
-                    "_model": purchase_order_item.material_model or "",
-                    "_spec": purchase_order_item.material_specification or "",
-                    "_factory_no": order_shoe_rid,
-                    "_material_type_id": material.material_type_id,
-                }
-            )
+                    )
+                    + " "
+                    + (
+                        purchase_order_item.color
+                        if purchase_order_item.color
+                        else ""
+                    )
+                ),
+                "型号": (
+                    material.material_name
+                    + " "
+                    + purchase_order_item.material_model
+                    if purchase_order_item.material_model
+                    else ""
+                ),
+                "类别": (
+                    purchase_order_item.material_specification
+                    if purchase_order_item.material_specification
+                    else ""
+                ),
+                "数量": purchase_order_item.purchase_amount,
+                "单位": material.material_unit,
+                "备注": purchase_order_item.remark,
+                "用途说明": "",
+                # Internal fields used by split_zipper_orders (stripped before Excel output)
+                "_material_name": material.material_name,
+                "_shoe_color": color.color_name or "",
+                "_material_color": purchase_order_item.color or "",
+                "_model": purchase_order_item.material_model or "",
+                "_spec": purchase_order_item.material_specification or "",
+                "_factory_no": order_shoe_rid,
+                "_material_type_id": material.material_type_id,
+            }
+            # For accessory items (non-standard), split quantity by shoe color
+            if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
+                color_splits = _split_accessory_by_shoe_color(
+                    purchase_order.bom_id,
+                    purchase_order_item.material_id,
+                    purchase_order_item.purchase_amount,
+                )
+                for _shoe_color_name, _color_amount in color_splits:
+                    _item_copy = dict(_base_item)
+                    _item_copy["数量"] = _color_amount
+                    _item_copy["_shoe_color"] = _shoe_color_name or ""
+                    purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_item_copy)
+            else:
+                purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_base_item)
         elif purchase_divide_order.purchase_divide_order_type == "S":
             # 获取 order_size_table 并转换为字典
             order_size_table = (
@@ -1750,41 +1806,52 @@ def download_purchase_order_zip():
                     "订单信息": order_rid,
                     "seriesData": [],
                 }
-            purchase_divide_order_dict[pdo_rid]["seriesData"].append(
-                {
-                    "物品名称": (
-                        material.material_name
-                        + " "
-                        + (purchase_order_item.material_model if purchase_order_item.material_model else "")
-                        + " "
-                        + (purchase_order_item.material_specification if purchase_order_item.material_specification else "")
-                        + " "
-                        + (purchase_order_item.color if purchase_order_item.color else "")
-                    ),
-                    "型号": (
-                        material.material_name + " " + purchase_order_item.material_model
-                        if purchase_order_item.material_model
-                        else ""
-                    ),
-                    "类别": (
-                        purchase_order_item.material_specification
-                        if purchase_order_item.material_specification
-                        else ""
-                    ),
-                    "数量": purchase_order_item.purchase_amount,
-                    "单位": material.material_unit,
-                    "备注": purchase_order_item.remark,
-                    "用途说明": "",
-                    # Internal fields used by split_zipper_orders (stripped before Excel output)
-                    "_material_name": material.material_name,
-                    "_shoe_color": color.color_name or "",
-                    "_material_color": purchase_order_item.color or "",
-                    "_model": purchase_order_item.material_model or "",
-                    "_spec": purchase_order_item.material_specification or "",
-                    "_factory_no": order_shoe_rid,
-                    "_material_type_id": material.material_type_id,
-                }
-            )
+            _base_item = {
+                "物品名称": (
+                    material.material_name
+                    + " "
+                    + (purchase_order_item.material_model if purchase_order_item.material_model else "")
+                    + " "
+                    + (purchase_order_item.material_specification if purchase_order_item.material_specification else "")
+                    + " "
+                    + (purchase_order_item.color if purchase_order_item.color else "")
+                ),
+                "型号": (
+                    material.material_name + " " + purchase_order_item.material_model
+                    if purchase_order_item.material_model
+                    else ""
+                ),
+                "类别": (
+                    purchase_order_item.material_specification
+                    if purchase_order_item.material_specification
+                    else ""
+                ),
+                "数量": purchase_order_item.purchase_amount,
+                "单位": material.material_unit,
+                "备注": purchase_order_item.remark,
+                "用途说明": "",
+                # Internal fields used by split_zipper_orders (stripped before Excel output)
+                "_material_name": material.material_name,
+                "_shoe_color": color.color_name or "",
+                "_material_color": purchase_order_item.color or "",
+                "_model": purchase_order_item.material_model or "",
+                "_spec": purchase_order_item.material_specification or "",
+                "_factory_no": order_shoe_rid,
+                "_material_type_id": material.material_type_id,
+            }
+            if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
+                color_splits = _split_accessory_by_shoe_color(
+                    purchase_order.bom_id,
+                    purchase_order_item.material_id,
+                    purchase_order_item.purchase_amount,
+                )
+                for _shoe_color_name, _color_amount in color_splits:
+                    _item_copy = dict(_base_item)
+                    _item_copy["数量"] = _color_amount
+                    _item_copy["_shoe_color"] = _shoe_color_name or ""
+                    purchase_divide_order_dict[pdo_rid]["seriesData"].append(_item_copy)
+            else:
+                purchase_divide_order_dict[pdo_rid]["seriesData"].append(_base_item)
         elif purchase_divide_order.purchase_divide_order_type == "S":
             order_size_table = (
                 db.session.query(Order)
