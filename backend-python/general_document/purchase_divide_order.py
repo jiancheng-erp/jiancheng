@@ -79,8 +79,11 @@ def generate_excel_file(template_path, new_file_path, order_data):
         row = 4 + i
         item = series[i] if i < len(series) else {}
         qty = item.get("数量", "") if item else ""
-        if isinstance(qty, (int, float)):
-            total_qty += qty
+        if qty not in ("", None):
+            try:
+                total_qty += float(qty)
+            except (TypeError, ValueError):
+                pass
         values = [
             i + 1,
             item.get("物品名称", ""),
@@ -93,7 +96,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
         for col_idx, value in enumerate(values, start=2):
             cell = ws.cell(row=row, column=col_idx, value=value)
             cell.border = border
-            cell.alignment = center
+            cell.alignment = left_align if col_idx == 3 else center
         ws.row_dimensions[row].height = 20
 
     # ── Footer rows ──────────────────────────────────────────────────────────
@@ -105,7 +108,9 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws[f"A{r}"].font = Font(bold=True)
     ws[f"A{r}"].alignment = center
     ws[f"A{r}"].border = border
-    ws[f"E{r}"] = total_qty if total_qty else ""
+    for col in range(2, 5):  # B, C, D — apply border so merged cell has full outline
+        ws.cell(row=r, column=col).border = border
+    ws[f"E{r}"] = int(total_qty) if total_qty else ""
     ws[f"E{r}"].alignment = center
     ws[f"E{r}"].border = border
     for col in range(6, 9):  # F, G, H
@@ -117,9 +122,11 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws.merge_cells(f"A{r}:D{r}")
     ws[f"A{r}"] = "发货地址：" + order_data.get("发货地址", "")
     ws[f"A{r}"].alignment = left_align
+    ws[f"A{r}"].font = Font(size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "联系人：范先生-13868846816"
     ws[f"E{r}"].alignment = center
+    ws[f"E{r}"].font = Font(size=9)
     ws.row_dimensions[r].height = 22
 
     # 交货周期 / 责任条款
@@ -127,10 +134,11 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws.merge_cells(f"A{r}:D{r}")
     ws[f"A{r}"] = "交货周期：" + order_data.get("交货期限", "")
     ws[f"A{r}"].alignment = left_align
-    ws[f"A{r}"].font = Font(color="0070C0")
+    ws[f"A{r}"].font = Font(color="0070C0", size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
     ws[f"E{r}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws[f"E{r}"].font = Font(size=9)
     ws.row_dimensions[r].height = 35
 
     # 制表 / 审核
@@ -138,13 +146,15 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws.merge_cells(f"A{r}:D{r}")
     ws[f"A{r}"] = "制表："
     ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].font = Font(size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "审核："
     ws[f"E{r}"].alignment = center
+    ws[f"E{r}"].font = Font(size=9)
     ws.row_dimensions[r].height = 30
 
     # ── Column widths ─────────────────────────────────────────────────────────
-    col_widths = [5, 6, 30, 8, 10, 10, 18, 15]
+    col_widths = [5, 5, 30, 8, 10, 10, 18, 15]
     for col_idx, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
