@@ -1034,6 +1034,7 @@ def submit_purchase_divide_orders():
                 "material_name": material.material_name,
                 "model": purchase_order_item.material_model or "",
                 "specification": purchase_order_item.material_specification or "",
+                "color": purchase_order_item.color or "",
                 "approval_amount": purchase_order_item.approval_amount,  # Assuming bom_item has approval quantity
                 "purchase_amount": purchase_order_item.purchase_amount,
             }
@@ -1556,6 +1557,7 @@ def advance_process():
                 "material_name": material.material_name,
                 "model": bom_item.material_model or "",
                 "specification": bom_item.material_specification or "",
+                "color": purchase_order_item.color or "",
                 "approval_amount": bom_item.total_usage,  # Assuming bom_item has approval quantity
                 "purchase_amount": purchase_order_item.purchase_amount,
             }
@@ -2106,6 +2108,7 @@ def download_material_statistics():
             "material_name": material.material_name,
             "model": purchase_order_item.material_model or "",
             "specification": purchase_order_item.material_specification or "",
+            "color": purchase_order_item.color or "",
             "approval_amount": purchase_order_item.approval_amount,
             "purchase_amount": purchase_order_item.purchase_amount,
         }

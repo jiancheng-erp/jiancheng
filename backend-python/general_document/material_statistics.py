@@ -47,7 +47,7 @@ def generate_material_statistics_file(template_path, save_path, order_rid, order
         
         # Fill the cells
         sheet[f"A{index}"] = supplier_name
-        sheet[f"B{index}"] = f"{material_name} {model} {specification}".strip()
+        sheet[f"B{index}"] = "-".join(filter(None, [material_name, model, specification, data.get("color", "")]))
         sheet[f"C{index}"] = approval_amount
         sheet[f"E{index}"] = purchase_amount
 
