@@ -39,14 +39,14 @@ def generate_excel_file(template_path, new_file_path, order_data):
 
     ws.merge_cells("D2:E2")
     ws["D2"] = order_data.get("订单信息", "")
-    ws["D2"].alignment = center
+    ws["D2"].alignment = left_align
 
     ws["F2"] = "日期："
-    ws["F2"].alignment = center
+    ws["F2"].alignment = left_align
 
     ws.merge_cells("G2:H2")
     ws["G2"] = order_data.get("日期", "")
-    ws["G2"].alignment = center
+    ws["G2"].alignment = left_align
     ws.row_dimensions[2].height = 22
 
     # ── Determine data range ──────────────────────────────────────────────────
@@ -164,7 +164,13 @@ def generate_excel_file(template_path, new_file_path, order_data):
     col_widths = [5, 5, 30, 8, 10, 10, 18, 15]
     for col_idx, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-
+    # ── Narrow page margins (0.25” all sides, 0.3” header/footer) ────────────
+    ws.page_margins.left = 0.25
+    ws.page_margins.right = 0.25
+    ws.page_margins.top = 0.75
+    ws.page_margins.bottom = 0.75
+    ws.page_margins.header = 0.3
+    ws.page_margins.footer = 0.3
     os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
     wb.save(new_file_path)
     logger.debug(f"材料订购单 saved: {new_file_path}")
