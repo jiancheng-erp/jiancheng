@@ -202,7 +202,7 @@ def split_zipper_orders(purchase_divide_order_dict):
             if zipper_items and head_items:
                 head_map   = _build_color_map(head_items)
                 first_head = head_items[0]
-                for z in zipper_items:
+                for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
                     sc   = z.get("_shoe_color", "")
                     head = head_map.get(sc) or head_map.get("") or first_head
                     accessory_series.append({
@@ -215,7 +215,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     })
             elif zipper_items:
                 # 拉链无对应拉链头 — 直接输出
-                for z in zipper_items:
+                for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
                     accessory_series.append({
                         "工厂货号": z.get("_factory_no", ""),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
@@ -337,7 +337,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         if zipper_items:
             head_map   = _build_color_map(head_items) if head_items else {}
             first_head = head_items[0] if head_items else {}
-            for z in zipper_items:
+            for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
                 sc   = z.get("_shoe_color", "")
                 head = head_map.get(sc) or head_map.get("") or first_head
                 accessory_series.append({
