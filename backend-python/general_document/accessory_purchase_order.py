@@ -57,7 +57,19 @@ def generate_accessory_purchase_order(file_path, order_data):
     ws.row_dimensions[3].height = 20
 
     # ── Data rows ─────────────────────────────────────────────────────────────
-    series = order_data.get("seriesData", [])
+    # Merge rows with same 工厂货号 + 材料货号 + 颜色 by summing 数量
+    raw_series = order_data.get("seriesData", [])
+    merged: dict = {}
+    for item in raw_series:
+        key = (item.get("工厂货号", ""), item.get("材料货号", ""), item.get("颜色", ""))
+        if key in merged:
+            try:
+                merged[key]["数量"] = (merged[key]["数量"] or 0) + (item.get("数量") or 0)
+            except TypeError:
+                pass
+        else:
+            merged[key] = dict(item)
+    series = list(merged.values())
     for i, item in enumerate(series):
         row = 4 + i
         values = [
@@ -379,6 +391,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             })
 
         if accessory_series:
+            accessory_series.sort(key=lambda x: x.get("工厂货号", ""))
             accessory_dict[pdo_rid] = {
                 **{k: v for k, v in data.items() if k != "seriesData"},
                 "颜色列名": color_col_name,
