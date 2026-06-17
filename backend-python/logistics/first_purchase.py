@@ -1,5 +1,6 @@
 import copy
 import datetime
+import io
 import os
 import zipfile
 from itertools import groupby
@@ -1112,7 +1113,7 @@ def submit_purchase_divide_orders():
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
                     "供应商": supplier.supplier_name,
-                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "日期": f"{datetime.datetime.now().month}月{datetime.datetime.now().day}日",
                     "备注": purchase_divide_order.purchase_order_remark,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
@@ -1255,7 +1256,7 @@ def submit_purchase_divide_orders():
             if purchase_order_id not in size_purchase_divide_order_dict:
                 size_purchase_divide_order_dict[purchase_order_id] = {
                     "供应商": supplier.supplier_name,
-                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "日期": f"{datetime.datetime.now().month}月{datetime.datetime.now().day}日",
                     "备注": purchase_divide_order.purchase_order_remark,
                     "客户名": customer_name,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
@@ -1648,7 +1649,7 @@ def download_purchase_order_zip():
             if pdo_rid not in purchase_divide_order_dict:
                 purchase_divide_order_dict[pdo_rid] = {
                     "供应商": supplier.supplier_name,
-                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "日期": f"{datetime.datetime.now().month}月{datetime.datetime.now().day}日",
                     "备注": purchase_divide_order.purchase_order_remark,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
                     "发货地址": purchase_divide_order.shipment_address,
@@ -1758,7 +1759,7 @@ def download_purchase_order_zip():
             if pdo_rid not in size_purchase_divide_order_dict:
                 size_purchase_divide_order_dict[pdo_rid] = {
                     "供应商": supplier.supplier_name,
-                    "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                    "日期": f"{datetime.datetime.now().month}月{datetime.datetime.now().day}日",
                     "备注": purchase_divide_order.purchase_order_remark,
                     "客户名": customer_name,
                     "环保要求": purchase_divide_order.purchase_order_environmental_request,
@@ -1805,15 +1806,87 @@ def download_purchase_order_zip():
 def download_material_statistics():
     order_rid = request.args.get("orderrid")
     order_shoe_rid = request.args.get("ordershoerid")
-    file_path = os.path.join(
-        FILE_STORAGE_PATH,
-        order_rid,
-        order_shoe_rid,
-        "purchase_order",
-        "材料统计表.xlsx",
+
+    # Resolve IDs from RIDs
+    order_shoe_info = (
+        db.session.query(PurchaseOrder, OrderShoe, Order, Shoe)
+        .join(OrderShoe, OrderShoe.order_shoe_id == PurchaseOrder.order_shoe_id)
+        .join(Order, Order.order_id == PurchaseOrder.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .filter(Order.order_rid == order_rid, Shoe.shoe_rid == order_shoe_rid)
+        .filter(PurchaseOrder.purchase_order_type == "F")
+        .first()
     )
+    if not order_shoe_info:
+        return jsonify({"message": "采购订单未找到"}), 404
+
+    purchase_order_rid = order_shoe_info.PurchaseOrder.purchase_order_rid
+    order_id = order_shoe_info.Order.order_id
+    customer_name = (
+        db.session.query(Customer)
+        .join(Order, Order.customer_id == Customer.customer_id)
+        .filter(Order.order_id == order_id)
+        .first()
+        .customer_name
+    )
+
+    rows = (
+        db.session.query(
+            PurchaseDivideOrder,
+            PurchaseOrder,
+            PurchaseOrderItem,
+            BomItem,
+            Material,
+            Supplier,
+        )
+        .join(
+            PurchaseOrderItem,
+            PurchaseDivideOrder.purchase_divide_order_id == PurchaseOrderItem.purchase_divide_order_id,
+        )
+        .join(PurchaseOrder, PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id)
+        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .join(Material, BomItem.material_id == Material.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
+        .all()
+    )
+    materials_data = [
+        {
+            "supplier_name": supplier.supplier_name,
+            "material_name": material.material_name,
+            "model": purchase_order_item.material_model or "",
+            "specification": purchase_order_item.material_specification or "",
+            "approval_amount": purchase_order_item.approval_amount,
+            "purchase_amount": purchase_order_item.purchase_amount,
+        }
+        for _, _, purchase_order_item, _, material, supplier in rows
+    ]
+
+    template_path = os.path.join(FILE_STORAGE_PATH, "材料统计表模板.xlsx")
+    buf = io.BytesIO()
+    # generate_material_statistics_file saves to a path; write to a temp file then read back
+    tmp_path = os.path.join(
+        FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order", "材料统计表.xlsx"
+    )
+    os.makedirs(os.path.dirname(tmp_path), exist_ok=True)
+    generate_material_statistics_file(
+        template_path=template_path,
+        save_path=tmp_path,
+        order_rid=order_rid,
+        order_shoe_rid=order_shoe_rid,
+        customer_name=customer_name,
+        materials_data=materials_data,
+    )
+    with open(tmp_path, "rb") as f:
+        buf.write(f.read())
+    buf.seek(0)
     new_name = order_rid + "_" + order_shoe_rid + "_材料统计表.xlsx"
-    return send_file(file_path, as_attachment=True, download_name=new_name)
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=new_name,
+    )
 
 
 @first_purchase_bp.route("/logistics/getallunit", methods=["GET"])

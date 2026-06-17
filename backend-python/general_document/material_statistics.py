@@ -34,7 +34,8 @@ def generate_material_statistics_file(template_path, save_path, order_rid, order
 
     # Insert materials data starting from row 3
     start_row = 4
-    for index, data in enumerate(materials_data, start=start_row):
+    sorted_materials = sorted(materials_data, key=lambda d: d.get("supplier_name", ""))
+    for index, data in enumerate(sorted_materials, start=start_row):
         supplier_name = data.get("supplier_name", "")
         material_name = data.get("material_name", "")
         model = data.get("model", "")
