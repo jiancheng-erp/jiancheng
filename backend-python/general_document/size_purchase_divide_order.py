@@ -107,18 +107,23 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     ws["B2"] = order_data.get("供应商", "")
     ws["H2"] = order_data.get("日期", "")
     ws["K2"] = order_data.get("客户名", "")
+    ws.row_dimensions[1].height = 28
     ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 18
 
     # Insert series data
     row = insert_series_data(ws, order_data.get("seriesData", []))
 
     # Fill summary fields (below data table)
-    ws[f"A{row + 1}"] = "合计"
+    ws[f"A{row}"] = "合计"
     # 合计 = sum of all `合计` values insert computed in the insert_series_data function
     total_sum = sum(ws[f"K{r}"].value for r in range(5, row, 2) if ws[f"K{r}"].value)
-    ws[f"K{row + 1}"] = total_sum
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=12)
-    ws[f"A{row}"] = order_data.get("备注", "")
+    ws[f"K{row}"] = total_sum
+    ws.row_dimensions[row].height = 28
+    add_borders(ws, f"A{row}", f"L{row}")
+    left_align_summary = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    for col_idx in range(1, 13):
+        ws.cell(row=row, column=col_idx).alignment = left_align_summary
 
     # ── Footer rows (same style as 普通订单) ─────────────────────────────────
     thin = Side(border_style="thin", color="000000")
@@ -126,43 +131,43 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     font9 = Font(size=9)
 
     # 发货地址 / 联系人
-    r_footer = row + 2
-    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    r_footer = row + 1
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=5)
     ws[f"A{r_footer}"] = "发货地址：" + order_data.get("发货地址", "")
     ws[f"A{r_footer}"].alignment = left_align_footer
     ws[f"A{r_footer}"].font = font9
-    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
-    ws[f"G{r_footer}"] = "联系人：范先生-13868846816"
-    ws[f"G{r_footer}"].alignment = left_align_footer
-    ws[f"G{r_footer}"].font = font9
+    ws.merge_cells(start_row=r_footer, start_column=6, end_row=r_footer, end_column=12)
+    ws[f"F{r_footer}"] = "联系人：范先生-13868846816"
+    ws[f"F{r_footer}"].alignment = left_align_footer
+    ws[f"F{r_footer}"].font = font9
     ws.row_dimensions[r_footer].height = 22
 
     # 交货周期 / 责任条款
     r_footer += 1
-    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=5)
     ws[f"A{r_footer}"] = "交货周期：" + order_data.get("交货期限", "")
     ws[f"A{r_footer}"].alignment = left_align_footer
     ws[f"A{r_footer}"].font = Font(color="0070C0", size=9)
-    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
-    ws[f"G{r_footer}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
-    ws[f"G{r_footer}"].alignment = left_align_footer
-    ws[f"G{r_footer}"].font = font9
+    ws.merge_cells(start_row=r_footer, start_column=6, end_row=r_footer, end_column=12)
+    ws[f"F{r_footer}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
+    ws[f"F{r_footer}"].alignment = left_align_footer
+    ws[f"F{r_footer}"].font = font9
     ws.row_dimensions[r_footer].height = 22
 
     # 制表 / 审核
     r_footer += 1
-    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=6)
+    ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=5)
     ws[f"A{r_footer}"] = "制表："
     ws[f"A{r_footer}"].alignment = left_align_footer
     ws[f"A{r_footer}"].font = font9
-    ws.merge_cells(start_row=r_footer, start_column=7, end_row=r_footer, end_column=12)
-    ws[f"G{r_footer}"] = "审核："
-    ws[f"G{r_footer}"].alignment = left_align_footer
-    ws[f"G{r_footer}"].font = font9
+    ws.merge_cells(start_row=r_footer, start_column=6, end_row=r_footer, end_column=12)
+    ws[f"F{r_footer}"] = "审核："
+    ws[f"F{r_footer}"].alignment = left_align_footer
+    ws[f"F{r_footer}"].font = font9
     ws.row_dimensions[r_footer].height = 22
 
     # Apply formatting to only header region
-    bold_cells = {"A2", "B2", "F2", "A3", "C3", "K3", "L3"}
+    bold_cells = {"A2", "F2", "A3", "C3", "K3", "L3"}
     format_cells(ws, "A1", "L3", center=True, bold_cells=bold_cells)
 
     # Apply left alignment, row height 28 and font size 11 to data rows
