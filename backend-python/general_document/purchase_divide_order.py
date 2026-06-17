@@ -39,14 +39,14 @@ def generate_excel_file(template_path, new_file_path, order_data):
 
     ws.merge_cells("D2:E2")
     ws["D2"] = order_data.get("订单信息", "")
-    ws["D2"].alignment = center
+    ws["D2"].alignment = left_align
 
     ws["F2"] = "日期："
-    ws["F2"].alignment = center
+    ws["F2"].alignment = left_align
 
     ws.merge_cells("G2:H2")
     ws["G2"] = order_data.get("日期", "")
-    ws["G2"].alignment = center
+    ws["G2"].alignment = left_align
     ws.row_dimensions[2].height = 22
 
     # ── Determine data range ──────────────────────────────────────────────────
@@ -63,6 +63,13 @@ def generate_excel_file(template_path, new_file_path, order_data):
         horizontal="center", vertical="center", wrap_text=True, text_rotation=255
     )
     ws["A3"].border = border
+    # openpyxl only paints border on the top-left cell of a merge; set left/right
+    # on every cell in the column so the sidebar outline is fully visible
+    left_right = Border(left=thin, right=thin)
+    for _r in range(4, last_data_row + 1):
+        ws.cell(row=_r, column=1).border = left_right
+    # ensure bottom border on last cell of merged range
+    ws.cell(row=last_data_row, column=1).border = Border(left=thin, right=thin, bottom=thin)
 
     # ── Row 3: column headers ─────────────────────────────────────────────────
     headers = ["序号", "物品名称", "单位", "数量", "单价", "用途说明", "备注"]
@@ -97,7 +104,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
             cell = ws.cell(row=row, column=col_idx, value=value)
             cell.border = border
             cell.alignment = left_align if col_idx == 3 else center
-        ws.row_dimensions[row].height = 20
+        ws.row_dimensions[row].height = 28
 
     # ── Footer rows ──────────────────────────────────────────────────────────
     r = last_data_row + 1
@@ -115,7 +122,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws[f"E{r}"].border = border
     for col in range(6, 9):  # F, G, H
         ws.cell(row=r, column=col).border = border
-    ws.row_dimensions[r].height = 20
+    ws.row_dimensions[r].height = 28
 
     # 发货地址 / 联系人
     r += 1
@@ -125,7 +132,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws[f"A{r}"].font = Font(size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "联系人：范先生-13868846816"
-    ws[f"E{r}"].alignment = center
+    ws[f"E{r}"].alignment = left_align
     ws[f"E{r}"].font = Font(size=9)
     ws.row_dimensions[r].height = 22
 
@@ -137,27 +144,33 @@ def generate_excel_file(template_path, new_file_path, order_data):
     ws[f"A{r}"].font = Font(color="0070C0", size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
-    ws[f"E{r}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws[f"E{r}"].alignment = left_align
     ws[f"E{r}"].font = Font(size=9)
-    ws.row_dimensions[r].height = 35
+    ws.row_dimensions[r].height = 22
 
     # 制表 / 审核
     r += 1
     ws.merge_cells(f"A{r}:D{r}")
     ws[f"A{r}"] = "制表："
-    ws[f"A{r}"].alignment = center
+    ws[f"A{r}"].alignment = left_align
     ws[f"A{r}"].font = Font(size=9)
     ws.merge_cells(f"E{r}:H{r}")
     ws[f"E{r}"] = "审核："
-    ws[f"E{r}"].alignment = center
+    ws[f"E{r}"].alignment = left_align
     ws[f"E{r}"].font = Font(size=9)
-    ws.row_dimensions[r].height = 30
+    ws.row_dimensions[r].height = 22
 
     # ── Column widths ─────────────────────────────────────────────────────────
     col_widths = [5, 5, 30, 8, 10, 10, 18, 15]
     for col_idx, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
-
+    # ── Narrow page margins (0.25” all sides, 0.3” header/footer) ────────────
+    ws.page_margins.left = 0.25
+    ws.page_margins.right = 0.25
+    ws.page_margins.top = 0.75
+    ws.page_margins.bottom = 0.75
+    ws.page_margins.header = 0.3
+    ws.page_margins.footer = 0.3
     os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
     wb.save(new_file_path)
     logger.debug(f"材料订购单 saved: {new_file_path}")
