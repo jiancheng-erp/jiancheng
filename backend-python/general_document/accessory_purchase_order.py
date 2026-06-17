@@ -48,7 +48,7 @@ def generate_accessory_purchase_order(file_path, order_data):
     ws.row_dimensions[2].height = 20
 
     # ── Row 3: column headers ─────────────────────────────────────────────────
-    headers = ["编号", "工厂货号", "材料货号", "颜色", "单位", "数量", "备注"]
+    headers = ["编号", "工厂货号", "材料货号", order_data.get("颜色列名", "颜色"), "单位", "数量", "备注"]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=3, column=col_idx, value=header)
         cell.font = Font(bold=True)
@@ -108,6 +108,16 @@ def generate_accessory_purchase_order(file_path, order_data):
 def _item_display_name(item):
     """返回 item 的实际显示名称：优先用 _material_name，否则用 物品名称。"""
     return item.get("_material_name", "") or item.get("物品名称", "")
+
+
+def _item_color_desc(item):
+    """组合 型号+规格+颜色 填入拉头颜色栏。"""
+    parts = [
+        item.get("_model", ""),
+        item.get("_spec", ""),
+        item.get("_material_color", ""),
+    ]
+    return " ".join(p for p in parts if p)
 
 
 def _is_zipper(item):
@@ -198,7 +208,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     accessory_series.append({
                         "工厂货号": z.get("_factory_no", ""),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
-                        "颜色": head.get("_material_color", "") or head.get("_shoe_color", ""),
+                        "颜色": _item_color_desc(head),
                         "单位": z.get("单位", ""),
                         "数量": z.get("数量", ""),
                         "备注": z.get("备注", ""),
@@ -209,7 +219,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     accessory_series.append({
                         "工厂货号": z.get("_factory_no", ""),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
-                        "颜色": "",
+                        "颜色": "",  # 拉链头缺失时无拉头颜色
                         "单位": z.get("单位", ""),
                         "数量": z.get("数量", ""),
                         "备注": z.get("备注", ""),
@@ -317,6 +327,10 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             and not _is_eyelet(i) and not _is_washer(i)
         ]
 
+        has_zipper_pair = bool(zipper_items and head_items)
+        # Column label: "拉头颜色" only for zipper orders, else "颜色"
+        color_col_name = "拉头颜色" if has_zipper_pair else "颜色"
+
         accessory_series = []
 
         # 拉链 + 拉链头
@@ -329,7 +343,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 accessory_series.append({
                     "工厂货号": z.get("_factory_no", ""),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
-                    "颜色": head.get("_material_color", "") if head else "",
+                    "颜色": _item_color_desc(head) if head else "",
                     "单位": z.get("单位", ""),
                     "数量": z.get("数量", ""),
                     "备注": z.get("备注", ""),
@@ -367,6 +381,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         if accessory_series:
             accessory_dict[pdo_rid] = {
                 **{k: v for k, v in data.items() if k != "seriesData"},
+                "颜色列名": color_col_name,
                 "seriesData": accessory_series,
             }
 
