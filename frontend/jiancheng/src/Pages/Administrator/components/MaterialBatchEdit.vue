@@ -1114,6 +1114,11 @@ export default {
             if (csNotInPi.length)
                 reasons.push(`工艺单有但投产指令单缺失：${csNotInPi.map(id => this.colorLabelOf(id)).join('、')}`)
 
+            // 1b. 投产指令单有配色但工艺单缺失
+            const piNotInCs = [...piOstIds].filter(id => !csOstIds.has(id))
+            if (piNotInCs.length)
+                reasons.push(`投产指令单有但工艺单缺失：${piNotInCs.map(id => this.colorLabelOf(id)).join('、')}`)
+
             // 2. 投产指令单有但一次BOM缺失（仅当该鞋款已产生一次BOM时检查）
             const bom1OstIds = new Set(
                 row.items.filter(i => i.docType === 'bom_item' && i.bomType === 0 && i.orderShoeTypeId)
@@ -1152,12 +1157,17 @@ export default {
         hasInconsistency(row) {
             return this.getInconsistencyReasons(row).length > 0
         },
-        // 仅检查「工艺单有但投产指令单缺失」—— 用于控制同步按钮
+        // 检查「工艺单」与「投产指令单」之间任意方向的互相缺失 —— 用于控制同步按钮
         hasCraftSheetNotInPi(row) {
             const piOstIds = new Set(
                 row.items.filter(i => i.docType === 'production_instruction_item').map(i => i.orderShoeTypeId)
             )
-            return row.items.some(i => i.docType === 'craft_sheet_item' && !piOstIds.has(i.orderShoeTypeId))
+            const csOstIds = new Set(
+                row.items.filter(i => i.docType === 'craft_sheet_item').map(i => i.orderShoeTypeId)
+            )
+            if (piOstIds.size > 0 && [...piOstIds].some(id => !csOstIds.has(id))) return true
+            if (csOstIds.size > 0 && [...csOstIds].some(id => !piOstIds.has(id))) return true
+            return false
         },
         // 检查「一次BOM缺失」—— 用于控制补充BOM按钮
         hasBom1Missing(row) {
@@ -1246,21 +1256,30 @@ export default {
             return `${row.materialId}|${row.groupModel || ''}|${row.groupSpec || ''}`
         },
         async syncMaterial(row) {
-            // 计算缺失配色信息（供确认弹框展示）
+            // 计算两个方向的缺失信息（供确认弹框展示）
             const piOstIds = new Set(
                 row.items.filter(i => i.docType === 'production_instruction_item').map(i => i.orderShoeTypeId)
             )
-            const missingOstIds = [...new Set(
-                row.items
-                    .filter(i => i.docType === 'craft_sheet_item' && !piOstIds.has(i.orderShoeTypeId))
-                    .map(i => i.orderShoeTypeId)
-            )]
-            const colorNames = missingOstIds.map(id => this.colorLabelOf(id)).join('、')
+            const csOstIds = new Set(
+                row.items.filter(i => i.docType === 'craft_sheet_item').map(i => i.orderShoeTypeId)
+            )
+            const csNotInPi = [...csOstIds].filter(id => !piOstIds.has(id))
+            const piNotInCs = [...piOstIds].filter(id => !csOstIds.has(id))
             const matLabel = [row.materialName, row.groupModel, row.groupSpec].filter(Boolean).join(' / ')
+
+            let msgLines = []
+            if (csNotInPi.length) {
+                const names = csNotInPi.map(id => this.colorLabelOf(id)).join('、')
+                msgLines.push(`工艺单有但投产指令单缺失：${names}（将自动创建 PI 项、关联工艺单项、关联或创建 BOM 项）`)
+            }
+            if (piNotInCs.length) {
+                const names = piNotInCs.map(id => this.colorLabelOf(id)).join('、')
+                msgLines.push(`投产指令单有但工艺单缺失：${names}（将自动创建工艺单项）`)
+            }
 
             try {
                 await ElMessageBox.confirm(
-                    `材料「${matLabel}」的以下配色在工艺单中存在，但投产指令单中缺失：\n${colorNames}\n\n点击同步将自动为上述配色：\n• 创建投产指令单项\n• 关联工艺单项\n• 关联或创建一次BOM项（用量来源于工艺单）`,
+                    `材料「${matLabel}」存在以下不一致：\n${msgLines.join('\n')}\n\n点击同步将自动修复上述问题。`,
                     '同步不一致材料',
                     { confirmButtonText: '确认同步', cancelButtonText: '取消', type: 'warning' }
                 )
