@@ -1083,15 +1083,19 @@ def sync_inconsistent_material():
             extra["gspec"] = group_spec
         return clause, extra
 
-    # 1) PI 中已有的 ost_ids
+    # 1) PI 中已有的 ost_ids（取完整字段，后续 PI→CS 创建时需要）
     pi_mc, pi_mp = _mf("pii")
     pi_rows = db.session.execute(text(f"""
-        SELECT pii.production_instruction_item_id, pii.order_shoe_type_id
+        SELECT pii.production_instruction_item_id, pii.order_shoe_type_id,
+               pii.material_model, pii.material_specification,
+               pii.color, pii.material_type, pii.material_second_type,
+               pii.department_id, pii.remark
         FROM production_instruction_item pii
         JOIN production_instruction pi ON pi.production_instruction_id = pii.production_instruction_id
         WHERE pi.order_shoe_id = :osid AND pii.material_id = :mid{pi_mc}
     """), {"osid": order_shoe_id, "mid": material_id, **pi_mp}).fetchall()
     pi_ost_ids = {r[1] for r in pi_rows}
+    pi_rows_by_ost = {r[1]: r for r in pi_rows}
 
     # 2) 工艺单中所有该材料组的项（含用量字段）
     cs_mc, cs_mp = _mf("csi")
@@ -1107,7 +1111,8 @@ def sync_inconsistent_material():
     """), {"osid": order_shoe_id, "mid": material_id, **cs_mp}).fetchall()
 
     # 分组：每个缺失 ost_id → 第一条作为模板；收集该 ost_id 的全部 cs_item_ids
-    template_by_ost = {}   # ost_id -> cs_row (模板)
+    cs_ost_ids = {r[1] for r in cs_rows}   # 工艺单已有的 ost_ids
+    template_by_ost = {}   # ost_id -> cs_row (模板，仅 CS 有而 PI 无的)
     cs_ids_by_ost = {}     # ost_id -> [craft_sheet_item_id, ...]
     for r in cs_rows:
         ost_id = r[1]
@@ -1116,9 +1121,13 @@ def sync_inconsistent_material():
                 template_by_ost[ost_id] = r
             cs_ids_by_ost.setdefault(ost_id, []).append(r[0])
 
-    if not template_by_ost:
+    # PI 有但工艺单缺失的 ost_ids
+    pi_missing_from_cs = {ost_id: row for ost_id, row in pi_rows_by_ost.items()
+                          if ost_id not in cs_ost_ids}
+
+    if not template_by_ost and not pi_missing_from_cs:
         return jsonify({
-            "message": "无需同步，该材料各配色均已有对应的投产指令单项",
+            "message": "无需同步，该材料各配色在投产指令单和工艺单中均已一致",
             "created": 0,
             "details": [],
         })
@@ -1210,14 +1219,42 @@ def sync_inconsistent_material():
                 "bomAction": bom_action,
             })
 
+        # ===== 方向二：投产指令单有但工艺单缺失 → 创建工艺单项 =====
+        cs_created_count = 0
+        if pi_missing_from_cs:
+            cs_head = CraftSheet.query.filter_by(order_shoe_id=order_shoe_id).first()
+            if cs_head:
+                for ost_id, pi_row in sorted(pi_missing_from_cs.items()):
+                    cs_item = CraftSheetItem(
+                        craft_sheet_id=cs_head.craft_sheet_id,
+                        material_id=int(material_id),
+                        department_id=pi_row[7] or 1,
+                        material_specification=pi_row[3] or "",
+                        material_model=pi_row[2] or "",
+                        color=pi_row[4] or "",
+                        material_type=pi_row[5] or "A",
+                        material_second_type=pi_row[6] or "",
+                        order_shoe_type_id=ost_id,
+                        remark=pi_row[8] or "",
+                        production_instruction_item_id=pi_row[0],
+                    )
+                    db.session.add(cs_item)
+                    cs_created_count += 1
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"同步失败: {str(e)}"}), 500
 
+    parts = []
+    if created:
+        parts.append(f"工艺单→投产指令单：{len(created)} 个配色")
+    if cs_created_count:
+        parts.append(f"投产指令单→工艺单：{cs_created_count} 个配色")
     return jsonify({
-        "message": f"同步成功，已为 {len(created)} 个配色创建投产指令单项",
+        "message": f"同步成功，{'；'.join(parts)}",
         "created": len(created),
+        "csCreated": cs_created_count,
         "details": created,
     })
 
