@@ -2827,6 +2827,7 @@ def manager_modify_craft_sheet():
                     "department_id": department_id,
                     "remark": remark,
                     "material_second_type": material_second_type,
+                    "material_type": material_type,
                 })
 
     db.session.flush()
@@ -3015,8 +3016,11 @@ def manager_modify_craft_sheet():
                 first_poi.color = color
 
     # ①-extra 一次采购订单 POI 更新：按 material_id 匹配（覆盖PI-id路径未找到 / PI为空 的情况）
+    # 仅限面料(S)和里料(I)，其他材料类型不做相同材料同步
     _updated_poi_mats = set()
     for t in sync_list:
+        if t.get("material_type") not in ("S", "I"):
+            continue
         mid = t["material_id"]
         if mid in _updated_poi_mats:
             continue
@@ -3030,10 +3034,13 @@ def manager_modify_craft_sheet():
             first_poi.color = t["color"]
 
     # ①-extra 一次BOM BomItem 更新（PI为空的手动添加材料，不覆盖工艺名）
+    # 仅限面料(S)和里料(I)，其他材料类型不做相同材料同步
     _updated_bom_mats = set()
     for t in sync_list:
         if t["pi_id"]:
             continue  # PI-id路径已处理
+        if t.get("material_type") not in ("S", "I"):
+            continue
         mid = t["material_id"]
         if mid in _updated_bom_mats:
             continue
