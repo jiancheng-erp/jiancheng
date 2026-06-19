@@ -193,7 +193,7 @@
                         </el-tooltip>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" fixed="right">
+                <el-table-column label="操作" width="230" fixed="right">
                     <template #default="{ row }">
                         <el-button type="primary" link size="small" @click="openEditDialog(row)">
                             整体替换/修改
@@ -210,6 +210,10 @@
                         <el-button v-if="hasPOMissing(row)" type="danger" link size="small"
                             @click="openPOSyncDialog(row)">
                             补充采购
+                        </el-button>
+                        <el-button v-if="isZipperMaterial(row)" type="info" link size="small"
+                            @click="openZipperPairDialog(row)">
+                            配对组
                         </el-button>
                         <el-button type="danger" link size="small" @click="openDeleteDialog(row)">
                             删除
@@ -323,21 +327,85 @@
                         description="该配色暂无尺码数量" :image-size="36" />
                 </div>
                 <el-row :gutter="12">
-                    <el-col :span="24">
-                        <div style="font-size:12px; color:#606266; margin-bottom:4px;">采购用量</div>
-                        <el-input-number v-model="r.purchaseAmount" :min="0" :precision="5" :step="0.1"
-                            style="width:200px;" />
-                        <el-button v-if="r.bomTotalUsage" link type="primary" size="small"
-                            style="margin-left:8px;" @click="r.purchaseAmount = r.bomTotalUsage">
-                            使用BOM核定用量
-                        </el-button>
-                    </el-col>
+                    <!-- 尺码材料：输入每双用量，自动计算各尺码数量 -->
+                    <template v-if="poSyncTarget && poSyncTarget.materialCategory === 1 && r.sizeInfo && r.sizeInfo.grandTotal > 0">
+                        <el-col :span="14">
+                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">每双用量</div>
+                            <el-input-number v-model="r.unitUsage" :min="0" :precision="5" :step="0.001"
+                                style="width:160px;" @change="calcPOSizeAmounts(r)" />
+                            <el-button v-if="r.bomUnitUsage" link type="primary" size="small"
+                                style="margin-left:8px;"
+                                @click="r.unitUsage = r.bomUnitUsage; calcPOSizeAmounts(r)">
+                                BOM用量
+                            </el-button>
+                        </el-col>
+                        <el-col :span="10">
+                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">采购总量（自动计算）</div>
+                            <span style="font-size:15px; font-weight:bold; color:#303133;">{{ r.purchaseAmount || 0 }}</span>
+                        </el-col>
+                    </template>
+                    <!-- 非尺码材料：手动输入 -->
+                    <template v-else>
+                        <el-col :span="24">
+                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">采购用量</div>
+                            <el-input-number v-model="r.purchaseAmount" :min="0" :precision="5" :step="0.1"
+                                style="width:200px;" />
+                            <el-button v-if="r.bomTotalUsage" link type="primary" size="small"
+                                style="margin-left:8px;" @click="r.purchaseAmount = r.bomTotalUsage">
+                                使用BOM核定用量
+                            </el-button>
+                        </el-col>
+                    </template>
                 </el-row>
+                <!-- 各尺码计算结果 -->
+                <div v-if="r.sizeInfo && r.sizeInfo.grandTotal > 0 && r.unitUsage > 0 && r.sizeAmounts && Object.keys(r.sizeAmounts).length"
+                    style="margin-top:8px; font-size:12px; color:#606266; background:#f5f7fa; padding:6px 10px; border-radius:4px;">
+                    <span v-for="s in poSizeColumns(r)" :key="s" style="margin-right:14px;">
+                        {{ s }}码: <strong>{{ r.sizeAmounts[s] || 0 }}</strong>
+                    </span>
+                </div>
             </div>
             <template #footer>
                 <el-button @click="poSyncDialogVisible = false">取消</el-button>
                 <el-button type="primary" :loading="poSyncLoading" @click="submitPOSync">
                     确认补充
+                </el-button>
+            </template>
+        </el-dialog>
+
+        <!-- ================= 拉链配对组对话框 ================= -->
+        <el-dialog v-model="zipperPairDialogVisible"
+            title="拉链 / 拉链头 配对组设置"
+            width="860px" destroy-on-close>
+            <el-alert type="info" :closable="false" style="margin-bottom:12px">
+                为每行拉链/拉头指定配对组编号（1-9）。同一配色下编号相同的拉链与拉头视为一对，每组需同时有拉链和拉链头。
+            </el-alert>
+            <el-table :data="zipperPairRows" border size="small">
+                <el-table-column label="配色" prop="colorLabel" width="100" />
+                <el-table-column label="材料名称" prop="materialName" width="110" />
+                <el-table-column label="型号" prop="materialModel" width="90" show-overflow-tooltip />
+                <el-table-column label="规格" prop="materialSpec" width="90" show-overflow-tooltip />
+                <el-table-column label="颜色" prop="color" width="80" show-overflow-tooltip />
+                <el-table-column label="配对组" width="130" align="center">
+                    <template #default="{ row }">
+                        <el-input-number v-model="row.pairId" :min="1" :max="9"
+                            controls-position="right" style="width:90px" size="small"
+                            :placeholder="row.isZipper ? '拉链' : '拉头'" />
+                        <el-button v-if="row.pairId != null" link size="small"
+                            style="color:#c0c4cc; margin-left:4px"
+                            @click="row.pairId = null">✕</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <!-- 配对平衡提示 -->
+            <div v-if="zipperPairWarnings.length" style="margin-top:10px">
+                <el-alert v-for="w in zipperPairWarnings" :key="w" :title="w"
+                    type="warning" show-icon :closable="false" style="margin-bottom:4px" />
+            </div>
+            <template #footer>
+                <el-button @click="zipperPairDialogVisible = false">取消</el-button>
+                <el-button type="primary" :loading="zipperPairLoading" @click="submitZipperPairs">
+                    保存
                 </el-button>
             </template>
         </el-dialog>
@@ -882,6 +950,12 @@ export default {
             poSyncTarget: null,
             poSyncRows: [],     // [{ ostId, colorLabel, purchaseAmount, sizeInfo, sizeInfoLoading, grandTotal }]
             poSyncLoading: false,
+
+            // 配对组对话框
+            zipperPairDialogVisible: false,
+            zipperPairTarget: null,   // row
+            zipperPairRows: [],       // [{ docType, itemId, colorLabel, materialName, docLabel, pairId }]
+            zipperPairLoading: false,
         }
     },
     computed: {
@@ -994,6 +1068,24 @@ export default {
             return this.materialGroups.some(g =>
                 g.items.some(i => i.docType === 'purchase_order_item')
             )
+        },
+        // 配对组对话框：检测同配色内拉链/拉头是否成对（不按文件计数，只看类型）
+        zipperPairWarnings() {
+            const byGroup = {}
+            for (const r of this.zipperPairRows) {
+                if (r.pairId == null) continue
+                const key = `${r._ostId}|${r.pairId}`
+                if (!byGroup[key]) byGroup[key] = { hasZipper: false, hasPull: false, label: r.colorLabel, pid: r.pairId }
+                const isHead = (r.materialName || '').includes('拉链头')
+                if (isHead) byGroup[key].hasPull = true
+                else byGroup[key].hasZipper = true
+            }
+            return Object.values(byGroup)
+                .filter(v => !v.hasZipper || !v.hasPull)
+                .map(v => {
+                    const missing = !v.hasZipper ? '缺少拉链' : '缺少拉链头'
+                    return `${v.label} 配对组${v.pid}：${missing}`
+                })
         },
     },
     watch: {
@@ -1211,6 +1303,70 @@ export default {
                 purchase_order_item: 'danger',
             })[docType] || ''
         },
+        // 判断该材料组是否包含拉链或拉链头
+        isZipperMaterial(row) {
+            const name = row.materialName || ''
+            return name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))
+        },
+
+        // ===== 配对组 =====
+        openZipperPairDialog(row) {
+            // 收集所有拉链/拉链头材料行，按 (配色+材料名+型号+规格+颜色) 合并为一行
+            const allZipperRows = this.materialGroups.filter(r => this.isZipperMaterial(r))
+            const docTypes = new Set(['production_instruction_item', 'craft_sheet_item', 'bom_item'])
+            const merged = {}
+            for (const matRow of allZipperRows) {
+                for (const it of matRow.items) {
+                    if (!docTypes.has(it.docType)) continue
+                    const name = it.materialName || matRow.materialName || ''
+                    const key = `${it.orderShoeTypeId}|${name}|${it.materialModel || ''}|${it.materialSpecification || ''}|${it.color || ''}`
+                    if (!merged[key]) {
+                        merged[key] = {
+                            colorLabel: this.colorLabelOf(it.orderShoeTypeId),
+                            materialName: name,
+                            materialModel: it.materialModel || '',
+                            materialSpec: it.materialSpecification || '',
+                            color: it.color || '',
+                            isZipper: name.includes('拉链') && !name.includes('拉链头'),
+                            pairId: it.zipperPairId != null ? Number(it.zipperPairId) : null,
+                            _ostId: it.orderShoeTypeId,
+                            _docItems: [],
+                        }
+                    }
+                    merged[key]._docItems.push({ docType: it.docType, itemId: it.itemId })
+                    // 若任意子项有配对编号则用它（优先非空）
+                    if (merged[key].pairId == null && it.zipperPairId != null) {
+                        merged[key].pairId = Number(it.zipperPairId)
+                    }
+                }
+            }
+            const rows = Object.values(merged)
+                .sort((a, b) => (a._ostId - b._ostId) || a.materialName.localeCompare(b.materialName))
+            this.zipperPairRows = rows
+            this.zipperPairTarget = row
+            this.zipperPairDialogVisible = true
+        },
+        async submitZipperPairs() {
+            const items = this.zipperPairRows.flatMap(r =>
+                r._docItems.map(d => ({
+                    docType: d.docType,
+                    itemId: d.itemId,
+                    zipperPairId: r.pairId != null ? Number(r.pairId) : null,
+                }))
+            )
+            this.zipperPairLoading = true
+            try {
+                const res = await axios.post(`${this.$apiBaseUrl}/material/set-zipper-pair-ids`, { items })
+                ElMessage.success(res.data.message || '保存成功')
+                this.zipperPairDialogVisible = false
+                this.fetchMaterials()
+            } catch (e) {
+                ElMessage.error(e.response?.data?.error || '保存失败')
+            } finally {
+                this.zipperPairLoading = false
+            }
+        },
+
         colorLabelOf(ostId) {
             if (!ostId) return '-'
             const ct = this.colorTypes.find(c => c.orderShoeTypeId === ostId)
@@ -1409,6 +1565,9 @@ export default {
                     colorLabel: this.colorLabelOf(ostId),
                     bomTotalUsage: bomItem?.totalUsage ?? null,
                     purchaseAmount: bomItem?.totalUsage ?? 0,
+                    unitUsage: null,
+                    bomUnitUsage: null,
+                    sizeAmounts: {},
                     sizeInfo: null,
                     sizeInfoLoading: false,
                 }
@@ -1424,8 +1583,31 @@ export default {
                     params: { orderShoeTypeId: r.ostId },
                 })
                 r.sizeInfo = res.data
+                // 仅分尺码材料（materialCategory === 1）才反推每双用量并自动计算
+                if (this.poSyncTarget?.materialCategory === 1 && r.bomTotalUsage && r.sizeInfo.grandTotal > 0) {
+                    r.bomUnitUsage = r.bomTotalUsage / r.sizeInfo.grandTotal
+                    r.unitUsage = r.bomUnitUsage
+                    this.calcPOSizeAmounts(r)
+                }
             } catch (e) { console.error(e) }
             finally { r.sizeInfoLoading = false }
+        },
+        calcPOSizeAmounts(r) {
+            if (!r.sizeInfo || !r.unitUsage) {
+                r.sizeAmounts = {}
+                r.purchaseAmount = 0
+                return
+            }
+            const amounts = {}
+            let total = 0
+            for (const [s, cnt] of Object.entries(r.sizeInfo.totals)) {
+                if (!cnt) continue
+                const amt = Math.ceil(r.unitUsage * cnt)
+                amounts[s] = amt
+                total += amt
+            }
+            r.sizeAmounts = amounts
+            r.purchaseAmount = total
         },
         poSizeColumns(r) {
             if (!r.sizeInfo) return []
@@ -1451,6 +1633,7 @@ export default {
                     items: this.poSyncRows.map(r => ({
                         ostId: r.ostId,
                         purchaseAmount: r.purchaseAmount,
+                        sizeAmounts: r.sizeAmounts || {},
                     })),
                 })
                 ElMessage.success(res.data.message || '补充成功')

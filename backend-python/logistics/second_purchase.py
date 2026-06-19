@@ -43,14 +43,7 @@ _ACCESSORY_SPLIT_EXCLUDE_TYPES = {1, 2, 4}
 
 
 def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
-    """
-    For accessory (non-standard) materials, split *purchase_amount* across shoe
-    colors proportionally to each color's BOM total_usage.
-
-    Returns a list of (shoe_color_name: str, amount: Decimal).
-    Falls back to [(None, purchase_amount)] when only one color exists or
-    BOM usage data is unavailable.
-    """
+    """Legacy wrapper — no longer used for new downloads. Kept for compatibility."""
     color_rows = (
         db.session.query(BomItem, Color)
         .join(Bom, BomItem.bom_id == Bom.bom_id)
@@ -79,6 +72,72 @@ def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
         proportion = usage / total_usage
         color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
         results.append((r.Color.color_name, color_amount))
+    return results
+
+
+def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bom_item):
+    """
+    按面色拆分辅料采购量。
+    直接用 POI 自身的 material_id/model/spec/color 查询该订单鞋款所有配色下的 BOM 条目，
+    不依赖 source_bom_item 的 bom_item_id（避免老 BOM 条目 zipper_pair_id=NULL 的干扰）。
+    同色取 zipper_pair_id 最大非 NULL 的行（优先已配对行）。
+    返回 [(shoe_color_name, amount, zipper_pair_id), ...]
+    """
+    material_id = purchase_order_item.material_id
+    material_model = purchase_order_item.material_model
+    material_specification = purchase_order_item.material_specification
+    bom_item_color = purchase_order_item.color
+
+    q = (
+        db.session.query(BomItem, Color)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .join(Color, ShoeType.color_id == Color.color_id)
+        .filter(
+            OrderShoeType.order_shoe_id == order_shoe_id,
+            BomItem.material_id == material_id,
+        )
+    )
+    if material_model:
+        q = q.filter(BomItem.material_model == material_model)
+    if material_specification:
+        q = q.filter(BomItem.material_specification == material_specification)
+    if bom_item_color:
+        q = q.filter(BomItem.bom_item_color == bom_item_color)
+
+    color_rows = q.all()
+
+    # 按鞋型颜色去重：同色优先保留有 zipper_pair_id 的行
+    seen: dict = {}
+    for r in color_rows:
+        key = r.Color.color_id
+        if key not in seen:
+            seen[key] = r
+        elif seen[key].BomItem.zipper_pair_id is None and r.BomItem.zipper_pair_id is not None:
+            seen[key] = r
+    color_rows = list(seen.values())
+
+    if not color_rows:
+        return [("", purchase_order_item.purchase_amount, None)]
+    if len(color_rows) == 1:
+        r = color_rows[0]
+        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.BomItem.zipper_pair_id)]
+
+    total_usage = sum(
+        Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
+        for r in color_rows
+    )
+    if total_usage == 0:
+        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.BomItem.zipper_pair_id)
+                for r in color_rows[:1]]
+    results = []
+    purchase_dec = Decimal(str(purchase_order_item.purchase_amount))
+    for r in color_rows:
+        usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
+        proportion = usage / total_usage
+        color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        results.append((r.Color.color_name, color_amount, r.BomItem.zipper_pair_id))
     return results
 
 material_order = case(
@@ -697,11 +756,14 @@ def save_purchase():
 def get_purchase_divide_orders():
     purchase_order_id = request.args.get("purchaseOrderId")
 
-    # Fetch the data from the database
+    # Fetch the data from the database.
+    # BomItem / ProductionInstructionItem are LEFT JOINed so that items added
+    # without a bom_item_id (补充采购) are still included.
+    # Material is resolved via COALESCE(inbound_material_id, poi.material_id).
+    # TotalPurchaseOrder is no longer used; status comes from PurchaseOrder directly.
     query = (
         db.session.query(
             PurchaseDivideOrder,
-            TotalPurchaseOrder,
             PurchaseOrder,
             PurchaseOrderItem,
             BomItem,
@@ -709,11 +771,6 @@ def get_purchase_divide_orders():
             Material,
             MaterialType,
             Supplier,
-        )
-        .outerjoin(
-            TotalPurchaseOrder,
-            PurchaseDivideOrder.total_purchase_order_id
-            == TotalPurchaseOrder.total_purchase_order_id,
         )
         .join(
             PurchaseOrder,
@@ -724,19 +781,23 @@ def get_purchase_divide_orders():
             PurchaseDivideOrder.purchase_divide_order_id
             == PurchaseOrderItem.purchase_divide_order_id,
         )
-        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .outerjoin(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
         .outerjoin(
             ProductionInstructionItem,
             BomItem.production_instruction_item_id
             == ProductionInstructionItem.production_instruction_item_id,
         )
-        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
+        .join(
+            Material,
+            Material.material_id == db.func.coalesce(
+                PurchaseOrderItem.inbound_material_id,
+                PurchaseOrderItem.material_id,
+            ),
+        )
         .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
-        .order_by(
-            material_order,
-        )
+        .order_by(material_order)
         .all()
     )
 
@@ -744,7 +805,6 @@ def get_purchase_divide_orders():
     grouped_results = {}
     for (
         purchase_divide_order,
-        total_purchase_order,
         purchase_order,
         purchase_order_item,
         bom_item,
@@ -755,13 +815,11 @@ def get_purchase_divide_orders():
     ) in query:
         divide_order_rid = purchase_divide_order.purchase_divide_order_rid
         if divide_order_rid not in grouped_results:
-            if total_purchase_order:
-                if total_purchase_order.total_purchase_order_status == "1":
-                    purchase_divide_order_status = "已保存"
-                elif total_purchase_order.total_purchase_order_status == "2":
-                    purchase_divide_order_status = "已下发"
-                else:
-                    purchase_divide_order_status = "未处理"
+            po_status = purchase_order.purchase_order_status
+            if po_status == "1":
+                purchase_divide_order_status = "已保存"
+            elif po_status in ("2", "3"):
+                purchase_divide_order_status = "已下发"
             else:
                 purchase_divide_order_status = "未处理"
             grouped_results[divide_order_rid] = {
@@ -779,7 +837,7 @@ def get_purchase_divide_orders():
 
         # Append the assets item details to the corresponding group
         obj = {
-            "materialId": purchase_order_item.inbound_material_id,
+            "materialId": purchase_order_item.inbound_material_id or purchase_order_item.material_id,
             "materialType": material_type.material_type_name,
             "materialName": material.material_name,
             "materialModel": purchase_order_item.material_model,
@@ -1187,18 +1245,20 @@ def submit_purchase_divide_orders():
                 "_spec": purchase_order_item.material_specification or "",
                 "_factory_no": order_shoe_rid,
                 "_material_type_id": material.material_type_id,
+                "_zipper_pair_id": None,  # filled below from BOM lookup
             }
             # For accessory items (non-standard), split quantity by shoe color
             if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
-                color_splits = _split_accessory_by_shoe_color(
-                    purchase_order.bom_id,
-                    purchase_order_item.material_id,
-                    purchase_order_item.purchase_amount,
+                color_splits = _split_accessory_by_order_shoe(
+                    purchase_order.order_shoe_id,
+                    purchase_order_item,
+                    bom_item,
                 )
-                for _shoe_color_name, _color_amount in color_splits:
+                for _shoe_color_name, _color_amount, _pair_id in color_splits:
                     _item_copy = dict(_base_item)
                     _item_copy["数量"] = _color_amount
                     _item_copy["_shoe_color"] = _shoe_color_name or ""
+                    _item_copy["_zipper_pair_id"] = _pair_id
                     purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_item_copy)
             else:
                 purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_base_item)
@@ -1753,17 +1813,23 @@ def download_purchase_order_zip():
             PurchaseOrder,
             PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
         )
-        .join(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
-        .join(
+        .outerjoin(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .outerjoin(
             ProductionInstructionItem,
             ProductionInstructionItem.production_instruction_item_id == BomItem.production_instruction_item_id,
         )
-        .join(Material, PurchaseOrderItem.inbound_material_id == Material.material_id)
+        .join(
+            Material,
+            Material.material_id == db.func.coalesce(
+                PurchaseOrderItem.inbound_material_id,
+                PurchaseOrderItem.material_id,
+            ),
+        )
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
-        .join(Bom, BomItem.bom_id == Bom.bom_id)
-        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
-        .join(Color, ShoeType.color_id == Color.color_id)
+        .outerjoin(Bom, BomItem.bom_id == Bom.bom_id)
+        .outerjoin(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .outerjoin(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .outerjoin(Color, ShoeType.color_id == Color.color_id)
         .filter(PurchaseOrder.purchase_order_rid == purchase_order_rid)
         .all()
     )
@@ -1835,25 +1901,30 @@ def download_purchase_order_zip():
                 "用途说明": "",
                 # Internal fields used by split_zipper_orders (stripped before Excel output)
                 "_material_name": material.material_name,
-                "_shoe_color": color.color_name or "",
+                "_shoe_color": (color.color_name if color else "") or "",
                 "_material_color": purchase_order_item.color or "",
                 "_model": purchase_order_item.material_model or "",
                 "_spec": purchase_order_item.material_specification or "",
                 "_factory_no": order_shoe_rid,
                 "_material_type_id": material.material_type_id,
+                "_zipper_pair_id": bom_item.zipper_pair_id if bom_item else None,
             }
+            # 辅料：按配色拆分，使用 POI 自身字段（material_id/model/spec/color）查 BOM
             if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
-                color_splits = _split_accessory_by_shoe_color(
-                    purchase_order.bom_id,
-                    purchase_order_item.material_id,
-                    purchase_order_item.purchase_amount,
+                color_splits = _split_accessory_by_order_shoe(
+                    purchase_order.order_shoe_id,
+                    purchase_order_item,
+                    bom_item,
                 )
-                for _shoe_color_name, _color_amount in color_splits:
+                for _shoe_color_name, _color_amount, _pair_id in color_splits:
                     _item_copy = dict(_base_item)
                     _item_copy["数量"] = _color_amount
                     _item_copy["_shoe_color"] = _shoe_color_name or ""
+                    _item_copy["_zipper_pair_id"] = _pair_id
                     purchase_divide_order_dict[pdo_rid]["seriesData"].append(_item_copy)
             else:
+                # 面料/里料/化工：直接用 JOIN 到的配色
+                _base_item["_shoe_color"] = (color.color_name if color else "") or ""
                 purchase_divide_order_dict[pdo_rid]["seriesData"].append(_base_item)
         elif purchase_divide_order.purchase_divide_order_type == "S":
             order_size_table = (
@@ -1885,7 +1956,7 @@ def download_purchase_order_zip():
             else:
                 size_values = order_size_table["客人码"]
             if "烫底" in material.material_name:
-                hotsole_key = (pdo_rid, material.material_id, bom_item.material_specification)
+                hotsole_key = (pdo_rid, material.material_id, bom_item.material_specification if bom_item else purchase_order_item.material_specification)
                 if hotsole_key not in _hotsole_processed:
                     _hotsole_processed.add(hotsole_key)
                     hotsole_bom_rows = (
@@ -1970,11 +2041,11 @@ def download_purchase_order_zip():
                     "物品名称": (
                         material.material_name
                         + " "
-                        + (bom_item.material_model if bom_item.material_model else "")
+                        + ((bom_item.material_model if bom_item else purchase_order_item.material_model) or "")
                         + " "
-                        + (bom_item.material_specification if bom_item.material_specification else "")
+                        + ((bom_item.material_specification if bom_item else purchase_order_item.material_specification) or "")
                         + " "
-                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                        + ((bom_item.bom_item_color if bom_item else purchase_order_item.color) or "")
                     ),
                     "型号": (
                         material.material_name + " " + purchase_order_item.material_model
@@ -1986,7 +2057,7 @@ def download_purchase_order_zip():
                         if purchase_order_item.material_specification
                         else ""
                     ),
-                    "备注": bom_item.remark,
+                    "备注": (bom_item.remark if bom_item else purchase_order_item.remark),
                 }
                 for index, size_value in enumerate(size_values):
                     customer_value = order_size_table["客人码"][index]

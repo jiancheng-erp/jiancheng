@@ -135,6 +135,7 @@ def edit_revert_craft_sheet():
                     item.material_second_type = material.get("materialDetailType")
                     item.processing_remark = material.get("processingRemark")
                     item.craft_name = craft_name  # Update `craft_name`
+                    item.zipper_pair_id = material.get("zipperPairId")
                 else:
                     # Insert New Item
                     new_item = CraftSheetItem(
@@ -152,6 +153,7 @@ def edit_revert_craft_sheet():
                         craft_name=craft_name,
                         after_usage_symbol=0,
                         production_instruction_item_id=item_id,
+                        zipper_pair_id=material.get("zipperPairId"),
                     )
                     db.session.add(new_item)
 
@@ -218,6 +220,7 @@ def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_i
                     remark=material.get("comment"),
                     bom_item_add_type=str(bom_type),
                     craft_name=craft_name,
+                    zipper_pair_id=material.get("zipperPairId"),
                 )
                 db.session.add(new_bom_item)
         else:
@@ -233,6 +236,7 @@ def _update_or_insert_bom_item(item_id, material, material_id, order_shoe_type_i
                 remark=material.get("comment"),
                 bom_item_add_type=str(bom_type),
                 craft_name="",
+                zipper_pair_id=material.get("zipperPairId"),
             )
             db.session.add(new_bom_item)
 

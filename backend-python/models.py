@@ -94,6 +94,7 @@ class BomItem(db.Model):
     craft_name = db.Column(db.String(200), nullable=True)
     pairs = db.Column(db.DECIMAL(12, 5), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
+    zipper_pair_id = db.Column(db.SmallInteger, nullable=True)
     create_time, update_time = portable_timestamp_columns()
 
     def __repr__(self):
@@ -1620,6 +1621,7 @@ class ProductionInstructionItem(db.Model):
     material_second_type = db.Column(db.String(10), nullable=False)
     pre_craft_name = db.Column(db.String(100), nullable=True)
     processing_remark = db.Column(db.String(200), nullable=True)
+    zipper_pair_id = db.Column(db.SmallInteger, nullable=True)
     create_time, update_time = portable_timestamp_columns()
 
     def __repr__(self):
@@ -1669,6 +1671,7 @@ class CraftSheetItem(db.Model):
     after_usage_symbol = db.Column(db.String(1), nullable=True)
     production_instruction_item_id = db.Column(db.BigInteger, nullable=True)
     processing_remark = db.Column(db.String(200), nullable=True)
+    zipper_pair_id = db.Column(db.SmallInteger, nullable=True)
     create_time, update_time = portable_timestamp_columns()
 
     def __repr__(self):

@@ -133,21 +133,21 @@ def _item_color_desc(item):
 
 
 def _is_zipper(item):
-    """判断是否为拉链（含"拉链"但不含"拉链头"）。"""
+    """判断是否为拉链（含"拉链"但不含"拉链头"或"拉头"）。"""
     # Check _material_name first, then fall back to 物品名称
     for field in ("_material_name", "物品名称"):
         name = item.get(field, "")
         if name:
-            return "拉链" in name and "拉链头" not in name
+            return "拉链" in name and "拉链头" not in name and "拉头" not in name
     return False
 
 
 def _is_head(item):
-    """判断是否为拉链头。"""
+    """判断是否为拉链头（含"拉链头"或"拉头"，如"B字拉头"、"装饰拉头"等）。"""
     for field in ("_material_name", "物品名称"):
         name = item.get(field, "")
         if name:
-            return "拉链头" in name
+            return "拉链头" in name or "拉头" in name
     return False
 
 
@@ -177,6 +177,58 @@ def _build_color_map(item_list):
         if sc not in m:
             m[sc] = it
     return m
+
+
+def _build_pair_map(item_list):
+    """
+    建立多层查找映射，用于拉链-拉头配对。
+    key = (pair_id, shoe_color, material_color)，每条目注册所有回退键。
+    先注册者优先，保证精确键命中正确条目。
+    """
+    m = {}
+    for it in item_list:
+        pid = it.get("_zipper_pair_id")
+        sc = it.get("_shoe_color", "")
+        mc = it.get("_material_color", "")
+        for key in [
+            (pid, sc, mc),
+            (pid, sc, ""),
+            (pid, "", mc),
+            (pid, "", ""),
+            (None, sc, mc),
+            (None, sc, ""),
+            (None, "", mc),
+            (None, "", ""),
+        ]:
+            if key not in m:
+                m[key] = it
+    return m
+
+
+def _find_matching_head(z, head_pair_map, first_head):
+    """
+    找到与拉链 z 配对的拉头。
+    优先顺序（精确→宽松）：
+      pair+鞋色+材料色 → pair+鞋色 → pair+材料色 → pair
+      → 鞋色+材料色 → 鞋色 → 材料色 → 任意 → first_head
+    """
+    pid = z.get("_zipper_pair_id")
+    sc = z.get("_shoe_color", "")
+    mc = z.get("_material_color", "")
+    for key in [
+        (pid, sc, mc),
+        (pid, sc, ""),
+        (pid, "", mc),
+        (pid, "", ""),
+        (None, sc, mc),
+        (None, sc, ""),
+        (None, "", mc),
+        (None, "", ""),
+    ]:
+        h = head_pair_map.get(key)
+        if h is not None:
+            return h
+    return first_head
 
 
 def split_zipper_orders(purchase_divide_order_dict):
@@ -212,11 +264,10 @@ def split_zipper_orders(purchase_divide_order_dict):
 
             # ── 拉链 + 拉链头 ─────────────────────────────────────────────
             if zipper_items and head_items:
-                head_map   = _build_color_map(head_items)
+                head_pair_map = _build_pair_map(head_items)
                 first_head = head_items[0]
-                for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
-                    sc   = z.get("_shoe_color", "")
-                    head = head_map.get(sc) or head_map.get("") or first_head
+                for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
+                    head = _find_matching_head(z, head_pair_map, first_head)
                     accessory_series.append({
                         "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
@@ -347,11 +398,10 @@ def split_second_purchase_orders(purchase_divide_order_dict):
 
         # 拉链 + 拉链头
         if zipper_items:
-            head_map   = _build_color_map(head_items) if head_items else {}
+            head_pair_map = _build_pair_map(head_items) if head_items else {}
             first_head = head_items[0] if head_items else {}
-            for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
-                sc   = z.get("_shoe_color", "")
-                head = head_map.get(sc) or head_map.get("") or first_head
+            for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
+                head = _find_matching_head(z, head_pair_map, first_head) if head_items else {}
                 accessory_series.append({
                     "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
