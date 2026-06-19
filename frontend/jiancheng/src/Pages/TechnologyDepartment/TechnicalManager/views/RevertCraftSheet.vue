@@ -479,12 +479,32 @@
                                         </template>
                                     </vxe-column>
                                     <vxe-column field="processingRemark" title="加工备注"> </vxe-column>
+                                    <vxe-column field="zipperPairId" title="拉链配对组" width="90"
+                                        :visible="hasZipperItems('accessoryMaterialData')"
+                                        :edit-render="{ autoFocus: 'input' }">
+                                        <template #header>
+                                            <span>配对组</span>
+                                            <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                                <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
+                                            </el-tooltip>
+                                        </template>
+                                        <template #default="{ row }">
+                                            <span v-if="isZipperOrPull(row.materialName)" style="font-weight:600;color:#E6A23C">{{ row.zipperPairId }}</span>
+                                            <span v-else style="color:#ccc">—</span>
+                                        </template>
+                                        <template #edit="{ row }">
+                                            <vxe-input v-if="isZipperOrPull(row.materialName)" type="number" v-model="row.zipperPairId"
+                                                :min="1" :max="9" clearable style="width:60px"></vxe-input>
+                                            <span v-else style="color:#ccc">—</span>
+                                        </template>
+                                    </vxe-column>
                                     <vxe-column title="操作" width="80">
                                         <template #default="scope">
                                             <vxe-button status="danger" size="small" :disabled="scope.row.materialSource === 'P'" @click="deleteMaterial(scope.$rowIndex, 2)"> 删除 </vxe-button>
                                         </template>
                                     </vxe-column>
                                 </vxe-table>
+                                <el-alert v-if="zipperPairWarning" :title="zipperPairWarning" type="warning" show-icon :closable="false" style="margin-top:6px" />
                             </el-col>
                         </el-row>
                         <el-row :gutter="20">
@@ -1134,7 +1154,7 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import Arrow from '@/components/OrderArrowView.vue'
-import { Search } from '@element-plus/icons-vue'
+import { Search, QuestionFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MaterialDataTable from '../components/MaterialDataTable.vue'
 import axios from 'axios'
@@ -1145,7 +1165,8 @@ export default {
     components: {
         AllHeader,
         Arrow,
-        MaterialDataTable
+        MaterialDataTable,
+        QuestionFilled,
     },
     props: ['orderId'],
     data() {
@@ -1333,7 +1354,39 @@ export default {
                     return acc
                 }, {})
             // return [...this.supplierNameOptions].sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'zh-CN'));
-        }
+        },
+        // 检查当前配色辅料表中是否有拉链/拉头，以控制配对列显示
+        hasZipperItems() {
+            return (type) => {
+                const items = this.getMaterialDataByType(type)
+                return items.some(r => this.isZipperOrPull(r.materialName))
+            }
+        },
+        // 拉链配对不平衡警告（当前激活配色）
+        zipperPairWarning() {
+            const items = this.getMaterialDataByType('accessoryMaterialData')
+            const zipperTotals = {}  // pairId → total usage
+            const pullTotals = {}
+            for (const row of items) {
+                const pid = row.zipperPairId
+                if (pid == null || pid === '') continue
+                const usage = parseFloat(row.unitUsage || 0)
+                const isZip = row.materialName && row.materialName.includes('拉链') && !row.materialName.includes('拉链头')
+                const isPull = row.materialName && row.materialName.includes('拉链头')
+                if (isZip) zipperTotals[pid] = (zipperTotals[pid] || 0) + usage
+                if (isPull) pullTotals[pid] = (pullTotals[pid] || 0) + usage
+            }
+            const allPids = new Set([...Object.keys(zipperTotals), ...Object.keys(pullTotals)])
+            const issues = []
+            for (const pid of allPids) {
+                const z = zipperTotals[pid] || 0
+                const p = pullTotals[pid] || 0
+                if (Math.abs(z - p) > 0.001) {
+                    issues.push(`配对组${pid}：拉链用量${z} ≠ 拉头用量${p}`)
+                }
+            }
+            return issues.length ? `拉链配对数量不一致 — ${issues.join('；')}` : null
+        },
     },
     methods: {
         filterByTypes(options, types) {
@@ -2162,7 +2215,12 @@ export default {
                 this.$message.warning('颜色不能以“色”结尾')
                 row.color = row.color.slice(0, -1)
             }
-        }
+        },
+        // 判断材料名称是否为拉链或拉头（需要配对组）
+        isZipperOrPull(name) {
+            if (!name) return false
+            return name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))
+        },
     }
 }
 </script>

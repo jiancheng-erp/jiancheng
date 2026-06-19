@@ -569,6 +569,7 @@ def _save_instruction_helper(
             material_second_type=material_second_type,
             pre_craft_name=pre_craft_name,
             processing_remark=processing_remark,
+            zipper_pair_id=material_data.get("zipperPairId"),
         )
         db.session.add(production_instruction_item)
 
@@ -782,6 +783,7 @@ def get_production_instruction():
             "isPurchase": item.is_pre_purchase,
             "materialDetailType": item.material_second_type,
             "processingRemark": item.processing_remark,
+            "zipperPairId": item.zipper_pair_id,
         }
 
         if item.material_type == "S":

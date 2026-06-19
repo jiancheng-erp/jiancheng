@@ -1262,7 +1262,8 @@ def get_craft_sheet_info():
             "materialDetailType": item.CraftSheetItem.material_second_type,
             "materialSource": item.CraftSheetItem.material_source,
             "productionInstructionItemId": item.CraftSheetItem.production_instruction_item_id,
-            "processingRemark": item.CraftSheetItem.processing_remark
+            "processingRemark": item.CraftSheetItem.processing_remark,
+            "zipperPairId": item.CraftSheetItem.zipper_pair_id,
         }
 
         if item.CraftSheetItem.material_type == "S":

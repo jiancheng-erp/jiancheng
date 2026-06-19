@@ -138,7 +138,8 @@ def get_ordershoe_materials():
         SELECT pii.production_instruction_item_id, pii.material_id, m.material_name,
                s.supplier_name, pii.material_model, pii.material_specification,
                pii.color, pii.material_type, pii.material_second_type,
-               pii.remark, pii.department_id, pii.order_shoe_type_id
+               pii.remark, pii.department_id, pii.order_shoe_type_id, pii.zipper_pair_id,
+               m.material_category
         FROM production_instruction_item pii
         JOIN production_instruction pi ON pi.production_instruction_id = pii.production_instruction_id
         JOIN material m ON m.material_id = pii.material_id
@@ -158,6 +159,8 @@ def get_ordershoe_materials():
             "materialType": r[7] or "", "materialSecondType": r[8] or "",
             "remark": r[9] or "", "departmentId": r[10],
             "orderShoeTypeId": r[11], "linkRootId": r[0],
+            "zipperPairId": r[12],
+            "materialCategory": r[13],
         })
 
     # 2) 工艺单
@@ -166,7 +169,7 @@ def get_ordershoe_materials():
                s.supplier_name, csi.material_model, csi.material_specification,
                csi.color, csi.material_type, csi.material_second_type,
                csi.craft_name, csi.department_id, csi.production_instruction_item_id,
-               csi.order_shoe_type_id, csi.unit_usage, csi.total_usage
+               csi.order_shoe_type_id, csi.unit_usage, csi.total_usage, csi.zipper_pair_id
         FROM craft_sheet_item csi
         JOIN craft_sheet cs ON cs.craft_sheet_id = csi.craft_sheet_id
         JOIN material m ON m.material_id = csi.material_id
@@ -189,6 +192,7 @@ def get_ordershoe_materials():
             "unitUsage": float(r[13]) if r[13] is not None else None,
             "totalUsage": float(r[14]) if r[14] is not None else None,
             "linkRootId": r[11],
+            "zipperPairId": r[15],
         })
 
     # 3) BOM
@@ -197,7 +201,7 @@ def get_ordershoe_materials():
                s.supplier_name, bi.material_model, bi.material_specification,
                bi.bom_item_color, bi.department_id, bi.material_second_type,
                bi.craft_name, bi.production_instruction_item_id,
-               b.bom_type, b.order_shoe_type_id, bi.total_usage
+               b.bom_type, b.order_shoe_type_id, bi.total_usage, bi.zipper_pair_id
         FROM bom_item bi
         JOIN bom b ON b.bom_id = bi.bom_id
         JOIN total_bom tb ON tb.total_bom_id = b.total_bom_id
@@ -221,14 +225,25 @@ def get_ordershoe_materials():
             "bomType": r[11], "orderShoeTypeId": r[12],
             "totalUsage": float(r[13]) if r[13] is not None else None,
             "linkRootId": r[10],
+            "zipperPairId": r[14],
         })
 
-    # 4) 采购订单
+    # 建立 PI 的 (material_id, model, spec, color) → order_shoe_type_id 查找表
+    # 用于给采购单条目补充 order_shoe_type_id
+    pi_ost_lookup = {}
+    for it in items:
+        if it["docType"] != "production_instruction_item":
+            continue
+        key = (it["materialId"], it["materialModel"], it["materialSpecification"], it["color"])
+        if key not in pi_ost_lookup:
+            pi_ost_lookup[key] = it["orderShoeTypeId"]
+
+    # 4) 采购订单 — 直接查采购单，用 PI 查找表补 order_shoe_type_id
     po_sql = """
         SELECT poi.purchase_order_item_id, poi.material_id, m.material_name,
                s.supplier_name, poi.material_model, poi.material_specification,
                poi.color, poi.craft_name, poi.remark, poi.bom_item_id,
-               b.order_shoe_type_id, pdo.purchase_divide_order_id,
+               pdo.purchase_divide_order_id,
                pdo.purchase_divide_order_rid, po.purchase_order_id,
                po.purchase_order_rid
         FROM purchase_order_item poi
@@ -236,24 +251,23 @@ def get_ordershoe_materials():
         JOIN purchase_order po ON po.purchase_order_id = pdo.purchase_order_id
         JOIN material m ON m.material_id = poi.material_id
         LEFT JOIN supplier s ON s.supplier_id = m.material_supplier
-        LEFT JOIN bom_item bi ON bi.bom_item_id = poi.bom_item_id
-        LEFT JOIN bom b ON b.bom_id = bi.bom_id
         WHERE po.order_shoe_id = :osid
     """
     po_params = {"osid": order_shoe_id}
-    if order_shoe_type_id:
-        po_sql += " AND b.order_shoe_type_id = :ostid"
-        po_params["ostid"] = order_shoe_type_id
     for r in db.session.execute(text(po_sql), po_params).fetchall():
+        mat_key = (r[1], r[4] or "", r[5] or "", r[6] or "")
+        ost_id = pi_ost_lookup.get(mat_key)
+        if order_shoe_type_id and ost_id != order_shoe_type_id:
+            continue
         items.append({
             "docType": "purchase_order_item", "docLabel": "采购订单",
             "itemId": r[0], "materialId": r[1], "materialName": r[2] or "",
             "supplierName": r[3] or "", "materialModel": r[4] or "",
             "materialSpecification": r[5] or "", "color": r[6] or "",
             "craftName": r[7] or "", "remark": r[8] or "",
-            "bomItemId": r[9], "orderShoeTypeId": r[10],
-            "purchaseDivideOrderId": r[11], "purchaseDivideOrderRid": r[12] or "",
-            "purchaseOrderId": r[13], "purchaseOrderRid": r[14] or "",
+            "bomItemId": r[9], "orderShoeTypeId": ost_id,
+            "purchaseDivideOrderId": r[10], "purchaseDivideOrderRid": r[11] or "",
+            "purchaseOrderId": r[12], "purchaseOrderRid": r[13] or "",
             "linkRootId": r[9],
         })
 
@@ -270,6 +284,7 @@ def get_ordershoe_materials():
                 "materialName": it["materialName"],
                 "supplierName": it["supplierName"],
                 "materialSecondType": it.get("materialSecondType", ""),
+                "materialCategory": it.get("materialCategory", 0),
                 "groupModel": model,
                 "groupSpec": spec,
                 "items": [],
@@ -1428,6 +1443,7 @@ def create_missing_po_items():
         for entry in items_payload:
             ost_id = entry.get("ostId")
             purchase_amount = float(entry.get("purchaseAmount") or 0)
+            size_amounts = entry.get("sizeAmounts") or {}
 
             bom_row = bom_by_ost.get(ost_id)
             if not bom_row:
@@ -1459,6 +1475,11 @@ def create_missing_po_items():
                 purchase_amount=purchase_amount,
                 approval_amount=purchase_amount,
             )
+            # 尺码材料：写入各尺码数量
+            for s in range(34, 47):
+                v = size_amounts.get(str(s))
+                if v is not None:
+                    setattr(po_item, f"size_{s}_purchase_amount", int(v))
             db.session.add(po_item)
             db.session.flush()
             created.append({"ostId": ost_id, "poItemId": po_item.purchase_order_item_id})
@@ -1472,6 +1493,68 @@ def create_missing_po_items():
     if skipped:
         msg += f"，{len(skipped)} 个配色跳过（{skipped[0]['reason']}）"
     return jsonify({"message": msg, "created": len(created), "details": created, "skipped": skipped})
+
+
+# ===========================================================================
+# 8-extra-3. 批量设置拉链/拉头配对组编号
+# ===========================================================================
+
+@material_batch_edit_bp.route("/material/set-zipper-pair-ids", methods=["POST"])
+def set_zipper_pair_ids():
+    """
+    批量更新 production_instruction_item / craft_sheet_item / bom_item 的 zipper_pair_id。
+
+    Body: {
+        items: [
+            { docType: "production_instruction_item"|"craft_sheet_item"|"bom_item",
+              itemId: int,
+              zipperPairId: int|null }
+        ]
+    }
+    """
+    data = request.get_json() or {}
+    items = data.get("items", [])
+    if not items:
+        return jsonify({"error": "items 不能为空"}), 400
+
+    updated = 0
+    try:
+        for entry in items:
+            doc_type = entry.get("docType")
+            item_id = entry.get("itemId")
+            pair_id = entry.get("zipperPairId")   # None = 清除
+
+            if not item_id:
+                continue
+
+            if doc_type == "production_instruction_item":
+                db.session.execute(text("""
+                    UPDATE production_instruction_item
+                    SET zipper_pair_id = :pid
+                    WHERE production_instruction_item_id = :iid
+                """), {"pid": pair_id, "iid": item_id})
+                updated += 1
+            elif doc_type == "craft_sheet_item":
+                db.session.execute(text("""
+                    UPDATE craft_sheet_item
+                    SET zipper_pair_id = :pid
+                    WHERE craft_sheet_item_id = :iid
+                """), {"pid": pair_id, "iid": item_id})
+                updated += 1
+            elif doc_type == "bom_item":
+                db.session.execute(text("""
+                    UPDATE bom_item
+                    SET zipper_pair_id = :pid
+                    WHERE bom_item_id = :iid
+                """), {"pid": pair_id, "iid": item_id})
+                updated += 1
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"更新失败: {str(e)}"}), 500
+
+    return jsonify({"message": f"已更新 {updated} 条记录的配对组编号", "updated": updated})
 
 
 # ===========================================================================

@@ -500,19 +500,27 @@
                                             ></el-input>
                                         </template>
                                     </el-table-column>
+                                    <el-table-column label="配对组" width="80"
+                                        v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
+                                        <template #header>
+                                            <span>配对组</span>
+                                            <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                                <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
+                                            </el-tooltip>
+                                        </template>
+                                        <template #default="scope">
+                                            <el-input-number v-if="isZipperOrPull(scope.row.materialName)"
+                                                v-model="scope.row.zipperPairId" :min="1" :max="9"
+                                                controls-position="right" style="width:65px" size="small" />
+                                            <span v-else style="color:#ccc">—</span>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column label="操作">
                                         <template #default="scope">
                                             <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
                                         </template>
                                     </el-table-column>
                                 </el-table>
-                            </el-col>
-                        </el-row>
-                        <el-row :gutter="20">
-                            <el-col :span="2" :offset="0"> 大底： </el-col>
-                            <el-col :span="4" :offset="0">
-                                <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
-                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
                             </el-col>
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
@@ -1421,6 +1429,22 @@
                                     </template>
                                 </el-table-column>
 
+                                <el-table-column label="配对组" width="80"
+                                    v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
+                                    <template #header>
+                                        <span>配对组</span>
+                                        <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                            <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
+                                        </el-tooltip>
+                                    </template>
+                                    <template #default="scope">
+                                        <el-input-number v-if="isZipperOrPull(scope.row.materialName)"
+                                            v-model="scope.row.zipperPairId" :min="1" :max="9"
+                                            controls-position="right" style="width:65px" size="small" />
+                                        <span v-else style="color:#ccc">—</span>
+                                    </template>
+                                </el-table-column>
+
                                 <el-table-column label="操作">
                                     <template #default="scope">
                                         <el-button type="danger" size="small" @click="deleteMaterial(scope.$index, 2)">删除</el-button>
@@ -1855,7 +1879,7 @@ const SmartDialog = SD_defineComponent({
 
 import AllHeader from '@/components/AllHeader.vue'
 import Arrow from '@/components/OrderArrowView.vue'
-import { Search } from '@element-plus/icons-vue'
+import { Search, QuestionFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import MaterialDataTable from '../components/MaterialDataTable.vue'
 import { withTimeout } from '@/Pages/utils/timeout'
@@ -1866,7 +1890,7 @@ export default {
         AllHeader,
         Arrow,
         MaterialDataTable
-    , SmartDialog },
+    , SmartDialog, QuestionFilled },
     props: ['orderId'],
     data() {
         return {
@@ -2866,7 +2890,12 @@ export default {
                 this.$message.warning('颜色不能以“色”结尾')
                 row.color = row.color.slice(0, -1) // Remove the last character
             }
-        }
+        },
+        // 判断材料名称是否为拉链或拉头（需要配对组）
+        isZipperOrPull(name) {
+            if (!name) return false
+            return name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))
+        },
     }
 }
 </script>
