@@ -6,6 +6,7 @@
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.page import PageMargins
 
 from logger import logger
 
@@ -27,28 +28,30 @@ def generate_accessory_purchase_order(file_path, order_data):
     center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
     # ── Row 1: title ─────────────────────────────────────────────────────────
-    ws.merge_cells("A1:G1")
+    ws.merge_cells("A1:F1")
     ws["A1"] = "辅料订购单"
     ws["A1"].font = Font(bold=True, size=14)
     ws["A1"].alignment = center_align
     ws.row_dimensions[1].height = 28
 
     # ── Row 2: supplier / order info ─────────────────────────────────────────
-    ws.merge_cells("A2:C2")
-    ws["A2"] = "供应商：" + order_data.get("供应商", "")
-    ws["A2"].alignment = center_align
+    left_align = Alignment(horizontal="left", vertical="center", wrap_text=False)
 
-    ws.merge_cells("D2:G2")
-    ws["D2"] = (
+    ws.merge_cells("A2:B2")
+    ws["A2"] = "供应商：" + order_data.get("供应商", "")
+    ws["A2"].alignment = left_align
+
+    ws.merge_cells("C2:F2")
+    ws["C2"] = (
         order_data.get("客户名", "")
         + "  " + order_data.get("订单信息", "")
         + "  " + order_data.get("商标", "")
     ).strip()
-    ws["D2"].alignment = center_align
+    ws["C2"].alignment = left_align
     ws.row_dimensions[2].height = 20
 
     # ── Row 3: column headers ─────────────────────────────────────────────────
-    headers = ["编号", "工厂货号", "材料货号", order_data.get("颜色列名", "颜色"), "单位", "数量", "备注"]
+    headers = ["工厂货号", "材料货号", order_data.get("颜色列名", "颜色"), "单位", "数量", "备注"]
     for col_idx, header in enumerate(headers, start=1):
         cell = ws.cell(row=3, column=col_idx, value=header)
         cell.font = Font(bold=True)
@@ -73,7 +76,6 @@ def generate_accessory_purchase_order(file_path, order_data):
     for i, item in enumerate(series):
         row = 4 + i
         values = [
-            i + 1,
             item.get("工厂货号", ""),
             item.get("材料货号", ""),
             item.get("颜色", ""),
@@ -89,7 +91,7 @@ def generate_accessory_purchase_order(file_path, order_data):
 
     # ── Footer ────────────────────────────────────────────────────────────────
     note_row = 4 + len(series)
-    ws.merge_cells(f"A{note_row}:G{note_row}")
+    ws.merge_cells(f"A{note_row}:F{note_row}")
     ws[f"A{note_row}"] = (
         "注：下单之日超5天内交货，逾期一天将处罚500元/天，"
         "如有异议接单之日起两天内答复沟通！"
@@ -102,16 +104,20 @@ def generate_accessory_purchase_order(file_path, order_data):
 
     # Footer: 订购 / 核准 labels
     sign_row = note_row + 1
-    ws.merge_cells(f"A{sign_row}:C{sign_row}")
+    ws.merge_cells(f"A{sign_row}:B{sign_row}")
     ws[f"A{sign_row}"] = "订购："
-    ws.merge_cells(f"E{sign_row}:G{sign_row}")
-    ws[f"E{sign_row}"] = "核准"
+    ws.merge_cells(f"D{sign_row}:F{sign_row}")
+    ws[f"D{sign_row}"] = "核准"
     ws.row_dimensions[sign_row].height = 40
 
-    # ── Column widths ─────────────────────────────────────────────────────────
-    col_widths = [6, 15, 42, 16, 8, 8, 15]
+    # ── Column widths: 工厂货号, 材料货号, 拉头颜色, 单位, 数量, 备注 ──────────
+    col_widths = [18, 30, 20, 8, 8, 15]
     for col_idx, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    # ── Page margins (narrow) ─────────────────────────────────────────────
+    ws.page_margins = PageMargins(left=0.25, right=0.25, top=0.75, bottom=0.75,
+                                   header=0.3, footer=0.3)
 
     wb.save(file_path)
     logger.debug(f"辅料订购单 saved: {file_path}")
