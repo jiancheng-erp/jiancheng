@@ -264,10 +264,26 @@ def split_zipper_orders(purchase_divide_order_dict):
 
             # ── 拉链 + 拉链头 ─────────────────────────────────────────────
             if zipper_items and head_items:
+                heads_by_color: dict = {}
+                for h in head_items:
+                    sc = h.get("_shoe_color", "")
+                    heads_by_color.setdefault(sc, []).append(h)
                 head_pair_map = _build_pair_map(head_items)
                 first_head = head_items[0]
+
+                def _pick_head_for_zipper_z(z):
+                    sc = z.get("_shoe_color", "")
+                    sc_heads = heads_by_color.get(sc) or heads_by_color.get("") or []
+                    if not sc_heads:
+                        return first_head
+                    unique_head_names = {_item_display_name(h) for h in sc_heads}
+                    if len(unique_head_names) == 1:
+                        return sc_heads[0]
+                    sc_head_map = _build_pair_map(sc_heads)
+                    return _find_matching_head(z, sc_head_map, sc_heads[0])
+
                 for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
-                    head = _find_matching_head(z, head_pair_map, first_head)
+                    head = _pick_head_for_zipper_z(z)
                     accessory_series.append({
                         "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
@@ -398,10 +414,37 @@ def split_second_purchase_orders(purchase_divide_order_dict):
 
         # 拉链 + 拉链头
         if zipper_items:
+            # 按鞋色建立拉头索引
+            heads_by_color: dict = {}
+            for h in head_items:
+                sc = h.get("_shoe_color", "")
+                heads_by_color.setdefault(sc, []).append(h)
+
             head_pair_map = _build_pair_map(head_items) if head_items else {}
             first_head = head_items[0] if head_items else {}
+
+            def _pick_head_for_zipper(z):
+                """
+                为拉链选取配对拉头：
+                  1. 同鞋色只有一种拉头 → 直接使用（无需 pair_id）
+                  2. 同鞋色有多种拉头   → 用 pair_id + material_color 精确匹配
+                  3. 兜底              → 全局 first_head
+                """
+                sc = z.get("_shoe_color", "")
+                sc_heads = heads_by_color.get(sc) or heads_by_color.get("") or []
+                if not sc_heads:
+                    return first_head
+                # 同色只有一种拉头：直接返回
+                unique_head_names = {_item_display_name(h) for h in sc_heads}
+                if len(unique_head_names) == 1:
+                    return sc_heads[0]
+                # 同色多种拉头：按 pair_id + material_color 匹配
+                sc_head_map = _build_pair_map(sc_heads)
+                matched = _find_matching_head(z, sc_head_map, sc_heads[0])
+                return matched
+
             for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
-                head = _find_matching_head(z, head_pair_map, first_head) if head_items else {}
+                head = _pick_head_for_zipper(z) if head_items else {}
                 accessory_series.append({
                     "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
