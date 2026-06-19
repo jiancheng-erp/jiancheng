@@ -106,7 +106,7 @@ def insert_series_data(ws, series_data, start_row=7):
             column = "C"
             for size in chunk:
                 ws[f"{column}{current_row}"] = size
-                ws[f"{column}{current_row}"].font = Font(bold=True)  # Make sizes bold
+                ws[f"{column}{current_row}"].font = Font(bold=True, size=12)  # Make sizes bold
                 column = get_next_column_name(column)
 
             # Insert corresponding amounts in the next row
@@ -116,13 +116,13 @@ def insert_series_data(ws, series_data, start_row=7):
 
             for size in chunk:
                 value = item.get(size, 0)  # Get quantity, default to 0
-                ws[f"{column}{current_row}"] = value
+                ws[f"{column}{current_row}"] = value if value else None  # 数量为0时留空
                 row_total += int(value)  # Sum row values
                 column = get_next_column_name(column)
 
             # Insert row total in column K
-            ws[f"K{current_row}"] = row_total
-            ws[f"K{current_row}"].font = Font(bold=True, size=12)  # Bold the total
+            ws[f"K{current_row}"] = row_total if row_total else None
+            ws[f"K{current_row}"].font = Font(size=12)
 
             current_row += 1  # Prepare for the next chunk
 
@@ -190,7 +190,13 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     ws["C4"].alignment = hdr_center
     ws["C4"].font = hdr_bold
     ws["K4"] = "合计"
+    ws["K4"].border = hdr_border
+    ws["K4"].alignment = hdr_center
+    ws["K4"].font = hdr_bold
     ws["L4"] = "备注"
+    ws["L4"].border = hdr_border
+    ws["L4"].alignment = hdr_center
+    ws["L4"].font = hdr_bold
 
     # Insert order details（原第4行 → 现第2行）
     ws["H2"] = order_data.get("订单信息", "") + " " + order_data.get("客户名", "") + " " + order_data.get("商标", "")
@@ -253,7 +259,7 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     if ws.sheet_properties.pageSetUpPr is None:
         ws.sheet_properties.pageSetUpPr = PageSetupProperties()
     ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.page_setup.orientation = "landscape"
+    ws.page_setup.orientation = "portrait"
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
 
@@ -263,7 +269,7 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
             if cell.font and cell.font.size and cell.font.size != 12:
                 cell.font = cell.font.copy(size=12)
             elif not cell.font or not cell.font.size:
-                cell.font = Font(size=12)
+                cell.font = cell.font.copy(size=12) if cell.font else Font(size=12)
 
     wb.save(new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
