@@ -1,6 +1,7 @@
 from calendar import c
 from openpyxl.styles import Border, Side, Alignment, Font
 from openpyxl.utils import column_index_from_string, get_column_letter
+from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
 from openpyxl import load_workbook
 import shutil
 import math
@@ -43,7 +44,8 @@ craft_series_number = 1
 def load_template(template_path, new_file_path):
     shutil.copy(template_path, new_file_path)
     wb = load_workbook(new_file_path)
-    ws = wb.active
+    ws = wb.active or wb.worksheets[0]
+    wb.active = ws
     return wb, ws
 
 
@@ -68,8 +70,7 @@ def format_cells(ws, range_start, range_end, center=True, bold_cells=None):
             if center:
                 cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             if bold_cells and cell.coordinate in bold_cells:
-                cell.font = Font(bold=True)
-
+                    cell.font = Font(bold=True, size=12)
 
 def insert_series_data(ws, series_data, start_row=7):
     """
@@ -87,11 +88,15 @@ def insert_series_data(ws, series_data, start_row=7):
     for item in series_data:
         sizes = [key for key in item.keys() if key not in ("物品名称", "型号", "类别", "合计", "备注", "工厂型号", "鞋面颜色", "工艺说明", "使用材料")]
         size_chunks = [sizes[x:x+8] for x in range(0, len(sizes), 8)]  # Break sizes into chunks of 8
+        # 去除各字段内部回车，编号间回车保留
+        _mat = (item.get("使用材料") or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ").strip()
+        _craft = (item.get("工艺说明") or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ").strip()
+        _entry = _mat + _craft
         if craft_whole_name == "1.":
-            craft_whole_name = "1." + (item.get("使用材料") or "") + (item.get("工艺说明") or "")
+            craft_whole_name = "1." + _entry
             craft_series_number = craft_series_number + 1
         else:
-            craft_whole_name = craft_whole_name + "\n" + str(craft_series_number) + "." + (item.get("使用材料") or "") + (item.get("工艺说明") or "")
+            craft_whole_name = craft_whole_name + "\n" + str(craft_series_number) + "." + _entry
             craft_series_number = craft_series_number + 1
             
 
@@ -117,7 +122,7 @@ def insert_series_data(ws, series_data, start_row=7):
 
             # Insert row total in column K
             ws[f"K{current_row}"] = row_total
-            ws[f"K{current_row}"].font = Font(bold=True)  # Bold the total
+            ws[f"K{current_row}"].font = Font(bold=True, size=12)  # Bold the total
 
             current_row += 1  # Prepare for the next chunk
 
@@ -149,40 +154,116 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     logger.debug("start generate_last_excel_file")
     wb, ws = load_template(template_path, new_file_path)
 
-    # Insert order details
-    ws["H4"] = order_data.get("订单信息", "") + " " + order_data.get("客户名", "") + " " + order_data.get("商标", "")
-    ws["B4"] = order_data.get("供应商", "")
+    # 删除模板中无用的第2、3行（删后行号整体-2）
+    ws.delete_rows(2, 2)
 
-    # Insert series data
-    row = insert_series_data(ws, order_data.get("seriesData", []))
+    # 清除第4行（表头行）M列及以后的多余内容，隐藏 M-Z 列
+    for col in range(13, 27):
+        ws.cell(row=4, column=col).value = None
+        ws.column_dimensions[get_column_letter(col)].hidden = True
+
+    # 重置第4行表头：工厂型号 | 鞋面颜色 | 尺码(C-J合并) | 合计 | 备注
+    thin = Side(border_style="thin", color="000000")
+    hdr_border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    hdr_center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    hdr_bold = Font(bold=True, size=12)
+
+    # 先清除A4-L4所有合并和内容
+    for col in range(1, 13):
+        cell = ws.cell(row=4, column=col)
+        cell.value = None
+        cell.border = hdr_border
+        cell.alignment = hdr_center
+        cell.font = hdr_bold
+
+    # 取消可能存在的合并
+    for merged in list(ws.merged_cells.ranges):
+        if merged.min_row == 4 and merged.max_row == 4:
+            ws.unmerge_cells(str(merged))
+
+    ws["A4"] = "工厂型号"
+    ws["B4"] = "鞋面颜色"
+    # C4:J4 合并为"尺码"
+    ws.merge_cells("C4:J4")
+    ws["C4"] = "尺码"
+    ws["C4"].border = hdr_border
+    ws["C4"].alignment = hdr_center
+    ws["C4"].font = hdr_bold
+    ws["K4"] = "合计"
+    ws["L4"] = "备注"
+
+    # Insert order details（原第4行 → 现第2行）
+    ws["H2"] = order_data.get("订单信息", "") + " " + order_data.get("客户名", "") + " " + order_data.get("商标", "")
+    ws["B2"] = order_data.get("供应商", "")
+
+    # Insert series data（原start_row=7 → 现5）
+    row = insert_series_data(ws, order_data.get("seriesData", []), start_row=5)
+
+    left_wrap = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
     # Fill summary fields (below data table)
     ws[f"A{row + 1}"] = "合计"
-    # 合计 = sum of all `合计` values insert computed in the insert_series_data function
-    total_sum = sum(ws[f"K{r}"].value for r in range(8, row, 2) if ws[f"K{r}"].value)
+    total_sum = sum(ws[f"K{r}"].value for r in range(6, row, 2) if ws[f"K{r}"].value)
     ws[f"K{row + 1}"] = total_sum
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=12)
     ws[f"A{row}"] = order_data.get("备注", "")
-    ws[f"A{row + 2}"] = craft_whole_name
+
+    ws.merge_cells(start_row=row + 2, start_column=1, end_row=row + 2, end_column=12)
+    set_wrapped_cell(ws, f"A{row + 2}", craft_whole_name, center=False)
+
     ws[f"A{row + 3}"] = "环境要求:"
+    ws.merge_cells(start_row=row + 3, start_column=2, end_row=row + 3, end_column=12)
     ws[f"B{row + 3}"] = order_data.get("环保要求", "")
+    ws[f"B{row + 3}"].alignment = left_wrap
+
     ws[f"A{row + 4}"] = "发货地址:"
+    ws.merge_cells(start_row=row + 4, start_column=2, end_row=row + 4, end_column=12)
     ws[f"B{row + 4}"] = order_data.get("发货地址", "")
+    ws[f"B{row + 4}"].alignment = left_wrap
+
     ws[f"A{row + 5}"] = "交货期限:"
-    ws[f"B{row + 5}"] = order_data.get("交货期限", "")
-    ws[f"G{row + 5}"] = "如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。"
+    ws.merge_cells(start_row=row + 5, start_column=2, end_row=row + 5, end_column=12)
+    deadline_text = (order_data.get("交货期限", "") + "    如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。").strip()
+    ws[f"B{row + 5}"] = deadline_text
+    ws[f"B{row + 5}"].alignment = left_wrap
+    ws.row_dimensions[row + 5].height = 30
+
     ws[f"A{row + 6}"] = "制表:"
     ws[f"G{row + 6}"] = "审核:"
     ws[f"G{row + 7}"] = order_data.get("日期", "")
-    ws.merge_cells(start_row=row + 2, start_column=1, end_row=row + 2, end_column=12)  # Merge cells for summary
-    set_wrapped_cell(ws, f"A{row + 2}", craft_whole_name, center=False)
 
-    # Apply formatting to only data region
-    bold_cells = {"A4", "A6", "B6", "K6", "L6"}
-    format_cells(ws, "A7", f"L{row - 1}", center=True, bold_cells=bold_cells)  # 只居中数据部分
+    # Apply formatting to only data region（原A7→A5，原A6→A4）
+    bold_cells = {"A2", "A4", "B4", "K4", "L4"}
+    format_cells(ws, "A5", f"L{row - 1}", center=True, bold_cells=bold_cells)
 
-    # Add borders
-    add_borders(ws, "A6", f"L{row - 1}")  # 只添加边框到数据部分
+    # Add borders（原A6→A4）
+    add_borders(ws, "A4", f"L{row - 1}")
+
+    # 列宽：A=工厂型号15，B=鞋面颜色15，C-J=数量列6，K=合计8，L=备注15
+    ws.column_dimensions["A"].width = 15
+    ws.column_dimensions["B"].width = 15
+    for col in range(3, 11):  # C~J
+        ws.column_dimensions[get_column_letter(col)].width = 6
+    ws.column_dimensions["K"].width = 8
+    ws.column_dimensions["L"].width = 15
+
+    # 页面设置：横向打印，宽度适应1页
+    if ws.sheet_properties is None:
+        ws.sheet_properties = WorksheetProperties()
+    if ws.sheet_properties.pageSetUpPr is None:
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+    # 全局字号 12
+    for row_cells in ws.iter_rows():
+        for cell in row_cells:
+            if cell.font and cell.font.size and cell.font.size != 12:
+                cell.font = cell.font.copy(size=12)
+            elif not cell.font or not cell.font.size:
+                cell.font = Font(size=12)
 
     wb.save(new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
