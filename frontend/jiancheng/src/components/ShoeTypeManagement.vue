@@ -643,22 +643,42 @@ export default {
                         shoeRId: this.shoeForm.shoeRid,
                         shoeId: this.shoeForm.shoeId
                     })
-
                     if (response.status === 200) {
-                        this.$message({
-                            type: 'success',
-                            message: '修改成功'
-                        })
+                        this.$message({ type: 'success', message: '修改成功' })
+                        this.editShoeRIdDialogConfirmVis = false
+                        this.editShoeRIdDialogVis = false
+                        this.getFilterShoes()
                     }
                 } catch (error) {
-                    this.$message({
-                        type: 'error',
-                        message: error?.response?.data?.message || '与其他已存在鞋型同名，请联系管理员更改'
-                    })
-                } finally {
-                    this.editShoeRIdDialogConfirmVis = false
-                    this.editShoeRIdDialogVis = false
-                    this.getFilterShoes()
+                    if (error?.response?.status === 404 && error?.response?.data?.error === 'shoe_rid already exists') {
+                        this.$confirm(
+                            `鞋型号 "${this.shoeForm.shoeRid}" 已存在。是否将当前鞋型合并至该鞋型？\n合并后，当前鞋型缺失的颜色将补充至目标鞋型，当前鞋型记录将被删除，所有关联订单将转移至目标鞋型。`,
+                            '目标鞋型已存在 — 确认合并',
+                            { confirmButtonText: '确认合并', cancelButtonText: '取消', type: 'warning' }
+                        ).then(async () => {
+                            try {
+                                await axios.post(`${this.$apiBaseUrl}/shoemanage/mergeshoerids`, {
+                                    sourceShoeId: this.shoeForm.shoeId,
+                                    targetShoeRId: this.shoeForm.shoeRid
+                                })
+                                this.$message({ type: 'success', message: '合并成功' })
+                            } catch (mergeError) {
+                                this.$message({ type: 'error', message: mergeError?.response?.data?.error || '合并失败' })
+                            } finally {
+                                this.editShoeRIdDialogConfirmVis = false
+                                this.editShoeRIdDialogVis = false
+                                this.getFilterShoes()
+                            }
+                        }).catch(() => {})
+                    } else {
+                        this.$message({
+                            type: 'error',
+                            message: error?.response?.data?.error || error?.response?.data?.message || '修改失败'
+                        })
+                        this.editShoeRIdDialogConfirmVis = false
+                        this.editShoeRIdDialogVis = false
+                        this.getFilterShoes()
+                    }
                 }
             })
         },

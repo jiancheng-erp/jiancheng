@@ -928,10 +928,11 @@ def batch_delete_material():
 @material_batch_edit_bp.route("/material/batch-add-material", methods=["POST"])
 def batch_add_material():
     """
-    向指定鞋款新增一条材料，联动写入：
-      1. production_instruction_item
-      2. bom_item（关联到 bom_type=0 的一次 BOM）
-      3. purchase_order_item（关联到该鞋款对应供应商的 purchase_divide_order）
+    向指定鞋款新增一条材料，可通过 targets 选择写入哪些文档：
+      - "pi"  → production_instruction_item
+      - "bom" → bom_item（关联到 bom_type=0 的一次 BOM）
+      - "po"  → purchase_order_item（关联到该鞋款对应供应商的 purchase_divide_order，需同时选 bom）
+      - "cs"  → craft_sheet_item（关联到该鞋款的工艺单）
 
     Body: {
         orderShoeId,
@@ -940,7 +941,13 @@ def batch_add_material():
         materialModel, materialSpecification, color,
         unitUsage,                # 单位用量（写入 bom_item.unit_usage）
         approvalAmount,           # 核定用量（写入 purchase_order_item.approval_amount & bom_item.total_usage）
-        remark
+        remark,
+        targets,                  # 可选列表，默认 ["pi","bom","po"]
+        csMaterialType,           # 工艺单材料类型 S/I/A/O/M/H/L，targets 含 "cs" 时必填
+        csMaterialSource,         # 材料来源 C/P，默认 "C"
+        csMaterialSecondType,     # 细分类型
+        csCraftName,              # 复合工艺，逗号分隔
+        csProcessingRemark        # 加工备注
     }
     """
     from models import OrderShoeType, Material
@@ -951,6 +958,14 @@ def batch_add_material():
     if not order_shoe_id or not material_id or not order_shoe_type_id:
         return jsonify({"error": "缺少必填参数 orderShoeId / materialId / orderShoeTypeId"}), 400
 
+    targets = data.get("targets") or ["pi", "bom", "po"]
+    if not targets:
+        return jsonify({"error": "至少需要选择一个写入目标"}), 400
+    do_pi = "pi" in targets
+    do_bom = "bom" in targets
+    do_po = "po" in targets and do_bom  # PO 依赖 BOM
+    do_cs = "cs" in targets
+
     unit_usage = float(data.get("unitUsage") or 0)
     approval_amount = float(data.get("approvalAmount") or 0)
     mat_model = data.get("materialModel") or ""
@@ -958,79 +973,109 @@ def batch_add_material():
     color = data.get("color") or ""
     remark = data.get("remark") or ""
 
+    # 工艺单字段
+    cs_material_type = data.get("csMaterialType") or "A"
+    cs_material_source = data.get("csMaterialSource") or "C"
+    cs_material_second_type = data.get("csMaterialSecondType") or ""
+    cs_craft_name_raw = data.get("csCraftName") or ""
+    cs_craft_name = "@".join(
+        [x.strip() for x in cs_craft_name_raw.replace("，", ",").split(",") if x.strip()]
+    )
+    cs_processing_remark = data.get("csProcessingRemark") or ""
+
+    if do_cs and cs_material_type not in ("S", "I", "A", "O", "M", "H", "L"):
+        return jsonify({"error": "工艺单材料类型无效，需为 S/I/A/O/M/H/L"}), 400
+
     # 取材料信息（供应商）
     material = Material.query.filter_by(material_id=material_id).first()
     if not material:
         return jsonify({"error": "未找到材料"}), 404
 
-    # 1. 找投产指令单
-    pi = ProductionInstruction.query.filter_by(order_shoe_id=order_shoe_id).first()
-    if not pi:
-        return jsonify({"error": "未找到该鞋款的投产指令单"}), 404
+    # 按需查找各文档
+    pi = None
+    if do_pi:
+        pi = ProductionInstruction.query.filter_by(order_shoe_id=order_shoe_id).first()
+        if not pi:
+            return jsonify({"error": "未找到该鞋款的投产指令单"}), 404
 
-    # 2. 找一次 BOM（bom_type=0, order_shoe_type_id）
-    bom = (
-        Bom.query
-        .filter_by(order_shoe_type_id=order_shoe_type_id, bom_type=0)
-        .first()
-    )
-    if not bom:
-        return jsonify({"error": f"未找到 orderShoeTypeId={order_shoe_type_id} 的一次BOM，请先生成BOM"}), 404
+    bom = None
+    if do_bom:
+        bom = (
+            Bom.query
+            .filter_by(order_shoe_type_id=order_shoe_type_id, bom_type=0)
+            .first()
+        )
+        if not bom:
+            return jsonify({"error": f"未找到 orderShoeTypeId={order_shoe_type_id} 的一次BOM，请先生成BOM"}), 404
 
-    # 3. 找该鞋款的一次采购分单（按材料供应商匹配 rid 后缀）
-    supplier_id = material.material_supplier
-    supplier_suffix = str(supplier_id).zfill(4)
+    pdo_row = None
+    if do_po:
+        supplier_id = material.material_supplier
+        supplier_suffix = str(supplier_id).zfill(4)
+        pdo_row = db.session.execute(text("""
+            SELECT pdo.purchase_divide_order_id, pdo.purchase_divide_order_rid, po.purchase_order_id
+            FROM purchase_divide_order pdo
+            JOIN purchase_order po ON po.purchase_order_id = pdo.purchase_order_id
+            WHERE po.order_shoe_id = :osid
+              AND pdo.purchase_divide_order_rid LIKE :suffix
+            ORDER BY po.purchase_order_id DESC
+            LIMIT 1
+        """), {"osid": order_shoe_id, "suffix": f"%{supplier_suffix}"}).first()
 
-    pdo_row = db.session.execute(text("""
-        SELECT pdo.purchase_divide_order_id, pdo.purchase_divide_order_rid, po.purchase_order_id
-        FROM purchase_divide_order pdo
-        JOIN purchase_order po ON po.purchase_order_id = pdo.purchase_order_id
-        WHERE po.order_shoe_id = :osid
-          AND pdo.purchase_divide_order_rid LIKE :suffix
-        ORDER BY po.purchase_order_id DESC
-        LIMIT 1
-    """), {"osid": order_shoe_id, "suffix": f"%{supplier_suffix}"}).first()
+    cs_head = None
+    if do_cs:
+        cs_head = CraftSheet.query.filter_by(order_shoe_id=order_shoe_id).first()
+        if not cs_head:
+            return jsonify({"error": "未找到该鞋款的工艺单，请先创建工艺单"}), 404
 
     try:
+        pi_item = None
+        bom_item = None
+        po_item_id = None
+        cs_item = None
+
         # --- PI item ---
-        pi_item = ProductionInstructionItem(
-            production_instruction_id=pi.production_instruction_id,
-            material_id=material_id,
-            order_shoe_type_id=order_shoe_type_id,
-            material_model=mat_model,
-            material_specification=mat_spec,
-            color=color,
-            is_pre_purchase=False,
-            material_type="A",
-            material_second_type="",
-            department_id=1,
-            remark=remark,
-        )
-        db.session.add(pi_item)
-        db.session.flush()
+        if do_pi:
+            pi_item = ProductionInstructionItem(
+                production_instruction_id=pi.production_instruction_id,
+                material_id=material_id,
+                order_shoe_type_id=order_shoe_type_id,
+                material_model=mat_model,
+                material_specification=mat_spec,
+                color=color,
+                is_pre_purchase=False,
+                material_type="A",
+                material_second_type="",
+                department_id=1,
+                remark=remark,
+            )
+            db.session.add(pi_item)
+            db.session.flush()
 
         # --- BOM item ---
-        bom_item = BomItem(
-            bom_id=bom.bom_id,
-            material_id=material_id,
-            material_model=mat_model,
-            material_specification=mat_spec,
-            bom_item_color=color,
-            unit_usage=unit_usage,
-            total_usage=approval_amount,
-            department_id=1,
-            bom_item_add_type="0",
-            material_second_type="",
-            production_instruction_item_id=pi_item.production_instruction_item_id,
-            remark=remark,
-            size_type="E",
-        )
-        db.session.add(bom_item)
-        db.session.flush()
+        if do_bom:
+            bom_item = BomItem(
+                bom_id=bom.bom_id,
+                material_id=material_id,
+                material_model=mat_model,
+                material_specification=mat_spec,
+                bom_item_color=color,
+                unit_usage=unit_usage,
+                total_usage=approval_amount,
+                department_id=1,
+                bom_item_add_type="0",
+                material_second_type="",
+                production_instruction_item_id=(
+                    pi_item.production_instruction_item_id if pi_item else None
+                ),
+                remark=remark,
+                size_type="E",
+            )
+            db.session.add(bom_item)
+            db.session.flush()
 
         # --- PurchaseOrderItem（若找到 PDO）---
-        po_item_id = None
-        if pdo_row:
+        if do_po and pdo_row and bom_item:
             po_item = PurchaseOrderItem(
                 purchase_divide_order_id=pdo_row[0],
                 bom_item_id=bom_item.bom_item_id,
@@ -1046,15 +1091,52 @@ def batch_add_material():
             db.session.flush()
             po_item_id = po_item.purchase_order_item_id
 
+        # --- CraftSheetItem ---
+        if do_cs:
+            cs_item = CraftSheetItem(
+                craft_sheet_id=cs_head.craft_sheet_id,
+                material_id=material_id,
+                order_shoe_type_id=order_shoe_type_id,
+                material_type=cs_material_type,
+                material_second_type=cs_material_second_type,
+                material_model=mat_model,
+                material_specification=mat_spec,
+                color=color,
+                remark=remark,
+                department_id=1,
+                material_source=cs_material_source,
+                craft_name=cs_craft_name,
+                unit_usage=unit_usage,
+                after_usage_symbol=0,
+                processing_remark=cs_processing_remark or None,
+                production_instruction_item_id=(
+                    pi_item.production_instruction_item_id if pi_item else None
+                ),
+            )
+            db.session.add(cs_item)
+            db.session.flush()
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"新增失败: {str(e)}"}), 500
 
+    written = []
+    if pi_item:
+        written.append("投产指令单")
+    if bom_item:
+        written.append("一次BOM")
+    if po_item_id:
+        written.append("采购分单")
+    elif do_po and not pdo_row:
+        written.append("一次BOM（未找到对应采购分单，跳过采购分单）")
+    if cs_item:
+        written.append("工艺单")
+
     return jsonify({
-        "message": "新增成功" + ("" if pdo_row else "（未找到对应采购分单，仅写入PI和BOM）"),
-        "piItemId": pi_item.production_instruction_item_id,
-        "bomItemId": bom_item.bom_item_id,
+        "message": f"新增成功，已写入：{'、'.join(written)}",
+        "piItemId": pi_item.production_instruction_item_id if pi_item else None,
+        "bomItemId": bom_item.bom_item_id if bom_item else None,
         "poItemId": po_item_id,
     })
 

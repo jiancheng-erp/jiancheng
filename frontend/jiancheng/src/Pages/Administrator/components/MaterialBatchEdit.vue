@@ -523,9 +523,15 @@
 
         <!-- ================= 添加材料对话框 ================= -->
         <el-dialog v-model="addDialogVisible" title="添加材料到鞋款文档" width="700px" destroy-on-close>
-            <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px;">
-                将同时写入投产指令单 (PI)、一次BOM 和采购分单（若已存在对应供应商的分单）。
-            </el-alert>
+            <el-form-item label="写入目标" style="margin-bottom:12px;">
+                <el-checkbox-group v-model="addForm.targets">
+                    <el-checkbox label="pi">投产指令单 (PI)</el-checkbox>
+                    <el-checkbox label="bom">一次BOM</el-checkbox>
+                    <el-checkbox label="po" :disabled="!addForm.targets.includes('bom')">采购分单</el-checkbox>
+                    <el-checkbox label="cs">工艺单</el-checkbox>
+                </el-checkbox-group>
+                <div style="font-size:12px; color:#909399; margin-top:4px;">至少选择一项；采购分单需先勾选一次BOM</div>
+            </el-form-item>
             <el-form :model="addForm" label-width="100px">
                 <el-form-item label="配色" required>
                     <el-select v-model="addForm.orderShoeTypeId" placeholder="选择配色（必选）" style="width:240px;"
@@ -602,20 +608,23 @@
                 </el-row>
                 <el-row :gutter="12">
                     <el-col :span="12">
-                        <el-form-item label="单位用量" required>
+                        <el-form-item label="单位用量" :required="addForm.targets.includes('bom')">
                             <el-input-number v-model="addForm.unitUsage" :min="0" :precision="5"
-                                style="width:100%;" placeholder="每双用量" />
+                                style="width:100%;" placeholder="每双用量"
+                                :disabled="!addForm.targets.includes('bom')" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="核定用量" required>
+                        <el-form-item label="核定用量" :required="addForm.targets.includes('bom')">
                             <el-input-number v-model="addForm.approvalAmount" :min="0" :precision="5"
-                                style="width:100%;" placeholder="采购核定数量" />
+                                style="width:100%;" placeholder="采购核定数量"
+                                :disabled="!addForm.targets.includes('bom')" />
                             <div style="font-size:11px; color:#909399; margin-top:2px;">
-                                <template v-if="sizeInfo">
+                                <template v-if="addForm.targets.includes('bom') && sizeInfo">
                                     = {{ addForm.unitUsage }} × {{ sizeInfo.grandTotal }}双
                                     <el-button link size="small" type="primary" @click="calcApproval">重新计算</el-button>
                                 </template>
+                                <span v-else-if="!addForm.targets.includes('bom')" style="color:#c0c4cc">（不写入BOM时无需填写）</span>
                                 <span v-else style="color:#c0c4cc">（先选配色后可自动计算）</span>
                             </div>
                         </el-form-item>
@@ -624,6 +633,14 @@
                 <el-form-item label="备注">
                     <el-input v-model="addForm.remark" placeholder="（可选）" clearable />
                 </el-form-item>
+
+                <!-- 工艺单专属字段 -->
+                <template v-if="addForm.targets.includes('cs')">
+                    <el-divider style="margin:12px 0;">工艺单信息</el-divider>
+                    <el-form-item label="复合工艺">
+                        <el-input v-model="addForm.csCraftName" placeholder="多个工艺用逗号分隔（可选）" clearable />
+                    </el-form-item>
+                </template>
             </el-form>
             <template #footer>
                 <el-button @click="addDialogVisible = false">取消</el-button>
@@ -920,6 +937,12 @@ export default {
                 unitUsage: 0,
                 approvalAmount: 0,
                 remark: '',
+                targets: ['pi', 'bom', 'po'],
+                csMaterialType: 'S',
+                csMaterialSource: 'C',
+                csMaterialSecondType: '',
+                csCraftName: '',
+                csProcessingRemark: '',
             },
             addLoading: false,
             addMaterialSearchKw: '',
@@ -1695,6 +1718,12 @@ export default {
                 unitUsage: 0,
                 approvalAmount: 0,
                 remark: '',
+                targets: ['pi', 'bom', 'po'],
+                csMaterialType: 'S',
+                csMaterialSource: 'C',
+                csMaterialSecondType: '',
+                csCraftName: '',
+                csProcessingRemark: '',
             }
             this.addMaterialSearchKw = ''
             this.addMaterialResults = []
@@ -1750,6 +1779,7 @@ export default {
         async submitAdd() {
             if (!this.addForm.materialId) { ElMessage.warning('请先选择材料'); return }
             if (!this.addForm.orderShoeTypeId) { ElMessage.warning('请选择配色'); return }
+            if (!this.addForm.targets.length) { ElMessage.warning('请至少选择一个写入目标'); return }
             this.addLoading = true
             try {
                 const body = {
@@ -1762,6 +1792,12 @@ export default {
                     unitUsage: this.addForm.unitUsage,
                     approvalAmount: this.addForm.approvalAmount,
                     remark: this.addForm.remark,
+                    targets: this.addForm.targets,
+                    csMaterialType: this.addForm.csMaterialType,
+                    csMaterialSource: this.addForm.csMaterialSource,
+                    csMaterialSecondType: this.addForm.csMaterialSecondType,
+                    csCraftName: this.addForm.csCraftName,
+                    csProcessingRemark: this.addForm.csProcessingRemark,
                 }
                 const res = await axios.post(`${this.$apiBaseUrl}/material/batch-add-material`, body)
                 ElMessage.success(res.data.message || '添加成功')
