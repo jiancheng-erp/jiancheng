@@ -625,7 +625,9 @@ def get_product_overview():
         for batch_info, pkg, outbounded_amount in batch_info_query:
             total_amount = batch_info.total_amount or 0
             out_amount = outbounded_amount or 0
-            batch_available_amount = max(total_amount - out_amount, 0)
+            # batchAvailableAmount will be overwritten below by physical-stock distribution;
+            # set to total_amount as a temporary placeholder.
+            batch_available_amount = total_amount
 
             bi = {
                 "batchInfoId": batch_info.order_shoe_batch_info_id,
@@ -697,6 +699,15 @@ def get_product_overview():
             .all()
         )
 
+        # 先聚合每个 order_shoe_type_id 的总物理库存（可能存在多条 FinishedShoeStorage）
+        ost_physical_stock: dict = {}
+        for (_, _, _, storage_obj, _, _, order_s_type) in order_shoe_query:
+            ost_id = order_s_type.order_shoe_type_id
+            ost_physical_stock[ost_id] = ost_physical_stock.get(ost_id, 0) + (storage_obj.finished_amount or 0)
+
+        # 按实际物理库存，将可用量按配码 totalAmount 比例分配（老方案，更可靠）
+        # 使用 round() 而非 int()，避免小值截断为 0
+        adjusted_ost_ids: set = set()
         for (
             order_shoe,
             shoe,
@@ -706,19 +717,22 @@ def get_product_overview():
             color,
             order_s_type,
         ) in order_shoe_query:
+            ost_id = order_s_type.order_shoe_type_id
             physical_stock = storage_obj.finished_amount or 0
-            batch_infos = batch_info_map.get(order_s_type.order_shoe_type_id, [])
+            batch_infos = batch_info_map.get(ost_id, [])
 
-            # 将配码库存限制在实际物理库存范围内，避免配码库存超过成品库存
-            total_batch_available = sum(
-                bi["batchAvailableAmount"] for bi in batch_infos
-            )
-            if total_batch_available > 0 and total_batch_available > physical_stock:
-                ratio = physical_stock / total_batch_available
-                for bi in batch_infos:
-                    bi["batchAvailableAmount"] = int(
-                        bi["batchAvailableAmount"] * ratio
-                    )
+            # 按物理库存比例分配配码可用量（每个 ost_id 只做一次）
+            if ost_id not in adjusted_ost_ids:
+                total_physical = ost_physical_stock.get(ost_id, 0)
+                color_total_batch = sum(bi["totalAmount"] for bi in batch_infos)
+                if color_total_batch > 0:
+                    for bi in batch_infos:
+                        batch_ratio = bi["totalAmount"] / color_total_batch
+                        bi["batchAvailableAmount"] = max(0, round(total_physical * batch_ratio))
+                else:
+                    for bi in batch_infos:
+                        bi["batchAvailableAmount"] = 0
+                adjusted_ost_ids.add(ost_id)
 
             color_obj = {
                 "orderShoeId": order_shoe.order_shoe_id,
@@ -729,7 +743,7 @@ def get_product_overview():
                 "storageId": storage_obj.finished_shoe_id,
                 "currentStock": physical_stock,
                 "colorName": color.color_name,
-                "orderShoeTypeId": order_s_type.order_shoe_type_id,
+                "orderShoeTypeId": ost_id,
                 "sizeColumns": size_columns,
                 "batchInfos": batch_infos,
             }
