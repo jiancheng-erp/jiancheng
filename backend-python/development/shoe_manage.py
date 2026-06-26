@@ -245,13 +245,19 @@ def confirm_edit_shoe_rid():
             old_path = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', old_shoe_rid)
             new_path = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', shoe_rid)
             os.rename(old_path, new_path)
-        order_association = db.session.query(Order, OrderShoe, CraftSheet).join(
+        # Get all orders linked to this shoe via OrderShoe (no CraftSheet required)
+        # This ensures filesystem directories are renamed even when CraftSheet doesn't exist yet
+        all_order_shoes = db.session.query(Order, OrderShoe).join(
+            OrderShoe, Order.order_id == OrderShoe.order_id
+        ).filter(OrderShoe.shoe_id == shoe_id).all()
+        order_name_set = set(order.order_rid for order, order_shoe in all_order_shoes)
+
+        # Separately update CraftSheet image paths for orders that have craft sheets
+        craft_sheet_association = db.session.query(Order, OrderShoe, CraftSheet).join(
             OrderShoe, Order.order_id == OrderShoe.order_id
         ).join(CraftSheet, CraftSheet.order_shoe_id == OrderShoe.order_shoe_id).filter(OrderShoe.shoe_id == shoe_id).all()
-        order_name_list = []
-        for order, order_shoe, craft_sheet in order_association:
-            order_name_list.append(order.order_rid)
-            # modify the craft sheet image path in db, the stynax is like http://192.168.16.100:12667/order_rid/shoe_rid/刀模图/xxx.jpg
+        for order, order_shoe, craft_sheet in craft_sheet_association:
+            # modify the craft sheet image path in db, the syntax is like http://192.168.16.100:12667/order_rid/shoe_rid/刀模图/xxx.jpg
             # and http://192.168.16.100:12667/order_rid/shoe_rid/图样备注/xxx.jpg
             old_cut_die_img_path = craft_sheet.cut_die_img_path
             if old_cut_die_img_path:
@@ -263,7 +269,7 @@ def confirm_edit_shoe_rid():
                 new_pic_note_img_path = 'http://192.168.16.100:12667/'+ order.order_rid + '/' + shoe_rid + '/图样备注/' + old_pic_note_img_path.split('/')[-1]
                 craft_sheet.pic_note_img_path = new_pic_note_img_path
                 db.session.flush()
-        for order_name in order_name_list:
+        for order_name in order_name_set:
             is_img_order_path_exist = os.path.exists(os.path.join(IMAGE_UPLOAD_PATH, order_name, old_shoe_rid))
             if is_img_order_path_exist:
                 old_order_path = os.path.join(IMAGE_UPLOAD_PATH, order_name, old_shoe_rid)
@@ -289,6 +295,132 @@ def confirm_edit_shoe_rid():
     else:
         return jsonify({"error": "shoe not found given shoe_id"}), 400
     
+@shoe_manage_bp.route("/shoemanage/mergeshoerids", methods=["POST"])
+def merge_shoe_rids():
+    """Merge source shoe into target shoe (which already owns the desired shoe_rid).
+    - Colors in source but missing from target are added to target.
+    - All OrderShoe and UnitPriceReportTemplate records are reassigned to target.
+    - CraftSheet image paths and filesystem directories are updated accordingly.
+    - Source shoe and its ShoeType records are deleted.
+    """
+    source_shoe_id = request.json.get("sourceShoeId")
+    target_shoe_rid = request.json.get("targetShoeRId")
+
+    source_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == source_shoe_id).first()
+    target_shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == target_shoe_rid).first()
+
+    if not source_shoe or not target_shoe:
+        return jsonify({"error": "源鞋型或目标鞋型不存在"}), 400
+    if source_shoe.shoe_id == target_shoe.shoe_id:
+        return jsonify({"error": "源鞋型与目标鞋型相同"}), 400
+
+    old_source_rid = source_shoe.shoe_rid
+    target_rid = target_shoe.shoe_rid
+
+    # Collect orders linked to source shoe BEFORE changes (needed for filesystem operations)
+    source_order_pairs = db.session.query(Order, OrderShoe).join(
+        OrderShoe, Order.order_id == OrderShoe.order_id
+    ).filter(OrderShoe.shoe_id == source_shoe.shoe_id).all()
+    source_order_rids = set(order.order_rid for order, _ in source_order_pairs)
+    source_order_ids = set(os_rec.order_id for _, os_rec in source_order_pairs)
+
+    # Guard: check no order already has both source and target shoe (would cause duplicate key)
+    if source_order_ids:
+        conflict = db.session.query(OrderShoe).filter(
+            OrderShoe.shoe_id == target_shoe.shoe_id,
+            OrderShoe.order_id.in_(source_order_ids)
+        ).first()
+        if conflict:
+            return jsonify({"error": "部分订单同时关联了源鞋型和目标鞋型，无法自动合并，请联系管理员处理"}), 400
+
+    # Step 1: Add colors from source that are missing in target
+    target_color_ids = {
+        st.color_id
+        for st in db.session.query(ShoeType).filter(ShoeType.shoe_id == target_shoe.shoe_id).all()
+    }
+    source_types = db.session.query(ShoeType).filter(ShoeType.shoe_id == source_shoe.shoe_id).all()
+    for source_type in source_types:
+        if source_type.color_id not in target_color_ids:
+            new_image_url = None
+            if source_type.shoe_image_url:
+                parts = source_type.shoe_image_url.replace('\\', '/').split('/')
+                if len(parts) >= 3:
+                    new_image_url = 'shoe/' + target_rid + '/' + parts[2] + '/shoe_image.jpg'
+            db.session.add(ShoeType(
+                shoe_id=target_shoe.shoe_id,
+                color_id=source_type.color_id,
+                shoe_image_url=new_image_url
+            ))
+    db.session.flush()
+
+    # Step 2: Reassign OrderShoe records from source to target
+    for os_rec in db.session.query(OrderShoe).filter(OrderShoe.shoe_id == source_shoe.shoe_id).all():
+        os_rec.shoe_id = target_shoe.shoe_id
+    db.session.flush()
+
+    # Step 3: Reassign UnitPriceReportTemplate records
+    for rt in db.session.query(UnitPriceReportTemplate).filter(UnitPriceReportTemplate.shoe_id == source_shoe.shoe_id).all():
+        rt.shoe_id = target_shoe.shoe_id
+    db.session.flush()
+
+    # Step 4: Update CraftSheet image paths for orders migrated from source
+    if source_order_rids:
+        for order, order_shoe, craft_sheet in db.session.query(Order, OrderShoe, CraftSheet).join(
+            OrderShoe, Order.order_id == OrderShoe.order_id
+        ).join(CraftSheet, CraftSheet.order_shoe_id == OrderShoe.order_shoe_id).filter(
+            OrderShoe.shoe_id == target_shoe.shoe_id,
+            Order.order_rid.in_(source_order_rids)
+        ).all():
+            if craft_sheet.cut_die_img_path:
+                craft_sheet.cut_die_img_path = craft_sheet.cut_die_img_path.replace(
+                    '/' + old_source_rid + '/', '/' + target_rid + '/'
+                )
+            if craft_sheet.pic_note_img_path:
+                craft_sheet.pic_note_img_path = craft_sheet.pic_note_img_path.replace(
+                    '/' + old_source_rid + '/', '/' + target_rid + '/'
+                )
+    db.session.flush()
+
+    # Step 5: Delete source shoe's ShoeType records and source shoe
+    db.session.query(ShoeType).filter(ShoeType.shoe_id == source_shoe.shoe_id).delete()
+    db.session.flush()
+    db.session.delete(source_shoe)
+    db.session.flush()
+
+    # Step 6: Merge shoe image directories (IMAGE_UPLOAD_PATH/shoe/)
+    source_shoe_img_dir = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', old_source_rid)
+    target_shoe_img_dir = os.path.join(IMAGE_UPLOAD_PATH, 'shoe', target_rid)
+    if os.path.exists(source_shoe_img_dir):
+        if not os.path.exists(target_shoe_img_dir):
+            os.rename(source_shoe_img_dir, target_shoe_img_dir)
+        else:
+            # Move color subfolders from source that don't already exist in target
+            for color_folder in os.listdir(source_shoe_img_dir):
+                src_color = os.path.join(source_shoe_img_dir, color_folder)
+                dst_color = os.path.join(target_shoe_img_dir, color_folder)
+                if os.path.isdir(src_color) and not os.path.exists(dst_color):
+                    os.rename(src_color, dst_color)
+            try:
+                os.rmdir(source_shoe_img_dir)
+            except OSError:
+                logger.debug(f"Could not remove source shoe img dir: {source_shoe_img_dir}")
+
+    # Step 7: Rename per-order directories from old_source_rid to target_rid
+    for order_rid in source_order_rids:
+        old_img = os.path.join(IMAGE_UPLOAD_PATH, order_rid, old_source_rid)
+        new_img = os.path.join(IMAGE_UPLOAD_PATH, order_rid, target_rid)
+        if os.path.exists(old_img) and not os.path.exists(new_img):
+            os.rename(old_img, new_img)
+
+        old_file = os.path.join(FILE_STORAGE_PATH, order_rid, old_source_rid)
+        new_file = os.path.join(FILE_STORAGE_PATH, order_rid, target_rid)
+        if os.path.exists(old_file) and not os.path.exists(new_file):
+            os.rename(old_file, new_file)
+
+    db.session.commit()
+    return jsonify({"message": "merge shoe rids OK"}), 200
+
+
 @shoe_manage_bp.route("/shoemanage/deprecateshoe", methods=["POST"])
 def deprecate_shoe():
     shoe_id = request.json.get("shoeId")
