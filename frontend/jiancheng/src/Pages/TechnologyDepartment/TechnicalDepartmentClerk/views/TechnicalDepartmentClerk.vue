@@ -35,6 +35,9 @@
           <el-menu-item index="10" @click="handleMenuClick(10)">
             <span>总仓订单缺失材料补采</span>
           </el-menu-item>
+          <el-menu-item index="11" @click="handleMenuClick(11)">
+            <span>补填拉头拉链组</span>
+          </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
             <span>退回任务列表</span>
           </el-menu-item>
@@ -69,6 +72,7 @@ import RevertDashboard from '@/components/RevertDashboard.vue';
 import ProductionOrderCreate from '@/Pages/DevelopmentManager/components/ProductionOrderCreate.vue'
 import SecondBOMListView from '@/Pages/UsageCalculation/components/SecondBOMListView.vue';
 import WarehouseMissingMaterialPurchase from '../components/WarehouseMissingMaterialPurchase.vue';
+import MaterialBatchEdit from '@/Pages/Administrator/components/MaterialBatchEdit.vue';
 import axios from 'axios'
 export default {
     components: {
@@ -80,7 +84,8 @@ export default {
         RevertDashboard,
         ProductionOrderCreate,
         SecondBOMListView,
-        WarehouseMissingMaterialPurchase
+        WarehouseMissingMaterialPurchase,
+        MaterialBatchEdit
     },
     data() {
         return {
@@ -125,6 +130,9 @@ export default {
                     break
                 case 10:
                     this.currentComponent = 'WarehouseMissingMaterialPurchase'
+                    break
+                case 11:
+                    this.currentComponent = 'MaterialBatchEdit'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'

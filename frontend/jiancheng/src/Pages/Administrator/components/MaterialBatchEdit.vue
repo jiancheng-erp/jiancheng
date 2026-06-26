@@ -1092,21 +1092,46 @@ export default {
                 g.items.some(i => i.docType === 'purchase_order_item')
             )
         },
-        // 配对组对话框：检测同配色内拉链/拉头是否成对（不按文件计数，只看类型）
+        // 配对组对话框：检测同配色内拉链/拉头、鞋眼/垫片是否成对
         zipperPairWarnings() {
+            const names = this.zipperPairRows.map(r => r.materialName || '')
+            // Only validate a pair type when BOTH sides are present in the dialog
+            const validateZipper = names.some(n => n.includes('拉链') && !n.includes('拉链头') && !n.includes('拉头'))
+                                && names.some(n => n.includes('拉链头') || n.includes('拉头'))
+            const validateEyelet = names.some(n => n.includes('鞋眼'))
+                                && names.some(n => n.includes('垫片'))
+
+            if (!validateZipper && !validateEyelet) return []
+
             const byGroup = {}
             for (const r of this.zipperPairRows) {
                 if (r.pairId == null) continue
-                const key = `${r._ostId}|${r.pairId}`
-                if (!byGroup[key]) byGroup[key] = { hasZipper: false, hasPull: false, label: r.colorLabel, pid: r.pairId }
-                const isHead = (r.materialName || '').includes('拉链头')
-                if (isHead) byGroup[key].hasPull = true
-                else byGroup[key].hasZipper = true
+                const name = r.materialName || ''
+                const pairType = (name.includes('拉链') || name.includes('拉头'))
+                    ? 'zipper'
+                    : (name.includes('鞋眼') || name.includes('垫片'))
+                        ? 'eyelet'
+                        : null
+                if (!pairType) continue
+                if (pairType === 'zipper' && !validateZipper) continue
+                if (pairType === 'eyelet' && !validateEyelet) continue
+                const key = `${r._ostId}|${r.pairId}|${pairType}`
+                if (!byGroup[key]) byGroup[key] = {
+                    hasA: false, hasB: false,
+                    labelA: pairType === 'zipper' ? '拉链' : '鞋眼',
+                    labelB: pairType === 'zipper' ? '拉链头' : '垫片',
+                    label: r.colorLabel, pid: r.pairId,
+                }
+                const isB = pairType === 'zipper'
+                    ? name.includes('拉链头') || name.includes('拉头')
+                    : name.includes('垫片')
+                if (isB) byGroup[key].hasB = true
+                else byGroup[key].hasA = true
             }
             return Object.values(byGroup)
-                .filter(v => !v.hasZipper || !v.hasPull)
+                .filter(v => !v.hasA || !v.hasB)
                 .map(v => {
-                    const missing = !v.hasZipper ? '缺少拉链' : '缺少拉链头'
+                    const missing = !v.hasA ? `缺少${v.labelA}` : `缺少${v.labelB}`
                     return `${v.label} 配对组${v.pid}：${missing}`
                 })
         },
@@ -1326,10 +1351,10 @@ export default {
                 purchase_order_item: 'danger',
             })[docType] || ''
         },
-        // 判断该材料组是否包含拉链或拉链头
+        // 判断该材料组是否包含拉链/拉头/鞋眼/垫片
         isZipperMaterial(row) {
             const name = row.materialName || ''
-            return name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))
+            return name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')
         },
 
         // ===== 配对组 =====
@@ -1350,7 +1375,11 @@ export default {
                             materialModel: it.materialModel || '',
                             materialSpec: it.materialSpecification || '',
                             color: it.color || '',
-                            isZipper: name.includes('拉链') && !name.includes('拉链头'),
+                            pairRole: name.includes('拉链头') || name.includes('拉头') ? '拉头'
+                                    : name.includes('拉链') ? '拉链'
+                                    : name.includes('鞋眼') ? '鞋眼'
+                                    : name.includes('垫片') ? '垫片'
+                                    : name,
                             pairId: it.zipperPairId != null ? Number(it.zipperPairId) : null,
                             _ostId: it.orderShoeTypeId,
                             _docItems: [],

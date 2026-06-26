@@ -1473,8 +1473,8 @@ def submit_purchase_divide_orders():
         materials_data=materials_data,
     )
     generated_files = []
-    # Split into 辅料订购单 and standard formats based on material type
-    standard_pdo_dict, zipper_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
+    # Split into standard, zipper 辅料订购单, and other 辅料订购单 formats
+    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(
@@ -1493,6 +1493,16 @@ def submit_purchase_divide_orders():
         generate_excel_file(template_path, new_file_path, data)
         generated_files.append(new_file_path)
     for purchase_order_id, data in zipper_pdo_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH,
+            order_rid,
+            order_shoe_rid,
+            "purchase_order",
+            purchase_order_id + "_" + data["供应商"] + "_拉链.xlsx",
+        )
+        generate_accessory_purchase_order(new_file_path, data)
+        generated_files.append(new_file_path)
+    for purchase_order_id, data in other_acc_pdo_dict.items():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             order_rid,
@@ -2080,8 +2090,8 @@ def download_purchase_order_zip():
             size_purchase_divide_order_dict[pdo_rid]["seriesData"].append(obj)
 
     generated_files = []
-    # Split into 辅料订购单 and standard formats based on material type
-    standard_pdo_dict, zipper_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
+    # Split into standard, zipper 辅料订购单, and other 辅料订购单 formats
+    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(FILE_STORAGE_PATH, "烫底标准采购订单.xlsx")
@@ -2095,6 +2105,13 @@ def download_purchase_order_zip():
         generate_excel_file(template_path, new_file_path, data)
         generated_files.append(new_file_path)
     for pdo_rid, data in zipper_pdo_dict.items():
+        new_file_path = os.path.join(
+            FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
+            pdo_rid + "_" + data["供应商"] + "_拉链.xlsx",
+        )
+        generate_accessory_purchase_order(new_file_path, data)
+        generated_files.append(new_file_path)
+    for pdo_rid, data in other_acc_pdo_dict.items():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
             pdo_rid + "_" + data["供应商"] + "_辅料.xlsx",

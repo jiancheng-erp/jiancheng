@@ -504,7 +504,7 @@
                                         v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
                                         <template #header>
                                             <span>配对组</span>
-                                            <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                            <el-tooltip content="拉链与拉头、鞋眼与垫片填写相同数字即为一对（1-9）" placement="top">
                                                 <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
                                             </el-tooltip>
                                         </template>
@@ -1433,7 +1433,7 @@
                                     v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
                                     <template #header>
                                         <span>配对组</span>
-                                        <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                        <el-tooltip content="拉链与拉头、鞋眼与垫片填写相同数字即为一对（1-9）" placement="top">
                                             <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
                                         </el-tooltip>
                                     </template>
@@ -2891,10 +2891,10 @@ export default {
                 row.color = row.color.slice(0, -1) // Remove the last character
             }
         },
-        // 判断材料名称是否为拉链或拉头（需要配对组）
+        // 判断材料名称是否为拉链/拉头/鞋眼/垫片（需要配对组）
         isZipperOrPull(name) {
             if (!name) return false
-            return name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))
+            return name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')
         },
     }
 }
