@@ -157,22 +157,27 @@ def _is_head(item):
     return False
 
 
-def _is_eyelet(item):
-    """判断是否为鞋眼（含"鞋眼"但不含"垫片"）。"""
-    for field in ("_material_name", "物品名称"):
-        name = item.get(field, "")
-        if name:
-            return "鞋眼" in name and "垫片" not in name
-    return False
-
-
 def _is_washer(item):
-    """判断是否为垫片。"""
-    for field in ("_material_name", "物品名称"):
-        name = item.get(field, "")
-        if name:
-            return "垫片" in name
+    """判断是否为垫片：直接命名为垫片，或鞋眼材料中型号含"垫片"。"""
+    name = item.get("_material_name", "") or item.get("物品名称", "")
+    if not name:
+        return False
+    # Material directly named as washer
+    if "垫片" in name and "鞋眼" not in name:
+        return True
+    # Eyelet-type material whose model indicates it's a washer
+    if "鞋眼" in name:
+        model = item.get("_model", "")
+        return bool(model and "垫片" in model)
     return False
+
+
+def _is_eyelet(item):
+    """判断是否为鞋眼（含"鞋眼"且未被判定为垫片款）。"""
+    name = item.get("_material_name", "") or item.get("物品名称", "")
+    if not name or "鞋眼" not in name:
+        return False
+    return not _is_washer(item)
 
 
 def _build_color_map(item_list):
@@ -289,7 +294,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     sc_head_map = _build_pair_map(sc_heads)
                     return _find_matching_head(z, sc_head_map, sc_heads[0])
 
-                for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
+                for z in sorted(zipper_items, key=lambda x: (x.get("_shoe_color", ""), x.get("物品名称", "") or x.get("_material_name", ""))):
                     head = _pick_head_for_zipper_z(z)
                     accessory_series.append({
                         "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
@@ -313,13 +318,11 @@ def split_zipper_orders(purchase_divide_order_dict):
 
             # ── 鞋眼 + 垫片 ───────────────────────────────────────────────
             if eyelet_items and washer_items:
-                washer_map   = _build_color_map(washer_items)
-                first_washer = washer_items[0]
+                washer_pair_map = _build_pair_map(washer_items)
+                first_washer    = washer_items[0]
                 for e in eyelet_items:
-                    sc = e.get("_shoe_color", "")
-                    # washer matched by shoe color (fallback to first)
-                    washer_map.get(sc) or washer_map.get("") or first_washer
-                    mat_desc = (e.get("物品名称", "") or _item_display_name(e)) + "+垫片"
+                    washer   = _find_matching_head(e, washer_pair_map, first_washer)
+                    mat_desc = (e.get("物品名称", "") or _item_display_name(e)) + "+" + _item_color_desc(washer)
                     accessory_series.append({
                         "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
                         "材料货号": mat_desc,
@@ -370,17 +373,17 @@ def split_second_purchase_orders(purchase_divide_order_dict):
     """
     二次采购专用分类函数：
       - 面料(1)、里料(2)、化工(4, 热熔胶等) → 标准采购订单格式
-      - 其余所有辅料 → 辅料订购单格式，其中：
-          * 拉链 + 拉链头：按鞋色匹配，拉头颜色列填拉链头材料颜色
-          * 鞋眼 + 垫片：按鞋色匹配，材料货号追加 "+垫片"
-          * 其他辅料：直接输出，拉头颜色留空
+      - 拉链 + 拉链头 → 辅料订购单格式（拉头颜色列，单独一张单子）
+      - 其余辅料（鞋眼+垫片、饰品等）→ 辅料订购单格式（颜色列，单独一张单子）
 
     返回:
-        standard_dict : pdo_rid → 标准格式数据
-        accessory_dict: pdo_rid → 辅料订购单格式数据
+        standard_dict       : pdo_rid → 标准格式数据
+        zipper_dict         : pdo_rid → 拉链辅料订购单格式数据
+        other_accessory_dict: pdo_rid → 其他辅料订购单格式数据
     """
     standard_dict = {}
-    accessory_dict = {}
+    zipper_dict = {}
+    other_accessory_dict = {}
 
     for pdo_rid, data in purchase_divide_order_dict.items():
         items = data["seriesData"]
@@ -413,13 +416,10 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             and not _is_eyelet(i) and not _is_washer(i)
         ]
 
-        has_zipper_pair = bool(zipper_items and head_items)
-        # Column label: "拉头颜色" only for zipper orders, else "颜色"
-        color_col_name = "拉头颜色" if has_zipper_pair else "颜色"
+        zipper_series = []
+        other_series  = []
 
-        accessory_series = []
-
-        # 拉链 + 拉链头
+        # 拉链 + 拉链头 → zipper_series
         if zipper_items:
             # 按鞋色建立拉头索引
             heads_by_color: dict = {}
@@ -451,9 +451,9 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 matched = _find_matching_head(z, sc_head_map, sc_heads[0])
                 return matched
 
-            for z in sorted(zipper_items, key=lambda x: (x.get("_zipper_pair_id") or 0, x.get("_shoe_color", ""))):
+            for z in sorted(zipper_items, key=lambda x: (x.get("_shoe_color", ""), x.get("物品名称", "") or x.get("_material_name", ""))):
                 head = _pick_head_for_zipper(z) if head_items else {}
-                accessory_series.append({
+                zipper_series.append({
                     "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
                     "颜色": _item_color_desc(head) if head else "",
@@ -462,27 +462,28 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "备注": z.get("备注", ""),
                 })
 
-        # 鞋眼 + 垫片
+        # 鞋眼 + 垫片 → other_series
         if eyelet_items:
-            washer_map   = _build_color_map(washer_items) if washer_items else {}
-            first_washer = washer_items[0] if washer_items else None
+            washer_pair_map = _build_pair_map(washer_items) if washer_items else {}
+            first_washer    = washer_items[0] if washer_items else None
             for e in eyelet_items:
-                sc = e.get("_shoe_color", "")
                 mat_desc = e.get("物品名称", "") or _item_display_name(e)
-                if washer_map or first_washer:
-                    mat_desc += "+垫片"
-                accessory_series.append({
+                if washer_items:
+                    washer    = _find_matching_head(e, washer_pair_map, first_washer)
+                    mat_desc += "+" + _item_color_desc(washer)
+                color_val  = e.get("_material_color", "")
+                other_series.append({
                     "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
                     "材料货号": mat_desc,
-                    "颜色": e.get("_material_color", ""),
+                    "颜色": color_val,
                     "单位": e.get("单位", ""),
                     "数量": e.get("数量", ""),
                     "备注": e.get("备注", ""),
                 })
 
-        # All other accessory items (饰品, 底材, 包材, etc.)
+        # All other accessory items (饰品, 底材, 包材, etc.) → other_series
         for item in other_items:
-            accessory_series.append({
+            other_series.append({
                 "工厂货号": (item.get("_factory_no", "") + " " + item.get("_shoe_color", "")).strip(),
                 "材料货号": item.get("物品名称", "") or _item_display_name(item),
                 "颜色": item.get("_material_color", ""),
@@ -491,12 +492,22 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 "备注": item.get("备注", ""),
             })
 
-        if accessory_series:
-            accessory_series.sort(key=lambda x: x.get("工厂货号", ""))
-            accessory_dict[pdo_rid] = {
-                **{k: v for k, v in data.items() if k != "seriesData"},
-                "颜色列名": color_col_name,
-                "seriesData": accessory_series,
+        base_meta = {k: v for k, v in data.items() if k != "seriesData"}
+
+        if zipper_series:
+            zipper_series.sort(key=lambda x: x.get("工厂货号", ""))
+            zipper_dict[pdo_rid] = {
+                **base_meta,
+                "颜色列名": "拉头颜色",
+                "seriesData": zipper_series,
             }
 
-    return standard_dict, accessory_dict
+        if other_series:
+            other_series.sort(key=lambda x: x.get("工厂货号", ""))
+            other_accessory_dict[pdo_rid] = {
+                **base_meta,
+                "颜色列名": "颜色",
+                "seriesData": other_series,
+            }
+
+    return standard_dict, zipper_dict, other_accessory_dict
