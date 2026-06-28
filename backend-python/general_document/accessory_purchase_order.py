@@ -287,10 +287,10 @@ def split_zipper_orders(purchase_divide_order_dict):
                     sc_heads = heads_by_color.get(sc) or heads_by_color.get("") or []
                     if not sc_heads:
                         return first_head
-                    # 用 (material_name, spec) 区分不同拉头类型，避免「装饰拉头」vs「B字拉头」被误判为同种
-                    unique_head_names = {(_item_display_name(h), h.get("_spec", "")) for h in sc_heads}
-                    if len(unique_head_names) == 1:
+                    if len(sc_heads) == 1:
                         return sc_heads[0]
+                    # 多个拉头：按 pair_id + 材料色 精确匹配（不能按名称去重，
+                    # 同名不同型号/配对组的拉头会被误判为同种）
                     sc_head_map = _build_pair_map(sc_heads)
                     return _find_matching_head(z, sc_head_map, sc_heads[0])
 
@@ -442,11 +442,10 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 if not sc_heads:
                     return first_head
                 # 同色只有一种拉头：直接返回
-                # 用 (material_name, spec) 区分不同拉头类型，避免「装饰拉头」vs「B字拉头」被误判为同种
-                unique_head_names = {(_item_display_name(h), h.get("_spec", "")) for h in sc_heads}
-                if len(unique_head_names) == 1:
+                if len(sc_heads) == 1:
                     return sc_heads[0]
                 # 同色多种拉头：按 pair_id + material_color 匹配
+                # （不能按名称去重，同名不同配对组的拉头会被误判为同种）
                 sc_head_map = _build_pair_map(sc_heads)
                 matched = _find_matching_head(z, sc_head_map, sc_heads[0])
                 return matched
