@@ -88,12 +88,22 @@ def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bo
     material_specification = purchase_order_item.material_specification
     bom_item_color = purchase_order_item.color
 
+    # zipper_pair_id 可能存于 bom_item，也可能仅存于关联的 production_instruction_item
+    # （配对组对话框可针对不同 docType 设置），故 COALESCE 两者
+    pair_id_expr = db.func.coalesce(
+        BomItem.zipper_pair_id, ProductionInstructionItem.zipper_pair_id
+    ).label("pair_id")
     q = (
-        db.session.query(BomItem, Color)
+        db.session.query(BomItem, Color, pair_id_expr)
         .join(Bom, BomItem.bom_id == Bom.bom_id)
         .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
         .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
         .join(Color, ShoeType.color_id == Color.color_id)
+        .outerjoin(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
+        )
         .filter(
             OrderShoeType.order_shoe_id == order_shoe_id,
             BomItem.material_id == material_id,
@@ -114,7 +124,7 @@ def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bo
         key = r.Color.color_id
         if key not in seen:
             seen[key] = r
-        elif seen[key].BomItem.zipper_pair_id is None and r.BomItem.zipper_pair_id is not None:
+        elif seen[key].pair_id is None and r.pair_id is not None:
             seen[key] = r
     color_rows = list(seen.values())
 
@@ -122,14 +132,14 @@ def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bo
         return [("", purchase_order_item.purchase_amount, None)]
     if len(color_rows) == 1:
         r = color_rows[0]
-        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.BomItem.zipper_pair_id)]
+        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.pair_id)]
 
     total_usage = sum(
         Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
         for r in color_rows
     )
     if total_usage == 0:
-        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.BomItem.zipper_pair_id)
+        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.pair_id)
                 for r in color_rows[:1]]
     results = []
     purchase_dec = Decimal(str(purchase_order_item.purchase_amount))
@@ -137,7 +147,7 @@ def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bo
         usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
         proportion = usage / total_usage
         color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        results.append((r.Color.color_name, color_amount, r.BomItem.zipper_pair_id))
+        results.append((r.Color.color_name, color_amount, r.pair_id))
     return results
 
 material_order = case(
