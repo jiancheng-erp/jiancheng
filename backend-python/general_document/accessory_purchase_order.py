@@ -242,6 +242,56 @@ def _find_matching_head(z, head_pair_map, first_head):
     return first_head
 
 
+def _find_matching_washer(e, washer_items):
+    """
+    为鞋眼 e 找配对垫片。
+
+    与拉链-拉头不同，鞋眼不一定都配垫片：只有配对组编号一致的鞋眼才有垫片。
+    规则：
+      - 当垫片使用了配对组编号时，鞋眼必须存在相同编号的垫片才算配对；
+        若鞋眼自身有编号但无同编号垫片，则视为无垫片，返回 None
+        （不追加"+垫片"）。
+      - 旧数据 / 未使用配对组编号时，回退按鞋色、材料色匹配。
+    无匹配返回 None。
+    """
+    if not washer_items:
+        return None
+
+    pid = e.get("_zipper_pair_id")
+    sc = e.get("_shoe_color", "")
+    mc = e.get("_material_color", "")
+
+    washers_have_pid = any(
+        w.get("_zipper_pair_id") is not None for w in washer_items
+    )
+
+    # 使用配对组编号时，严格按编号配对
+    if pid is not None and washers_have_pid:
+        candidates = [w for w in washer_items if w.get("_zipper_pair_id") == pid]
+        if not candidates:
+            return None  # 该鞋眼组无对应垫片
+        for ksc, kmc in [(sc, mc), (sc, ""), ("", mc), ("", "")]:
+            for w in candidates:
+                if (not ksc or w.get("_shoe_color", "") == ksc) and (
+                    not kmc or w.get("_material_color", "") == kmc
+                ):
+                    return w
+        return candidates[0]
+
+    # 旧数据 / 未使用配对组编号：按鞋色、材料色回退匹配
+    pair_map = _build_pair_map(washer_items)
+    for key in [
+        (None, sc, mc),
+        (None, sc, ""),
+        (None, "", mc),
+        (None, "", ""),
+    ]:
+        w = pair_map.get(key)
+        if w is not None:
+            return w
+    return washer_items[0]
+
+
 def split_zipper_orders(purchase_divide_order_dict):
     """
     识别分采购订单中需要合并打印为「辅料订购单」的条目：
@@ -318,11 +368,11 @@ def split_zipper_orders(purchase_divide_order_dict):
 
             # ── 鞋眼 + 垫片 ───────────────────────────────────────────────
             if eyelet_items and washer_items:
-                washer_pair_map = _build_pair_map(washer_items)
-                first_washer    = washer_items[0]
                 for e in eyelet_items:
-                    washer   = _find_matching_head(e, washer_pair_map, first_washer)
-                    mat_desc = (e.get("物品名称", "") or _item_display_name(e)) + "+" + _item_color_desc(washer)
+                    washer   = _find_matching_washer(e, washer_items)
+                    mat_desc = e.get("物品名称", "") or _item_display_name(e)
+                    if washer is not None:
+                        mat_desc += "+" + _item_color_desc(washer)
                     accessory_series.append({
                         "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
                         "材料货号": mat_desc,
@@ -463,13 +513,12 @@ def split_second_purchase_orders(purchase_divide_order_dict):
 
         # 鞋眼 + 垫片 → other_series
         if eyelet_items:
-            washer_pair_map = _build_pair_map(washer_items) if washer_items else {}
-            first_washer    = washer_items[0] if washer_items else None
             for e in eyelet_items:
                 mat_desc = e.get("物品名称", "") or _item_display_name(e)
                 if washer_items:
-                    washer    = _find_matching_head(e, washer_pair_map, first_washer)
-                    mat_desc += "+" + _item_color_desc(washer)
+                    washer = _find_matching_washer(e, washer_items)
+                    if washer is not None:
+                        mat_desc += "+" + _item_color_desc(washer)
                 color_val  = e.get("_material_color", "")
                 other_series.append({
                     "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
