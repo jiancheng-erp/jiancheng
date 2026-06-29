@@ -57,6 +57,16 @@ def edit_revert_production_instruction():
 
     uploaded_item_ids = set()
     craft_sheet = db.session.query(CraftSheet).filter(CraftSheet.order_shoe_id == order_shoe.order_shoe_id).first()
+    # 二次用量下发会生成一批 after_usage_symbol=1 的工艺单快照，且不带
+    # production_instruction_item_id。退回后重新编辑投产指令单时，这些快照无法通过
+    # production_instruction_item_id 关联到现有工艺单行，会被当成新材料重复插入
+    # （重复行用量为 0）。重新编辑会重建一/二次BOM及采购单，旧的下发快照已失效，
+    # 这里先清除，确保工艺单按投产指令单重建为唯一一套，再次下发时重新生成快照。
+    if craft_sheet:
+        db.session.query(CraftSheetItem).filter(
+            CraftSheetItem.craft_sheet_id == craft_sheet.craft_sheet_id,
+            CraftSheetItem.after_usage_symbol == 1,
+        ).delete(synchronize_session=False)
     second_bom = (
         db.session.query(Bom)
         .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)

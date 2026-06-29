@@ -42,6 +42,26 @@ second_purchase_bp = Blueprint("second_purrchase_bp", __name__)
 _ACCESSORY_SPLIT_EXCLUDE_TYPES = {1, 2, 4}
 
 
+def _get_hotsole_latest_craft(hotsole_bi):
+    """烫底采购订单生成时，工艺说明以投产指令单最新工艺(pre_craft_name)为准。
+
+    BOM 中的 craft_name 可能是工艺被修改（退回）前的陈旧值，因此优先查找
+    关联的投产指令单明细。若无关联项或指令单工艺为空，则回退到 BOM 工艺名。
+    """
+    if hotsole_bi.production_instruction_item_id is not None:
+        pii = (
+            db.session.query(ProductionInstructionItem)
+            .filter(
+                ProductionInstructionItem.production_instruction_item_id
+                == hotsole_bi.production_instruction_item_id
+            )
+            .first()
+        )
+        if pii and pii.pre_craft_name:
+            return pii.pre_craft_name
+    return hotsole_bi.craft_name
+
+
 def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
     """Legacy wrapper — no longer used for new downloads. Kept for compatibility."""
     color_rows = (
@@ -1381,7 +1401,7 @@ def submit_purchase_divide_orders():
                             "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
-                            "工艺说明": hotsole_bi.craft_name,
+                            "工艺说明": _get_hotsole_latest_craft(hotsole_bi),
                             "备注": hotsole_bi.remark,
                         }
                         for index, size_value in enumerate(size_values):
@@ -2033,7 +2053,7 @@ def download_purchase_order_zip():
                             "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
-                            "工艺说明": hotsole_bi.craft_name,
+                            "工艺说明": _get_hotsole_latest_craft(hotsole_bi),
                             "备注": hotsole_bi.remark,
                         }
                         for index, size_value in enumerate(size_values):
