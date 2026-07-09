@@ -144,10 +144,16 @@ function sortByAscII(val1, val2) {
         return 0;
       }
 }
+// 按订单开始日期倒序（时间越新越靠前）
+function sortByDateDesc(a, b) {
+    const aTime = Date.parse(a.orderStartDate || '') || 0
+    const bTime = Date.parse(b.orderStartDate || '') || 0
+    return bTime - aTime
+}
 async function getAllOrders() {
     const response = await axios.get(`${$api_baseUrl}/order/getallorders`)
     console.log(allData)
-    allData.value = response.data.sort((a,b) => sortByAscII(a.orderRid, b.orderRid));
+    allData.value = response.data.sort(sortByDateDesc);
     // 此处需要增加订单状态筛选功能，保留状态为生产订单确认的数据
     const arr1 = []
     const arr2 = []
@@ -158,8 +164,8 @@ async function getAllOrders() {
             arr2.push(response.data[i])
         }
     }
-    examineData.value = arr1.sort((a,b) => sortByAscII(a.orderRid, b.orderRid))
-    approvedData.value = arr2.sort((a,b) => sortByAscII(a.orderRid, b.orderRid))
+    examineData.value = arr1.sort(sortByDateDesc)
+    approvedData.value = arr2.sort(sortByDateDesc)
     dataPagination()
 }
 
