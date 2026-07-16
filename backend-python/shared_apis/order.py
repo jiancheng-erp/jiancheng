@@ -711,6 +711,10 @@ def get_order_info_business():
         "batchInfoType": batch_info_type_response,
         "orderStaffName": entity.Staff.staff_name,
         "dateInfo": formatted_start_date + " —— " + formatted_end_date,
+        "startDate": formatted_start_date,
+        "endDate": formatted_end_date,
+        "customerName": entity.Customer.customer_name,
+        "customerBrand": entity.Customer.customer_brand,
         "customerInfo": "客人编号:"
         + entity.Customer.customer_name
         + " 客人商标: "
@@ -913,6 +917,11 @@ def get_order_info_business():
                     else:
                         temp_obj["unitPerRatio"] = float(entity.OrderShoeBatchInfo.packaging_info_quantity)
                 temp_obj['total'] = int(temp_obj['unitPerRatio'] * temp_obj['totalQuantityRatio'])
+                # per-size amounts for this batch row (used by the Excel-style layout)
+                for i in range(34, 47):
+                    temp_obj[f"size{i}Amount"] = getattr(
+                        entity.OrderShoeBatchInfo, f"size_{i}_amount"
+                    )
                 response_order_shoe["shoeTypeBatchInfoList"].append(temp_obj)
 
             price_filled = (

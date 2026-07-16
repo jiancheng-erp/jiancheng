@@ -5,132 +5,130 @@
         </el-header>
         <el-container>
             <el-main>
-                <el-row :gutter="0">
-                    <el-col :span="24" :offset="0">
-                        <el-descriptions title="" :column="3" border>
-                            <el-descriptions-item label="订单编号" align="center">{{ orderData.orderRid }}</el-descriptions-item>
-                            <el-descriptions-item label="客户订单" align="center">
-                                {{ orderData.orderCid }}
-                            </el-descriptions-item>
-                            <el-descriptions-item label="客户信息" align="center">{{ orderData.customerInfo }}</el-descriptions-item>
-                            <el-descriptions-item label="订单周期" align="center">{{ orderData.dateInfo }}</el-descriptions-item>
-                            <el-descriptions-item label="配码类型" align="center">{{ orderData.batchInfoTypeName }}</el-descriptions-item>
-                            <el-descriptions-item label="订单业务员" align="center">
-                                {{ orderData.orderStaffName }}
-                            </el-descriptions-item>
-                            <el-descriptions-item label="退回订单" align="center">
-                                <el-button type="danger " size="default" @click="openRevertDialog">退回订单</el-button>
-                            </el-descriptions-item>
-                        </el-descriptions>
-                    </el-col>
-                </el-row>
+                <div class="order-sheet">
+                    <div class="sheet-title">健诚集团{{ orderData.customerName }}号客人{{ orderData.customerBrand }}生产订单</div>
 
-                <el-table
-                    :data="orderShoeData"
-                    border
-                    stripe
-                    height="550"
-                    :row-key="
-                        (row) => {
-                            return `${row.orderShoeId}`
-                        }
-                    "
-                    :default-expand-all="true"
-                    :header-row-style="tableHeaderStyle"
-                    style="margin-top: 20px"
-                >
-                    <el-table-column type="expand">
-                        <template #default="props">
-                            <el-table
-                                :data="props.row.orderShoeTypes"
-                                border
-                                :row-key="
-                                    (row) => {
-                                        return `${row.orderShoeTypeId}`
-                                    }
-                                "
-                                :default-expand-all="true"
-                                :header-row-style="tableHeaderStyle"
-                            >
-                                <el-table-column type="expand">
-                                    <template #default="scope">
-                                        <el-table :data="scope.row.shoeTypeBatchInfoList" :header-row-style="tableHeaderStyle">
-                                            <el-table-column type="index"></el-table-column>
-                                            <el-table-column prop="packagingInfoName" label="配码名称" width="180" />
-                                            <el-table-column
-                                                v-for="col in Object.keys(attrMappingToRatio).filter((key) => batchInfoType[key] != null)"
-                                                :prop="attrMappingToRatio[col]"
-                                                :label="batchInfoType[col]"
-                                                width="60"
-                                            ></el-table-column>
-                                            <el-table-column prop="totalQuantityRatio" label="对/件" width="240" />
-                                            <el-table-column prop="unitPerRatio" label="件数" />
-                                        </el-table>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column prop="shoeTypeColorName" label="中文颜色" width="90" />
-                                <el-table-column prop="customerColorName" label="英文颜色" width="90" />
-                                <el-table-column
-                                    v-for="col in Object.keys(attrMappingToAmount).filter((key) => batchInfoType[key] != null)"
-                                    :prop="`shoeTypeBatchData.${attrMappingToAmount[col]}`"
-                                    :label="batchInfoType[col]"
-                                    width="60"
-                                ></el-table-column>
-                                <el-table-column prop="shoeTypeBatchData.totalAmount" label="总数量" width="120" />
-                                <el-table-column label="金额" width="120">
-                                    <template #default="scope">
-                                        <el-input
-                                            size="small"
-                                            controls-position="right"
-                                            @change="updateValue(scope.row)"
-                                            v-model.lazy="scope.row.shoeTypeBatchData.unitPrice"
-                                            :disabled="priceChangeNotAllowed"
-                                        >
-                                        </el-input>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column label="金额单位">
-                                    <template #default="scope">
-                                        <el-input
-                                            size="small"
-                                            controls-position="right"
-                                            @change="updateCurrencyValue(scope.row)"
-                                            v-model="scope.row.shoeTypeBatchData.currencyType"
-                                            :disabled="priceChangeNotAllowed"
-                                        >
-                                        </el-input>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column prop="shoeTypeBatchData.totalPrice" label="总金额" />
-                                <el-table-column label="鞋型">
-                                    <template #default="scope">
-                                        <el-image :src="imagerUrl(scope.row.shoeTypeImgUrl)" style="width: 150px; height: 100px" v-if="scope.row.shoeTypeImgUrl"></el-image>
-                                        <span v-else>暂无图片数据</span>
-                                    </template>
-                                </el-table-column>
-                            </el-table>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="shoeRid" label="鞋型编号" sortable />
-                    <el-table-column prop="shoeCid" label="客户鞋型编号" sortable />
-                    <el-table-column prop="currentStatus" label="鞋型状态" />
-                    <el-table-column label="备注">
-                        <template #default="scope">
-                            <el-button v-if="!scope.row.orderShoeRemarkExist" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
+                    <table class="excel-table info-table">
+                        <tbody>
+                            <tr>
+                                <td class="info-label">单号</td>
+                                <td class="info-value">{{ orderData.orderRid }}</td>
+                                <td class="info-label">下单日期</td>
+                                <td class="info-value">{{ orderData.startDate }}</td>
+                                <td class="info-label">出货日期</td>
+                                <td class="info-value">{{ orderData.endDate }}</td>
+                                <td class="info-label">客户订单号</td>
+                                <td class="info-value">{{ orderData.orderCid }}</td>
+                                <td class="info-label">业务</td>
+                                <td class="info-value">{{ orderData.orderStaffName }}</td>
+                                <td class="info-label">配码类型</td>
+                                <td class="info-value">{{ orderData.batchInfoTypeName }}</td>
+                                <td class="info-action">
+                                    <el-button type="danger" size="small" @click="openRevertDialog">退回订单</el-button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                            <el-text v-if="scope.row.orderShoeRemarkExist" style="display: inline-block">{{ scope.row.orderShoeRemarkRep }}</el-text>
-                            <el-button v-if="scope.row.orderShoeRemarkExist" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px; margin-top: -20px">
-                                编辑备注
-                            </el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
+                    <table class="excel-table main-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px">鞋图</th>
+                                <th style="width: 90px">工厂款号</th>
+                                <th style="width: 100px">客户型号</th>
+                                <th style="width: 70px">颜色</th>
+                                <th style="width: 90px">客户颜色</th>
+                                <th style="width: 80px">配码</th>
+                                <th class="size-col" colspan="1" v-for="s in activeSizes" :key="s.amountKey">{{ s.name }}</th>
+                                <th style="width: 55px">对/件</th>
+                                <th style="width: 55px">件数</th>
+                                <th style="width: 55px">双数</th>
+                                <th style="width: 200px">备注</th>
+                                <th style="width: 120px">价格</th>
+                                <th style="width: 110px">金额</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="shoe in orderShoeData" :key="shoe.orderShoeId">
+                                <template v-for="(colorType, ci) in shoe.orderShoeTypes" :key="colorType.orderShoeTypeId">
+                                    <tr v-for="(batch, bi) in colorType.shoeTypeBatchInfoList" :key="`${colorType.orderShoeTypeId}-${bi}`">
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)" class="img-cell">
+                                            <div v-for="ct in shoe.orderShoeTypes" :key="`img-${ct.orderShoeTypeId}`" class="img-wrap">
+                                                <el-image
+                                                    v-if="ct.shoeTypeImgUrl"
+                                                    :src="ct.shoeTypeImgUrl"
+                                                    :preview-src-list="[ct.shoeTypeImgUrl]"
+                                                    fit="contain"
+                                                    style="width: 120px; height: 80px"
+                                                ></el-image>
+                                                <span v-else class="no-img">暂无图片</span>
+                                            </div>
+                                        </td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)">{{ shoe.shoeRid }}</td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)">{{ shoe.shoeCid }}</td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">{{ colorType.shoeTypeColorName }}</td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">{{ colorType.customerColorName }}</td>
+                                        <td>{{ batch.packagingInfoName }}</td>
+                                        <td class="size-col" v-for="s in activeSizes" :key="s.amountKey">
+                                            {{ batch[s.amountKey] || '' }}
+                                        </td>
+                                        <td>{{ batch.totalQuantityRatio }}</td>
+                                        <td>{{ batch.unitPerRatio }}</td>
+                                        <td>{{ batch.total }}</td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)" class="remark-cell">
+                                            <template v-if="shoe.orderShoeRemarkExist">
+                                                <div class="remark-text">{{ shoe.orderShoeRemarkRep }}</div>
+                                                <el-button type="warning" size="small" @click="openEditRemarkDialog(shoe)">编辑备注</el-button>
+                                            </template>
+                                            <el-button v-else type="primary" size="small" @click="openRemarkDialog(shoe)">添加备注</el-button>
+                                        </td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length" class="price-cell">
+                                            <template v-if="colorType.shoeTypeBatchData.unitPrice !== null && colorType.shoeTypeBatchData.unitPrice !== undefined">
+                                                <el-input
+                                                    size="small"
+                                                    v-model.lazy="colorType.shoeTypeBatchData.unitPrice"
+                                                    @change="onPriceChange(colorType)"
+                                                    :disabled="priceChangeNotAllowed"
+                                                />
+                                                <el-input
+                                                    size="small"
+                                                    placeholder="单位"
+                                                    v-model="colorType.shoeTypeBatchData.currencyType"
+                                                    @change="onCurrencyChange(colorType)"
+                                                    :disabled="priceChangeNotAllowed"
+                                                    style="margin-top: 4px"
+                                                />
+                                            </template>
+                                            <span v-else>--</span>
+                                        </td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">
+                                            <template v-if="colorType.shoeTypeBatchData.totalPrice !== null && colorType.shoeTypeBatchData.totalPrice !== undefined">
+                                                {{ colorType.shoeTypeBatchData.currencyType === 'RMB' || colorType.shoeTypeBatchData.currencyType === '人民币' ? '¥' : '' }}{{ formatMoney(colorType.shoeTypeBatchData.totalPrice) }}
+                                            </template>
+                                            <span v-else>--</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <tr class="total-row">
+                                <td :colspan="5">合计</td>
+                                <td></td>
+                                <td class="size-col" v-for="s in activeSizes" :key="`total-${s.amountKey}`">{{ sizeTotals[s.amountKey] || '' }}</td>
+                                <td></td>
+                                <td></td>
+                                <td>{{ grandTotalPairs }}</td>
+                                <td></td>
+                                <td></td>
+                                <td>{{ grandTotalPrice !== null ? '¥' + formatMoney(grandTotalPrice) : '--' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-                <span>
-                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7 || role == 1">保存数据</el-button>
-                    <!--<el-button type="warning" @click="rejectOrder" v-if="orderData.orderStatus === 7">订单退回</el-button> -->
+                <div class="action-bar">
+                    <el-button type="primary" @click="saveFormData" v-if="orderData.orderStatus === 7 || role == 1 || role == 2">保存数据</el-button>
                     <el-button type="primary" @click="showMessage" v-if="orderData.orderStatus === 7">完成审批</el-button>
-                </span>
+                </div>
             </el-main>
         </el-container>
     </el-container>
@@ -192,7 +190,7 @@
 <script setup>
 import AllHeader from '@/components/AllHeader.vue'
 import axios from 'axios'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch, computed } from 'vue'
 import { getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -251,6 +249,69 @@ let remarkForm = reactive({
     materialRemark: ''
 })
 
+const activeSizes = ref([])
+
+const sizeTotals = computed(() => {
+    const totals = {}
+    activeSizes.value.forEach((s) => (totals[s.amountKey] = 0))
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) =>
+            (colorType.shoeTypeBatchInfoList || []).forEach((batch) => {
+                activeSizes.value.forEach((s) => {
+                    totals[s.amountKey] += Number(batch[s.amountKey]) || 0
+                })
+            })
+        )
+    )
+    return totals
+})
+
+const grandTotalPairs = computed(() => {
+    let total = 0
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) => {
+            total += Number(colorType.shoeTypeBatchData?.totalAmount) || 0
+        })
+    )
+    return total
+})
+
+const grandTotalPrice = computed(() => {
+    let total = 0
+    let hasPrice = false
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) => {
+            const price = colorType.shoeTypeBatchData?.totalPrice
+            if (price !== null && price !== undefined) {
+                total += Number(price) || 0
+                hasPrice = true
+            }
+        })
+    )
+    return hasPrice ? parseFloat(total.toFixed(2)) : null
+})
+
+function shoeRowCount(shoe) {
+    return (shoe.orderShoeTypes || []).reduce((sum, colorType) => sum + (colorType.shoeTypeBatchInfoList?.length || 0), 0)
+}
+
+function formatMoney(value) {
+    const num = Number(value)
+    if (isNaN(num)) return value
+    return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function onPriceChange(colorType) {
+    const amount = Number(colorType.shoeTypeBatchData.totalAmount) || 0
+    const price = parseFloat(colorType.shoeTypeBatchData.unitPrice) || 0
+    colorType.shoeTypeBatchData.totalPrice = parseFloat((price * amount).toFixed(2))
+    orderShoeTypeIdToUnitPrice[colorType.orderShoeTypeId] = colorType.shoeTypeBatchData.unitPrice
+}
+
+function onCurrencyChange(colorType) {
+    orderShoeTypeIdToCurrencyType[colorType.orderShoeTypeId] = colorType.shoeTypeBatchData.currencyType
+}
+
 onMounted(() => {
     getOrderInfo()
     getAllRevertStatusReasonOptions()
@@ -262,6 +323,12 @@ async function getOrderInfo() {
     orderData.value = response.data
     orderShoeData.value = response.data.orderShoeAllData
     batchInfoType = response.data.batchInfoType
+    activeSizes.value = Object.keys(attrMappingToRatio)
+        .filter((key) => batchInfoType[key] != null)
+        .map((key) => ({
+            name: batchInfoType[key],
+            amountKey: attrMappingToAmount[key]
+        }))
     orderData.value.orderShoeAllData.forEach((orderShoe) =>
         orderShoe.orderShoeTypes.forEach((orderShoeType) => {
             orderShoeTypeIdToUnitPrice[orderShoeType.orderShoeTypeId] = orderShoeType.shoeTypeBatchData.unitPrice
@@ -412,5 +479,158 @@ async function revertOrder() {
 <style scoped>
 .el-table .cell {
     white-space: pre-line !important;
+}
+
+:deep(.el-main) {
+    background: #f0f2f5;
+    padding: 20px;
+}
+
+.order-sheet {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 24px 28px 30px;
+    overflow-x: auto;
+}
+
+.sheet-title {
+    text-align: center;
+    font-size: 23px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: #1f2d3d;
+    padding: 4px 0 20px;
+}
+
+.sheet-title::after {
+    content: '';
+    display: block;
+    width: 90px;
+    height: 3px;
+    margin: 12px auto 0;
+    background: linear-gradient(90deg, #409eff, #66b1ff);
+    border-radius: 2px;
+}
+
+.excel-table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: fixed;
+    font-size: 13px;
+    color: #303133;
+}
+
+.excel-table th,
+.excel-table td {
+    border: 1px solid #d5d8dd;
+    padding: 6px 6px;
+    text-align: center;
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.excel-table th {
+    background: linear-gradient(180deg, #f7f9fc, #eaeef4);
+    font-weight: 600;
+    color: #1f2d3d;
+}
+
+.info-table {
+    margin-bottom: -1px;
+}
+
+.info-table .info-label {
+    background: #eef4ff;
+    color: #3a7bd5;
+    font-weight: 600;
+    width: 80px;
+    white-space: nowrap;
+}
+
+.info-table .info-value {
+    white-space: nowrap;
+    color: #303133;
+}
+
+.info-table .info-action {
+    width: 110px;
+    background: #fafbfc;
+}
+
+.main-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.main-table .size-col {
+    width: 44px;
+    background: #fbfcfe;
+}
+
+.main-table tbody tr:hover td {
+    background: #f2f8ff;
+}
+
+.img-cell {
+    padding: 6px;
+    background: #fff;
+}
+
+.img-cell .img-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3px 0;
+}
+
+.img-cell .img-wrap :deep(.el-image) {
+    border-radius: 6px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+.img-cell .no-img {
+    color: #b0b3b8;
+    font-size: 12px;
+}
+
+.remark-cell {
+    text-align: left;
+    white-space: pre-line;
+    line-height: 1.6;
+}
+
+.remark-cell .remark-text {
+    margin-bottom: 8px;
+    color: #5a5e66;
+}
+
+.price-cell {
+    padding: 6px;
+}
+
+.price-cell :deep(.el-input__wrapper) {
+    border-radius: 6px;
+}
+
+.total-row td {
+    font-weight: 700;
+    background: #eef4ff !important;
+    color: #1f2d3d;
+    font-size: 14px;
+}
+
+.action-bar {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.action-bar :deep(.el-button) {
+    min-width: 120px;
+    border-radius: 8px;
 }
 </style>
