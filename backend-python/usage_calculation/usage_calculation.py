@@ -549,6 +549,7 @@ def issue_bom_usage():
         message_first_purchase,
         "XieShuWa",
         context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        push_to_group=True,
     )
     message_second_purchase = (
         "订单已发出至二次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
@@ -558,6 +559,7 @@ def issue_bom_usage():
         message_second_purchase,
         "FanJianMing",
         context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        push_to_group=True,
     )
     db.session.commit()
     return jsonify({"status": "success"})

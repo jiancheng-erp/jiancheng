@@ -1251,6 +1251,7 @@ def issue_production_order():
         message_first_usage,
         "YangShuYao",
         context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        push_to_group=True,
     )
     message_craft_sheet = "投产指令单已发出至工艺单填写，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
     send_configurable_message(
@@ -1258,6 +1259,7 @@ def issue_production_order():
         message_craft_sheet,
         "YangShuYao",
         context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        push_to_group=True,
     )
     return jsonify({"message": "Production order issued successfully"})
 

@@ -900,6 +900,7 @@ def confirm_production_order():
             message,
             "YangShuYao",
             context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+            push_to_group=True,
         )
         message2 = "订单已由总经理确认，可以下载生产订单/包装资料信息，订单号：{order_rid}，鞋型号：{order_shoe_rid}"
         send_configurable_message(
