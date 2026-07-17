@@ -635,6 +635,7 @@ def order_next_step():
         message,
         "070d09bbc28c2cec22535b7ec5d1316b",
         context={"order_rid": order_rid, "order_shoe_rid": order_shoe_rid},
+        push_to_group=True,
     )
     db.session.commit()
     return "Event Processed In Order Create API CALL", 200

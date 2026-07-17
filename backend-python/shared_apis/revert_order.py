@@ -444,6 +444,7 @@ def revert_order_save():
             "order_rid": order_rid,
             "revert_to_status": revert_to_status,
         },
+        push_to_group=True,
     )
     db.session.commit()
     return jsonify({"message": "success"})
