@@ -16,6 +16,9 @@
                     <el-menu-item index="order" @click="handleMenuClick('order')">
                         <span>订单查询</span>
                     </el-menu-item>
+                    <el-menu-item index="orderShoeEdit" @click="handleMenuClick('orderShoeEdit')">
+                        <span>订单鞋型修改</span>
+                    </el-menu-item>
                     <el-menu-item index="lingerDashboard" @click="handleMenuClick('lingerDashboard')">
                         <span>滞留看板</span>
                     </el-menu-item>
@@ -52,6 +55,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import OrderSearch from '../components/OrderSearch.vue'
+import OrderShoeTypeManage from '../components/OrderShoeTypeManage.vue'
 import LingerDashboard from '../components/LingerDashboard.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import WechatTemplateManager from '@/Pages/System/WechatTemplateManager.vue'
@@ -62,6 +66,7 @@ export default {
     components: {
         AllHeader,
         OrderSearch,
+        OrderShoeTypeManage,
         LingerDashboard,
         PersonalInfo,
         WechatTemplateManager,
@@ -89,6 +94,8 @@ export default {
         handleMenuClick(index) {
             if (index === 'order') {
                 this.currentComponent = 'OrderSearch'
+            } else if (index === 'orderShoeEdit') {
+                this.currentComponent = 'OrderShoeTypeManage'
             } else if (index === 'lingerDashboard') {
                 this.currentComponent = 'LingerDashboard'
             } else if (index === 'profile') {

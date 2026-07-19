@@ -10,6 +10,7 @@ import math
 import os
 import shutil
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from event_processor import EventProcessor
 
 from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
@@ -21,7 +22,7 @@ from general_document.production_order_export import (
     generate_production_excel_file,
     generate_production_amount_excel_file,
 )
-from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH
+from file_locations import FILE_STORAGE_PATH, IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH
 from models import *
 from shared_apis import customer
 from logger import logger
@@ -2853,3 +2854,274 @@ def approve_outbound_by_general_manager():
         return jsonify({"message": "failed"}), 400
     db.session.commit()
     return jsonify({"message": "批准成功"}), 200
+
+
+@order_bp.route("/order/getordershoetypeeditinfo", methods=["GET"])
+def get_order_shoe_type_edit_info():
+    """获取订单下每个鞋型的可编辑信息（颜色、客户型号、客户颜色、单价、币种、数量）"""
+    order_id = request.args.get("orderId", type=int)
+    if not order_id:
+        return jsonify({"message": "缺少orderId参数"}), 400
+
+    order = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    customer = (
+        db.session.query(Customer)
+        .filter(Customer.customer_id == order.customer_id)
+        .first()
+    )
+
+    order_shoes = (
+        db.session.query(OrderShoe, Shoe)
+        .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .all()
+    )
+
+    result_shoes = []
+    for order_shoe, shoe in order_shoes:
+        shoe_types = (
+            db.session.query(OrderShoeType, ShoeType, Color)
+            .join(ShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+            .join(Color, Color.color_id == ShoeType.color_id)
+            .filter(OrderShoeType.order_shoe_id == order_shoe.order_shoe_id)
+            .all()
+        )
+        shoe_type_list = []
+        for ost, shoe_type, color in shoe_types:
+            batch_infos = (
+                db.session.query(OrderShoeBatchInfo)
+                .filter(
+                    OrderShoeBatchInfo.order_shoe_type_id == ost.order_shoe_type_id
+                )
+                .all()
+            )
+            batch_list = []
+            for b in batch_infos:
+                batch_obj = {
+                    "orderShoeBatchInfoId": b.order_shoe_batch_info_id,
+                    "name": b.name,
+                    "totalAmount": b.total_amount or 0,
+                    "totalPrice": float(b.total_price) if b.total_price is not None else 0,
+                }
+                for i in range(34, 47):
+                    batch_obj[f"size{i}Amount"] = getattr(b, f"size_{i}_amount") or 0
+                batch_list.append(batch_obj)
+            shoe_type_list.append(
+                {
+                    "orderShoeTypeId": ost.order_shoe_type_id,
+                    "colorId": color.color_id,
+                    "colorName": color.color_name,
+                    "customerColorName": ost.customer_color_name or "",
+                    "unitPrice": float(ost.unit_price) if ost.unit_price is not None else 0,
+                    "currencyType": ost.currency_type or "",
+                    "shoeImageUrl": (
+                        IMAGE_STORAGE_PATH + shoe_type.shoe_image_url
+                        if shoe_type.shoe_image_url
+                        else None
+                    ),
+                    "batchInfoList": batch_list,
+                }
+            )
+        result_shoes.append(
+            {
+                "orderShoeId": order_shoe.order_shoe_id,
+                "shoeId": shoe.shoe_id,
+                "shoeRid": shoe.shoe_rid,
+                "customerProductName": order_shoe.customer_product_name or "",
+                "shoeTypes": shoe_type_list,
+            }
+        )
+
+    return jsonify(
+        {
+            "orderId": order.order_id,
+            "orderRid": order.order_rid,
+            "customerName": customer.customer_name if customer else "",
+            "orderShoes": result_shoes,
+        }
+    )
+
+
+def _resolve_shoe_type_image_for_color(shoe_id, new_color_id):
+    """按新颜色推导鞋型图片路径。
+
+    鞋型图片按颜色存放（shoe/{标识}/{颜色名}/shoe_image.jpg）。参考同款鞋型任一
+    带图片的兄弟记录来学习路径规则，将颜色目录替换为新颜色名。仅当新颜色的图片
+    在图片服务器上确实存在时才返回该路径，否则返回 None（留空，等待后续上传）。
+    """
+    new_color = (
+        db.session.query(Color).filter(Color.color_id == new_color_id).first()
+    )
+    if not new_color:
+        return None
+    sibling = (
+        db.session.query(ShoeType)
+        .filter(
+            ShoeType.shoe_id == shoe_id,
+            ShoeType.shoe_image_url.isnot(None),
+            ShoeType.shoe_image_url != "",
+        )
+        .first()
+    )
+    if not sibling:
+        return None
+    parts = sibling.shoe_image_url.replace("\\", "/").split("/")
+    # 期望形如 shoe/{标识}/{颜色名}/shoe_image.jpg
+    if len(parts) < 4:
+        return None
+    parts[2] = new_color.color_name
+    candidate = "/".join(parts)
+    if os.path.exists(os.path.join(IMAGE_UPLOAD_PATH, candidate)):
+        return candidate
+    return None
+
+
+@order_bp.route("/order/updateordershoetypeeditinfo", methods=["POST"])
+def update_order_shoe_type_edit_info():
+    """更新订单鞋型信息（客户型号、颜色、客户颜色、单价、币种、数量）。
+
+    修改颜色时不会直接改动共享的 shoe_type 记录，而是为该鞋型定位/新建
+    对应颜色的 shoe_type 并改变 order_shoe_type 的指向，从而避免影响其他订单。
+
+    注意路径变化：
+    - 图片服务器（IMAGE_UPLOAD_PATH / IMAGE_STORAGE_PATH）上鞋型图片是按颜色存放的，
+      路径形如 shoe/{标识}/{颜色名}/shoe_image.jpg。新建颜色对应的 shoe_type 时不能
+      沿用旧颜色的图片路径，需按新颜色名推导，且仅当图片实际存在时才引用，否则留空。
+    - 文件服务器（FILE_STORAGE_PATH）上的订单文件按 {order_id}/{shoe_rid} 组织，与颜色无关，
+      因此修改颜色不涉及订单文件目录的迁移。
+    """
+    data = request.get_json() or {}
+    order_shoe_updates = data.get("orderShoes", [])
+    shoe_type_updates = data.get("shoeTypes", [])
+
+    try:
+        # 1) 更新客户型号（order_shoe 为订单私有，不会影响其他订单）
+        for item in order_shoe_updates:
+            order_shoe_id = item.get("orderShoeId")
+            if order_shoe_id is None:
+                continue
+            order_shoe = (
+                db.session.query(OrderShoe)
+                .filter(OrderShoe.order_shoe_id == order_shoe_id)
+                .first()
+            )
+            if not order_shoe:
+                continue
+            if "customerProductName" in item:
+                order_shoe.customer_product_name = item.get("customerProductName") or ""
+
+        # 预先校验：同一 order_shoe 内不能出现重复颜色
+        planned_colors = {}
+        ost_cache = {}
+        for st in shoe_type_updates:
+            ost_id = st.get("orderShoeTypeId")
+            if ost_id is None:
+                continue
+            ost = (
+                db.session.query(OrderShoeType)
+                .filter(OrderShoeType.order_shoe_type_id == ost_id)
+                .first()
+            )
+            if not ost:
+                continue
+            ost_cache[ost_id] = ost
+            current_shoe_type = (
+                db.session.query(ShoeType)
+                .filter(ShoeType.shoe_type_id == ost.shoe_type_id)
+                .first()
+            )
+            target_color = st.get("colorId")
+            if target_color is None:
+                target_color = current_shoe_type.color_id if current_shoe_type else None
+            used_colors = planned_colors.setdefault(ost.order_shoe_id, set())
+            if target_color in used_colors:
+                return jsonify({"message": "同一鞋型下存在重复的颜色，请检查"}), 400
+            used_colors.add(target_color)
+
+        # 2) 更新每个鞋型的信息
+        for st in shoe_type_updates:
+            ost_id = st.get("orderShoeTypeId")
+            ost = ost_cache.get(ost_id)
+            if not ost:
+                continue
+
+            if "customerColorName" in st:
+                ost.customer_color_name = st.get("customerColorName") or ""
+            if "currencyType" in st:
+                ost.currency_type = st.get("currencyType") or ""
+            if "unitPrice" in st and st.get("unitPrice") is not None:
+                try:
+                    ost.unit_price = Decimal(str(st.get("unitPrice")))
+                except (InvalidOperation, ValueError):
+                    return jsonify({"message": "单价格式不正确"}), 400
+
+            # 处理颜色修改：定位/新建对应颜色的 shoe_type，避免修改共享记录
+            new_color_id = st.get("colorId")
+            if new_color_id is not None:
+                current_shoe_type = (
+                    db.session.query(ShoeType)
+                    .filter(ShoeType.shoe_type_id == ost.shoe_type_id)
+                    .first()
+                )
+                if current_shoe_type and new_color_id != current_shoe_type.color_id:
+                    shoe_id = current_shoe_type.shoe_id
+                    target_shoe_type = (
+                        db.session.query(ShoeType)
+                        .filter(
+                            ShoeType.shoe_id == shoe_id,
+                            ShoeType.color_id == new_color_id,
+                        )
+                        .first()
+                    )
+                    if not target_shoe_type:
+                        # 图片按颜色存放，新建颜色不能沿用旧颜色的图片路径，
+                        # 需按新颜色名推导并校验图片是否存在，否则留空等待上传。
+                        new_image_url = _resolve_shoe_type_image_for_color(
+                            shoe_id, new_color_id
+                        )
+                        target_shoe_type = ShoeType(
+                            shoe_id=shoe_id,
+                            color_id=new_color_id,
+                            shoe_image_url=new_image_url,
+                        )
+                        db.session.add(target_shoe_type)
+                        db.session.flush()
+                    ost.shoe_type_id = target_shoe_type.shoe_type_id
+
+            # 3) 更新数量并重算金额
+            unit_price = ost.unit_price or Decimal("0")
+            for batch in st.get("batchInfoList", []):
+                batch_id = batch.get("orderShoeBatchInfoId")
+                if batch_id is None:
+                    continue
+                b = (
+                    db.session.query(OrderShoeBatchInfo)
+                    .filter(OrderShoeBatchInfo.order_shoe_batch_info_id == batch_id)
+                    .first()
+                )
+                if not b:
+                    continue
+                size_provided = False
+                size_total = 0
+                for i in range(34, 47):
+                    key = f"size{i}Amount"
+                    if key in batch:
+                        size_provided = True
+                        val = int(batch.get(key) or 0)
+                        setattr(b, f"size_{i}_amount", val)
+                        size_total += val
+                if size_provided:
+                    b.total_amount = size_total
+                elif "totalAmount" in batch:
+                    b.total_amount = int(batch.get("totalAmount") or 0)
+                b.total_price = unit_price * (b.total_amount or 0)
+
+        db.session.commit()
+        return jsonify({"message": "修改成功"}), 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"更新订单鞋型信息失败: {e}")
+        return jsonify({"message": "修改失败"}), 500
