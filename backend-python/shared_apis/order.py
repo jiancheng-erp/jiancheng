@@ -3042,6 +3042,7 @@ def update_order_shoe_type_edit_info():
             used_colors.add(target_color)
 
         # 2) 更新每个鞋型的信息
+        affected_ost_ids = set()  # 记录数量发生变化的鞋型，稍后同步入库预计数量
         for st in shoe_type_updates:
             ost_id = st.get("orderShoeTypeId")
             ost = ost_cache.get(ost_id)
@@ -3118,6 +3119,11 @@ def update_order_shoe_type_edit_info():
                 elif "totalAmount" in batch:
                     b.total_amount = int(batch.get("totalAmount") or 0)
                 b.total_price = unit_price * (b.total_amount or 0)
+                affected_ost_ids.add(ost.order_shoe_type_id)
+
+        # 4) 同步入库预计数量：成品/半成品入库的预计数量按鞋型下所有批次汇总，
+        #    修改订单数量后必须同步更新，否则入库时的预计数量会与实际订单不一致。
+        _sync_estimated_inbound_amounts(affected_ost_ids)
 
         db.session.commit()
         return jsonify({"message": "修改成功"}), 200
@@ -3125,3 +3131,52 @@ def update_order_shoe_type_edit_info():
         db.session.rollback()
         logger.error(f"更新订单鞋型信息失败: {e}")
         return jsonify({"message": "修改失败"}), 500
+
+
+def _sync_estimated_inbound_amounts(order_shoe_type_ids):
+    """按鞋型重新汇总各尺码数量，并同步更新成品/半成品入库的预计数量。
+
+    成品仓（FinishedShoeStorage）与半成品仓（SemifinishedShoeStorage）中的预计入库
+    数量（finished_estimated_amount / semifinished_estimated_amount 及各尺码预计数量）
+    是排期时按该鞋型下所有批次数量汇总得到的。当订单数量被修改后，这里按相同规则
+    重新汇总并回写，保证入库时的预计数量与订单数量一致。仅当对应库存记录已存在时更新。
+    """
+    for ost_id in order_shoe_type_ids:
+        if ost_id is None:
+            continue
+        # 汇总该鞋型下所有批次的总数量与各尺码数量
+        batches = (
+            db.session.query(OrderShoeBatchInfo)
+            .filter(OrderShoeBatchInfo.order_shoe_type_id == ost_id)
+            .all()
+        )
+        total_amount = 0
+        size_totals = {i: 0 for i in range(34, 47)}
+        for b in batches:
+            total_amount += b.total_amount or 0
+            for i in range(34, 47):
+                size_totals[i] += getattr(b, f"size_{i}_amount") or 0
+
+        finished_storage = (
+            db.session.query(FinishedShoeStorage)
+            .filter(FinishedShoeStorage.order_shoe_type_id == ost_id)
+            .first()
+        )
+        if finished_storage:
+            finished_storage.finished_estimated_amount = total_amount
+            for i in range(34, 47):
+                setattr(
+                    finished_storage, f"size_{i}_estimated_amount", size_totals[i]
+                )
+
+        semifinished_storage = (
+            db.session.query(SemifinishedShoeStorage)
+            .filter(SemifinishedShoeStorage.order_shoe_type_id == ost_id)
+            .first()
+        )
+        if semifinished_storage:
+            semifinished_storage.semifinished_estimated_amount = total_amount
+            for i in range(34, 47):
+                setattr(
+                    semifinished_storage, f"size_{i}_estimated_amount", size_totals[i]
+                )
