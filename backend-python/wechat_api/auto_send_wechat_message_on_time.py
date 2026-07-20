@@ -209,84 +209,28 @@ def send_message_to_all(app):
 
 def send_massage_to_business(app):
     with app.app_context():
-        manager1 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 10,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 1,
+        def count_business_orders(supervisor_id, order_status_value):
+            # 按 order_id 去重统计，避免一个订单含多个鞋款时被重复计数
+            # 排除预报单（order_type == "F"），与订单管理页面口径保持一致
+            return (
+                db.session.query(Order.order_id)
+                .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+                .filter(
+                    Order.supervisor_id == supervisor_id,
+                    Order.order_type != "F",
+                    OrderStatus.order_current_status == 6,
+                    OrderStatus.order_status_value == order_status_value,
+                )
+                .distinct()
+                .count()
             )
-            .all()
-        )
-        manager2 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 24,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 1,
-            )
-            .all()
-        )
-        manager3 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 30,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 1,
-            )
-            .all()
-        )
-        pre_create_orders_for_manager1 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 10,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 0,
-            )
-            .all()
-        )
-        pre_create_orders_for_manager2 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 24,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 0,
-            )
-            .all()
-        )
-        pre_create_orders_for_manager3 = (
-            db.session.query(Order, OrderShoe, Shoe, Customer, OrderStatus)
-            .join(OrderShoe, OrderShoe.order_id == Order.order_id)
-            .join(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-            .join(Customer, Order.customer_id == Customer.customer_id)
-            .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
-            .filter(
-                Order.supervisor_id == 30,
-                OrderStatus.order_current_status == 6,
-                OrderStatus.order_status_value == 0,
-            )
-            .all()
-        )
+
+        manager1_pending = count_business_orders(10, 1)
+        manager2_pending = count_business_orders(24, 1)
+        manager3_pending = count_business_orders(30, 1)
+        manager1_pre_create = count_business_orders(10, 0)
+        manager2_pre_create = count_business_orders(24, 0)
+        manager3_pre_create = count_business_orders(30, 0)
 
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         status_message = (
@@ -316,12 +260,12 @@ def send_massage_to_business(app):
             "070d09bbc28c2cec22535b7ec5d1316b|55232b966e1a1348da858dc23135274a",
             context={
                 "current_time": current_time,
-                "manager1_pending": len(manager1),
-                "manager2_pending": len(manager2),
-                "manager3_pending": len(manager3),
-                "manager1_pre_create": len(pre_create_orders_for_manager1),
-                "manager2_pre_create": len(pre_create_orders_for_manager2),
-                "manager3_pre_create": len(pre_create_orders_for_manager3),
+                "manager1_pending": manager1_pending,
+                "manager2_pending": manager2_pending,
+                "manager3_pending": manager3_pending,
+                "manager1_pre_create": manager1_pre_create,
+                "manager2_pre_create": manager2_pre_create,
+                "manager3_pre_create": manager3_pre_create,
             },
         )
         send_configurable_message(
@@ -330,8 +274,8 @@ def send_massage_to_business(app):
             "utopa.",
             context={
                 "current_time": current_time,
-                "pending": len(manager1),
-                "pre_create": len(pre_create_orders_for_manager1),
+                "pending": manager1_pending,
+                "pre_create": manager1_pre_create,
             },
         )
         send_configurable_message(
@@ -340,8 +284,8 @@ def send_massage_to_business(app):
             "ellen",
             context={
                 "current_time": current_time,
-                "pending": len(manager2),
-                "pre_create": len(pre_create_orders_for_manager2),
+                "pending": manager2_pending,
+                "pre_create": manager2_pre_create,
             },
         )
         send_configurable_message(
@@ -350,8 +294,8 @@ def send_massage_to_business(app):
             "55232b966e1a1348da858dc23135274a",
             context={
                 "current_time": current_time,
-                "pending": len(manager3),
-                "pre_create": len(pre_create_orders_for_manager3),
+                "pending": manager3_pending,
+                "pre_create": manager3_pre_create,
             },
         )
 
