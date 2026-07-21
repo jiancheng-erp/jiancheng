@@ -103,7 +103,7 @@
                                         </td>
                                         <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">
                                             <template v-if="colorType.shoeTypeBatchData.totalPrice !== null && colorType.shoeTypeBatchData.totalPrice !== undefined">
-                                                {{ colorType.shoeTypeBatchData.currencyType === 'RMB' || colorType.shoeTypeBatchData.currencyType === '人民币' ? '¥' : '' }}{{ formatMoney(colorType.shoeTypeBatchData.totalPrice) }}
+                                                {{ currencySymbol(colorType.shoeTypeBatchData.currencyType) }}{{ formatMoney(colorType.shoeTypeBatchData.totalPrice) }}
                                             </template>
                                             <span v-else>--</span>
                                         </td>
@@ -119,7 +119,7 @@
                                 <td>{{ grandTotalPairs }}</td>
                                 <td></td>
                                 <td></td>
-                                <td>{{ grandTotalPrice !== null ? '¥' + formatMoney(grandTotalPrice) : '--' }}</td>
+                                <td>{{ grandTotalPrice !== null ? grandTotalCurrencySymbol + formatMoney(grandTotalPrice) : '--' }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -291,6 +291,23 @@ const grandTotalPrice = computed(() => {
     return hasPrice ? parseFloat(total.toFixed(2)) : null
 })
 
+const grandTotalCurrencySymbol = computed(() => {
+    // 与单行金额口径保持一致：仅当所有有价格鞋型的币种一致且为人民币时显示 ¥，否则不显示
+    const currencySet = new Set()
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) => {
+            const price = colorType.shoeTypeBatchData?.totalPrice
+            if (price !== null && price !== undefined) {
+                currencySet.add(colorType.shoeTypeBatchData?.currencyType)
+            }
+        })
+    )
+    if (currencySet.size === 1) {
+        return currencySymbol([...currencySet][0])
+    }
+    return ''
+})
+
 function shoeRowCount(shoe) {
     return (shoe.orderShoeTypes || []).reduce((sum, colorType) => sum + (colorType.shoeTypeBatchInfoList?.length || 0), 0)
 }
@@ -299,6 +316,24 @@ function formatMoney(value) {
     const num = Number(value)
     if (isNaN(num)) return value
     return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function currencySymbol(currency) {
+    switch (currency) {
+        case 'RMB':
+        case 'CNY':
+        case '人民币':
+            return '¥'
+        case 'USD':
+        case 'USA':
+        case '美元':
+            return '$'
+        case 'EUR':
+        case '欧元':
+            return '€'
+        default:
+            return currency ? currency + ' ' : ''
+    }
 }
 
 function onPriceChange(colorType) {
