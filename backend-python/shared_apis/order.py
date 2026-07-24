@@ -77,6 +77,9 @@ CRAFT_SHEET_ORDER_SHOE_STATUS = 9
 TECH_DEPARTMENT_MANAGER = 5
 
 
+PACKAGING_DOC_CANDIDATES = ["包装资料.xlsx", "包装资料.xls", "包装资料.pdf"]
+
+
 def _locate_packaging_doc(order_rid: str):
     if not order_rid:
         return None
@@ -84,11 +87,10 @@ def _locate_packaging_doc(order_rid: str):
         os.path.join(FILE_STORAGE_PATH, "业务部文件", order_rid),
         os.path.join(FILE_STORAGE_PATH, order_rid),  # legacy fallback
     ]
-    candidates = ["包装资料.xlsx", "包装资料.xls", "包装资料.pdf"]
     for base_dir in base_dirs:
         if not os.path.exists(base_dir):
             continue
-        for name in candidates:
+        for name in PACKAGING_DOC_CANDIDATES:
             candidate_path = os.path.join(base_dir, name)
             if os.path.exists(candidate_path):
                 return {
@@ -2798,6 +2800,48 @@ def download_packaging_doc():
     )
 
 
+@order_bp.route("/order/uploadpackagingdoc", methods=["POST"])
+def upload_packaging_doc():
+    if "file" not in request.files:
+        return jsonify({"message": "No file part in the request"}), 400
+
+    uploaded_file = request.files["file"]
+    if uploaded_file.filename == "":
+        return jsonify({"message": "No selected file"}), 400
+
+    order_id = request.form.get("orderId", type=int)
+    if not order_id:
+        return jsonify({"message": "orderId is required"}), 400
+
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"message": "order not found"}), 404
+
+    ext = os.path.splitext(uploaded_file.filename)[1].lower()
+    if ext not in [".xlsx", ".xls", ".pdf"]:
+        return jsonify({"message": "仅支持 xlsx、xls 或 pdf 格式的包装资料"}), 400
+
+    target_dir = os.path.join(FILE_STORAGE_PATH, "业务部文件", order_entity.order_rid)
+    os.makedirs(target_dir, exist_ok=True)
+
+    # 删除已有的包装资料（含不同扩展名及历史遗留路径），避免下载时命中旧文件
+    for base_dir in [
+        target_dir,
+        os.path.join(FILE_STORAGE_PATH, order_entity.order_rid),  # legacy fallback
+    ]:
+        for name in PACKAGING_DOC_CANDIDATES:
+            old_path = os.path.join(base_dir, name)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError as e:
+                    logger.debug(e)
+
+    target_file_path = os.path.join(target_dir, f"包装资料{ext}")
+    uploaded_file.save(target_file_path)
+    return jsonify({"message": "包装资料替换成功"}), 200
+
+
 @order_bp.route("/order/approveoutboundbybusiness", methods=["PATCH"])
 def approve_outbound_by_business():
     order_ids = request.get_json()
@@ -2940,6 +2984,7 @@ def get_order_shoe_type_edit_info():
             "orderId": order.order_id,
             "orderRid": order.order_rid,
             "customerName": customer.customer_name if customer else "",
+            "packagingDocExists": _locate_packaging_doc(order.order_rid) is not None,
             "orderShoes": result_shoes,
         }
     )

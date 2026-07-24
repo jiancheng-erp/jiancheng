@@ -10,6 +10,19 @@
             <el-alert type="info" :closable="false" show-icon style="margin-bottom: 16px"
                 title="修改鞋型颜色只会影响当前订单，不会影响其他订单。" />
 
+            <div class="packaging-block">
+                <span class="packaging-label">包装资料：</span>
+                <el-tag v-if="orderInfo.packagingDocExists" type="success" size="small">已上传</el-tag>
+                <el-tag v-else type="info" size="small">未上传</el-tag>
+                <el-button v-if="orderInfo.packagingDocExists" size="small" text type="primary"
+                    @click="downloadPackaging">下载</el-button>
+                <el-upload :show-file-list="false" :http-request="handlePackagingUpload" accept=".xlsx,.xls,.pdf"
+                    style="display: inline-block; margin-left: 8px">
+                    <el-button size="small" type="primary" :loading="uploadingPackaging">替换包装资料</el-button>
+                </el-upload>
+                <span class="packaging-tip">支持 xlsx、xls、pdf 格式</span>
+            </div>
+
             <div v-for="shoe in orderInfo.orderShoes" :key="shoe.orderShoeId" class="shoe-block">
                 <div class="shoe-header">
                     <span class="shoe-title">工厂型号：{{ shoe.shoeRid }}</span>
@@ -120,9 +133,11 @@ export default {
         return {
             loading: false,
             saving: false,
+            uploadingPackaging: false,
             orderInfo: {
                 orderRid: '',
                 customerName: '',
+                packagingDocExists: false,
                 orderShoes: [],
             },
             colorOptions: [],
@@ -221,6 +236,27 @@ export default {
                 this.activeColorTarget.colorId = found.value
             }
         },
+        downloadPackaging() {
+            window.open(`${this.$apiBaseUrl}/order/downloadpackagingdoc?orderId=${this.orderId}`)
+        },
+        async handlePackagingUpload({ file }) {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('orderId', this.orderId)
+            this.uploadingPackaging = true
+            try {
+                await axios.post(`${this.$apiBaseUrl}/order/uploadpackagingdoc`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                })
+                ElMessage.success('包装资料替换成功')
+                this.orderInfo.packagingDocExists = true
+            } catch (error) {
+                const msg = error?.response?.data?.message || '包装资料替换失败'
+                ElMessage.error(msg)
+            } finally {
+                this.uploadingPackaging = false
+            }
+        },
         recalcBatch(row, unitPrice) {
             let total = 0
             for (const size of this.sizeList) {
@@ -281,6 +317,24 @@ export default {
 </script>
 
 <style scoped>
+.packaging-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.packaging-label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.packaging-tip {
+    font-size: 12px;
+    color: #909399;
+    margin-left: 4px;
+}
+
 .shoe-block {
     border: 1px solid #ebeef5;
     border-radius: 6px;
