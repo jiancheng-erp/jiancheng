@@ -522,6 +522,13 @@
                                     </el-table-column>
                                 </el-table>
                             </el-col>
+                        </el-row>
+                        <el-row :gutter="20">
+                            <el-col :span="2" :offset="0"> 大底： </el-col>
+                            <el-col :span="4" :offset="0">
+                                <el-button type="primary" size="default" @click="addMaterial(3)">添加大底</el-button>
+                                <el-button type="primary" size="default" @click="addMaterialByManual(3)">手动添加大底</el-button>
+                            </el-col>
                             <el-col :span="2" :offset="0">
                                 <el-button @click="syncMaterials(3)">{{ this.syncMaterialButtonText }}</el-button>
                             </el-col>
