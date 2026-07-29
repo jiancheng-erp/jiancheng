@@ -152,17 +152,57 @@ def get_usage_modification_order_shoes():
     return jsonify(result)
 
 
+def _is_purchase_issued(order_shoe_id, purchase_type):
+    """判断某订单鞋型的采购订单是否已下发（状态 '3'）。"""
+    if order_shoe_id is None:
+        return False
+    return (
+        db.session.query(PurchaseOrder.purchase_order_id)
+        .filter(
+            PurchaseOrder.order_shoe_id == order_shoe_id,
+            PurchaseOrder.purchase_order_type == purchase_type,
+            PurchaseOrder.purchase_order_status == "3",
+        )
+        .first()
+        is not None
+    )
+
+
+def _resolve_target_bom_type(order_shoe_id):
+    """依据采购下发状态确定要修改的 BOM 类型与采购范围。
+
+    - 一次采购已下发 -> (0, "first")   仅修改一次采购用量
+    - 仅二次采购已下发 -> (1, "second") 仅修改二次采购用量
+    - 都未下发 -> 默认一次BOM (0, "first")
+    """
+    if _is_purchase_issued(order_shoe_id, "F"):
+        return 0, "first"
+    if _is_purchase_issued(order_shoe_id, "S"):
+        return 1, "second"
+    return 0, "first"
+
+
 @usage_modification_bp.route("/usagemodification/bomitems", methods=["GET"])
 def get_usage_modification_bom_items():
-    """按鞋型(订单鞋型)与颜色查询一次BOM的材料明细，附带采购用量。
+    """按鞋型(订单鞋型)与颜色查询 BOM 的材料明细，附带采购用量。
 
-    不再依赖 total_bom_rid，直接通过 order_shoe_type_id(鞋型+颜色)
-    -> Bom(一次BOM) -> BomItem 查询。
+    根据采购下发状态决定查询哪一份 BOM 及采购用量：
+    - 一次采购已下发 -> 仅可修改一次采购的用量（一次BOM，bom_type=0）
+    - 仅二次采购已下发 -> 仅可修改二次采购的用量（二次BOM，bom_type=1）
     """
     order_shoe_type_id = request.args.get("orderShoeTypeId")
     order_id = request.args.get("orderId")
 
     size_name_info = get_order_batch_type_helper(order_id) if order_id else []
+
+    # 依据采购下发状态确定目标 BOM 类型
+    order_shoe_type = (
+        db.session.query(OrderShoeType)
+        .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
+        .first()
+    )
+    order_shoe_id = order_shoe_type.order_shoe_id if order_shoe_type else None
+    target_bom_type, purchase_scope = _resolve_target_bom_type(order_shoe_id)
 
     entities = (
         db.session.query(
@@ -191,7 +231,7 @@ def get_usage_modification_bom_items():
             == BomItem.production_instruction_item_id,
         )
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
-        .filter(Bom.bom_type == 0)
+        .filter(Bom.bom_type == target_bom_type)
         .order_by(Supplier.supplier_name, Material.material_name)
         .all()
     )
@@ -273,7 +313,13 @@ def get_usage_modification_bom_items():
 
         result[bom_item.bom_item_id] = entry
 
-    return jsonify(list(result.values()))
+    return jsonify(
+        {
+            "purchaseScope": purchase_scope,
+            "bomType": target_bom_type,
+            "items": list(result.values()),
+        }
+    )
 
 
 def _build_order_pairs_map(order_shoe_type_ids):
