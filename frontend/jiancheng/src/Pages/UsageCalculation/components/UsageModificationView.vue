@@ -5,7 +5,7 @@
             <el-card shadow="never" class="header-card">
                 <div class="page-title">用量修改</div>
                 <el-alert type="info" :closable="false" show-icon
-                    title="仅显示已完成一次采购订单创建与二次采购订单创建的订单。修改用量后，采购用量也可在此处修改。"
+                    title="显示已完成一次采购或二次采购的订单。哪个采购完成就可修改对应材料的用量，两者都完成则都可修改。"
                     style="margin-bottom: 12px" />
                 <el-form :inline="true" @submit.prevent>
                     <el-form-item label="搜索">
@@ -80,7 +80,7 @@
         <el-dialog :title="`用量修改 - ${currentShoe.inheritId || ''}${currentShoe.color ? ' / ' + currentShoe.color : ''}`" v-model="editDialogVisible" width="90%"
             :close-on-click-modal="false" fullscreen>
             <el-alert v-if="purchaseScope" type="warning" :closable="false" show-icon style="margin-bottom: 12px"
-                :title="purchaseScope === 'first' ? '当前一次采购已下发，仅可修改一次采购的用量' : '当前二次采购已下发，仅可修改二次采购的用量'" />
+                :title="purchaseScopeTip" />
             <el-table :data="bomItems" border stripe v-loading="bomLoading" style="width: 100%" height="70vh">
                 <el-table-column type="index" label="序号" width="60" fixed="left" />
                 <el-table-column prop="materialType" label="材料类型" width="100" fixed="left" />
@@ -191,6 +191,18 @@ export default {
         pagedOrderList() {
             const start = (this.orderPage - 1) * this.orderPageSize
             return this.orderList.slice(start, start + this.orderPageSize)
+        },
+        purchaseScopeTip() {
+            if (this.purchaseScope === 'both') {
+                return '一次采购与二次采购均已完成，主料与辅料(含烫底)用量均可修改'
+            }
+            if (this.purchaseScope === 'second') {
+                return '仅二次采购已完成，仅可修改二次采购材料（辅料 + 烫底）的用量'
+            }
+            if (this.purchaseScope === 'first') {
+                return '仅一次采购已完成，仅可修改一次采购材料（主料等）的用量'
+            }
+            return ''
         }
     },
     methods: {

@@ -88,8 +88,16 @@ def get_modifiable_orders():
     query = (
         db.session.query(Order, Customer)
         .outerjoin(Customer, Customer.customer_id == Order.customer_id)
-        .filter(Order.order_id.in_(db.session.query(first_done_order_ids.c.order_id)))
-        .filter(Order.order_id.in_(db.session.query(second_done_order_ids.c.order_id)))
+        .filter(
+            or_(
+                Order.order_id.in_(
+                    db.session.query(first_done_order_ids.c.order_id)
+                ),
+                Order.order_id.in_(
+                    db.session.query(second_done_order_ids.c.order_id)
+                ),
+            )
+        )
     )
 
     if keyword:
@@ -152,8 +160,8 @@ def get_usage_modification_order_shoes():
     return jsonify(result)
 
 
-def _is_purchase_issued(order_shoe_id, purchase_type):
-    """判断某订单鞋型的采购订单是否已下发（状态 '3'）。"""
+def _is_purchase_completed(order_shoe_id, purchase_type):
+    """判断某订单鞋型的采购订单是否已完成（已提交/已下发，状态 '2' 或 '3'）。"""
     if order_shoe_id is None:
         return False
     return (
@@ -161,7 +169,7 @@ def _is_purchase_issued(order_shoe_id, purchase_type):
         .filter(
             PurchaseOrder.order_shoe_id == order_shoe_id,
             PurchaseOrder.purchase_order_type == purchase_type,
-            PurchaseOrder.purchase_order_status == "3",
+            PurchaseOrder.purchase_order_status.in_(_COMPLETED_PURCHASE_STATUS),
         )
         .first()
         is not None
@@ -169,15 +177,18 @@ def _is_purchase_issued(order_shoe_id, purchase_type):
 
 
 def _resolve_purchase_scope(order_shoe_id):
-    """依据采购下发状态确定可修改的采购范围（按材料类型区分）。
+    """依据采购完成状态确定可修改的采购范围（按材料类型区分）。
 
-    - 一次采购(物控经理, type 'F')已下发 -> "first"  仅修改一次采购材料的用量
-    - 仅二次采购(总仓, type 'S')已下发   -> "second" 仅修改二次采购材料的用量
-    - 都未下发 -> 默认 "first"
+    - 一次采购(物控经理, 'F') 与 二次采购(总仓, 'S') 都已完成 -> "both" 两者都可修改
+    - 仅一次采购已完成 -> "first"  仅修改一次采购材料
+    - 仅二次采购已完成 -> "second" 仅修改二次采购材料
+    - 都未完成 -> 默认 "first"
     """
-    if _is_purchase_issued(order_shoe_id, "F"):
-        return "first"
-    if _is_purchase_issued(order_shoe_id, "S"):
+    first_done = _is_purchase_completed(order_shoe_id, "F")
+    second_done = _is_purchase_completed(order_shoe_id, "S")
+    if first_done and second_done:
+        return "both"
+    if second_done and not first_done:
         return "second"
     return "first"
 
@@ -193,7 +204,9 @@ def _second_purchase_material_predicate():
 
 
 def _material_scope_filter(purchase_scope):
-    """按采购范围返回材料过滤条件。"""
+    """按采购范围返回材料过滤条件；both 表示不过滤（两类材料都返回）。"""
+    if purchase_scope == "both":
+        return None
     accessory = _second_purchase_material_predicate()
     if purchase_scope == "second":
         return accessory
@@ -205,16 +218,17 @@ def _material_scope_filter(purchase_scope):
 def get_usage_modification_bom_items():
     """按鞋型(订单鞋型)与颜色查询 BOM 的材料明细，附带采购用量。
 
-    始终查询一次BOM(bom_type=0)，并根据采购下发状态按材料类型区分范围：
-    - 一次采购(物控经理)已下发 -> 仅返回一次采购材料（主料等）
-    - 仅二次采购(总仓)已下发   -> 仅返回二次采购材料（辅料 + 烫底）
+    始终查询一次BOM(bom_type=0)，并根据采购完成状态按材料类型区分范围：
+    - 一次采购(物控经理)与二次采购(总仓)都已完成 -> 两类材料都返回
+    - 仅一次采购已完成 -> 仅返回一次采购材料（主料等）
+    - 仅二次采购已完成 -> 仅返回二次采购材料（辅料 + 烫底）
     """
     order_shoe_type_id = request.args.get("orderShoeTypeId")
     order_id = request.args.get("orderId")
 
     size_name_info = get_order_batch_type_helper(order_id) if order_id else []
 
-    # 依据采购下发状态确定可修改的采购范围（按材料类型区分）
+    # 依据采购完成状态确定可修改的采购范围（按材料类型区分）
     order_shoe_type = (
         db.session.query(OrderShoeType)
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
@@ -252,10 +266,12 @@ def get_usage_modification_bom_items():
         )
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
         .filter(Bom.bom_type == 0)
-        .filter(material_filter)
-        .order_by(Supplier.supplier_name, Material.material_name)
-        .all()
     )
+    if material_filter is not None:
+        entities = entities.filter(material_filter)
+    entities = entities.order_by(
+        Supplier.supplier_name, Material.material_name
+    ).all()
 
     size_info_template = [
         {
