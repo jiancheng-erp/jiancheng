@@ -11,7 +11,7 @@ from decimal import Decimal, InvalidOperation
 import copy
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import or_
+from sqlalchemy import and_, func, not_, or_
 
 from app_config import db
 from models import (
@@ -168,41 +168,61 @@ def _is_purchase_issued(order_shoe_id, purchase_type):
     )
 
 
-def _resolve_target_bom_type(order_shoe_id):
-    """依据采购下发状态确定要修改的 BOM 类型与采购范围。
+def _resolve_purchase_scope(order_shoe_id):
+    """依据采购下发状态确定可修改的采购范围（按材料类型区分）。
 
-    - 一次采购已下发 -> (0, "first")   仅修改一次采购用量
-    - 仅二次采购已下发 -> (1, "second") 仅修改二次采购用量
-    - 都未下发 -> 默认一次BOM (0, "first")
+    - 一次采购(物控经理, type 'F')已下发 -> "first"  仅修改一次采购材料的用量
+    - 仅二次采购(总仓, type 'S')已下发   -> "second" 仅修改二次采购材料的用量
+    - 都未下发 -> 默认 "first"
     """
     if _is_purchase_issued(order_shoe_id, "F"):
-        return 0, "first"
+        return "first"
     if _is_purchase_issued(order_shoe_id, "S"):
-        return 1, "second"
-    return 0, "first"
+        return "second"
+    return "first"
+
+
+def _second_purchase_material_predicate():
+    """二次采购(总仓)负责的材料：辅料(A / material_type_id=3) 与 烫底。"""
+    pit_type = func.coalesce(ProductionInstructionItem.material_type, "")
+    return or_(
+        pit_type == "A",
+        Material.material_type_id == 3,
+        and_(pit_type == "H", Material.material_name == "烫底"),
+    )
+
+
+def _material_scope_filter(purchase_scope):
+    """按采购范围返回材料过滤条件。"""
+    accessory = _second_purchase_material_predicate()
+    if purchase_scope == "second":
+        return accessory
+    # 一次采购(物控)负责的材料 = 二次采购材料之外的全部
+    return not_(accessory)
 
 
 @usage_modification_bp.route("/usagemodification/bomitems", methods=["GET"])
 def get_usage_modification_bom_items():
     """按鞋型(订单鞋型)与颜色查询 BOM 的材料明细，附带采购用量。
 
-    根据采购下发状态决定查询哪一份 BOM 及采购用量：
-    - 一次采购已下发 -> 仅可修改一次采购的用量（一次BOM，bom_type=0）
-    - 仅二次采购已下发 -> 仅可修改二次采购的用量（二次BOM，bom_type=1）
+    始终查询一次BOM(bom_type=0)，并根据采购下发状态按材料类型区分范围：
+    - 一次采购(物控经理)已下发 -> 仅返回一次采购材料（主料等）
+    - 仅二次采购(总仓)已下发   -> 仅返回二次采购材料（辅料 + 烫底）
     """
     order_shoe_type_id = request.args.get("orderShoeTypeId")
     order_id = request.args.get("orderId")
 
     size_name_info = get_order_batch_type_helper(order_id) if order_id else []
 
-    # 依据采购下发状态确定目标 BOM 类型
+    # 依据采购下发状态确定可修改的采购范围（按材料类型区分）
     order_shoe_type = (
         db.session.query(OrderShoeType)
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
         .first()
     )
     order_shoe_id = order_shoe_type.order_shoe_id if order_shoe_type else None
-    target_bom_type, purchase_scope = _resolve_target_bom_type(order_shoe_id)
+    purchase_scope = _resolve_purchase_scope(order_shoe_id)
+    material_filter = _material_scope_filter(purchase_scope)
 
     entities = (
         db.session.query(
@@ -231,7 +251,8 @@ def get_usage_modification_bom_items():
             == BomItem.production_instruction_item_id,
         )
         .filter(OrderShoeType.order_shoe_type_id == order_shoe_type_id)
-        .filter(Bom.bom_type == target_bom_type)
+        .filter(Bom.bom_type == 0)
+        .filter(material_filter)
         .order_by(Supplier.supplier_name, Material.material_name)
         .all()
     )
@@ -316,7 +337,6 @@ def get_usage_modification_bom_items():
     return jsonify(
         {
             "purchaseScope": purchase_scope,
-            "bomType": target_bom_type,
             "items": list(result.values()),
         }
     )
