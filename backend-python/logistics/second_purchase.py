@@ -293,6 +293,7 @@ def get_order_shoe_list():
         first_purchase_order_id = None
         first_purchase_order_status = "未填写"
         second_bom_id = None
+        second_bom_db_id = None
         second_bom_status = "未填写"
         second_purchase_order_id = None
         second_purchase_order_status = "未填写"
@@ -311,6 +312,7 @@ def get_order_shoe_list():
                 }.get(bom.bom_status, "未填写")
             elif bom.bom_type == 1:
                 second_bom_id = bom.bom_rid
+                second_bom_db_id = bom.bom_id
                 second_bom_status = {"1": "已保存", "2": "已提交", "3": "已下发"}.get(
                     bom.bom_status, "未填写"
                 )
@@ -345,8 +347,9 @@ def get_order_shoe_list():
                 existing_entry["firstPurchaseOrderId"] = first_purchase_order_id
                 existing_entry["firstPurchaseOrderStatus"] = first_purchase_order_status
 
-            if second_bom_id and existing_entry.get("secondBomId") == "未填写":
-                existing_entry["secondBomId"] = second_bom_id
+            if second_bom_db_id and not existing_entry.get("secondBomDbId"):
+                existing_entry["secondBomId"] = second_bom_id if second_bom_id else "未填写"
+                existing_entry["secondBomDbId"] = second_bom_db_id
                 existing_entry["secondBomStatus"] = second_bom_status
             if (
                 second_purchase_order_id
@@ -375,6 +378,7 @@ def get_order_shoe_list():
                     ),
                     "firstPurchaseOrderStatus": first_purchase_order_status,
                     "secondBomId": second_bom_id if second_bom_id else "未填写",
+                    "secondBomDbId": second_bom_db_id,
                     "secondBomStatus": second_bom_status,
                     "secondPurchaseOrderId": (
                         second_purchase_order_id
