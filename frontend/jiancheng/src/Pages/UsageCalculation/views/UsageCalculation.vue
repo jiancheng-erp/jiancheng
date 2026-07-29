@@ -35,6 +35,9 @@
           <el-menu-item index="5" @click="handleMenuClick(5)">
             <span>总仓订单缺失材料用量填写</span>
           </el-menu-item>
+          <el-menu-item index="11" @click="handleMenuClick(11)">
+            <span>用量修改</span>
+          </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
             <span>订单查询</span>
           </el-menu-item>
@@ -71,6 +74,7 @@ import PersonalInfo from '@/components/PersonalInfo.vue';
 import SecondBOMListView from '../components/SecondBOMListView.vue';
 import RevertDashboard from '@/components/RevertDashboard.vue';
 import MissingPurchaseUsageInput from '../components/MissingPurchaseUsageInput.vue';
+import UsageModificationView from '../components/UsageModificationView.vue';
 import MaterialPriceView from '../components/MaterialPriceView.vue';
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import axios from 'axios'
@@ -86,6 +90,7 @@ export default {
         SecondBOMListView,
         RevertDashboard,
         MissingPurchaseUsageInput,
+        UsageModificationView,
         MaterialPriceView,
         FinancialWarehouseDetail
     },
@@ -134,6 +139,9 @@ export default {
                     break
                 case 10:
                     this.currentComponent = 'RevertDashboard'
+                    break
+                case 11:
+                    this.currentComponent = 'UsageModificationView'
                     break
             }
         },

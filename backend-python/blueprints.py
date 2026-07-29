@@ -11,6 +11,7 @@ from shared_apis.color import color_bp
 from logistics.first_bom import first_bom_bp
 from shared_apis.department import department_bp
 from usage_calculation.usage_calculation import usage_calculation_bp
+from usage_calculation.usage_modification import usage_modification_bp
 from business.order_import import order_import_bp
 from business.order_create import order_create_bp
 from business.forecast_sheet import forecast_sheet_bp
@@ -84,6 +85,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(first_bom_bp)
     app.register_blueprint(second_bom_bp)
     app.register_blueprint(usage_calculation_bp)
+    app.register_blueprint(usage_modification_bp)
     app.register_blueprint(order_import_bp)
     app.register_blueprint(customer_bp)
     app.register_blueprint(shoe_bp)
