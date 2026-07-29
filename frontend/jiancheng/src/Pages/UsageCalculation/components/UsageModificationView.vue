@@ -79,6 +79,8 @@
         <!-- 用量修改对话框 -->
         <el-dialog :title="`用量修改 - ${currentShoe.inheritId || ''}${currentShoe.color ? ' / ' + currentShoe.color : ''}`" v-model="editDialogVisible" width="90%"
             :close-on-click-modal="false" fullscreen>
+            <el-alert v-if="purchaseScope" type="warning" :closable="false" show-icon style="margin-bottom: 12px"
+                :title="purchaseScope === 'first' ? '当前一次采购已下发，仅可修改一次采购的用量' : '当前二次采购已下发，仅可修改二次采购的用量'" />
             <el-table :data="bomItems" border stripe v-loading="bomLoading" style="width: 100%" height="70vh">
                 <el-table-column type="index" label="序号" width="60" fixed="left" />
                 <el-table-column prop="materialType" label="材料类型" width="100" fixed="left" />
@@ -175,6 +177,7 @@ export default {
             bomItems: [],
             bomLoading: false,
             saving: false,
+            purchaseScope: '',
             sizeDialogVisible: false,
             sizeData: [],
             currentSizeRow: null
@@ -253,7 +256,8 @@ export default {
                 const response = await axios.get(`${this.$apiBaseUrl}/usagemodification/bomitems`, {
                     params: { orderShoeTypeId: row.orderShoeTypeId, orderId: this.currentOrder.orderId }
                 })
-                this.bomItems = response.data.map((item) => ({
+                this.purchaseScope = response.data.purchaseScope || ''
+                this.bomItems = (response.data.items || []).map((item) => ({
                     ...item,
                     unitUsage: item.unitUsage != null ? Number(item.unitUsage) : 0,
                     approvalUsage: item.approvalUsage != null ? Number(item.approvalUsage) : 0,
