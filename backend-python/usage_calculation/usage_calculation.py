@@ -216,6 +216,32 @@ def get_order_first_bom():
 @usage_calculation_bp.route("/usagecalculation/getshoebomitems", methods=["GET"])
 def get_shoe_bom_items():
     bom_rid = request.args.get("bomrid")
+    bom_id = request.args.get("bomid")
+    order_shoe_type_id = request.args.get("ordershoetypeid")
+    bom_type = request.args.get("bomtype")
+    # 解析出唯一的 bom_id：优先数值 bom_id，其次按 鞋型+bom_type 查找（bom_rid 可能为空），最后回退到 bom_rid
+    target_bom_id = None
+    if bom_id:
+        target_bom_id = bom_id
+    elif order_shoe_type_id and bom_type is not None:
+        row = (
+            db.session.query(Bom.bom_id)
+            .filter(
+                Bom.order_shoe_type_id == order_shoe_type_id,
+                Bom.bom_type == bom_type,
+            )
+            .order_by(Bom.bom_id.desc())
+            .first()
+        )
+        target_bom_id = row.bom_id if row else None
+    elif bom_rid and bom_rid != "未填写":
+        row = (
+            db.session.query(Bom.bom_id).filter(Bom.bom_rid == bom_rid).first()
+        )
+        target_bom_id = row.bom_id if row else None
+    if target_bom_id is None:
+        return jsonify([])
+    bom_filter = Bom.bom_id == target_bom_id
     material_order = case(
         (ProductionInstructionItem.material_type == "S", 1),
         (ProductionInstructionItem.material_type == "I", 2),
@@ -238,21 +264,23 @@ def get_shoe_bom_items():
             BomItem.production_instruction_item_id
             == ProductionInstructionItem.production_instruction_item_id,
         )
-        .filter(Bom.bom_rid == bom_rid)
+        .filter(bom_filter)
         .order_by(material_order, Supplier.supplier_name, Material.material_name)
         .all()
     )
     result = []
     # get shoe size name
-    order_id = (
+    order_row = (
         db.session.query(Order.order_id)
         .join(OrderShoe, OrderShoe.order_id == Order.order_id)
         .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
         .join(Bom, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
-        .filter(Bom.bom_rid == bom_rid)
+        .filter(bom_filter)
         .first()
-        .order_id
     )
+    if order_row is None:
+        return jsonify([])
+    order_id = order_row.order_id
     shoe_size_names = get_order_batch_type_helper(order_id)
 
     for entity in entities:

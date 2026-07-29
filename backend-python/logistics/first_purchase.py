@@ -149,6 +149,7 @@ def get_order_shoe_list():
 
         # Prepare BOM and PurchaseOrder details
         first_bom_id = None
+        first_bom_db_id = None
         first_bom_status = "未填写"
         first_purchase_order_id = None
         first_purchase_order_status = "未填写"
@@ -161,6 +162,7 @@ def get_order_shoe_list():
         if bom:
             if bom.bom_type == 0:
                 first_bom_id = bom.bom_rid
+                first_bom_db_id = bom.bom_id
                 first_bom_status = {
                     "1": "材料已保存",
                     "2": "材料已提交",
@@ -195,8 +197,9 @@ def get_order_shoe_list():
         # If the color entry already exists, update it with BOM details
         if existing_entry:
             # Update only if fields are not already filled to prevent overwriting
-            if first_bom_id and existing_entry.get("firstBomId") == "未填写":
-                existing_entry["firstBomId"] = first_bom_id
+            if first_bom_db_id and not existing_entry.get("firstBomDbId"):
+                existing_entry["firstBomId"] = first_bom_id if first_bom_id else "未填写"
+                existing_entry["firstBomDbId"] = first_bom_db_id
                 existing_entry["firstBomStatus"] = first_bom_status
             if (
                 first_purchase_order_id
@@ -229,6 +232,7 @@ def get_order_shoe_list():
                         else None
                     ),
                     "firstBomId": first_bom_id if first_bom_id else "未填写",
+                    "firstBomDbId": first_bom_db_id,
                     "firstBomStatus": first_bom_status,
                     "firstPurchaseOrderId": (
                         first_purchase_order_id if first_purchase_order_id else "未填写"

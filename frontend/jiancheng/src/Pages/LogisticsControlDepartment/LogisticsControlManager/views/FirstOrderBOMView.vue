@@ -939,7 +939,8 @@ export default {
                 `${this.$apiBaseUrl}/usagecalculation/getshoebomitems`,
                 {
                     params: {
-                        bomrid: row.firstBomId
+                        ordershoetypeid: row.orderShoeTypeId,
+                        bomtype: 0
                     }
                 }
             )
