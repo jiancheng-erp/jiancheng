@@ -492,11 +492,17 @@ def get_shoe_bom_items():
             if purchase_order_item
             else material.material_id
         )
-        inbound_material_name = (
+        if inbound_material_id is None:
+            inbound_material_id = material.material_id
+        inbound_material_obj = (
             db.session.query(Material)
             .filter(Material.material_id == inbound_material_id)
             .first()
-            .material_name
+        )
+        inbound_material_name = (
+            inbound_material_obj.material_name
+            if inbound_material_obj
+            else material.material_name
         )
         # If key already exists, accumulate the data; otherwise, initialize
         if key not in combined_items:
@@ -519,6 +525,12 @@ def get_shoe_bom_items():
                 ),
                 "materialName": material.material_name,
                 "inboundMaterialName": inbound_material_name,
+                "craftName": (
+                    production_instruction_item.pre_craft_name
+                    if production_instruction_item
+                    and production_instruction_item.pre_craft_name
+                    else bom_item.craft_name
+                ),
                 "materialModel": (
                     purchase_order_item.material_model
                     if purchase_order_item
@@ -558,6 +570,7 @@ def get_shoe_bom_items():
                 "warehouseUsageInfo": (
                     json.loads(purchase_order_item.related_selected_material_storage)
                     if purchase_order_item
+                    and purchase_order_item.related_selected_material_storage
                     else []
                 ),
             }
@@ -877,6 +890,12 @@ def get_purchase_divide_orders():
             "purchaseAmount": purchase_order_item.purchase_amount,
             "remark": purchase_order_item.remark,
             "sizeType": purchase_order_item.size_type,
+            "craftName": (
+                production_instruction_item.pre_craft_name
+                if production_instruction_item
+                and production_instruction_item.pre_craft_name
+                else purchase_order_item.craft_name
+            ),
         }
         for size in SHOESIZERANGE:
             obj[f"size{size}Amount"] = getattr(

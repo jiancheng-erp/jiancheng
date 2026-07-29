@@ -37,6 +37,9 @@
                     <el-menu-item index="finishedStorageOverview" @click="handleMenuClick('finishedStorageOverview')">
                         <span>成品入出库概览</span>
                     </el-menu-item>
+                    <el-menu-item index="usageModification" @click="handleMenuClick('usageModification')">
+                        <span>用量修改</span>
+                    </el-menu-item>
                     <el-menu-item index="logout" @click="logout">
                         <span>退出系统</span>
                     </el-menu-item>
@@ -62,6 +65,7 @@ import WechatTemplateManager from '@/Pages/System/WechatTemplateManager.vue'
 import MaterialConsolidation from '../components/MaterialConsolidation.vue'
 import MaterialBatchEdit from '../components/MaterialBatchEdit.vue'
 import FinishedStorageOverview from '../components/FinishedStorageOverview.vue'
+import UsageModificationView from '@/Pages/UsageCalculation/components/UsageModificationView.vue'
 export default {
     components: {
         AllHeader,
@@ -72,7 +76,8 @@ export default {
         WechatTemplateManager,
         MaterialConsolidation,
         MaterialBatchEdit,
-        FinishedStorageOverview
+        FinishedStorageOverview,
+        UsageModificationView
     },
     data() {
         return {
@@ -108,6 +113,8 @@ export default {
                 this.currentComponent = 'MaterialBatchEdit'
             } else if (index === 'finishedStorageOverview') {
                 this.currentComponent = 'FinishedStorageOverview'
+            } else if (index === 'usageModification') {
+                this.currentComponent = 'UsageModificationView'
             }
         },
         async logout() {

@@ -263,6 +263,11 @@
                                     </el-select>
                                 </template>
                             </el-table-column>
+                            <el-table-column label="工艺" min-width="180">
+                                <template #default="scope">
+                                    <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量"></el-table-column>
                             <el-table-column prop="approvalUsage" label="核定用量"></el-table-column>
                             <el-table-column prop="purchaseAmount" label="采购数量" width="150">
@@ -404,6 +409,11 @@
                                     <el-table-column prop="materialModel" label="材料型号" />
                                     <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                     <el-table-column prop="unit" label="单位" />
+                                    <el-table-column label="工艺" min-width="180">
+                                        <template #default="scope">
+                                            <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                        </template>
+                                    </el-table-column>
 
                                     <el-table-column prop="purchaseAmount" label="采购数量" />
                                     <el-table-column :label="`分码数量 (${currentShoeSizeType})`">
@@ -423,6 +433,11 @@
                                     <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                     <el-table-column prop="color" label="颜色" />
                                     <el-table-column prop="unit" label="单位" />
+                                    <el-table-column label="工艺" min-width="180">
+                                        <template #default="scope">
+                                            <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column prop="purchaseAmount" label="采购数量" />
                                     <el-table-column prop="remark" label="开发部备注" />
                                 </el-table>
@@ -500,6 +515,11 @@
                                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                 <el-table-column prop="unit" label="单位" />
 
+                                <el-table-column label="工艺" min-width="180">
+                                    <template #default="scope">
+                                        <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                    </template>
+                                </el-table-column>
                                 <el-table-column prop="amount" label="采购数量" />
                                 <el-table-column :label="`分码数量(${currentShoeSizeType})`">
                                     <el-table-column v-for="column in filteredColumns(item.assetsItems)"
@@ -516,6 +536,11 @@
                                 <el-table-column prop="materialSpecification" label="材料规格"></el-table-column>
                                 <el-table-column prop="color" label="颜色" />
                                 <el-table-column prop="unit" label="单位" />
+                                <el-table-column label="工艺" min-width="180">
+                                    <template #default="scope">
+                                        <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                    </template>
+                                </el-table-column>
                                 <el-table-column prop="purchaseAmount" label="数量" />
                                 <el-table-column prop="remark" label="开发部备注" />
                             </el-table>
