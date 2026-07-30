@@ -654,17 +654,41 @@ def get_product_overview():
             batch_info_map[batch_info.order_shoe_type_id].append(bi)
 
         # 3）颜色行 + 仓库库存（订单下所有颜色）
+        # 注意：order_amount 与 outbound_amount 必须分别用子查询预聚合，
+        # 不能在同一查询里同时 join OrderShoeBatchInfo 与 ShoeOutboundRecordDetail，
+        # 否则两张多行表会产生笛卡尔积，使两个 SUM 互相被对方行数放大。
+        batch_amount_subquery = (
+            db.session.query(
+                OrderShoeBatchInfo.order_shoe_type_id.label("order_shoe_type_id"),
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label(
+                    "order_amount_per_color"
+                ),
+            )
+            .group_by(OrderShoeBatchInfo.order_shoe_type_id)
+            .subquery()
+        )
+        outbound_amount_subquery = (
+            db.session.query(
+                ShoeOutboundRecordDetail.finished_shoe_storage_id.label(
+                    "finished_shoe_storage_id"
+                ),
+                func.coalesce(
+                    func.sum(ShoeOutboundRecordDetail.outbound_amount), 0
+                ).label("outbound_amount"),
+            )
+            .group_by(ShoeOutboundRecordDetail.finished_shoe_storage_id)
+            .subquery()
+        )
         order_shoe_query = (
             db.session.query(
                 OrderShoe,
                 Shoe,
-                func.sum(OrderShoeBatchInfo.total_amount).label(
-                    "order_amount_per_color"
-                ),
+                func.coalesce(
+                    batch_amount_subquery.c.order_amount_per_color, 0
+                ).label("order_amount_per_color"),
                 FinishedShoeStorage,
                 func.coalesce(
-                    func.sum(ShoeOutboundRecordDetail.outbound_amount),
-                    0,
+                    outbound_amount_subquery.c.outbound_amount, 0
                 ).label("outbound_amount"),
                 Color,
                 OrderShoeType,
@@ -677,25 +701,21 @@ def get_product_overview():
             .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
             .join(Color, Color.color_id == ShoeType.color_id)
             .join(
-                OrderShoeBatchInfo,
-                OrderShoeBatchInfo.order_shoe_type_id
-                == OrderShoeType.order_shoe_type_id,
-            )
-            .join(
                 FinishedShoeStorage,
                 FinishedShoeStorage.order_shoe_type_id
                 == OrderShoeType.order_shoe_type_id,
             )
             .outerjoin(
-                ShoeOutboundRecordDetail,
-                ShoeOutboundRecordDetail.finished_shoe_storage_id
+                batch_amount_subquery,
+                batch_amount_subquery.c.order_shoe_type_id
+                == OrderShoeType.order_shoe_type_id,
+            )
+            .outerjoin(
+                outbound_amount_subquery,
+                outbound_amount_subquery.c.finished_shoe_storage_id
                 == FinishedShoeStorage.finished_shoe_id,
             )
             .filter(OrderShoe.order_id == order_id)
-            .group_by(
-                OrderShoeType.order_shoe_type_id,
-                FinishedShoeStorage.finished_shoe_id,
-            )
             .all()
         )
 
@@ -722,13 +742,22 @@ def get_product_overview():
             batch_infos = batch_info_map.get(ost_id, [])
 
             # 按物理库存比例分配配码可用量（每个 ost_id 只做一次）
+            # 用最大余数法，保证各配码分配之和恰好等于物理库存，避免四舍五入丢量。
             if ost_id not in adjusted_ost_ids:
                 total_physical = ost_physical_stock.get(ost_id, 0)
                 color_total_batch = sum(bi["totalAmount"] for bi in batch_infos)
-                if color_total_batch > 0:
+                if color_total_batch > 0 and total_physical > 0:
+                    quotas = []
                     for bi in batch_infos:
-                        batch_ratio = bi["totalAmount"] / color_total_batch
-                        bi["batchAvailableAmount"] = max(0, round(total_physical * batch_ratio))
+                        exact = total_physical * bi["totalAmount"] / color_total_batch
+                        floor_val = int(exact)
+                        bi["batchAvailableAmount"] = floor_val
+                        quotas.append((exact - floor_val, bi))
+                    remainder = total_physical - sum(bi["batchAvailableAmount"] for bi in batch_infos)
+                    # 把剩余的整数份额按小数部分从大到小逐一补 1
+                    quotas.sort(key=lambda x: x[0], reverse=True)
+                    for _, bi in quotas[:remainder]:
+                        bi["batchAvailableAmount"] += 1
                 else:
                     for bi in batch_infos:
                         bi["batchAvailableAmount"] = 0
