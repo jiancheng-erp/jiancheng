@@ -941,6 +941,44 @@ def _determine_outbound_status(storage):
     return False
 
 
+ORDER_FINISHED_STATUS_ID = 18
+
+
+def _advance_order_to_finish(processor, order_id, staff_id):
+    """货已全部出库时，把订单状态从当前节点稳健地推进到 18（订单完成）。
+
+    不再假设订单正好停在状态 11 后盲跑 range(22,36)：每一步都按订单“当前”状态
+    选对应的 operation（值1、值2 各触发一次，兼容当前 value 为 0 或 1 的情况），
+    直到到达 18 或无法继续为止。幂等，可重复调用。返回是否成功到达 18。
+    """
+    guard = 0
+    while guard < 40:
+        guard += 1
+        current_status, _ = processor.dbQueryOrderStatus(order_id)
+        if current_status is None or current_status >= ORDER_FINISHED_STATUS_ID:
+            return True
+        if current_status < 9:
+            # 尚未进入成品阶段，不应由出库推进
+            return False
+        # operation 表：状态 S(9..17) 的 值1/值2 operation_id = 18+(S-9)*2 及其 +1
+        op_val1 = 18 + (current_status - 9) * 2
+        op_val2 = op_val1 + 1
+        for operation_id in (op_val1, op_val2):
+            processor.processEvent(
+                Event(
+                    staff_id=staff_id,
+                    handle_time=datetime.now(),
+                    operation_id=operation_id,
+                    event_order_id=order_id,
+                )
+            )
+        new_status, _ = processor.dbQueryOrderStatus(order_id)
+        if new_status == current_status:
+            # 未推进，避免死循环
+            return False
+    return False
+
+
 @finished_storage_bp.route(
     "/warehouse/warehousemanager/outboundfinished", methods=["POST", "PATCH"]
 )
@@ -1033,14 +1071,11 @@ def outbound_finished():
             order = order_map[order_id]
             # All storages for this order are finished
             try:
-                for operation in [30, 31]:
-                    event = Event(
-                        staff_id=staff_id,
-                        handle_time=datetime.now(),
-                        operation_id=operation,
-                        event_order_id=order_id,
+                order.order_actual_end_date = datetime.now().date()
+                if not _advance_order_to_finish(processor, order_id, staff_id):
+                    logger.warning(
+                        f"订单 {order_id} 出库完成但未能推进到订单完成(18)，请检查前置状态"
                     )
-                    processor.processEvent(event)
             except Exception as e:
                 logger.debug(e)
                 return jsonify({"message": "推进流程失败"}), 500
@@ -3389,14 +3424,12 @@ def execute_outbound_apply():
                 order_row = order_map[order_id]
                 order_row.order_actual_end_date = datetime.now().date()
                 try:
-                    for operation in range(22, 36):
-                        event = Event(
-                            staff_id=staff_id,
-                            handle_time=datetime.now(),
-                            operation_id=operation,
-                            event_order_id=order_row.order_id,
+                    if not _advance_order_to_finish(
+                        processor, order_row.order_id, staff_id
+                    ):
+                        logger.warning(
+                            f"订单 {order_row.order_id} 出库完成但未能推进到订单完成(18)，请检查前置状态"
                         )
-                        processor.processEvent(event)
                 except Exception as e:
                     logger.debug(e)
                     db.session.rollback()
@@ -3628,14 +3661,12 @@ def warehouse_direct_outbound():
                 order_row = order_map[oid]
                 order_row.order_actual_end_date = datetime.now().date()
                 try:
-                    for operation in range(22, 36):
-                        event = Event(
-                            staff_id=staff_id,
-                            handle_time=datetime.now(),
-                            operation_id=operation,
-                            event_order_id=order_row.order_id,
+                    if not _advance_order_to_finish(
+                        processor, order_row.order_id, staff_id
+                    ):
+                        logger.warning(
+                            f"订单 {order_row.order_id} 出库完成但未能推进到订单完成(18)，请检查前置状态"
                         )
-                        processor.processEvent(event)
                 except Exception as e:
                     logger.debug(e)
                     db.session.rollback()
