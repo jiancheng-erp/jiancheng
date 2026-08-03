@@ -259,6 +259,66 @@ def get_all_material_info():
 
     size_details_map = _get_material_storage_size_details(msids)
 
+    # 盘库入库(inbound_type=4)/盘库出库(outbound_type=5)按日期明细，用于导出时按每次盘库拆列
+    make_inventory_map = {msid: [] for msid in msids}
+    if msids:
+        mi_inbound = (
+            db.session.query(
+                InboundRecordDetail.material_storage_id,
+                InboundRecord.inbound_datetime,
+                InboundRecordDetail.inbound_amount,
+            )
+            .join(
+                InboundRecord,
+                InboundRecord.inbound_record_id
+                == InboundRecordDetail.inbound_record_id,
+            )
+            .filter(
+                InboundRecord.inbound_type == 4,
+                InboundRecord.approval_status == 1,
+                InboundRecord.display == 1,
+                InboundRecordDetail.display == 1,
+                InboundRecordDetail.material_storage_id.in_(msids),
+            )
+            .all()
+        )
+        for msid, dt, amount in mi_inbound:
+            make_inventory_map.setdefault(msid, []).append(
+                {
+                    "date": dt.strftime("%Y-%m-%d") if dt else "",
+                    "direction": "in",
+                    "amount": float(amount or 0),
+                }
+            )
+        mi_outbound = (
+            db.session.query(
+                OutboundRecordDetail.material_storage_id,
+                OutboundRecord.outbound_datetime,
+                OutboundRecordDetail.outbound_amount,
+            )
+            .join(
+                OutboundRecord,
+                OutboundRecord.outbound_record_id
+                == OutboundRecordDetail.outbound_record_id,
+            )
+            .filter(
+                OutboundRecord.outbound_type == 5,
+                OutboundRecord.approval_status == 1,
+                OutboundRecord.display == 1,
+                OutboundRecordDetail.display == 1,
+                OutboundRecordDetail.material_storage_id.in_(msids),
+            )
+            .all()
+        )
+        for msid, dt, amount in mi_outbound:
+            make_inventory_map.setdefault(msid, []).append(
+                {
+                    "date": dt.strftime("%Y-%m-%d") if dt else "",
+                    "direction": "out",
+                    "amount": float(amount or 0),
+                }
+            )
+
     for row in response:
         (
             storage,
@@ -287,6 +347,11 @@ def get_all_material_info():
             "pendingOutbound": storage.pending_outbound,
             "actualInboundAmount": storage.inbound_amount,
             "outboundAmount": storage.outbound_amount,
+            "makeInventoryInbound": storage.make_inventory_inbound,
+            "makeInventoryOutbound": storage.make_inventory_outbound,
+            "makeInventoryRecords": make_inventory_map.get(
+                storage.material_storage_id, []
+            ),
             "actualInboundUnit": storage.actual_inbound_unit,
             "currentAmount": storage.current_amount,
             "unitPrice": storage.unit_price,

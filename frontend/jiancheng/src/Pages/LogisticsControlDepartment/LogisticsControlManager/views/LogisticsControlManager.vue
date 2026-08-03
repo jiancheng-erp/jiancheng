@@ -57,6 +57,9 @@
           <el-menu-item index="8" @click="handleMenuClick(8)">
             <span>订单查询</span>
           </el-menu-item>
+          <el-menu-item index="15" @click="handleMenuClick(15)">
+            <span>生产通知单及工艺单</span>
+          </el-menu-item>
           <el-menu-item index="9" @click="handleMenuClick(9)">
             <span>个人信息</span>
           </el-menu-item>
@@ -95,6 +98,7 @@ import { UserFilled } from '@element-plus/icons-vue'
 import FinancialWarehouseDetail from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import PurchaseOrderInfo from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/PurchaseOrderInfo.vue'
 import MissingPurchaseAmountInput from '../components/MissingPurchaseAmountInput.vue'
+import BusinessProductionOrder from '../components/BusinessProductionOrderView.vue'
 export default {
     components: {
         AllHeader,
@@ -114,7 +118,8 @@ export default {
         MaterialStorage,
         FinancialWarehouseDetail,
         PurchaseOrderInfo,
-        MissingPurchaseAmountInput
+        MissingPurchaseAmountInput,
+        BusinessProductionOrder
     },
     data() {
         return {
@@ -174,6 +179,9 @@ export default {
                     break
                 case 14:
                     this.currentComponent = 'MissingPurchaseAmountInput'
+                    break
+                case 15:
+                    this.currentComponent = 'BusinessProductionOrder'
                     break
             }
         },
