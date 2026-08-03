@@ -22,6 +22,9 @@
                     <el-menu-item index="13" @click="handleMenuClick(13)">
                         <span>订单查询</span>
                     </el-menu-item>
+                    <el-menu-item index="21" @click="handleMenuClick(21)">
+                        <span>生产通知单及工艺单</span>
+                    </el-menu-item>
                     <el-menu-item index="14" @click="handleMenuClick(14)">
                         <span>未出库材料查看</span>
                     </el-menu-item>
@@ -105,6 +108,7 @@ import OtherWarehouseOutboundView from '../components/UncompletedOutboundMateria
 import OutboundByOrder from '../components/OutboundByOrder.vue'
 import GeneralMaterialOutbound from '../components/GeneralMaterialOutbound.vue'
 import MissingPurchaseAmountInput from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/MissingPurchaseAmountInput.vue'
+import BusinessProductionOrder from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/BusinessProductionOrderView.vue'
 
 export default {
     components: {
@@ -127,7 +131,8 @@ export default {
         OtherWarehouseOutboundView,
         OutboundByOrder,
         GeneralMaterialOutbound,
-        MissingPurchaseAmountInput
+        MissingPurchaseAmountInput,
+        BusinessProductionOrder
     },
     data() {
         return {
@@ -207,6 +212,9 @@ export default {
                     break
                 case 20:
                     this.currentComponent = 'GeneralMaterialOutbound'
+                    break
+                case 21:
+                    this.currentComponent = 'BusinessProductionOrder'
                     break
             }
         }
