@@ -705,7 +705,9 @@ def save_purchase():
                 purchase_divide_order_id=purchase_divide_order_id,
                 bom_item_id=item["bomItemId"],
             )
-            if items[0]["materialCategory"] == 0:
+            # 按每项材料自身大类计算用量，避免同一供应商混供烫底与其他材料时，
+            # 非烫底材料被错误地按尺码分支处理而导致用量为 0。
+            if item["materialCategory"] == 0:
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
                 purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
@@ -1236,7 +1238,12 @@ def submit_purchase_divide_orders():
         color,
     ) in purchase_divide_orders:
         purchase_order_id = purchase_divide_order.purchase_divide_order_rid
-        if purchase_divide_order.purchase_divide_order_type == "N":
+        # 按每项材料自身类别路由：烫底/大底/中底/楦头等尺码材料走尺码表分支，
+        # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
+        # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
+        _mat_name = material.material_name or ""
+        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+        if not _is_size_material:
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
                     "供应商": supplier.supplier_name,
@@ -1315,7 +1322,7 @@ def submit_purchase_divide_orders():
                     purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_item_copy)
             else:
                 purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_base_item)
-        elif purchase_divide_order.purchase_divide_order_type == "S":
+        else:
             # 获取 order_size_table 并转换为字典
             order_size_table = (
                 db.session.query(Order)
@@ -1924,7 +1931,12 @@ def download_purchase_order_zip():
         color,
     ) in purchase_divide_orders:
         pdo_rid = purchase_divide_order.purchase_divide_order_rid
-        if purchase_divide_order.purchase_divide_order_type == "N":
+        # 按每项材料自身类别路由：烫底/大底/中底/楦头等尺码材料走尺码表分支，
+        # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
+        # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
+        _mat_name = material.material_name or ""
+        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+        if not _is_size_material:
             if pdo_rid not in purchase_divide_order_dict:
                 purchase_divide_order_dict[pdo_rid] = {
                     "供应商": supplier.supplier_name,
@@ -1989,7 +2001,7 @@ def download_purchase_order_zip():
                 # 面料/里料/化工：直接用 JOIN 到的配色
                 _base_item["_shoe_color"] = (color.color_name if color else "") or ""
                 purchase_divide_order_dict[pdo_rid]["seriesData"].append(_base_item)
-        elif purchase_divide_order.purchase_divide_order_type == "S":
+        else:
             order_size_table = (
                 db.session.query(Order)
                 .filter(Order.order_id == order_id)
