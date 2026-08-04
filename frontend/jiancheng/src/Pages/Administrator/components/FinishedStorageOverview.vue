@@ -147,11 +147,15 @@
                         <el-table-column prop="picker" label="拣货人" width="100" />
                         <el-table-column prop="datetime" label="时间" width="160" />
                         <el-table-column prop="remark" label="备注" min-width="120" />
-                        <el-table-column label="操作" width="90" align="center">
+                        <el-table-column label="操作" width="150" align="center">
                             <template #default="{ row }">
                                 <el-button type="danger" link size="small"
                                     @click="revertOutbound(row)">
-                                    撤回
+                                    退回本条
+                                </el-button>
+                                <el-button type="warning" link size="small"
+                                    @click="revertOutboundRecord(row)">
+                                    退回整单
                                 </el-button>
                             </template>
                         </el-table-column>
@@ -355,9 +359,9 @@ export default {
         async revertOutbound(row) {
             try {
                 await ElMessageBox.confirm(
-                    `确认撤回出库记录 "${row.rid}"？\n出库数量: ${row.amount} 双\n撤回后将恢复库存，此操作不可逆。`,
-                    '撤回出库',
-                    { confirmButtonText: '确认撤回', cancelButtonText: '取消', type: 'warning' }
+                    `确认退回本条出库记录 "${row.rid}"？\n出库数量: ${row.amount} 双\n退回后将恢复库存，此操作不可逆。`,
+                    '退回出库记录',
+                    { confirmButtonText: '确认退回', cancelButtonText: '取消', type: 'warning' }
                 )
             } catch {
                 return
@@ -367,13 +371,39 @@ export default {
                     `${this.$apiBaseUrl}/admin/revert-finished-outbound`,
                     { params: { detailId: row.detailId } }
                 )
-                ElMessage.success(res.data.message || '撤回成功')
+                ElMessage.success(res.data.message || '退回成功')
                 await this.fetchRecords(this.currentStorageRow.finishedShoeId)
                 this.fetchOverview()
                 this.fetchStatusCounts()
             } catch (e) {
                 console.error(e)
-                const msg = e.response?.data?.error || '撤回失败'
+                const msg = e.response?.data?.error || '退回失败'
+                ElMessage.error(msg)
+            }
+        },
+
+        async revertOutboundRecord(row) {
+            try {
+                await ElMessageBox.confirm(
+                    `确认退回整张出库单 "${row.rid}"？\n将撤销该出库单下的全部出库明细并恢复库存，若关联审批单将回退到「待仓库出库」，此操作不可逆。`,
+                    '退回整张出库单',
+                    { confirmButtonText: '确认退回', cancelButtonText: '取消', type: 'warning' }
+                )
+            } catch {
+                return
+            }
+            try {
+                const res = await axios.delete(
+                    `${this.$apiBaseUrl}/admin/revert-finished-outbound-record`,
+                    { params: { recordId: row.recordId } }
+                )
+                ElMessage.success(res.data.message || '退回成功')
+                await this.fetchRecords(this.currentStorageRow.finishedShoeId)
+                this.fetchOverview()
+                this.fetchStatusCounts()
+            } catch (e) {
+                console.error(e)
+                const msg = e.response?.data?.error || '退回失败'
                 ElMessage.error(msg)
             }
         },

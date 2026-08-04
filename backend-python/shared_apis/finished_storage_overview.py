@@ -19,11 +19,26 @@ from models import (
     ShoeInboundRecordDetail,
     ShoeOutboundRecord,
     ShoeOutboundRecordDetail,
+    ShoeOutboundApply,
 )
 from sqlalchemy import func, desc
 from api_utility import format_datetime
 
 finished_storage_overview_bp = Blueprint("finished_storage_overview_bp", __name__)
+
+
+def _rollback_outbound_apply(record_id):
+    """当出库主记录被撤销时，回退关联的出库审批单到「待仓库出库(3)」，并清除出库关联。"""
+    applies = (
+        db.session.query(ShoeOutboundApply)
+        .filter(ShoeOutboundApply.outbound_record_id == record_id)
+        .all()
+    )
+    for apply in applies:
+        apply.status = 3
+        apply.outbound_record_id = None
+        apply.actual_outbound_datetime = None
+        apply.warehouse_staff_id = None
 
 
 @finished_storage_overview_bp.route(
@@ -366,7 +381,71 @@ def revert_finished_outbound():
         .count()
     )
     if remaining == 0:
+        _rollback_outbound_apply(record.shoe_outbound_record_id)
         db.session.delete(record)
 
     db.session.commit()
     return jsonify({"message": f"已撤回出库 {amount} 双"})
+
+
+@finished_storage_overview_bp.route(
+    "/admin/revert-finished-outbound-record", methods=["DELETE"]
+)
+def revert_finished_outbound_record():
+    """
+    撤销整张出库单（ShoeOutboundRecord）及其全部明细。
+    - 逐条恢复对应库存的 amount（库存加回）
+    - status 回退（若为 2 已完成出库 → 回退为 1）
+    - 回退关联的出库审批单到「待仓库出库(3)」并清除出库关联
+    - 删除全部明细和出库主记录
+    """
+    record_id = request.args.get("recordId", type=int)
+    if not record_id:
+        return jsonify({"error": "缺少 recordId"}), 400
+
+    record = (
+        db.session.query(ShoeOutboundRecord)
+        .filter(ShoeOutboundRecord.shoe_outbound_record_id == record_id)
+        .first()
+    )
+    if not record:
+        return jsonify({"error": "出库单不存在"}), 404
+
+    record_rid = record.shoe_outbound_rid
+    details = (
+        db.session.query(ShoeOutboundRecordDetail)
+        .filter(ShoeOutboundRecordDetail.shoe_outbound_record_id == record_id)
+        .all()
+    )
+
+    total_amount = 0
+    for detail in details:
+        amount = detail.outbound_amount or 0
+        total_amount += amount
+        storage = (
+            db.session.query(FinishedShoeStorage)
+            .filter(
+                FinishedShoeStorage.finished_shoe_id
+                == detail.finished_shoe_storage_id
+            )
+            .first()
+        )
+        if storage:
+            storage.finished_amount = (storage.finished_amount or 0) + amount
+            if storage.finished_status == 2:
+                storage.finished_status = 1
+            for size in SHOESIZERANGE:
+                col = f"size_{size}_amount"
+                detail_qty = getattr(detail, col, 0) or 0
+                if detail_qty:
+                    cur = getattr(storage, col, 0) or 0
+                    setattr(storage, col, cur + detail_qty)
+        db.session.delete(detail)
+
+    db.session.flush()
+    _rollback_outbound_apply(record_id)
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify(
+        {"message": f"已撤回整张出库单 {record_rid}，共 {total_amount} 双"}
+    )
