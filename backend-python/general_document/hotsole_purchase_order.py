@@ -38,7 +38,7 @@ def set_wrapped_cell(ws, cell_address, text, center=True, column_width_chars=40,
     ws.row_dimensions[row].height = height + 10
 
 
-craft_whole_name = "1."
+craft_entries = []
 craft_series_number = 1
 
 def load_template(template_path, new_file_path):
@@ -82,7 +82,7 @@ def insert_series_data(ws, series_data, start_row=7):
     - Automatically calculate `合计` for each amount row.
     - Merge `备注` field for each item.
     """
-    global craft_whole_name, craft_series_number
+    global craft_entries, craft_series_number
     current_row = start_row  # Start at row 4
 
     for item in series_data:
@@ -92,13 +92,9 @@ def insert_series_data(ws, series_data, start_row=7):
         _mat = (item.get("使用材料") or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ").strip()
         _craft = (item.get("工艺说明") or "").replace("\r\n", " ").replace("\n", " ").replace("\r", " ").strip()
         _entry = _mat + _craft
-        if craft_whole_name == "1.":
-            craft_whole_name = "1." + _entry
-            craft_series_number = craft_series_number + 1
-        else:
-            craft_whole_name = craft_whole_name + "\n" + str(craft_series_number) + "." + _entry
-            craft_series_number = craft_series_number + 1
-            
+        craft_entries.append(str(craft_series_number) + "." + _entry)
+        craft_series_number = craft_series_number + 1
+
 
         # Insert sizes and amounts
         for chunk in size_chunks:
@@ -148,8 +144,8 @@ def get_next_column_name(current_column_name):
 
 
 def generate_hotsole_excel_file(template_path, new_file_path, order_data):
-    global craft_whole_name, craft_series_number
-    craft_whole_name = "1."
+    global craft_entries, craft_series_number
+    craft_entries = []
     craft_series_number = 1
     logger.debug("start generate_last_excel_file")
     wb, ws = load_template(template_path, new_file_path)
@@ -214,29 +210,34 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=12)
     ws[f"A{row}"] = order_data.get("备注", "")
 
-    ws.merge_cells(start_row=row + 2, start_column=1, end_row=row + 2, end_column=12)
-    set_wrapped_cell(ws, f"A{row + 2}", craft_whole_name, center=False)
+    # 工艺说明：每条编号单独占一行
+    craft_lines = craft_entries if craft_entries else [""]
+    for idx, entry in enumerate(craft_lines):
+        r = row + 2 + idx
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=12)
+        set_wrapped_cell(ws, f"A{r}", entry, center=False)
+    base = row + 2 + len(craft_lines)
 
-    ws[f"A{row + 3}"] = "环境要求:"
-    ws.merge_cells(start_row=row + 3, start_column=2, end_row=row + 3, end_column=12)
-    ws[f"B{row + 3}"] = order_data.get("环保要求", "")
-    ws[f"B{row + 3}"].alignment = left_wrap
+    ws[f"A{base}"] = "环境要求:"
+    ws.merge_cells(start_row=base, start_column=2, end_row=base, end_column=12)
+    ws[f"B{base}"] = order_data.get("环保要求", "")
+    ws[f"B{base}"].alignment = left_wrap
 
-    ws[f"A{row + 4}"] = "发货地址:"
-    ws.merge_cells(start_row=row + 4, start_column=2, end_row=row + 4, end_column=12)
-    ws[f"B{row + 4}"] = order_data.get("发货地址", "")
-    ws[f"B{row + 4}"].alignment = left_wrap
+    ws[f"A{base + 1}"] = "发货地址:"
+    ws.merge_cells(start_row=base + 1, start_column=2, end_row=base + 1, end_column=12)
+    ws[f"B{base + 1}"] = order_data.get("发货地址", "")
+    ws[f"B{base + 1}"].alignment = left_wrap
 
-    ws[f"A{row + 5}"] = "交货期限:"
-    ws.merge_cells(start_row=row + 5, start_column=2, end_row=row + 5, end_column=12)
+    ws[f"A{base + 2}"] = "交货期限:"
+    ws.merge_cells(start_row=base + 2, start_column=2, end_row=base + 2, end_column=12)
     deadline_text = (order_data.get("交货期限", "") + "    如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。").strip()
-    ws[f"B{row + 5}"] = deadline_text
-    ws[f"B{row + 5}"].alignment = left_wrap
-    ws.row_dimensions[row + 5].height = 30
+    ws[f"B{base + 2}"] = deadline_text
+    ws[f"B{base + 2}"].alignment = left_wrap
+    ws.row_dimensions[base + 2].height = 30
 
-    ws[f"A{row + 6}"] = "制表:"
-    ws[f"G{row + 6}"] = "审核:"
-    ws[f"G{row + 7}"] = order_data.get("日期", "")
+    ws[f"A{base + 3}"] = "制表:"
+    ws[f"G{base + 3}"] = "审核:"
+    ws[f"G{base + 4}"] = order_data.get("日期", "")
 
     # Apply formatting to only data region（原A7→A5，原A6→A4）
     bold_cells = {"A2", "A4", "B4", "K4", "L4"}
