@@ -192,7 +192,7 @@
                                     <th style="width: 80px">车间</th>
                                     <th style="width: 100px">部件</th>
                                     <th>材料名称</th>
-                                    <th style="width: 140px">工艺</th>
+                                    <th>工艺</th>
                                     <th style="width: 70px">双数</th>
                                     <th style="width: 70px">用量</th>
                                 </tr>

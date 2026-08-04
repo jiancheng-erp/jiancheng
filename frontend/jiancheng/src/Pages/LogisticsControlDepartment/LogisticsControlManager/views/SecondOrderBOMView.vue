@@ -1003,6 +1003,26 @@ export default {
                 item.purchaseAmount = Number(item.purchaseAmount)
             }
         },
+        async getPurchaseItemsForEdit(row) {
+            const response = await this.$axios.get(
+                `${this.$apiBaseUrl}/secondpurchase/getpurchaseitemsforedit`,
+                {
+                    params: {
+                        purchaseOrderId: row.purchaseOrderId,
+                        orderid: this.$props.orderId
+                    }
+                }
+            )
+            this.bomPreviewData = response.data
+            this.bomTestData = response.data
+            for (const item of this.bomTestData) {
+                item.purchaseAmount = Number(item.purchaseAmount)
+                item.storageAmount = item.warehouseUsageInfo.reduce(
+                    (total, w) => total + w.useAmount,
+                    0
+                )
+            }
+        },
         async getAllPurchaseUnit() {
             const response = await axios.get(`${this.$apiBaseUrl}/logistics/getallunit`)
             this.unitOptions = response.data
@@ -1142,7 +1162,7 @@ export default {
             this.currentOrderShoeRow = row
             this.currentBOMId = row.totalBomId
             await this.getOrderShoeBatchInfo(row.orderShoeId)
-            await this.getBOMDetails(row)
+            await this.getPurchaseItemsForEdit(row)
             loadingInstance.close()
 
             this.createVis = true

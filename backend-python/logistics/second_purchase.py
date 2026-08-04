@@ -640,6 +640,136 @@ def get_shoe_bom_items():
     return jsonify(result)
 
 
+@second_purchase_bp.route("/secondpurchase/getpurchaseitemsforedit", methods=["GET"])
+def get_purchase_items_for_edit():
+    """编辑已保存的二次采购订单时，直接读取已保存的采购项（与预览同源），
+    逐条返回，保证编辑与预览一致。首次生成仍走 get_shoe_bom_items（从 BOM 派生）。"""
+    purchase_order_id = request.args.get("purchaseOrderId")
+    order_id = request.args.get("orderid")
+    size_name_info = get_order_batch_type_helper(order_id)
+
+    query = (
+        db.session.query(
+            PurchaseOrderItem,
+            BomItem,
+            ProductionInstructionItem,
+            Material,
+            MaterialType,
+            Supplier,
+        )
+        .join(
+            PurchaseDivideOrder,
+            PurchaseDivideOrder.purchase_divide_order_id
+            == PurchaseOrderItem.purchase_divide_order_id,
+        )
+        .join(
+            PurchaseOrder,
+            PurchaseDivideOrder.purchase_order_id == PurchaseOrder.purchase_order_id,
+        )
+        .outerjoin(BomItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id)
+        .outerjoin(
+            ProductionInstructionItem,
+            BomItem.production_instruction_item_id
+            == ProductionInstructionItem.production_instruction_item_id,
+        )
+        .join(
+            Material,
+            Material.material_id
+            == db.func.coalesce(
+                PurchaseOrderItem.inbound_material_id,
+                PurchaseOrderItem.material_id,
+            ),
+        )
+        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
+        .order_by(material_order, Supplier.supplier_name, Material.material_name)
+        .all()
+    )
+
+    result = []
+    for (
+        purchase_order_item,
+        bom_item,
+        production_instruction_item,
+        material,
+        material_type,
+        supplier,
+    ) in query:
+        size_info = []
+        for i in range(len(size_name_info)):
+            db_name = i + 34
+            approval_amount = (
+                getattr(bom_item, f"size_{db_name}_total_usage", Decimal(0.00))
+                if bom_item
+                else Decimal(0.00)
+            ) or Decimal(0.00)
+            purchase_amount = (
+                getattr(purchase_order_item, f"size_{db_name}_purchase_amount", Decimal(0.00))
+                or Decimal(0.00)
+            )
+            size_info.append(
+                {
+                    "size": size_name_info[i]["label"],
+                    "approvalAmount": approval_amount,
+                    "purchaseAmount": purchase_amount,
+                }
+            )
+
+        result.append(
+            {
+                "bomItemId": purchase_order_item.bom_item_id,
+                "purchaseOrderItemId": purchase_order_item.purchase_order_item_id,
+                "materialTypeId": material.material_type_id,
+                "materialType": material_type.material_type_name,
+                "materialProductionInstructionType": (
+                    production_instruction_item.material_type
+                    if production_instruction_item
+                    else None
+                ),
+                "materialId": purchase_order_item.material_id,
+                "inboundMaterialId": purchase_order_item.inbound_material_id
+                or purchase_order_item.material_id,
+                "inboundUnit": purchase_order_item.inbound_unit or material.material_unit,
+                "materialName": material.material_name,
+                "inboundMaterialName": material.material_name,
+                "craftName": (
+                    production_instruction_item.pre_craft_name
+                    if production_instruction_item
+                    and production_instruction_item.pre_craft_name
+                    else purchase_order_item.craft_name
+                ),
+                "materialModel": purchase_order_item.material_model,
+                "materialSpecification": purchase_order_item.material_specification,
+                "color": purchase_order_item.color,
+                "unit": material.material_unit,
+                "unitUsage": bom_item.unit_usage
+                if bom_item
+                and (bom_item.unit_usage is not None or material.material_category != 0)
+                else (Decimal(0.00) if material.material_category == 0 else None),
+                "approvalUsage": (
+                    purchase_order_item.approval_amount
+                    if purchase_order_item.approval_amount is not None
+                    else (bom_item.total_usage if bom_item else Decimal(0.00))
+                ),
+                "useDepart": bom_item.department_id if bom_item else None,
+                "purchaseAmount": purchase_order_item.purchase_amount,
+                "supplierId": supplier.supplier_id,
+                "supplierName": supplier.supplier_name,
+                "materialCategory": material.material_category,
+                "remark": purchase_order_item.remark,
+                "sizeInfo": size_info,
+                "warehouseUsageInfo": (
+                    json.loads(purchase_order_item.related_selected_material_storage)
+                    if purchase_order_item.related_selected_material_storage
+                    else []
+                ),
+            }
+        )
+
+    return jsonify(result)
+
+
 @second_purchase_bp.route("/secondpurchase/savepurchase", methods=["POST"])
 def save_purchase():
     bom_rid = request.json.get("bomRid")
@@ -971,6 +1101,68 @@ def edit_purchase_items():
             db.session.add(material)
             db.session.flush()
         purchase_order_item.inbound_material_id = material.material_id
+        # 保存时按厂家归并：确保采购项落在同一采购订单下对应厂家的分采购订单，
+        # 既处理本次改厂家，也修复历史遗留的「厂家未合并」数据。
+        current_divide_order = (
+            db.session.query(PurchaseDivideOrder)
+            .filter(
+                PurchaseDivideOrder.purchase_divide_order_id
+                == purchase_order_item.purchase_divide_order_id
+            )
+            .first()
+        )
+        if current_divide_order:
+            parent_purchase_order = (
+                db.session.query(PurchaseOrder)
+                .filter(
+                    PurchaseOrder.purchase_order_id
+                    == current_divide_order.purchase_order_id
+                )
+                .first()
+            )
+            target_rid = parent_purchase_order.purchase_order_rid + str(
+                supplier_id
+            ).zfill(4)
+            if current_divide_order.purchase_divide_order_rid != target_rid:
+                target_divide_order = (
+                    db.session.query(PurchaseDivideOrder)
+                    .filter(
+                        PurchaseDivideOrder.purchase_divide_order_rid == target_rid
+                    )
+                    .first()
+                )
+                if not target_divide_order:
+                    target_divide_order = PurchaseDivideOrder(
+                        purchase_divide_order_rid=target_rid,
+                        purchase_order_id=parent_purchase_order.purchase_order_id,
+                        purchase_divide_order_type=current_divide_order.purchase_divide_order_type,
+                        purchase_order_remark=current_divide_order.purchase_order_remark,
+                        purchase_order_environmental_request=current_divide_order.purchase_order_environmental_request,
+                        shipment_address=current_divide_order.shipment_address,
+                        shipment_deadline=current_divide_order.shipment_deadline,
+                        total_purchase_order_id=current_divide_order.total_purchase_order_id,
+                    )
+                    db.session.add(target_divide_order)
+                    db.session.flush()
+                old_divide_order_id = purchase_order_item.purchase_divide_order_id
+                purchase_order_item.purchase_divide_order_id = (
+                    target_divide_order.purchase_divide_order_id
+                )
+                db.session.flush()
+                # 若原分采购订单已无采购项，则删除该空订单
+                remaining_count = (
+                    db.session.query(PurchaseOrderItem)
+                    .filter(
+                        PurchaseOrderItem.purchase_divide_order_id
+                        == old_divide_order_id
+                    )
+                    .count()
+                )
+                if remaining_count == 0:
+                    db.session.query(PurchaseDivideOrder).filter(
+                        PurchaseDivideOrder.purchase_divide_order_id
+                        == old_divide_order_id
+                    ).delete()
         if purchase_order_item.related_selected_material_storage:
             # revert the storage
             for storage in json.loads(
