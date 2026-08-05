@@ -1432,7 +1432,7 @@ export default {
                 type: 'warning'
             })
                 .then(() => {
-                    this.saveUsagePurchase()
+                    this.confirmGapThenSave(() => this.saveUsagePurchase())
                 })
                 .catch(() => {
                     this.$message({
@@ -1448,7 +1448,7 @@ export default {
                 type: 'warning'
             })
                 .then(() => {
-                    this.saveEditUsagePurchase()
+                    this.confirmGapThenSave(() => this.saveEditUsagePurchase())
                 })
                 .catch(() => {
                     this.$message({
@@ -1456,6 +1456,67 @@ export default {
                         message: '已取消保存'
                     })
                 })
+        },
+        // 核定用量与采购数量差距过大时（采购 >= 核定×1.35，或无核定却采购），列出并二次确认
+        getApprovalGapItems(ratio = 1.35) {
+            const flagged = []
+            for (const row of this.bomTestData || []) {
+                const approval = Number(row.approvalUsage) || 0
+                const purchase = Number(row.purchaseAmount) || 0
+                if (purchase <= 0) continue
+                let reason = ''
+                let ratioText = ''
+                if (approval > 0) {
+                    if (purchase >= approval * ratio) {
+                        reason = '超采'
+                        ratioText = (purchase / approval).toFixed(1) + '×'
+                    }
+                } else {
+                    reason = '无核定却采购'
+                    ratioText = '∞'
+                }
+                if (!reason) continue
+                const name = [row.materialName, row.materialModel, row.materialSpecification]
+                    .filter(Boolean)
+                    .join(' / ')
+                flagged.push({ name: name || '（未命名材料）', approval, purchase, reason, ratioText })
+            }
+            return flagged
+        },
+        async confirmGapThenSave(saveFn) {
+            const flagged = this.getApprovalGapItems()
+            if (flagged.length) {
+                const rows = flagged
+                    .map(
+                        (f) =>
+                            `<tr><td style="padding:2px 8px;">${f.name}</td>` +
+                            `<td style="padding:2px 8px;text-align:right;">${f.approval}</td>` +
+                            `<td style="padding:2px 8px;text-align:right;">${f.purchase}</td>` +
+                            `<td style="padding:2px 8px;text-align:center;color:#f56c6c;">${f.ratioText}</td></tr>`
+                    )
+                    .join('')
+                const html =
+                    `<div>以下材料的采购数量与核定用量差距过大，请确认无误：</div>` +
+                    `<table style="margin-top:8px;border-collapse:collapse;font-size:13px;">` +
+                    `<thead><tr style="background:#f5f7fa;">` +
+                    `<th style="padding:2px 8px;text-align:left;">材料</th>` +
+                    `<th style="padding:2px 8px;">核定用量</th>` +
+                    `<th style="padding:2px 8px;">采购数量</th>` +
+                    `<th style="padding:2px 8px;">倍数</th></tr></thead>` +
+                    `<tbody>${rows}</tbody></table>`
+                try {
+                    await ElMessageBox.confirm(html, '核定与采购数量差距过大', {
+                        confirmButtonText: '仍然保存',
+                        cancelButtonText: '返回修改',
+                        type: 'warning',
+                        dangerouslyUseHTMLString: true
+                    })
+                } catch {
+                    this.$message({ type: 'info', message: '已返回修改' })
+                    return
+                }
+            }
+            saveFn()
         },
         advanceProcess() {
             this.$confirm('确定推进二次采购流程吗？', '提示', {
