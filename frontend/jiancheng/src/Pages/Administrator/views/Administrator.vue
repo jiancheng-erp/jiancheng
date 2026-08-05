@@ -40,6 +40,9 @@
                     <el-menu-item index="usageModification" @click="handleMenuClick('usageModification')">
                         <span>用量修改</span>
                     </el-menu-item>
+                    <el-menu-item index="purchaseApprovalAdjust" @click="handleMenuClick('purchaseApprovalAdjust')">
+                        <span>采购核定差异调整</span>
+                    </el-menu-item>
                     <el-menu-item index="logout" @click="logout">
                         <span>退出系统</span>
                     </el-menu-item>
@@ -66,6 +69,7 @@ import MaterialConsolidation from '../components/MaterialConsolidation.vue'
 import MaterialBatchEdit from '../components/MaterialBatchEdit.vue'
 import FinishedStorageOverview from '../components/FinishedStorageOverview.vue'
 import UsageModificationView from '@/Pages/UsageCalculation/components/UsageModificationView.vue'
+import PurchaseApprovalAdjust from '../components/PurchaseApprovalAdjust.vue'
 export default {
     components: {
         AllHeader,
@@ -77,7 +81,8 @@ export default {
         MaterialConsolidation,
         MaterialBatchEdit,
         FinishedStorageOverview,
-        UsageModificationView
+        UsageModificationView,
+        PurchaseApprovalAdjust
     },
     data() {
         return {
@@ -115,6 +120,8 @@ export default {
                 this.currentComponent = 'FinishedStorageOverview'
             } else if (index === 'usageModification') {
                 this.currentComponent = 'UsageModificationView'
+            } else if (index === 'purchaseApprovalAdjust') {
+                this.currentComponent = 'PurchaseApprovalAdjust'
             }
         },
         async logout() {

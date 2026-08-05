@@ -150,6 +150,17 @@
                             <el-table-column prop="actualInboundUnit" label="单位" min-width="50" />
                             <el-table-column prop="allowedOutboundAmount" label="可出库库存" min-width="70" />
 
+                            <el-table-column label="可复用余料" min-width="110">
+                                <template #default="{ row }">
+                                    <el-tag :type="row.reusable ? 'success' : 'info'" size="small">
+                                        {{ row.reusable ? '已标记' : '未标记' }}
+                                    </el-tag>
+                                    <el-button type="primary" link @click="toggleReusable(row)">
+                                        {{ row.reusable ? '取消' : '标记' }}
+                                    </el-button>
+                                </template>
+                            </el-table-column>
+
                             <el-table-column label="按尺码分配" min-width="140">
                                 <template #default="{ row }">
                                     <div class="flex items-center gap-3">
@@ -786,6 +797,21 @@ function normalizeRow(r: any) {
 }
 function deepClone<T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj))
+}
+
+async function toggleReusable(row: any) {
+    const next = !row.reusable
+    try {
+        await axios.post(`${apiBaseUrl}/warehouse/orderoutbound/markreusable`, {
+            materialStorageId: row.materialStorageId,
+            reusable: next,
+        })
+        row.reusable = next
+        ElMessage.success(next ? '已标记为可复用' : '已取消可复用标记')
+    } catch (e) {
+        console.error(e)
+        ElMessage.error('操作失败')
+    }
 }
 
 function resetFiltersOnly() {

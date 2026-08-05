@@ -558,11 +558,11 @@
             </span>
         </template>
     </el-dialog>
-    <el-dialog title="查看库存相似材料" v-model="isSimiliarMaterialDialogVisible" :draggable="true" :modal="false"
-        :before-close="closeSimiliarDialog" width="80%">
-        <span>
-            <span>已选库存相似材料</span>
-            <el-table :data="selectSimiliarData" border stripe>
+    <el-dialog title="查看库存相似材料" v-model="isSimiliarMaterialDialogVisible" :draggable="true" append-to-body
+        :close-on-click-modal="false" :before-close="closeSimiliarDialog" width="80%" top="5vh">
+        <div style="margin-bottom: 18px;">
+            <div style="font-weight: 600; margin-bottom: 8px;">已选库存相似材料</div>
+            <el-table :data="selectSimiliarData" border stripe max-height="260">
                 <el-table-column prop="orderRid" label="订单编号"></el-table-column>
                 <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
                 <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
@@ -572,19 +572,21 @@
                 <el-table-column prop="color" label="颜色"></el-table-column>
                 <el-table-column prop="unit" label="单位"></el-table-column>
                 <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
-                <el-table-column label="使用数量">
+                <el-table-column label="使用数量" width="160">
                     <template #default="scope">
                         <el-input-number v-model="scope.row.useAmount" :min="0" :step="0.001" size="small" />
                     </template>
                 </el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="90">
                     <template #default="scope">
-                        <el-button type="primary" @click="handleSimiliarMaterialDelete(scope.row)">删除</el-button>
+                        <el-button type="danger" size="small" @click="handleSimiliarMaterialDelete(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
-            <span>相似库存材料</span>
-            <el-table :data="similiarData" border stripe>
+        </div>
+        <div>
+            <div style="font-weight: 600; margin-bottom: 8px;">相似库存材料</div>
+            <el-table :data="pagedSimiliarData" border stripe max-height="320">
                 <el-table-column prop="orderRid" label="订单编号"></el-table-column>
                 <el-table-column prop="orderShoeRid" label="订单鞋型编号"></el-table-column>
                 <el-table-column prop="supplierName" label="厂家名称"></el-table-column>
@@ -594,14 +596,16 @@
                 <el-table-column prop="color" label="颜色"></el-table-column>
                 <el-table-column prop="unit" label="单位"></el-table-column>
                 <el-table-column prop="purchaseAmount" label="库存数量"></el-table-column>
-                <el-table-column label="操作">
+                <el-table-column label="操作" width="140">
                     <template #default="scope">
-                        <el-button type="primary" @click="handleSimiliarMaterial(scope.row)">使用该库存材料</el-button>
+                        <el-button type="primary" size="small" @click="handleSimiliarMaterial(scope.row)">使用该库存材料</el-button>
                     </template>
                 </el-table-column>
-
             </el-table>
-        </span>
+            <el-pagination style="margin-top: 12px; justify-content: flex-end;" background
+                layout="total, prev, pager, next" :total="similiarData.length" :page-size="similiarPageSize"
+                :current-page="similiarPage" @current-change="handleSimiliarPageChange" />
+        </div>
         <template #footer>
             <span>
                 <el-button @click="closeSimiliarDialog">取消</el-button>
@@ -732,6 +736,8 @@ export default {
             isSimiliarMaterialDialogVisible: false,
             selectSimiliarData: [],
             similiarData: [],
+            similiarPage: 1,
+            similiarPageSize: 5,
             revertForm: {
                 revertToStatus: '',
                 revertReason: '',
@@ -781,6 +787,10 @@ export default {
         },
         allPurchaseDivideOrderIssued() {
             return this.purchaseTestData.every(item => item.purchaseDivideOrderStatus === "已下发") && this.previewAdvanceSymbol;
+        },
+        pagedSimiliarData() {
+            const start = (this.similiarPage - 1) * this.similiarPageSize
+            return this.similiarData.slice(start, start + this.similiarPageSize)
         }
     },
     methods: {
@@ -868,6 +878,9 @@ export default {
             this.similiarData.push(row)
             this.selectSimiliarData = this.selectSimiliarData.filter(item => item !== row)
         },
+        handleSimiliarPageChange(page) {
+            this.similiarPage = page
+        },
         async openSizeComparisonDialog(row) {
             await this.getSizeTableData(row);
             this.sizeGridOptions.editConfig = false;
@@ -890,8 +903,20 @@ export default {
             this.isSimiliarMaterialDialogVisible = false
         },
         saveSimiliarData() {
+            const currentRow = this.bomTestData[this.currentSimiliarIndex]
+            const totalUse = this.selectSimiliarData.reduce(
+                (sum, item) => sum + (Number(item.useAmount) || 0),
+                0
+            )
+            const base = this.getApprovalBase(currentRow)
+            if (totalUse > base) {
+                ElMessage.error(`使用库存数量（${totalUse}）不能超过核定用量（${base}）`)
+                return
+            }
             if (this.selectSimiliarData.length === 0) {
-                this.bomTestData[this.currentSimiliarIndex].similiarMaterial = []
+                currentRow.warehouseUsageInfo = []
+                currentRow.storageAmount = 0
+                this.applyStorageOffset(currentRow, 0)
                 this.isSimiliarMaterialDialogVisible = false
                 return
             }
@@ -901,12 +926,44 @@ export default {
                 return {
                     type: item.similiarType,
                     materialStorageId: item.materialStorageId,
-                    useAmount: item.useAmount
+                    useAmount: Number(item.useAmount) || 0
                 }
             })
-            this.bomTestData[this.currentSimiliarIndex].warehouseUsageInfo = similiarMaterial
+            currentRow.warehouseUsageInfo = similiarMaterial
+            currentRow.storageAmount = totalUse
+            // 库存冲减采购量：采购数量 = 核定用量 − 已用库存
+            this.applyStorageOffset(currentRow, totalUse)
             this.isSimiliarMaterialDialogVisible = false
 
+        },
+        getApprovalBase(row) {
+            if (row.materialCategory == 0) {
+                return Number(row.approvalUsage) || 0
+            }
+            if (Array.isArray(row.sizeInfo)) {
+                return row.sizeInfo.reduce((sum, s) => sum + (Number(s.approvalAmount) || 0), 0)
+            }
+            return Number(row.approvalUsage) || 0
+        },
+        // 以核定用量为基准冲减采购量，保证多次编辑幂等
+        applyStorageOffset(row, totalUse) {
+            if (row.materialCategory == 0) {
+                const base = Number(row.approvalUsage) || 0
+                row.purchaseAmount = Math.max(base - totalUse, 0)
+                return
+            }
+            if (Array.isArray(row.sizeInfo)) {
+                const base = row.sizeInfo.reduce((sum, s) => sum + (Number(s.approvalAmount) || 0), 0)
+                if (base <= 0) return
+                let newTotal = 0
+                row.sizeInfo.forEach(size => {
+                    const appr = Number(size.approvalAmount) || 0
+                    const val = appr - totalUse * (appr / base)
+                    size.purchaseAmount = val
+                    newTotal += val
+                })
+                row.purchaseAmount = newTotal
+            }
         },
         async getAllMaterialNames() {
             const params = { department: 0 }
@@ -1095,34 +1152,40 @@ export default {
             this.createVis = false
         },
         async openSimiliarMaterialDialog(row, index) {
-            const response = await axios.get(
-                `${this.$apiBaseUrl}/logistics/getmaterialstoragesimiliar`,
-                {
-                    params: {
-                        materialId: row.materialId,
-                        materialModel: row.materialModel,
-                        materialSpecification: row.materialSpecification,
-
-                    }
-                }
-            )
-            this.similiarData = response.data
-            if (row.warehouseUsageInfo.length > 0) {
+            try {
                 const response = await axios.get(
-                    `${this.$apiBaseUrl}/logistics/getselectedmaterialstorage`,
+                    `${this.$apiBaseUrl}/logistics/getmaterialstoragesimiliar`,
                     {
                         params: {
-                            warehouseUsageInfo: row.warehouseUsageInfo
+                            materialId: row.materialId,
+                            materialModel: row.materialModel,
+                            materialSpecification: row.materialSpecification,
                         }
                     }
                 )
-                this.selectSimiliarData = response.data
+                this.similiarData = response.data
+                const usageInfo = row.warehouseUsageInfo || []
+                if (usageInfo.length > 0) {
+                    const selectedResponse = await axios.get(
+                        `${this.$apiBaseUrl}/logistics/getselectedmaterialstorage`,
+                        {
+                            params: {
+                                warehouseUsageInfo: JSON.stringify(usageInfo)
+                            }
+                        }
+                    )
+                    this.selectSimiliarData = selectedResponse.data
+                }
+                else {
+                    this.selectSimiliarData = []
+                }
+                this.currentSimiliarIndex = index
+                this.similiarPage = 1
+                this.isSimiliarMaterialDialogVisible = true
+            } catch (error) {
+                console.error(error)
+                ElMessage.error('获取库存相似材料失败')
             }
-            else {
-                this.selectSimiliarData = []
-            }
-            this.currentSizeIndex = index
-            this.isSimiliarMaterialDialogVisible = true
         },
         async openPreviewDialog(row) {
             if (row.currentStatus === '已提交') {

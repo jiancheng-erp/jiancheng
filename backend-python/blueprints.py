@@ -69,6 +69,7 @@ from wechat_api.wechat_template_api import wechat_template_bp
 from shared_apis.material_consolidation import material_consolidation_bp
 from shared_apis.material_batch_edit import material_batch_edit_bp
 from shared_apis.finished_storage_overview import finished_storage_overview_bp
+from shared_apis.purchase_approval_adjust import purchase_approval_adjust_bp
 from flask import Flask
 def register_blueprints(app: Flask):
     app.register_blueprint(price_report_bp)
@@ -142,3 +143,4 @@ def register_blueprints(app: Flask):
     app.register_blueprint(material_consolidation_bp)
     app.register_blueprint(material_batch_edit_bp)
     app.register_blueprint(finished_storage_overview_bp)
+    app.register_blueprint(purchase_approval_adjust_bp)
