@@ -19,6 +19,7 @@
                     <el-menu-item index="5" @click="handleMenuClick(5)">退回任务列表</el-menu-item>
                     <el-menu-item index="3" @click="handleMenuClick(3)">订单查询</el-menu-item>
                     <el-menu-item index="6" @click="handleMenuClick(6)">工艺单修改管理</el-menu-item>
+                    <el-menu-item index="7" @click="handleMenuClick(7)">生产通知单及工艺单</el-menu-item>
                     <el-menu-item index="8" @click="handleMenuClick(8)">个人信息</el-menu-item>
                     <el-menu-item index="9" @click="logout">退出系统</el-menu-item>
                 </el-menu>
@@ -41,6 +42,7 @@ import AdjustList from '../components/AdjustList.vue'
 import BOMReviewList from '../components/BOMReviewList.vue'
 import RevertDashboard from '@/components/RevertDashboard.vue'
 import CraftSheetModifyList from '../components/CraftSheetModifyList.vue'
+import BusinessProductionOrder from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/BusinessProductionOrderView.vue'
 import axios from 'axios'
 export default {
     components: {
@@ -51,7 +53,8 @@ export default {
         AdjustList,
         BOMReviewList,
         RevertDashboard,
-        CraftSheetModifyList
+        CraftSheetModifyList,
+        BusinessProductionOrder
     },
     data() {
         return {
@@ -90,6 +93,9 @@ export default {
                     break
                 case 6:
                     this.currentComponent = 'CraftSheetModifyList'
+                    break
+                case 7:
+                    this.currentComponent = 'BusinessProductionOrder'
                     break
                 case 8:
                     this.currentComponent = 'PersonalInfo'
