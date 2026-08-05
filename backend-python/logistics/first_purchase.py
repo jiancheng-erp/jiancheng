@@ -25,7 +25,7 @@ from general_document.last_purchase_divide_order import generate_last_excel_file
 from general_document.package_purchase_divide_order import generate_package_excel_file
 from models import *
 from sqlalchemy.dialects.mysql import insert
-from sqlalchemy.sql.expression import or_, func
+from sqlalchemy.sql.expression import or_, func, and_
 from sqlalchemy.sql.expression import case
 
 from warehouse import material_storage
@@ -1472,9 +1472,10 @@ def get_material_storage_similiar():
     material_category = material.material_category
     material_storage = (
         db.session.query(
-            MaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe
+            MaterialStorage, SPUMaterial, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe
         )
-        .join(Material, MaterialStorage.material_id == Material.material_id)
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, SPUMaterial.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
         .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
@@ -1482,10 +1483,18 @@ def get_material_storage_similiar():
             OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id
         )
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .filter(MaterialStorage.material_id == material_id)
-        .filter(MaterialStorage.material_model == material_model)
+        .filter(SPUMaterial.material_id == material_id)
+        .filter(SPUMaterial.material_model == material_model)
         .filter(MaterialStorage.current_amount > 0)
-        .filter(OrderStatus.order_current_status > 9)
+        .filter(
+            or_(
+                MaterialStorage.order_id.is_(None),
+                and_(
+                    MaterialStorage.material_storage_status == "2",
+                    OrderStatus.order_current_status > 9,
+                ),
+            )
+        )
         .all()
     )
     result = [
@@ -1494,12 +1503,11 @@ def get_material_storage_similiar():
             "materialStorageId": storage.MaterialStorage.material_storage_id,
             "actualInboundAmount": storage.MaterialStorage.current_amount,
             "unitPrice": storage.MaterialStorage.unit_price,
-            "craftName": storage.MaterialStorage.craft_name,
-            "materialName": material.material_name,
-            "materialModel": storage.MaterialStorage.material_model,
-            "materialSpecification": storage.MaterialStorage.material_specification,
-            "color": storage.MaterialStorage.material_storage_color,
-            "unit": material.material_unit,
+            "materialName": storage.Material.material_name,
+            "materialModel": storage.SPUMaterial.material_model,
+            "materialSpecification": storage.SPUMaterial.material_specification,
+            "color": storage.SPUMaterial.color,
+            "unit": storage.Material.material_unit,
             "supplierName": storage.Supplier.supplier_name,
             "purchaseAmount": storage.MaterialStorage.current_amount,
             "orderRid": storage.Order.order_rid if storage.Order else "",
@@ -1521,6 +1529,7 @@ def get_selected_material_storage():
         material_storage = (
             db.session.query(
                 MaterialStorage,
+                SPUMaterial,
                 Material,
                 Supplier,
                 Order,
@@ -1528,7 +1537,8 @@ def get_selected_material_storage():
                 OrderShoe,
                 Shoe,
             )
-            .join(Material, MaterialStorage.material_id == Material.material_id)
+            .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+            .join(Material, SPUMaterial.material_id == Material.material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
             .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
             .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
@@ -1545,11 +1555,10 @@ def get_selected_material_storage():
                 "materialStorageId": material_storage.MaterialStorage.material_storage_id,
                 "actualInboundAmount": material_storage.MaterialStorage.current_amount,
                 "unitPrice": material_storage.MaterialStorage.unit_price,
-                "craftName": material_storage.MaterialStorage.craft_name,
                 "materialName": material_storage.Material.material_name,
-                "materialModel": material_storage.MaterialStorage.material_model,
-                "materialSpecification": material_storage.MaterialStorage.material_specification,
-                "color": material_storage.MaterialStorage.material_storage_color,
+                "materialModel": material_storage.SPUMaterial.material_model,
+                "materialSpecification": material_storage.SPUMaterial.material_specification,
+                "color": material_storage.SPUMaterial.color,
                 "unit": material_storage.Material.material_unit,
                 "supplierName": material_storage.Supplier.supplier_name,
                 "purchaseAmount": material_storage.MaterialStorage.current_amount,

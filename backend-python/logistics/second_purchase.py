@@ -41,6 +41,121 @@ second_purchase_bp = Blueprint("second_purrchase_bp", __name__)
 # 1=面料, 2=里料, 4=化工 — these are NOT split by shoe color in the accessory Excel
 _ACCESSORY_SPLIT_EXCLUDE_TYPES = {1, 2, 4}
 
+# 库存利用（材料复用）出库类型码，走待审(pending)预占，仓库按订单出库时释放
+MATERIAL_REUSE_OUTBOUND_TYPE = 8
+
+
+def _reserve_material_reuse_outbound(order_id, order_shoe_id, warehouse_usage_info, remark=""):
+    """为库存利用创建一条待审(status=0)材料复用出库单(type=8)，占用 pending_outbound。
+
+    仅数量类材料调用。每条 warehouseUsageInfo 会被回写 outboundRecordId /
+    outboundRecordDetailId，供后续编辑撤销与仓库释放精准定位。不改动 current_amount。
+    返回更新后的 warehouseUsageInfo。
+    """
+    if not warehouse_usage_info:
+        return warehouse_usage_info
+    now = datetime.datetime.now()
+    outbound_record = OutboundRecord(
+        outbound_rid="OR" + now.strftime("%Y%m%d%H%M%S") + "T" + str(MATERIAL_REUSE_OUTBOUND_TYPE),
+        outbound_datetime=now,
+        outbound_type=MATERIAL_REUSE_OUTBOUND_TYPE,
+        approval_status=0,
+        is_sized_material=0,
+        remark=remark,
+    )
+    db.session.add(outbound_record)
+    db.session.flush()
+    for storage_line in warehouse_usage_info:
+        storage_id = storage_line["materialStorageId"]
+        use_amount = Decimal(str(storage_line["useAmount"]))
+        material_storage = (
+            db.session.query(MaterialStorage)
+            .filter(MaterialStorage.material_storage_id == storage_id)
+            .first()
+        )
+        if not material_storage:
+            continue
+        average_price = material_storage.average_price or 0
+        detail = OutboundRecordDetail(
+            outbound_record_id=outbound_record.outbound_record_id,
+            outbound_amount=use_amount,
+            unit_price=average_price,
+            item_total_price=use_amount * Decimal(str(average_price)),
+            material_storage_id=storage_id,
+            spu_material_id=material_storage.spu_material_id,
+            order_id=order_id,
+            order_shoe_id=order_shoe_id,
+        )
+        db.session.add(detail)
+        db.session.flush()
+        material_storage.pending_outbound = (material_storage.pending_outbound or 0) + use_amount
+        storage_line["outboundRecordId"] = outbound_record.outbound_record_id
+        storage_line["outboundRecordDetailId"] = detail.id
+    return warehouse_usage_info
+
+
+def _release_material_reuse_reservation(warehouse_usage_info):
+    """撤销库存利用的待审出库预占（编辑二采或删除时）。
+
+    仅对仍处于待审(status=0)的记录生效；若已被仓库释放/审核则不再回退，交由退回流程处理。
+    兼容旧数据：没有 outboundRecordDetailId 的按旧逻辑回加 current_amount。
+    """
+    if not warehouse_usage_info:
+        return
+    touched_records = set()
+    for storage_line in warehouse_usage_info:
+        detail_id = storage_line.get("outboundRecordDetailId")
+        if detail_id:
+            detail = (
+                db.session.query(OutboundRecordDetail)
+                .filter(OutboundRecordDetail.id == detail_id)
+                .first()
+            )
+            if not detail:
+                continue
+            record = (
+                db.session.query(OutboundRecord)
+                .filter(OutboundRecord.outbound_record_id == detail.outbound_record_id)
+                .first()
+            )
+            if record and record.approval_status == 0:
+                material_storage = (
+                    db.session.query(MaterialStorage)
+                    .filter(MaterialStorage.material_storage_id == detail.material_storage_id)
+                    .first()
+                )
+                if material_storage:
+                    material_storage.pending_outbound = (
+                        material_storage.pending_outbound or 0
+                    ) - (detail.outbound_amount or 0)
+                touched_records.add(detail.outbound_record_id)
+                db.session.delete(detail)
+            continue
+        # 旧数据兼容：无出库明细关联，直接回加库存
+        storage_id = storage_line.get("materialStorageId")
+        use_amount = Decimal(str(storage_line.get("useAmount", 0)))
+        if storage_id:
+            material_storage = (
+                db.session.query(MaterialStorage)
+                .filter(MaterialStorage.material_storage_id == storage_id)
+                .first()
+            )
+            if material_storage:
+                material_storage.current_amount = (
+                    material_storage.current_amount or 0
+                ) + use_amount
+    db.session.flush()
+    for record_id in touched_records:
+        remaining = (
+            db.session.query(OutboundRecordDetail)
+            .filter(OutboundRecordDetail.outbound_record_id == record_id)
+            .count()
+        )
+        if remaining == 0:
+            db.session.query(OutboundRecord).filter(
+                OutboundRecord.outbound_record_id == record_id
+            ).delete()
+
 
 def _get_hotsole_latest_craft(hotsole_bi):
     """烫底采购订单生成时，工艺说明以投产指令单最新工艺(pre_craft_name)为准。
@@ -905,17 +1020,17 @@ def save_purchase():
                 db.session.flush()
             purchase_order_item.inbound_material_id = material.material_id
             db.session.add(purchase_order_item)
-            # use warehouseUsageInfo to update the storage
-            if len(item["warehouseUsageInfo"]) > 0:
-                for storage in item["warehouseUsageInfo"]:
-                    storage_id = storage["materialStorageId"]
-                    storage_amount = storage["useAmount"]
-                    material_storage = (
-                        db.session.query(MaterialStorage)
-                        .filter(MaterialStorage.material_storage_id == storage_id)
-                        .first()
-                    )
-                    material_storage.current_amount -= storage_amount
+            # 库存利用：数量类材料创建待审(pending)材料复用出库预占，回写明细ID
+            if item["materialCategory"] == 0 and len(item["warehouseUsageInfo"]) > 0:
+                _reserve_material_reuse_outbound(
+                    order_id,
+                    order_shoe_id,
+                    item["warehouseUsageInfo"],
+                    remark=f"二次采购库存利用 {purchase_order_rid}",
+                )
+                purchase_order_item.related_selected_material_storage = json.dumps(
+                    item["warehouseUsageInfo"]
+                )
                 db.session.flush()
 
     # set the order shoe status to 1
@@ -1058,6 +1173,7 @@ def edit_purchase_items():
             .first()
         )
         purchase_order_item, material = entities
+        material_category = material.material_category
         purchase_order_item.purchase_amount = item["purchaseAmount"]
         purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
         for i in range(len(item["sizeInfo"])):
@@ -1164,33 +1280,35 @@ def edit_purchase_items():
                         == old_divide_order_id
                     ).delete()
         if purchase_order_item.related_selected_material_storage:
-            # revert the storage
-            for storage in json.loads(
-                purchase_order_item.related_selected_material_storage
-            ):
-                storage_id = storage["materialStorageId"]
-                storage_amount = storage["useAmount"]
-                material_storage = (
-                    db.session.query(MaterialStorage)
-                    .filter(MaterialStorage.material_storage_id == storage_id)
-                    .first()
+            # 撤销旧的库存利用待审预占
+            _release_material_reuse_reservation(
+                json.loads(purchase_order_item.related_selected_material_storage)
+            )
+        # 数量类材料重新创建待审材料复用出库预占，回写明细ID
+        if material_category == 0 and len(item["warehouseUsageInfo"]) > 0:
+            reuse_purchase_order = (
+                db.session.query(PurchaseOrder)
+                .join(
+                    PurchaseDivideOrder,
+                    PurchaseDivideOrder.purchase_order_id
+                    == PurchaseOrder.purchase_order_id,
                 )
-                material_storage.current_amount += storage_amount
-            db.session.flush()
+                .filter(
+                    PurchaseDivideOrder.purchase_divide_order_id
+                    == purchase_order_item.purchase_divide_order_id
+                )
+                .first()
+            )
+            _reserve_material_reuse_outbound(
+                reuse_purchase_order.order_id,
+                reuse_purchase_order.order_shoe_id,
+                item["warehouseUsageInfo"],
+                remark=f"二次采购库存利用 {reuse_purchase_order.purchase_order_rid}",
+            )
         purchase_order_item.related_selected_material_storage = json.dumps(
             item["warehouseUsageInfo"]
         )
-        if len(item["warehouseUsageInfo"]) > 0:
-            for storage in item["warehouseUsageInfo"]:
-                storage_id = storage["materialStorageId"]
-                storage_amount = storage["useAmount"]
-                material_storage = (
-                    db.session.query(MaterialStorage)
-                    .filter(MaterialStorage.material_storage_id == storage_id)
-                    .first()
-                )
-                material_storage.current_amount -= storage_amount
-            db.session.flush()
+        db.session.flush()
 
     db.session.commit()
     return jsonify({"status": "success"})
@@ -1940,9 +2058,10 @@ def get_material_storage_similiar():
     material_category = material.material_category
     material_storage = (
         db.session.query(
-            MaterialStorage, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe
+            MaterialStorage, SPUMaterial, Material, Supplier, Order, OrderStatus, OrderShoe, Shoe
         )
-        .join(Material, MaterialStorage.material_id == Material.material_id)
+        .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+        .join(Material, SPUMaterial.material_id == Material.material_id)
         .join(Supplier, Material.material_supplier == Supplier.supplier_id)
         .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
         .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
@@ -1950,10 +2069,18 @@ def get_material_storage_similiar():
             OrderShoe, MaterialStorage.order_shoe_id == OrderShoe.order_shoe_id
         )
         .outerjoin(Shoe, OrderShoe.shoe_id == Shoe.shoe_id)
-        .filter(MaterialStorage.material_id == material_id)
-        .filter(MaterialStorage.material_model == material_model)
+        .filter(SPUMaterial.material_id == material_id)
+        .filter(SPUMaterial.material_model == material_model)
         .filter(MaterialStorage.current_amount > 0)
-        .filter(OrderStatus.order_current_status > 9)
+        .filter(
+            or_(
+                MaterialStorage.order_id.is_(None),
+                and_(
+                    MaterialStorage.material_storage_status == "2",
+                    OrderStatus.order_current_status > 9,
+                ),
+            )
+        )
         .all()
     )
     result = [
@@ -1962,12 +2089,11 @@ def get_material_storage_similiar():
             "materialStorageId": storage.MaterialStorage.material_storage_id,
             "actualInboundAmount": storage.MaterialStorage.current_amount,
             "unitPrice": storage.MaterialStorage.unit_price,
-            "craftName": storage.MaterialStorage.craft_name,
-            "materialName": material.material_name,
-            "materialModel": storage.MaterialStorage.material_model,
-            "materialSpecification": storage.MaterialStorage.material_specification,
-            "color": storage.MaterialStorage.material_storage_color,
-            "unit": material.material_unit,
+            "materialName": storage.Material.material_name,
+            "materialModel": storage.SPUMaterial.material_model,
+            "materialSpecification": storage.SPUMaterial.material_specification,
+            "color": storage.SPUMaterial.color,
+            "unit": storage.Material.material_unit,
             "supplierName": storage.Supplier.supplier_name,
             "purchaseAmount": storage.MaterialStorage.current_amount,
             "orderRid": storage.Order.order_rid if storage.Order else "",
@@ -1989,6 +2115,7 @@ def get_selected_material_storage():
         material_storage = (
             db.session.query(
                 MaterialStorage,
+                SPUMaterial,
                 Material,
                 Supplier,
                 Order,
@@ -1996,7 +2123,8 @@ def get_selected_material_storage():
                 OrderShoe,
                 Shoe,
             )
-            .join(Material, MaterialStorage.material_id == Material.material_id)
+            .join(SPUMaterial, MaterialStorage.spu_material_id == SPUMaterial.spu_material_id)
+            .join(Material, SPUMaterial.material_id == Material.material_id)
             .join(Supplier, Material.material_supplier == Supplier.supplier_id)
             .outerjoin(Order, MaterialStorage.order_id == Order.order_id)
             .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
@@ -2013,11 +2141,10 @@ def get_selected_material_storage():
                 "materialStorageId": material_storage.MaterialStorage.material_storage_id,
                 "actualInboundAmount": material_storage.MaterialStorage.current_amount,
                 "unitPrice": material_storage.MaterialStorage.unit_price,
-                "craftName": material_storage.MaterialStorage.craft_name,
                 "materialName": material_storage.Material.material_name,
-                "materialModel": material_storage.MaterialStorage.material_model,
-                "materialSpecification": material_storage.MaterialStorage.material_specification,
-                "color": material_storage.MaterialStorage.material_storage_color,
+                "materialModel": material_storage.SPUMaterial.material_model,
+                "materialSpecification": material_storage.SPUMaterial.material_specification,
+                "color": material_storage.SPUMaterial.color,
                 "unit": material_storage.Material.material_unit,
                 "supplierName": material_storage.Supplier.supplier_name,
                 "purchaseAmount": material_storage.MaterialStorage.current_amount,

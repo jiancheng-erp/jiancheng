@@ -1127,6 +1127,55 @@ def _create_outbound_record(data, approval_status):
     return outbound_record
 
 
+def _consume_reuse_reservation(order_id, storage, amount):
+    """按订单出库时释放该库存对本订单的材料复用(type=8)待审预占，
+    使被预占库存可被真实出库消耗，避免重复占用 pending。返回已释放数量。"""
+    if not order_id or Decimal(str(amount)) <= 0:
+        return Decimal(0)
+    pending_details = (
+        db.session.query(OutboundRecordDetail, OutboundRecord)
+        .join(
+            OutboundRecord,
+            OutboundRecord.outbound_record_id
+            == OutboundRecordDetail.outbound_record_id,
+        )
+        .filter(
+            OutboundRecordDetail.material_storage_id == storage.material_storage_id,
+            OutboundRecordDetail.order_id == order_id,
+            OutboundRecord.outbound_type == 8,  # 材料复用预占
+            OutboundRecord.approval_status == 0,
+        )
+        .all()
+    )
+    released = Decimal(0)
+    target = Decimal(str(amount))
+    touched_records = set()
+    for detail, record in pending_details:
+        if released >= target:
+            break
+        reserved = Decimal(str(detail.outbound_amount or 0))
+        take = min(reserved, target - released)
+        storage.pending_outbound = (storage.pending_outbound or 0) - take
+        released += take
+        if take >= reserved:
+            db.session.delete(detail)
+            touched_records.add(record.outbound_record_id)
+        else:
+            detail.outbound_amount = reserved - take
+    db.session.flush()
+    for record_id in touched_records:
+        remaining = (
+            db.session.query(OutboundRecordDetail)
+            .filter(OutboundRecordDetail.outbound_record_id == record_id)
+            .count()
+        )
+        if remaining == 0:
+            db.session.query(OutboundRecord).filter(
+                OutboundRecord.outbound_record_id == record_id
+            ).delete()
+    return released
+
+
 def _create_outbound_record_details(items, outbound_record):
     total_price = 0
     for item in items:
@@ -1205,6 +1254,9 @@ def _create_outbound_record_details(items, outbound_record):
                 column_name = f"size_{shoe_size}_outbound_amount"
                 setattr(record_detail, column_name, size_outbound_amount)
         else:
+            # 生产出库(0)：先释放本订单的材料复用预占，使被占库存可被真实消耗
+            if outbound_record.outbound_type == 0:
+                _consume_reuse_reservation(order_id, storage, outbound_quantity)
             if outbound_quantity > storage.current_amount - storage.pending_outbound:
                 available = storage.current_amount - storage.pending_outbound
                 error_message = json.dumps({
@@ -2491,6 +2543,30 @@ def get_order_outbound_materials():
 
     size_details_map = _get_material_storage_size_details(msids)
 
+    # 材料复用(type=8)待审预占数量，按本订单+库存聚合，供前端提示/预填出库数量
+    reuse_map = {}
+    if msids:
+        reuse_rows = (
+            db.session.query(
+                OutboundRecordDetail.material_storage_id,
+                func.sum(OutboundRecordDetail.outbound_amount),
+            )
+            .join(
+                OutboundRecord,
+                OutboundRecord.outbound_record_id
+                == OutboundRecordDetail.outbound_record_id,
+            )
+            .filter(
+                OutboundRecordDetail.material_storage_id.in_(msids),
+                OutboundRecordDetail.order_id.in_(order_ids),
+                OutboundRecord.outbound_type == 8,
+                OutboundRecord.approval_status == 0,
+            )
+            .group_by(OutboundRecordDetail.material_storage_id)
+            .all()
+        )
+        reuse_map = {mid: amt for mid, amt in reuse_rows}
+
     result = []
     for storage, spu, material, mtype, supplier, order, order_shoe, shoe in rows:
         obj = {
@@ -2504,6 +2580,10 @@ def get_order_outbound_materials():
             "supplierName": supplier.supplier_name,
             "allowedOutboundAmount": storage.current_amount - storage.pending_outbound,
             "currentAmount": storage.current_amount,
+            "reservedReuseAmount": float(
+                reuse_map.get(storage.material_storage_id, 0) or 0
+            ),
+            "reusable": storage.material_storage_status == "2",
             "unitPrice": storage.unit_price,
             "orderRId": order.order_rid if order else None,
             "shoeRId": shoe.shoe_rid if shoe else None,
@@ -2578,6 +2658,30 @@ def create_order_outbound():
     rid, ts = _outbound_material_helper(data)
     db.session.commit()
     return jsonify({"message": "success", "outboundRId": rid, "outboundTime": ts}), 200
+
+
+@material_storage_bp.route("/warehouse/orderoutbound/markreusable", methods=["POST"])
+def mark_material_reusable():
+    """人工标记/取消库存为「已完成出库、可复用」(material_storage_status='2')。
+    只有被标记的余料才会出现在二次采购的库存相似材料候选里。"""
+    data = request.get_json() or {}
+    storage_ids = list(data.get("materialStorageIds") or [])
+    single = data.get("materialStorageId")
+    if single is not None:
+        storage_ids.append(single)
+    storage_ids = list(dict.fromkeys([s for s in storage_ids if s is not None]))
+    if not storage_ids:
+        return jsonify({"message": "缺少 materialStorageId"}), 400
+    reusable = data.get("reusable", True)
+    new_status = "2" if reusable else None
+    db.session.query(MaterialStorage).filter(
+        MaterialStorage.material_storage_id.in_(storage_ids)
+    ).update(
+        {MaterialStorage.material_storage_status: new_status},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    return jsonify({"message": "success"})
 
 @material_storage_bp.route("/warehouse/orderoutbound/records", methods=["GET"])
 def list_order_outbound_records():

@@ -72,6 +72,7 @@ OUTBOUND_TYPE_MAPPING = {
     5: "盘库出库",
     6: "行政出库",
     7: "通用材料出库",
+    8: "材料复用",
 }
 
 BOM_STATUS = {
