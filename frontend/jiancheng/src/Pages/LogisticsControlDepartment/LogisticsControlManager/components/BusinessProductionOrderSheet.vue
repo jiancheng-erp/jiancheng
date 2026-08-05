@@ -127,6 +127,107 @@
         </div>
             </el-tab-pane>
 
+            <el-tab-pane label="生产订单" name="production">
+                <div class="order-sheet" v-loading="loading">
+                    <div class="sheet-title">{{ orderData.title || `健诚集团${orderData.customerName || ''}号客人${orderData.customerBrand || ''}生产订单` }}</div>
+
+                    <table class="excel-table info-table">
+                        <tbody>
+                            <tr>
+                                <td class="info-label">单号</td>
+                                <td class="info-value">{{ orderData.orderRid }}</td>
+                                <td class="info-label">下单日期</td>
+                                <td class="info-value">{{ orderData.startDate }}</td>
+                                <td class="info-label">出货日期</td>
+                                <td class="info-value">{{ orderData.endDate }}</td>
+                                <td class="info-label">客户订单号</td>
+                                <td class="info-value">{{ orderData.orderCid }}</td>
+                                <td class="info-label">业务</td>
+                                <td class="info-value">{{ orderData.orderStaffName }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="excel-table main-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 130px">鞋图</th>
+                                <th style="width: 90px">工厂型号</th>
+                                <th style="width: 100px">客户型号</th>
+                                <th style="width: 70px">颜色</th>
+                                <th style="width: 90px">客户颜色</th>
+                                <th style="width: 90px">配码</th>
+                                <th class="size-col" v-for="s in activeSizes" :key="`po-h-${s.amountKey}`">{{ s.name }}</th>
+                                <th style="width: 70px">总双数</th>
+                                <th style="width: 55px">件数</th>
+                                <th style="width: 55px">双数</th>
+                                <th style="width: 200px">备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="shoe in orderShoeData" :key="`po-${shoe.orderShoeId}`">
+                                <template v-for="(colorType, ci) in shoe.orderShoeTypes" :key="`po-${colorType.orderShoeTypeId}`">
+                                    <tr v-for="(batch, bi) in colorType.shoeTypeBatchInfoList" :key="`po-${colorType.orderShoeTypeId}-${bi}`">
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length" class="img-cell">
+                                            <el-image
+                                                v-if="colorType.shoeTypeImgUrl"
+                                                :src="colorType.shoeTypeImgUrl"
+                                                :preview-src-list="[colorType.shoeTypeImgUrl]"
+                                                fit="contain"
+                                                style="width: 120px; height: 80px"
+                                            ></el-image>
+                                            <span v-else class="no-img">暂无图片</span>
+                                        </td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)">{{ shoe.shoeRid }}</td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)">{{ shoe.shoeCid }}</td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">{{ colorType.shoeTypeColorName }}</td>
+                                        <td v-if="bi === 0" :rowspan="colorType.shoeTypeBatchInfoList.length">{{ colorType.customerColorName }}</td>
+                                        <td>{{ batch.packagingInfoName }}</td>
+                                        <td class="size-col" v-for="s in activeSizes" :key="`po-${colorType.orderShoeTypeId}-${bi}-${s.amountKey}`">
+                                            {{ batch[s.amountKey] || '' }}
+                                        </td>
+                                        <td>{{ batch.totalQuantityRatio }}</td>
+                                        <td>{{ batch.unitPerRatio }}</td>
+                                        <td>{{ batch.total }}</td>
+                                        <td v-if="ci === 0 && bi === 0" :rowspan="shoeRowCount(shoe)" class="remark-cell">
+                                            <div v-if="shoe.orderShoeRemarkExist" class="remark-text">{{ shoe.orderShoeRemarkRep }}</div>
+                                            <span v-else>--</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <tr class="total-row">
+                                <td colspan="6">合计</td>
+                                <td class="size-col" v-for="s in activeSizes" :key="`po-total-${s.amountKey}`">{{ sizeTotals[s.amountKey] || '' }}</td>
+                                <td></td>
+                                <td>{{ productionPieceTotal }}</td>
+                                <td>{{ productionPairTotal }}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="packaging-section">
+                        <div class="packaging-header">包装资料</div>
+                        <div v-if="orderData.packagingDoc && orderData.packagingDoc.exists" class="packaging-body">
+                            <div class="packaging-file-row">
+                                <span class="packaging-file-name">{{ orderData.packagingDoc.fileName }}</span>
+                                <el-button type="primary" size="small" :loading="packagingDownloading" @click="downloadPackagingDoc">
+                                    下载包装资料
+                                </el-button>
+                            </div>
+                            <!-- PDF 内嵌预览 -->
+                            <iframe
+                                v-if="packagingPreviewUrl"
+                                :src="packagingPreviewUrl"
+                                class="packaging-preview"
+                            ></iframe>
+                        </div>
+                        <div v-else class="packaging-empty">暂无包装资料</div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
             <el-tab-pane label="工艺单" name="craft">
                 <div class="craft-wrap" v-loading="loading">
                     <div v-if="craftTabs.length === 0" class="craft-empty">
@@ -235,6 +336,31 @@
                                 </tr>
                             </tbody>
                         </table>
+
+                        <div class="craft-image-section">
+                            <div class="craft-image-block">
+                                <div class="craft-image-title">工艺单图片备注</div>
+                                <el-image
+                                    v-if="cs.detail.picNoteImgPath"
+                                    :src="cs.detail.picNoteImgPath"
+                                    :preview-src-list="[cs.detail.picNoteImgPath]"
+                                    fit="contain"
+                                    class="craft-image-preview"
+                                ></el-image>
+                                <span v-else class="no-img">暂无工艺单图片备注</span>
+                            </div>
+                            <div class="craft-image-block">
+                                <div class="craft-image-title">刀模图</div>
+                                <el-image
+                                    v-if="cs.detail.cutDieImgPath"
+                                    :src="cs.detail.cutDieImgPath"
+                                    :preview-src-list="[cs.detail.cutDieImgPath]"
+                                    fit="contain"
+                                    class="craft-image-preview"
+                                ></el-image>
+                                <span v-else class="no-img">暂无刀模图</span>
+                            </div>
+                        </div>
                     </div>
                     </el-tab-pane>
                     </el-tabs>
@@ -261,6 +387,8 @@ const activeSizes = ref([])
 const loading = ref(false)
 const activeTab = ref('notice')
 const activeCraftTab = ref('')
+const packagingDownloading = ref(false)
+const packagingPreviewUrl = ref('')
 
 // 每个工厂款号(shoeRid)对应的投产指令单状态：loading/exists/missing/error
 const instructionMap = reactive({})
@@ -350,7 +478,9 @@ const craftTabs = computed(() => {
                 burnSoleCraft: instrDetail.burnSoleCraft,
                 postProcessing: detail.postProcessing,
                 oilyGlue: detail.oilyGlue,
-                productionRemark: detail.productionRemark
+                productionRemark: detail.productionRemark,
+                picNoteImgPath: detail.picNoteImgPath,
+                cutDieImgPath: detail.cutDieImgPath
             }
             tabs.push({
                 key: `${shoe.shoeRid}__${colorName}`,
@@ -419,6 +549,31 @@ const grandTotalPairs = computed(() => {
     return total
 })
 
+// ---- 生产订单tab（数量订单：各码显示总数量，不含单价/金额）----
+const productionPieceTotal = computed(() => {
+    let total = 0
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) =>
+            (colorType.shoeTypeBatchInfoList || []).forEach((batch) => {
+                total += Number(batch.unitPerRatio) || 0
+            })
+        )
+    )
+    return total
+})
+
+const productionPairTotal = computed(() => {
+    let total = 0
+    orderShoeData.value.forEach((shoe) =>
+        (shoe.orderShoeTypes || []).forEach((colorType) =>
+            (colorType.shoeTypeBatchInfoList || []).forEach((batch) => {
+                total += Number(batch.total) || 0
+            })
+        )
+    )
+    return total
+})
+
 function shoeRowCount(shoe) {
     return (shoe.orderShoeTypes || []).reduce((sum, colorType) => sum + (colorType.shoeTypeBatchInfoList?.length || 0), 0)
 }
@@ -442,10 +597,56 @@ async function getOrderInfo() {
                 amountKey: attrMappingToAmount[key]
             }))
         fetchAllInstructions()
+        loadPackagingPreview()
     } catch (error) {
         ElMessage.error('获取生产订单信息失败')
     } finally {
         loading.value = false
+    }
+}
+
+// 包装资料内嵌预览：仅 PDF 用 iframe，其它格式仅提供下载
+async function loadPackagingPreview() {
+    if (packagingPreviewUrl.value) {
+        window.URL.revokeObjectURL(packagingPreviewUrl.value)
+        packagingPreviewUrl.value = ''
+    }
+    const doc = orderData.value.packagingDoc
+    if (!doc || !doc.exists || doc.ext !== '.pdf') return
+    try {
+        const resp = await axios.get(`${$api_baseUrl}/order/downloadpackagingdoc`, {
+            params: { orderId: props.orderId },
+            responseType: 'arraybuffer'
+        })
+        packagingPreviewUrl.value = window.URL.createObjectURL(
+            new Blob([resp.data], { type: 'application/pdf' })
+        )
+    } catch (error) {
+        packagingPreviewUrl.value = ''
+    }
+}
+
+async function downloadPackagingDoc() {
+    if (!props.orderId) return
+    packagingDownloading.value = true
+    try {
+        const resp = await axios.get(`${$api_baseUrl}/order/downloadpackagingdoc`, {
+            params: { orderId: props.orderId },
+            responseType: 'blob'
+        })
+        const fileName = (orderData.value.packagingDoc && orderData.value.packagingDoc.fileName) || '包装资料'
+        const url = window.URL.createObjectURL(new Blob([resp.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+    } catch (error) {
+        ElMessage.error('下载包装资料失败')
+    } finally {
+        packagingDownloading.value = false
     }
 }
 
@@ -511,6 +712,43 @@ async function downloadExcel(type = 'notice') {
 <style scoped>
 .sheet-page {
     width: 100%;
+}
+
+.packaging-section {
+    margin-top: 24px;
+    border-top: 1px dashed #d5d8dd;
+    padding-top: 16px;
+}
+
+.packaging-header {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2d3d;
+    margin-bottom: 12px;
+}
+
+.packaging-file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.packaging-file-name {
+    font-size: 14px;
+    color: #303133;
+}
+
+.packaging-preview {
+    width: 100%;
+    height: 600px;
+    margin-top: 12px;
+    border: 1px solid #d5d8dd;
+    border-radius: 8px;
+}
+
+.packaging-empty {
+    font-size: 14px;
+    color: #909399;
 }
 
 .toolbar {
@@ -745,5 +983,30 @@ async function downloadExcel(type = 'notice') {
     line-height: 1.7;
     color: #ad6800;
     background: #fffdf5;
+}
+
+.craft-image-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-top: 16px;
+}
+
+.craft-image-block {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
+.craft-image-title {
+    font-weight: 600;
+    color: #3a7bd5;
+    margin-bottom: 8px;
+}
+
+.craft-image-preview {
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid #d5d8dd;
+    border-radius: 8px;
 }
 </style>
