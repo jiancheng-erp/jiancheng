@@ -545,7 +545,9 @@ def save_purchase():
                 purchase_divide_order_id=purchase_divide_order_id,
                 bom_item_id=item["bomItemId"],
             )
-            if items[0]["materialCategory"] == 0:
+            # 按每项材料自身大类计算用量，避免同一供应商混供大底/中底与普通材料时，
+            # 大底/中底材料被错误地按普通分支处理而丢失尺码用量。
+            if item["materialCategory"] == 0:
                 purchase_order_item.purchase_amount = item["purchaseAmount"]
                 purchase_order_item.approval_amount = item["approvalUsage"]
                 # purchase_order_item.estimated_inbound_amount = item["purchaseAmount"]
@@ -1104,7 +1106,13 @@ def submit_purchase_divide_orders():
         supplier,
     ) in purchase_divide_orders:
         purchase_order_id = purchase_divide_order.purchase_divide_order_rid
-        if purchase_divide_order.purchase_divide_order_type == "N":
+        # 按每项材料的生产指令类型拆单：大底(O)/中底(M) 走尺码版，其余走标准版，
+        # 使同一分采购订单内的大底/中底与普通材料生成到不同的采购单文件中。
+        is_size_material = bool(
+            production_instruction_item
+            and production_instruction_item.material_type in ("O", "M")
+        )
+        if not is_size_material:
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
                     "供应商": supplier.supplier_name,
@@ -1160,7 +1168,7 @@ def submit_purchase_divide_orders():
                     "用途说明": "",
                 }
             )
-        elif purchase_divide_order.purchase_divide_order_type == "S":
+        else:
             # 获取 order_size_table 并转换为字典
             order_size_table = (
                 db.session.query(Order)
@@ -1308,7 +1316,7 @@ def submit_purchase_divide_orders():
             order_rid,
             order_shoe_rid,
             "purchase_order",
-            purchase_order_id + "_" + data["供应商"] + ".xlsx",
+            purchase_order_id + "_" + data["供应商"] + "_尺码.xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
         generate_size_excel_file(size_template_path, new_file_path, data)
@@ -1656,7 +1664,12 @@ def download_purchase_order_zip():
         supplier,
     ) in purchase_divide_orders:
         pdo_rid = purchase_divide_order.purchase_divide_order_rid
-        if purchase_divide_order.purchase_divide_order_type == "N":
+        # 按每项材料的生产指令类型拆单：大底(O)/中底(M) 走尺码版，其余走标准版。
+        is_size_material = bool(
+            production_instruction_item
+            and production_instruction_item.material_type in ("O", "M")
+        )
+        if not is_size_material:
             if pdo_rid not in purchase_divide_order_dict:
                 purchase_divide_order_dict[pdo_rid] = {
                     "供应商": supplier.supplier_name,
@@ -1696,7 +1709,7 @@ def download_purchase_order_zip():
                     "用途说明": "",
                 }
             )
-        elif purchase_divide_order.purchase_divide_order_type == "S":
+        else:
             order_size_table = (
                 db.session.query(Order)
                 .filter(Order.order_id == order_id)
@@ -1795,7 +1808,7 @@ def download_purchase_order_zip():
     for pdo_rid, data in size_purchase_divide_order_dict.items():
         new_file_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
-            pdo_rid + "_" + data["供应商"] + ".xlsx",
+            pdo_rid + "_" + data["供应商"] + "_尺码.xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
         generate_size_excel_file(size_template_path, new_file_path, data)
