@@ -13,7 +13,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from event_processor import EventProcessor
 
-from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, ORDER_FINISH_SYMBOL
+from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, BUSINESS_DEPARTMENT_IDS, ORDER_FINISH_SYMBOL
 from general_document.order_export import (
     generate_excel_file,
     generate_amount_excel_file,
@@ -98,6 +98,11 @@ def _locate_packaging_doc(order_rid: str):
                     "file_name": name,
                     "ext": os.path.splitext(candidate_path)[1].lower(),
                 }
+    logger.debug(
+        "packaging doc not found for order_rid=%r, checked dirs=%s",
+        order_rid,
+        base_dirs,
+    )
     return None
 
 
@@ -753,6 +758,12 @@ def get_order_info_business():
         result["wrapRequirementUploadStatus"] = "已上传包装文件"
     else:
         result["wrapRequirementUploadStatus"] = "未上传包装文件"
+    packaging_doc = _locate_packaging_doc(entity.Order.order_rid)
+    result["packagingDoc"] = {
+        "exists": packaging_doc is not None,
+        "fileName": packaging_doc["file_name"] if packaging_doc else None,
+        "ext": packaging_doc["ext"] if packaging_doc else None,
+    }
     order_shoe_ids = []
     for order_shoe in order_shoe_entities:
         response = {}
@@ -1142,7 +1153,7 @@ def get_display_orders_manager():
     # --- 部门人员映射（避免 KeyError 用 get） ---
     department_staff = (
         db.session.query(Staff)
-        .filter_by(department_id=BUSINESS_DEPARTMENT)
+        .filter(Staff.department_id.in_(BUSINESS_DEPARTMENT_IDS))
         .all()
     )
     id_to_name = {s.staff_id: s.staff_name for s in department_staff}
@@ -1446,6 +1457,19 @@ def get_all_orders():
                 OrderStatus.order_current_status < ORDER_FINISH_SYMBOL,
             )
         )
+    # 业务经理/文员只看本业务部（按业务员所属部门归属）的订单；其它角色（生产/物控/总经理等）看全部
+    try:
+        character, staff, _ = current_user_info()
+        if character.character_id in (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE):
+            dept_staff_ids = [
+                s.staff_id
+                for s in db.session.query(Staff.staff_id)
+                .filter(Staff.department_id == staff.department_id)
+                .all()
+            ]
+            entities = entities.filter(Order.salesman_id.in_(dept_staff_ids))
+    except Exception:
+        pass
     if desc_symbol:
         entities = entities.order_by(Order.order_rid.desc()).all()
     else:
