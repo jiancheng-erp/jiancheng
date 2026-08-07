@@ -1551,8 +1551,13 @@ def submit_purchase_divide_orders():
         # 按每项材料自身类别路由：烫底/大底/中底/楦头等尺码材料走尺码表分支，
         # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
         # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
+        # 面料(S)按 category 决定：category==1 时也走尺码表分支（用客人码）。烫底不变。
         _mat_name = material.material_name or ""
-        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底")) or (
+            production_instruction_item is not None
+            and production_instruction_item.material_type == "S"
+            and material.material_category == 1
+        )
         if not _is_size_material:
             if purchase_order_id not in purchase_divide_order_dict:
                 purchase_divide_order_dict[purchase_order_id] = {
@@ -1749,8 +1754,9 @@ def submit_purchase_divide_orders():
                             if customer_value in customer_size_map:
                                 actual_size = customer_size_map[customer_value]
                                 obj[size_value] = getattr(hotsole_bi, f"size_{actual_size}_total_usage", 0) or 0
-                        if purchase_order_id not in size_purchase_divide_order_dict:
-                            size_purchase_divide_order_dict[purchase_order_id] = {
+                        size_dict_key = purchase_order_id + "::烫底"
+                        if size_dict_key not in size_purchase_divide_order_dict:
+                            size_purchase_divide_order_dict[size_dict_key] = {
                                 "供应商": supplier.supplier_name,
                                 "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                                 "备注": purchase_divide_order.purchase_order_remark,
@@ -1760,35 +1766,51 @@ def submit_purchase_divide_orders():
                                 "发货地址": purchase_divide_order.shipment_address,
                                 "交货期限": purchase_divide_order.shipment_deadline,
                                 "订单信息": order_rid,
+                                "pdo_rid": purchase_order_id,
+                                "分类": "烫底",
                                 "seriesData": [],
                             }
-                        size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
+                        size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
                 continue
             else:
             # 4️⃣ 转换为实际尺码并构造最终的 obj
+                # 尺码面料（S）没有单独的物品名称列，把名称/型号/规格/颜色合并填入型号列
+                is_size_fabric = (
+                    production_instruction_item is not None
+                    and production_instruction_item.material_type == "S"
+                )
+                item_full_name = (
+                    material.material_name
+                    + " "
+                    + (bom_item.material_model if bom_item.material_model else "")
+                    + " "
+                    + (
+                        bom_item.material_specification
+                        if bom_item.material_specification
+                        else ""
+                    )
+                    + " "
+                    + (bom_item.bom_item_color if bom_item.bom_item_color else "")
+                )
                 obj = {
-                    "物品名称": (
-                        material.material_name
-                        + " "
-                        + (bom_item.material_model if bom_item.material_model else "")
-                        + " "
-                        + (
-                            bom_item.material_specification
-                            if bom_item.material_specification
+                    "物品名称": item_full_name,
+                    "型号": (
+                        item_full_name
+                        if is_size_fabric
+                        else (
+                            material.material_name + " " + purchase_order_item.material_model
+                            if purchase_order_item.material_model
                             else ""
                         )
-                        + " "
-                        + (bom_item.bom_item_color if bom_item.bom_item_color else "")
-                    ),
-                    "型号": (
-                        material.material_name + " " + purchase_order_item.material_model
-                        if purchase_order_item.material_model
-                        else ""
                     ),
                     "类别": (
-                        purchase_order_item.material_specification
-                        if purchase_order_item.material_specification
-                        else ""
+                        ""
+                        if is_size_fabric
+                        else (
+                            purchase_order_item.material_specification
+                            if purchase_order_item.material_specification
+                            else ""
+                        )
                     ),
                     "备注": bom_item.remark,
                 }
@@ -1801,8 +1823,11 @@ def submit_purchase_divide_orders():
                         )
 
             # 5️⃣ 添加到 seriesData
-            if purchase_order_id not in size_purchase_divide_order_dict:
-                size_purchase_divide_order_dict[purchase_order_id] = {
+            # 面料(S)用客人码、底材(O/M)用大底码，尺码列不同，需拆成两张单独导出
+            size_group = "面料" if is_size_fabric else "底材"
+            size_dict_key = purchase_order_id + "::" + size_group
+            if size_dict_key not in size_purchase_divide_order_dict:
+                size_purchase_divide_order_dict[size_dict_key] = {
                     "供应商": supplier.supplier_name,
                     "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                     "备注": purchase_divide_order.purchase_order_remark,
@@ -1812,10 +1837,12 @@ def submit_purchase_divide_orders():
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
                     "订单信息": order_rid,
+                    "pdo_rid": purchase_order_id,
+                    "分类": size_group,
                     "seriesData": [],
                 }
 
-            size_purchase_divide_order_dict[purchase_order_id]["seriesData"].append(obj)
+            size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
     customer = (
         db.session.query(Order, Customer)
         .join(Customer, Order.customer_id == Customer.customer_id)
@@ -1884,12 +1911,13 @@ def submit_purchase_divide_orders():
         generated_files.append(new_file_path)
     shoe_size_names = get_order_batch_type_helper(order_id)
     for purchase_order_id, data in size_purchase_divide_order_dict.items():
+        file_suffix = "_" + data.get("分类", "") if data.get("分类") else ""
         new_file_path = os.path.join(
             FILE_STORAGE_PATH,
             order_rid,
             order_shoe_rid,
             "purchase_order",
-            purchase_order_id + "_" + data["供应商"] + ".xlsx",
+            data.get("pdo_rid", purchase_order_id) + "_" + data["供应商"] + file_suffix + ".xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
         if "烫底" in data["seriesData"][0]["物品名称"]:
@@ -2253,8 +2281,13 @@ def download_purchase_order_zip():
         # 按每项材料自身类别路由：烫底/大底/中底/楦头等尺码材料走尺码表分支，
         # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
         # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
+        # 面料(S)按 category 决定：category==1 时也走尺码表分支（用客人码）。烫底不变。
         _mat_name = material.material_name or ""
-        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底")) or (
+            production_instruction_item is not None
+            and production_instruction_item.material_type == "S"
+            and material.material_category == 1
+        )
         if not _is_size_material:
             if pdo_rid not in purchase_divide_order_dict:
                 purchase_divide_order_dict[pdo_rid] = {
@@ -2415,8 +2448,9 @@ def download_purchase_order_zip():
                             if customer_value in customer_size_map:
                                 actual_size = customer_size_map[customer_value]
                                 obj[size_value] = getattr(hotsole_bi, f"size_{actual_size}_total_usage", 0) or 0
-                        if pdo_rid not in size_purchase_divide_order_dict:
-                            size_purchase_divide_order_dict[pdo_rid] = {
+                        size_dict_key = pdo_rid + "::烫底"
+                        if size_dict_key not in size_purchase_divide_order_dict:
+                            size_purchase_divide_order_dict[size_dict_key] = {
                                 "供应商": supplier.supplier_name,
                                 "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                                 "备注": purchase_divide_order.purchase_order_remark,
@@ -2426,30 +2460,46 @@ def download_purchase_order_zip():
                                 "发货地址": purchase_divide_order.shipment_address,
                                 "交货期限": purchase_divide_order.shipment_deadline,
                                 "订单信息": order_rid,
+                                "pdo_rid": pdo_rid,
+                                "分类": "烫底",
                                 "seriesData": [],
                             }
-                        size_purchase_divide_order_dict[pdo_rid]["seriesData"].append(obj)
+                        size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
                 continue
             else:
+                # 尺码面料（S）没有单独的物品名称列，把名称/型号/规格/颜色合并填入型号列
+                is_size_fabric = (
+                    production_instruction_item is not None
+                    and production_instruction_item.material_type == "S"
+                )
+                item_full_name = (
+                    material.material_name
+                    + " "
+                    + ((bom_item.material_model if bom_item else purchase_order_item.material_model) or "")
+                    + " "
+                    + ((bom_item.material_specification if bom_item else purchase_order_item.material_specification) or "")
+                    + " "
+                    + ((bom_item.bom_item_color if bom_item else purchase_order_item.color) or "")
+                )
                 obj = {
-                    "物品名称": (
-                        material.material_name
-                        + " "
-                        + ((bom_item.material_model if bom_item else purchase_order_item.material_model) or "")
-                        + " "
-                        + ((bom_item.material_specification if bom_item else purchase_order_item.material_specification) or "")
-                        + " "
-                        + ((bom_item.bom_item_color if bom_item else purchase_order_item.color) or "")
-                    ),
+                    "物品名称": item_full_name,
                     "型号": (
-                        material.material_name + " " + purchase_order_item.material_model
-                        if purchase_order_item.material_model
-                        else ""
+                        item_full_name
+                        if is_size_fabric
+                        else (
+                            material.material_name + " " + purchase_order_item.material_model
+                            if purchase_order_item.material_model
+                            else ""
+                        )
                     ),
                     "类别": (
-                        purchase_order_item.material_specification
-                        if purchase_order_item.material_specification
-                        else ""
+                        ""
+                        if is_size_fabric
+                        else (
+                            purchase_order_item.material_specification
+                            if purchase_order_item.material_specification
+                            else ""
+                        )
                     ),
                     "备注": (bom_item.remark if bom_item else purchase_order_item.remark),
                 }
@@ -2458,8 +2508,11 @@ def download_purchase_order_zip():
                     if customer_value in customer_size_map:
                         actual_size = customer_size_map[customer_value]
                         obj[size_value] = getattr(purchase_order_item, f"size_{actual_size}_purchase_amount", 0)
-            if pdo_rid not in size_purchase_divide_order_dict:
-                size_purchase_divide_order_dict[pdo_rid] = {
+            # 面料(S)用客人码、底材(O/M)用大底码，尺码列不同，需拆成两张单独导出
+            size_group = "面料" if is_size_fabric else "底材"
+            size_dict_key = pdo_rid + "::" + size_group
+            if size_dict_key not in size_purchase_divide_order_dict:
+                size_purchase_divide_order_dict[size_dict_key] = {
                     "供应商": supplier.supplier_name,
                     "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
                     "备注": purchase_divide_order.purchase_order_remark,
@@ -2469,9 +2522,11 @@ def download_purchase_order_zip():
                     "发货地址": purchase_divide_order.shipment_address,
                     "交货期限": purchase_divide_order.shipment_deadline,
                     "订单信息": order_rid,
+                    "pdo_rid": pdo_rid,
+                    "分类": size_group,
                     "seriesData": [],
                 }
-            size_purchase_divide_order_dict[pdo_rid]["seriesData"].append(obj)
+            size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
 
     generated_files = []
     # Split into standard, zipper 辅料订购单, and other 辅料订购单 formats
@@ -2504,9 +2559,10 @@ def download_purchase_order_zip():
         generated_files.append(new_file_path)
     shoe_size_names = get_order_batch_type_helper(order_id)
     for pdo_rid, data in size_purchase_divide_order_dict.items():
+        file_suffix = "_" + data.get("分类", "") if data.get("分类") else ""
         new_file_path = os.path.join(
             FILE_STORAGE_PATH, order_rid, order_shoe_rid, "purchase_order",
-            pdo_rid + "_" + data["供应商"] + ".xlsx",
+            data.get("pdo_rid", pdo_rid) + "_" + data["供应商"] + file_suffix + ".xlsx",
         )
         data["shoe_size_names"] = shoe_size_names
         if "烫底" in data["seriesData"][0]["物品名称"]:

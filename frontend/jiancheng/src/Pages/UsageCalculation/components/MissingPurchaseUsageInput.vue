@@ -419,6 +419,7 @@ type RowItem = {
     orderShoeTypeId: number | null
     shoeColorName: string
     materialType?: string
+    materialCategory?: number | null
     materialName: string
     supplierName?: string
     supplierId?: number | null
@@ -439,9 +440,9 @@ const usageKeyword = ref('')
 let currentRecordId: number | null = null
 let selectedRows: RowItem[] = []
 
-/** 识别带尺码材料 */
+/** 识别带尺码材料：按材料 category 决定（1=尺码） */
 function isSizeBased(row: RowItem) {
-    return ['大底', '中底', '烫底'].includes(String(row.materialType || ''))
+    return Number(row.materialCategory) === 1
 }
 
 /** 过滤 / 合计 */
@@ -494,7 +495,7 @@ async function loadUsageForm() {
 
     // 如果有“带尺码”材料且还没有尺码列，则先把尺码列取回来（注意 await）
     const hasSizeBased = items.some((it: any) =>
-      ['大底', '中底', '烫底'].includes(String(it.materialType || ''))
+      Number(it.materialCategory) === 1
     )
     if (hasSizeBased && !shoeSizeColumns.value.length && detailDialog.record?.orderId) {
       const cols = await getShoeSizesName(detailDialog.record.orderId)
@@ -522,6 +523,7 @@ async function loadUsageForm() {
         orderShoeTypeId: it.orderShoeTypeId ?? null,
         shoeColorName: it.shoeColorName || '',
         materialType: it.materialType || '',
+        materialCategory: it.materialCategory ?? null,
         materialName: it.materialName || '',
         supplierName: it.supplierName || '',
         supplierId: it.supplierId ?? null,

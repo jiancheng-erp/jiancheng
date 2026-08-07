@@ -79,8 +79,8 @@ def send_massage_to_users(message, users="SunHaoZheng", push_to_group=False):
     url = f"http://121.43.33.97:8067/send_wechat"
     payload = {"content": message, "touser": "SunHaoZheng|" + users}
     response = requests.post(url, json=payload)
-    # 仅在需要时（如下发、退回消息）向企业微信群推送，定时通知不推送到群
-    if push_to_group:
+    # 仅在需要时（如下发、退回消息）向企业微信群推送，定时通知不推送到群；测试模式不推送到群
+    if push_to_group and not config.WECHAT_TEST_MODE:
         send_message_to_group(message)
     return response.json()
 

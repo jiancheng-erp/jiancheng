@@ -821,6 +821,37 @@ def get_ordershoetype_batch_info():
     })
 
 
+@material_batch_edit_bp.route("/material/search-materials", methods=["GET"])
+def search_materials_by_name():
+    """
+    按名称搜索基础材料表（material），返回 materialId / 名称 / 供应商 / 配码类型。
+    用于添加材料对话框：直接查 material 表，包含尚未被任何单据引用的新材料。
+    """
+    kw = request.args.get("materialName", "", type=str).strip()
+    limit = request.args.get("limit", 50, type=int)
+    if not kw:
+        return jsonify({"result": []})
+
+    rows = (
+        db.session.query(Material, Supplier)
+        .outerjoin(Supplier, Supplier.supplier_id == Material.material_supplier)
+        .filter(Material.material_name.like(f"%{kw}%"))
+        .order_by(Material.material_id.desc())
+        .limit(limit)
+        .all()
+    )
+    result = [
+        {
+            "materialId": m.material_id,
+            "materialName": m.material_name,
+            "supplierName": s.supplier_name if s else "",
+            "materialCategory": m.material_category if m.material_category is not None else 0,
+        }
+        for m, s in rows
+    ]
+    return jsonify({"result": result})
+
+
 # ===========================================================================
 # 7. 删除材料（从指定鞋款的所有文档中移除该材料的所有记录）
 # ===========================================================================
@@ -973,6 +1004,14 @@ def batch_add_material():
     color = data.get("color") or ""
     remark = data.get("remark") or ""
 
+    # 配码材料：各尺码数量（键为实际尺码字符串 "34".."46"）。写入 BOM 项分尺码用量
+    # 与采购订单项分尺码采购量。若提供则核定/采购量以各尺码之和为准。
+    size_amounts = data.get("sizeAmounts") or {}
+    if size_amounts:
+        approval_amount = float(
+            sum(float(v or 0) for v in size_amounts.values())
+        )
+
     # 工艺单字段
     cs_material_type = data.get("csMaterialType") or "A"
     cs_material_source = data.get("csMaterialSource") or "C"
@@ -1022,6 +1061,30 @@ def batch_add_material():
             LIMIT 1
         """), {"osid": order_shoe_id, "suffix": f"%{supplier_suffix}"}).first()
 
+        # 该供应商暂无采购分单：在该鞋款的采购订单下自动新建一张
+        if not pdo_row:
+            po_row = db.session.execute(text("""
+                SELECT purchase_order_id, purchase_order_rid
+                FROM purchase_order
+                WHERE order_shoe_id = :osid
+                ORDER BY (purchase_order_type = 'F') DESC, purchase_order_id DESC
+                LIMIT 1
+            """), {"osid": order_shoe_id}).first()
+            if po_row:
+                target_rid = (po_row[1] or "") + supplier_suffix
+                new_pdo = PurchaseDivideOrder(
+                    purchase_order_id=po_row[0],
+                    purchase_divide_order_rid=target_rid,
+                    purchase_divide_order_type=("S" if material.material_category == 1 else "N"),
+                    purchase_order_remark="",
+                    purchase_order_environmental_request="",
+                    shipment_address="温州市瓯海区梧田工业基地镇南路8号（健诚集团）",
+                    shipment_deadline="请在7-10日内交货",
+                )
+                db.session.add(new_pdo)
+                db.session.flush()
+                pdo_row = (new_pdo.purchase_divide_order_id, target_rid, po_row[0])
+
     cs_head = None
     if do_cs:
         cs_head = CraftSheet.query.filter_by(order_shoe_id=order_shoe_id).first()
@@ -1036,6 +1099,8 @@ def batch_add_material():
 
         # --- PI item ---
         if do_pi:
+            # 配码材料需按其真实物料类型写入 PI，采购环节才能正确走尺码版 Excel
+            pi_material_type = data.get("piMaterialType") or ("S" if size_amounts else "A")
             pi_item = ProductionInstructionItem(
                 production_instruction_id=pi.production_instruction_id,
                 material_id=material_id,
@@ -1044,7 +1109,7 @@ def batch_add_material():
                 material_specification=mat_spec,
                 color=color,
                 is_pre_purchase=False,
-                material_type="A",
+                material_type=pi_material_type,
                 material_second_type="",
                 department_id=1,
                 remark=remark,
@@ -1074,6 +1139,13 @@ def batch_add_material():
             db.session.add(bom_item)
             db.session.flush()
 
+            # 配码材料：写入 BOM 各尺码用量
+            if size_amounts:
+                for s in range(34, 47):
+                    v = size_amounts.get(str(s))
+                    if v is not None:
+                        setattr(bom_item, f"size_{s}_total_usage", int(float(v)))
+
         # --- PurchaseOrderItem（若找到 PDO）---
         if do_po and pdo_row and bom_item:
             po_item = PurchaseOrderItem(
@@ -1090,6 +1162,13 @@ def batch_add_material():
             db.session.add(po_item)
             db.session.flush()
             po_item_id = po_item.purchase_order_item_id
+
+            # 配码材料：写入采购订单项各尺码采购量
+            if size_amounts:
+                for s in range(34, 47):
+                    v = size_amounts.get(str(s))
+                    if v is not None:
+                        setattr(po_item, f"size_{s}_purchase_amount", int(float(v)))
 
         # --- CraftSheetItem ---
         if do_cs:
@@ -1543,12 +1622,36 @@ def create_missing_po_items():
                 LIMIT 1
             """), {"osid": order_shoe_id, "suffix": f"%{supplier_suffix}"}).first()
 
-            if not pdo_row:
-                skipped.append({"ostId": ost_id, "reason": "未找到对应供应商的采购分单"})
-                continue
+            if pdo_row:
+                target_pdo_id = pdo_row[0]
+            else:
+                # 该供应商暂无采购分单：在该鞋款的采购订单下自动新建一张
+                po_row = db.session.execute(text("""
+                    SELECT purchase_order_id, purchase_order_rid
+                    FROM purchase_order
+                    WHERE order_shoe_id = :osid
+                    ORDER BY (purchase_order_type = 'F') DESC, purchase_order_id DESC
+                    LIMIT 1
+                """), {"osid": order_shoe_id}).first()
+                if not po_row:
+                    skipped.append({"ostId": ost_id, "reason": "该鞋款暂无采购订单，无法补充"})
+                    continue
+                target_rid = (po_row[1] or "") + supplier_suffix
+                new_pdo = PurchaseDivideOrder(
+                    purchase_order_id=po_row[0],
+                    purchase_divide_order_rid=target_rid,
+                    purchase_divide_order_type=("S" if material.material_category == 1 else "N"),
+                    purchase_order_remark="",
+                    purchase_order_environmental_request="",
+                    shipment_address="温州市瓯海区梧田工业基地镇南路8号（健诚集团）",
+                    shipment_deadline="请在7-10日内交货",
+                )
+                db.session.add(new_pdo)
+                db.session.flush()
+                target_pdo_id = new_pdo.purchase_divide_order_id
 
             po_item = PurchaseOrderItem(
-                purchase_divide_order_id=pdo_row[0],
+                purchase_divide_order_id=target_pdo_id,
                 bom_item_id=bom_row[0],
                 material_id=int(material_id),
                 material_model=bom_row[2] or "",
