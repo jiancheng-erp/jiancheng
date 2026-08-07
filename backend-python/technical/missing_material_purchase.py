@@ -70,8 +70,13 @@ def _sum_list(nums) -> Decimal:
     return s
 
 
-def _is_size_based(mt: str) -> bool:
-    return mt in ("O", "M", "H")  # 大底/中底/烫底
+def _is_size_based(mt: str, category=None) -> bool:
+    # 大底/中底/烫底恒为尺码材料；面料(S)按材料 category 决定（1=尺码）。
+    if mt in ("O", "M", "H"):
+        return True
+    if mt == "S" and category == 1:
+        return True
+    return False
 
 
 def _to_float4(x):
@@ -862,6 +867,7 @@ def usage_form():
     # 可选：材料名 + 厂家映射
     mat_name_map = {}
     mat_supplier_map = {}  # material_id -> supplier_id
+    mat_category_map = {}  # material_id -> material_category
     try:
         from models import Material
 
@@ -872,12 +878,14 @@ def usage_form():
                     Material.material_id,
                     Material.material_name,
                     Material.material_supplier,
+                    Material.material_category,
                 )
                 .filter(Material.material_id.in_(mat_ids))
                 .all()
             )
-            for mid, name, sup_id in mrows:
+            for mid, name, sup_id, category in mrows:
                 mat_name_map[int(mid)] = name
+                mat_category_map[int(mid)] = category
                 if sup_id is not None:
                     mat_supplier_map[int(mid)] = int(sup_id)
     except Exception:
@@ -909,6 +917,9 @@ def usage_form():
         sup_id = (
             mat_supplier_map.get(int(it.material_id)) if it.material_id else None
         )
+        _mat_category = (
+            mat_category_map.get(int(it.material_id)) if it.material_id else None
+        )
         row = {
             "id": int(it.id),
             "orderShoeTypeId": ost_id,
@@ -923,11 +934,12 @@ def usage_form():
             "unitUsage": _to_float4(it.unit_usage),
             "approvalUsage": _to_float4(it.approval_usage),
             "materialType": type_text.get(it.material_type, ""),
+            "materialCategory": _mat_category,
             "supplierId": sup_id,
             "supplierName": supplier_name_map.get(sup_id, "") if sup_id else "",
         }
 
-        if _is_size_based(it.material_type):
+        if _is_size_based(it.material_type, _mat_category):
             # 新：数组优先
             if it.size_qty_arr:
                 row["sizeQuantitiesArr"] = list(it.size_qty_arr)
@@ -958,6 +970,17 @@ def usage_save():
         for x in db.session.query(WMRItem).filter(WMRItem.record_id == record_id).all()
     }
 
+    # material_id -> material_category
+    mat_category_map = {}
+    _mat_ids = {int(x.material_id) for x in item_map.values() if x.material_id}
+    if _mat_ids:
+        for mid, category in (
+            db.session.query(Material.material_id, Material.material_category)
+            .filter(Material.material_id.in_(_mat_ids))
+            .all()
+        ):
+            mat_category_map[int(mid)] = category
+
     updated = 0
     for row in items:
         iid = row.get("id")
@@ -972,7 +995,12 @@ def usage_save():
         arr = row.get("sizeQuantitiesArr", None)  # 新：数组
         mp = row.get("sizeQuantities", None)  # 旧：Map（兼容）
 
-        if _is_size_based(model_item.material_type):
+        if _is_size_based(
+            model_item.material_type,
+            mat_category_map.get(int(model_item.material_id))
+            if model_item.material_id
+            else None,
+        ):
             # 优先数组；否则把 Map 按当前列顺序转数组
             if isinstance(arr, list):
                 clean_arr = [int(Decimal(str(v or 0))) for v in arr]
@@ -1077,6 +1105,7 @@ def purchase_form():
     out_items = []
     mat_name_map = {}
     mat_supplier_map = {}  # material_id -> supplier_id
+    mat_category_map = {}  # material_id -> material_category
     try:
         from models import Material
 
@@ -1087,12 +1116,14 @@ def purchase_form():
                     Material.material_id,
                     Material.material_name,
                     Material.material_supplier,
+                    Material.material_category,
                 )
                 .filter(Material.material_id.in_(mat_ids))
                 .all()
             )
-            for mid, name, sup_id in mrows:
+            for mid, name, sup_id, category in mrows:
                 mat_name_map[int(mid)] = name
+                mat_category_map[int(mid)] = category
                 if sup_id is not None:
                     mat_supplier_map[int(mid)] = int(sup_id)
     except Exception:
@@ -1115,7 +1146,10 @@ def purchase_form():
         order_qty = qty_map.get(ost_id or -1, 0.0)
 
         mat_type_name = MAT_TYPE_NAME.get(it.material_type, "")
-        is_size_based = it.material_type in SIZE_BASED_TYPES
+        _mat_category = (
+            mat_category_map.get(int(it.material_id)) if it.material_id else None
+        )
+        is_size_based = _is_size_based(it.material_type, _mat_category)
         sup_id = (
             mat_supplier_map.get(int(it.material_id)) if it.material_id else None
         )
@@ -1126,6 +1160,7 @@ def purchase_form():
             "orderShoeTypeId": ost_id,
             "shoeColorName": shoe_color,
             "materialType": mat_type_name,
+            "materialCategory": _mat_category,
             "materialName": (
                 mat_name_map.get(int(it.material_id), "") if it.material_id else ""
             ),

@@ -120,7 +120,8 @@ def get_material_variants():
     id_placeholders = ",".join(str(int(mid)) for mid in paged_ids)
     detail_sql = f"""
         SELECT v.material_id, v.mm, v.ms, v.mc, v.src, v.cnt,
-               m.material_name, mt.material_type_name, s.supplier_name
+               m.material_name, mt.material_type_name, s.supplier_name,
+               m.material_category
         FROM ({union_sql}) v
         JOIN material m ON m.material_id = v.material_id
         LEFT JOIN supplier s ON s.supplier_id = m.material_supplier
@@ -140,6 +141,7 @@ def get_material_variants():
                 "materialName": row[6] or "",
                 "materialType": row[7] or "",
                 "supplierName": row[8] or "",
+                "materialCategory": row[9] if row[9] is not None else 0,
                 "variants": {},
             }
         vkey = (row[1] or "", row[2] or "", row[3] or "")

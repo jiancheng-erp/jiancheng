@@ -563,6 +563,9 @@ def get_materials():
             shoe_size_columns = size_table["大底"]
         elif material.material_name == "中底":
             shoe_size_columns = size_table["中底"]
+        elif material.material_category == 1:
+            # 面料等尺码材料（category==1）用客人码
+            shoe_size_columns = size_table.get("客人码", [])
         else:
             shoe_size_columns = []
         obj = {
@@ -754,7 +757,10 @@ def _find_storage_in_db(
             item.get("shoeSizeColumns", []) if item.get("shoeSizeColumns", []) else []
         )
         if len(shoe_size_columns) == 0 and (
-            material_name == "大底" or material_name == "中底" or material_name == "烫底"
+            material_name == "大底"
+            or material_name == "中底"
+            or material_name == "烫底"
+            or material_category == 1
         ):
             shoe_size_columns = []
             result = (

@@ -578,7 +578,8 @@
                         </template>
                     </el-input>
                     <el-select v-if="addMaterialResults.length" v-model="addForm.materialId"
-                        placeholder="选择材料" style="width:100%; margin-top:8px;" filterable>
+                        placeholder="选择材料" style="width:100%; margin-top:8px;" filterable
+                        @change="onAddMaterialSelected">
                         <el-option v-for="mat in addMaterialResults" :key="mat.materialId"
                             :label="`${mat.materialName} | ${mat.supplierName || '无供应商'} (ID:${mat.materialId})`"
                             :value="mat.materialId">
@@ -611,16 +612,20 @@
                         <el-form-item label="单位用量" :required="addForm.targets.includes('bom')">
                             <el-input-number v-model="addForm.unitUsage" :min="0" :precision="5"
                                 style="width:100%;" placeholder="每双用量"
-                                :disabled="!addForm.targets.includes('bom')" />
+                                :disabled="!addForm.targets.includes('bom')"
+                                @change="calcApproval" />
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item label="核定用量" :required="addForm.targets.includes('bom')">
                             <el-input-number v-model="addForm.approvalAmount" :min="0" :precision="5"
                                 style="width:100%;" placeholder="采购核定数量"
-                                :disabled="!addForm.targets.includes('bom')" />
+                                :disabled="!addForm.targets.includes('bom') || isAddSizeMaterial" />
                             <div style="font-size:11px; color:#909399; margin-top:2px;">
-                                <template v-if="addForm.targets.includes('bom') && sizeInfo">
+                                <template v-if="isAddSizeMaterial">
+                                    配码材料：核定用量 = 各尺码采购量合计（自动）
+                                </template>
+                                <template v-else-if="addForm.targets.includes('bom') && sizeInfo">
                                     = {{ addForm.unitUsage }} × {{ sizeInfo.grandTotal }}双
                                     <el-button link size="small" type="primary" @click="calcApproval">重新计算</el-button>
                                 </template>
@@ -630,6 +635,33 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+
+                <!-- 配码材料：各尺码采购量填写 -->
+                <div v-if="isAddSizeMaterial && sizeInfo && sizeColumns.length"
+                    style="border:1px solid #e4e7ed; border-radius:4px; padding:10px 12px; margin-bottom:12px;">
+                    <div style="font-size:13px; color:#606266; margin-bottom:8px; font-weight:bold;">
+                        配码数量填写
+                        <span style="font-weight:normal; color:#909399; margin-left:8px;">
+                            按每双用量自动计算，可手动调整
+                        </span>
+                        <el-button link type="primary" size="small" style="margin-left:8px;"
+                            @click="calcAddSizeAmounts">按每双用量计算</el-button>
+                    </div>
+                    <el-table :data="[addSizeAmounts]" border size="small">
+                        <el-table-column v-for="s in sizeColumns" :key="s" :label="`${s}码`"
+                            width="72" align="center">
+                            <template #default>
+                                <el-input-number v-model="addSizeAmounts[s]" :min="0" :precision="0"
+                                    :controls="false" size="small" style="width:100%;"
+                                    @change="onAddSizeAmountChange" />
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="font-size:12px; color:#606266; margin-top:6px;">
+                        采购核定合计：<strong>{{ addForm.approvalAmount || 0 }}</strong>
+                    </div>
+                </div>
+
                 <el-form-item label="备注">
                     <el-input v-model="addForm.remark" placeholder="（可选）" clearable />
                 </el-form-item>
@@ -952,7 +984,8 @@ export default {
             // 尺码数量表
             sizeInfo: null,
             sizeInfoLoading: false,
-
+            // 配码材料：各尺码采购量（键为实际尺码字符串 "34".."46"）
+            addSizeAmounts: {},
             // 检查匹配
             checkDialogVisible: false,
             checkLoading: false,
@@ -1055,6 +1088,12 @@ export default {
         sizeColumns() {
             if (!this.sizeInfo) return []
             return Object.keys(this.sizeInfo.totals).filter(s => this.sizeInfo.totals[s] > 0)
+        },
+        selectedAddMaterial() {
+            return this.addMaterialResults.find(m => m.materialId === this.addForm.materialId) || null
+        },
+        isAddSizeMaterial() {
+            return Number(this.selectedAddMaterial?.materialCategory) === 1
         },
         issueTypeLabel() {
             return (t) => ({
@@ -1757,6 +1796,7 @@ export default {
             this.addMaterialSearchKw = ''
             this.addMaterialResults = []
             this.sizeInfo = null
+            this.addSizeAmounts = {}
             this.addDialogVisible = true
             if (ostId) this.fetchSizeInfo(ostId)
         },
@@ -1775,9 +1815,40 @@ export default {
         },
         calcApproval() {
             if (!this.sizeInfo) return
+            // 配码材料：核定用量 = 各尺码采购量之和
+            if (this.isAddSizeMaterial) {
+                this.calcAddSizeAmounts()
+                return
+            }
             const total = this.sizeInfo.grandTotal || 0
             const u = parseFloat(this.addForm.unitUsage) || 0
             this.addForm.approvalAmount = parseFloat((u * total).toFixed(5))
+        },
+        // 配码材料：按每双用量 × 各尺码双数自动计算各尺码采购量，核定用量取合计
+        calcAddSizeAmounts() {
+            if (!this.sizeInfo) { this.addSizeAmounts = {}; return }
+            const u = parseFloat(this.addForm.unitUsage) || 0
+            const amounts = {}
+            let total = 0
+            for (const [s, cnt] of Object.entries(this.sizeInfo.totals)) {
+                if (!cnt) continue
+                const amt = Math.ceil(u * cnt)
+                amounts[s] = amt
+                total += amt
+            }
+            this.addSizeAmounts = amounts
+            this.addForm.approvalAmount = total
+        },
+        // 手动改动某尺码采购量后，核定用量重新汇总
+        onAddSizeAmountChange() {
+            let total = 0
+            for (const v of Object.values(this.addSizeAmounts)) total += (parseInt(v) || 0)
+            this.addForm.approvalAmount = total
+        },
+        onAddMaterialSelected() {
+            this.addSizeAmounts = {}
+            if (this.isAddSizeMaterial) this.calcAddSizeAmounts()
+            else this.calcApproval()
         },
         sizeSummary({ columns }) {
             const t = this.sizeInfo?.totals || {}
@@ -1793,13 +1864,14 @@ export default {
             if (!kw) { ElMessage.warning('请输入搜索关键字'); return }
             this.addMaterialSearchLoading = true
             try {
-                const res = await axios.get(`${this.$apiBaseUrl}/material/variants`, {
-                    params: { materialName: kw, pageSize: 50, page: 1, showAll: 'true' },
+                const res = await axios.get(`${this.$apiBaseUrl}/material/search-materials`, {
+                    params: { materialName: kw, limit: 50 },
                 })
                 this.addMaterialResults = (res.data.result || []).map(m => ({
                     materialId: m.materialId,
                     materialName: m.materialName,
                     supplierName: m.supplierName || '',
+                    materialCategory: m.materialCategory ?? 0,
                 }))
                 if (!this.addMaterialResults.length) ElMessage.info('未找到匹配的材料')
             } catch (e) { console.error(e); ElMessage.error('搜索材料失败') }
@@ -1827,6 +1899,11 @@ export default {
                     csMaterialSecondType: this.addForm.csMaterialSecondType,
                     csCraftName: this.addForm.csCraftName,
                     csProcessingRemark: this.addForm.csProcessingRemark,
+                }
+                // 配码材料：附带各尺码采购量，并将投产指令类型标记为面料(S)以便采购走尺码版
+                if (this.isAddSizeMaterial) {
+                    body.sizeAmounts = this.addSizeAmounts || {}
+                    body.piMaterialType = 'S'
                 }
                 const res = await axios.post(`${this.$apiBaseUrl}/material/batch-add-material`, body)
                 ElMessage.success(res.data.message || '添加成功')

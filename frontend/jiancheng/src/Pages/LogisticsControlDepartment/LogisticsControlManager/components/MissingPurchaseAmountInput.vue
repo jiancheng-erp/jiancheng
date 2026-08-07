@@ -408,6 +408,7 @@ type RowItem = {
   orderShoeTypeId:number|null
   shoeColorName:string
   materialType:string
+  materialCategory?:number|null
   materialName:string
   supplierName?:string
   supplierId?:number|null
@@ -436,7 +437,7 @@ const totalPurchase = computed(()=> fix4(filteredRows.value.reduce((s,r)=>s + Nu
 
 function fix4(n:any){ const v=Number(n||0); return Math.round(v*10000)/10000 }
 function sum(arr?:number[]){ return fix4((arr||[]).reduce((s,n)=>s+Number(n||0),0)) }
-function isSizeBased(row:RowItem){ return ['大底','中底','烫底'].includes(String(row.materialType||'')) }
+function isSizeBased(row:RowItem){ return Number(row.materialCategory) === 1 }
 
 /** 打开对话框 */
 async function openPurchase(listRow:any){
@@ -478,6 +479,7 @@ async function loadPurchaseForm(){
         orderShoeTypeId: it.orderShoeTypeId ?? null,
         shoeColorName: it.shoeColorName || '',
         materialType: it.materialType || '',
+        materialCategory: it.materialCategory ?? null,
         materialName: it.materialName || '',
         supplierName: it.supplierName || '',
         supplierId: it.supplierId ?? null,

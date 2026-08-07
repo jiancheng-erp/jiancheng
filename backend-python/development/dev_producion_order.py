@@ -532,13 +532,26 @@ def _save_instruction_helper(
             if material_data.get("materialType") == "烫底":
                 input_material_category = 1
 
+            # 自动联想改厂家会以"同名+新厂家"新建材料，继承同名已有材料的 material_category，
+            # 避免丢失分尺码属性
+            same_name_material = (
+                db.session.query(Material.material_category)
+                .filter(Material.material_name == material_name)
+                .first()
+            )
+            resolved_material_category = (
+                same_name_material.material_category
+                if same_name_material is not None
+                else input_material_category
+            )
+
             material = Material(
                 material_name=material_name,
                 material_supplier=supplier_id,
                 material_unit=material_data.get("unit"),
                 material_creation_date=datetime.datetime.now(),
                 material_type_id=material_type_id,
-                material_category=input_material_category,
+                material_category=resolved_material_category,
             )
             db.session.add(material)
             db.session.flush()
