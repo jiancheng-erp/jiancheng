@@ -6,6 +6,11 @@
     </el-row>
     <el-row :gutter="20" class="mb-2">
         <el-col>
+            <el-select v-model="outboundTypeSearch" placeholder="出库类型" clearable style="width: 160px; margin-right: 12px;" @change="onOutboundTypeChange">
+                <el-option label="全部出库类型" :value="null" />
+                <el-option label="生产出库" :value="0" />
+                <el-option label="损失出库" :value="9" />
+            </el-select>
             <el-button type="primary" :loading="exportLoadingOutbound" @click="exportOutboundExcel"> 导出出库Excel </el-button>
             <el-button type="success" :loading="exportLoadingInout" @click="exportInoutExcel"> 导出出入库合并Excel </el-button>
         </el-col>
@@ -15,6 +20,13 @@
             <el-table :data="tableData" border stripe show-summary :summary-method="getSummaries" style="height: 70vh;">
                 <el-table-column prop="outboundRId" label="出库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
+                <el-table-column label="出库类型" width="100">
+                    <template #default="{ row }">
+                        <el-tag :type="row.outboundType === 9 ? 'danger' : 'success'" size="small">
+                            {{ row.outboundTypeLabel || '生产出库' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="shoeRId" label="工厂鞋型"></el-table-column>
                 <el-table-column prop="customerName" label="客户名称"></el-table-column>
@@ -70,6 +82,7 @@ export default {
             tableData: [],
             total: 0,
             totalDetailAmount: 0,
+            outboundTypeSearch: null,
             currentRow: {},
             recordData: {},
             dialogVisible: false,
@@ -112,6 +125,10 @@ export default {
             this.searchFilters = { ...filters }
             this.getOutboundRecordsTable()
         },
+        onOutboundTypeChange() {
+            this.currentPage = 1
+            this.getOutboundRecordsTable()
+        },
         calculateOutboundTotal() {
             // Calculate the total outbound quantity
             const number = this.recordData.items.reduce((total, item) => {
@@ -138,7 +155,8 @@ export default {
                     customerName: this.searchFilters.customerNameSearch,
                     customerProductName: this.searchFilters.customerProductNameSearch,
                     orderCId: this.searchFilters.orderCIdSearch,
-                    customerBrand: this.searchFilters.customerBrandSearch
+                    customerBrand: this.searchFilters.customerBrandSearch,
+                    outboundType: this.outboundTypeSearch ?? undefined
                 }
                 let response = await axios.get(`${this.$apiBaseUrl}/warehouse/getfinishedoutboundrecords`, { params })
                 this.tableData = response.data.result
@@ -182,7 +200,8 @@ export default {
                 customerName: this.searchFilters.customerNameSearch,
                 customerProductName: this.searchFilters.customerProductNameSearch,
                 orderCId: this.searchFilters.orderCIdSearch,
-                customerBrand: this.searchFilters.customerBrandSearch
+                customerBrand: this.searchFilters.customerBrandSearch,
+                outboundType: this.outboundTypeSearch ?? undefined
             }
         },
 
