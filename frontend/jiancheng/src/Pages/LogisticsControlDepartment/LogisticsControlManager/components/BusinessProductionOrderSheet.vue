@@ -8,6 +8,7 @@
                     <el-dropdown-menu>
                         <el-dropdown-item command="notice">生产通知单</el-dropdown-item>
                         <el-dropdown-item command="craft">工艺单</el-dropdown-item>
+                        <el-dropdown-item command="production">生产订单</el-dropdown-item>
                     </el-dropdown-menu>
                 </template>
             </el-dropdown>
@@ -700,11 +701,17 @@ async function downloadExcel(type = 'notice') {
     try {
         if (type === 'craft') {
             await exportCraftSheetExcel($api_baseUrl, props.orderId)
+        } else if (type === 'production') {
+            // 生产订单（数量订单，不含单价/金额）
+            window.open(
+                `${$api_baseUrl}/order/exportproductionorder?orderIds=${props.orderId}&outputType=1&includePrice=0`
+            )
         } else {
             await exportProductionOrderExcel($api_baseUrl, props.orderId)
         }
     } catch (error) {
-        ElMessage.error(type === 'craft' ? '导出工艺单 Excel 失败' : '导出生产通知单 Excel 失败')
+        const label = type === 'craft' ? '工艺单' : type === 'production' ? '生产订单' : '生产通知单'
+        ElMessage.error(`导出${label} Excel 失败`)
     }
 }
 </script>

@@ -37,6 +37,9 @@
                     <el-menu-item index="finishedStorageOverview" @click="handleMenuClick('finishedStorageOverview')">
                         <span>成品入出库概览</span>
                     </el-menu-item>
+                    <el-menu-item index="stuckOrderRepair" @click="handleMenuClick('stuckOrderRepair')">
+                        <span>断链订单修复</span>
+                    </el-menu-item>
                     <el-menu-item index="usageModification" @click="handleMenuClick('usageModification')">
                         <span>用量修改</span>
                     </el-menu-item>
@@ -77,6 +80,7 @@ import WechatTemplateManager from '@/Pages/System/WechatTemplateManager.vue'
 import MaterialConsolidation from '../components/MaterialConsolidation.vue'
 import MaterialBatchEdit from '../components/MaterialBatchEdit.vue'
 import FinishedStorageOverview from '../components/FinishedStorageOverview.vue'
+import StuckOrderRepair from '../components/StuckOrderRepair.vue'
 import UsageModificationView from '@/Pages/UsageCalculation/components/UsageModificationView.vue'
 import PurchaseApprovalAdjust from '../components/PurchaseApprovalAdjust.vue'
 import UserManagementView from '@/Pages/HumanResourcesDepartment/components/UserManagementView.vue'
@@ -93,6 +97,7 @@ export default {
         MaterialConsolidation,
         MaterialBatchEdit,
         FinishedStorageOverview,
+        StuckOrderRepair,
         UsageModificationView,
         PurchaseApprovalAdjust,
         UserManagementView,
@@ -133,6 +138,8 @@ export default {
                 this.currentComponent = 'MaterialBatchEdit'
             } else if (index === 'finishedStorageOverview') {
                 this.currentComponent = 'FinishedStorageOverview'
+            } else if (index === 'stuckOrderRepair') {
+                this.currentComponent = 'StuckOrderRepair'
             } else if (index === 'usageModification') {
                 this.currentComponent = 'UsageModificationView'
             } else if (index === 'purchaseApprovalAdjust') {

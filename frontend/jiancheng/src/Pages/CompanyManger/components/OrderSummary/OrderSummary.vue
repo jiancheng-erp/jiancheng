@@ -9,7 +9,33 @@
           range-separator="~"
           start-placeholder="开始"
           end-placeholder="结束"
-          style="width: 240px"
+          :shortcuts="dateShortcuts"
+          unlink-panels
+          clearable
+          style="width: 260px"
+          @change="onStartRangeChange"
+        />
+      </el-form-item>
+      <el-form-item label="按年">
+        <el-date-picker
+          v-model="yearPick"
+          type="year"
+          value-format="YYYY"
+          placeholder="选年份"
+          clearable
+          style="width: 120px"
+          @change="onYearPick"
+        />
+      </el-form-item>
+      <el-form-item label="按月">
+        <el-date-picker
+          v-model="monthPick"
+          type="month"
+          value-format="YYYY-MM"
+          placeholder="选月份"
+          clearable
+          style="width: 130px"
+          @change="onMonthPick"
         />
       </el-form-item>
       <el-form-item label="订单交货期">
@@ -20,7 +46,10 @@
           range-separator="~"
           start-placeholder="开始"
           end-placeholder="结束"
-          style="width: 240px"
+          :shortcuts="dateShortcuts"
+          unlink-panels
+          clearable
+          style="width: 260px"
         />
       </el-form-item>
       <el-form-item label="客户">
@@ -87,6 +116,59 @@ export default {
   name: 'OrderSummary',
   data() {
     return {
+      dateShortcuts: [
+        {
+          text: '今天',
+          value: () => {
+            const d = new Date()
+            return [d, d]
+          }
+        },
+        {
+          text: '本月',
+          value: () => {
+            const now = new Date()
+            const start = new Date(now.getFullYear(), now.getMonth(), 1)
+            const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+            return [start, end]
+          }
+        },
+        {
+          text: '上月',
+          value: () => {
+            const now = new Date()
+            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const end = new Date(now.getFullYear(), now.getMonth(), 0)
+            return [start, end]
+          }
+        },
+        {
+          text: '本季度',
+          value: () => {
+            const now = new Date()
+            const q = Math.floor(now.getMonth() / 3)
+            const start = new Date(now.getFullYear(), q * 3, 1)
+            const end = new Date(now.getFullYear(), q * 3 + 3, 0)
+            return [start, end]
+          }
+        },
+        {
+          text: '今年',
+          value: () => {
+            const now = new Date()
+            return [new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31)]
+          }
+        },
+        {
+          text: '近三个月',
+          value: () => {
+            const end = new Date()
+            const start = new Date()
+            start.setMonth(start.getMonth() - 3)
+            return [start, end]
+          }
+        }
+      ],
       filters: {
         customerName: '',
         departmentId: null,
@@ -96,6 +178,8 @@ export default {
       },
       startDateRange: null,
       endDateRange: null,
+      yearPick: null,
+      monthPick: null,
       departments: [],
       tableData: [],
       total: 0,
@@ -111,6 +195,27 @@ export default {
   methods: {
     indexMethod(index) {
       return (this.currentPage - 1) * this.pageSize + index + 1
+    },
+    _pad(n) {
+      return String(n).padStart(2, '0')
+    },
+    onYearPick(year) {
+      if (!year) return
+      this.monthPick = null
+      this.startDateRange = [`${year}-01-01`, `${year}-12-31`]
+      this.onSearch()
+    },
+    onMonthPick(ym) {
+      if (!ym) return
+      this.yearPick = null
+      const [y, m] = ym.split('-').map(Number)
+      const lastDay = new Date(y, m, 0).getDate()
+      this.startDateRange = [`${ym}-01`, `${ym}-${this._pad(lastDay)}`]
+      this.onSearch()
+    },
+    onStartRangeChange() {
+      this.yearPick = null
+      this.monthPick = null
     },
     formatAmount(v) {
       return Number(v).toLocaleString('zh-CN', {
@@ -165,6 +270,8 @@ export default {
       }
       this.startDateRange = null
       this.endDateRange = null
+      this.yearPick = null
+      this.monthPick = null
       this.currentPage = 1
       this.loadTable()
     },
