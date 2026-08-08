@@ -8,7 +8,7 @@ from file_locations import FILE_STORAGE_PATH
 from shared_apis import shoe
 from shared_apis.batch_info_type import get_order_batch_type_helper
 from constants import *
-from event_processor import EventProcessor
+from event_processor import EventProcessor, ORDERSTATUSNAMELIST
 from flask import Blueprint, current_app, jsonify, request, send_file
 from models import *
 from dateutil.relativedelta import relativedelta
@@ -3157,6 +3157,145 @@ def audit_loss_outbound():
             "status": 4,
             "outboundRId": outbound_record.shoe_outbound_rid,
             "actualTotalPairs": total_amount,
+        }
+    )
+
+
+@finished_storage_bp.route("/warehouse/admin/stuckoutboundorders", methods=["GET"])
+def list_stuck_outbound_orders():
+    """管理员：列出「成品已全部出库、订单主状态却未推进到订单完成(18)」的断链订单。
+
+    判定：订单下所有成品库存(FinishedShoeStorage)均为 finished_status==2（已全部出库），
+    但 order_status.order_current_status 处于 [9, 18) 之间（已进入生产阶段但未到订单完成）。
+    典型成因：最后一批为损失出库，损失出库不推进订单完成，导致主状态卡死。
+    """
+    storage_agg = (
+        db.session.query(
+            OrderShoe.order_id.label("order_id"),
+            func.count(FinishedShoeStorage.finished_shoe_id).label("total_cnt"),
+            func.sum(case((FinishedShoeStorage.finished_status == 2, 1), else_=0)).label(
+                "status2_cnt"
+            ),
+            func.coalesce(
+                func.sum(FinishedShoeStorage.finished_estimated_amount), 0
+            ).label("estimated"),
+        )
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id,
+        )
+        .join(
+            FinishedShoeStorage,
+            FinishedShoeStorage.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(OrderShoe.order_id)
+        .subquery()
+    )
+    rows = (
+        db.session.query(
+            Order,
+            OrderStatus,
+            Customer,
+            storage_agg.c.total_cnt,
+            storage_agg.c.status2_cnt,
+            storage_agg.c.estimated,
+        )
+        .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .outerjoin(Customer, Customer.customer_id == Order.customer_id)
+        .join(storage_agg, storage_agg.c.order_id == Order.order_id)
+        .filter(OrderStatus.order_current_status >= 9)
+        .filter(OrderStatus.order_current_status < ORDER_FINISHED_STATUS_ID)
+        .filter(storage_agg.c.total_cnt > 0)
+        .filter(storage_agg.c.total_cnt == storage_agg.c.status2_cnt)
+        .order_by(desc(OrderStatus.order_current_status), Order.order_rid)
+        .all()
+    )
+    result = []
+    for order, order_status, customer, total_cnt, status2_cnt, estimated in rows:
+        cur = order_status.order_current_status
+        status_name = (
+            ORDERSTATUSNAMELIST[cur]
+            if cur is not None and 0 <= cur < len(ORDERSTATUSNAMELIST)
+            else str(cur)
+        )
+        result.append(
+            {
+                "orderId": order.order_id,
+                "orderRId": order.order_rid,
+                "orderCId": order.order_cid,
+                "customerName": customer.customer_name if customer else "",
+                "currentStatus": cur,
+                "currentStatusName": status_name,
+                "storageCount": int(total_cnt or 0),
+                "estimatedAmount": int(estimated or 0),
+            }
+        )
+    return jsonify({"result": result, "total": len(result)})
+
+
+@finished_storage_bp.route("/warehouse/admin/advancestuckorder", methods=["POST"])
+def advance_stuck_order():
+    """管理员：把「已全部出库但未完成」的断链订单强制推进到订单完成(18)。
+
+    Request JSON: { orderId }
+    仅当订单所有成品库存均已全部出库(finished_status==2)时允许操作，幂等安全。
+    """
+    data = request.get_json(silent=True) or {}
+    order_id = data.get("orderId")
+    if not order_id:
+        return jsonify({"message": "缺少 orderId"}), 400
+
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    storages = (
+        db.session.query(FinishedShoeStorage)
+        .join(
+            OrderShoeType,
+            OrderShoeType.order_shoe_type_id == FinishedShoeStorage.order_shoe_type_id,
+        )
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeType.order_shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .all()
+    )
+    if not storages:
+        return jsonify({"message": "该订单无成品库存记录"}), 400
+    if not all(s.finished_status == 2 for s in storages):
+        return jsonify({"message": "该订单尚未全部出库，不能强制完成"}), 409
+
+    processor: EventProcessor = current_app.config["event_processor"]
+    staff_id = current_user_info()[1].staff_id
+    current_status, _ = processor.dbQueryOrderStatus(order_id)
+    if current_status is not None and current_status >= ORDER_FINISHED_STATUS_ID:
+        return jsonify(
+            {"message": "订单已是完成状态", "currentStatus": current_status}
+        )
+
+    try:
+        if not order.order_actual_end_date:
+            order.order_actual_end_date = datetime.now().date()
+        if not _advance_order_to_finish(processor, order_id, staff_id):
+            db.session.rollback()
+            return jsonify({"message": "推进失败，请检查订单前置状态"}), 500
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.debug(e)
+        return jsonify({"message": "推进异常"}), 500
+
+    new_status, _ = processor.dbQueryOrderStatus(order_id)
+    new_status_name = (
+        ORDERSTATUSNAMELIST[new_status]
+        if new_status is not None and 0 <= new_status < len(ORDERSTATUSNAMELIST)
+        else str(new_status)
+    )
+    return jsonify(
+        {
+            "message": "订单已推进到订单完成",
+            "orderId": order_id,
+            "currentStatus": new_status,
+            "currentStatusName": new_status_name,
         }
     )
 
