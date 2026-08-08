@@ -75,6 +75,14 @@ OUTBOUND_TYPE_MAPPING = {
     8: "材料复用",
 }
 
+# 成品仓出库类型（ShoeOutboundRecord.outbound_type / ShoeOutboundApply.outbound_type）
+SHOE_OUTBOUND_TYPE_PRODUCTION = 0
+SHOE_OUTBOUND_TYPE_LOSS = 9
+SHOE_OUTBOUND_TYPE_MAPPING = {
+    SHOE_OUTBOUND_TYPE_PRODUCTION: "生产出库",
+    SHOE_OUTBOUND_TYPE_LOSS: "损失出库",
+}
+
 BOM_STATUS = {
     "1": "材料已保存",
     "2": "材料已提交",

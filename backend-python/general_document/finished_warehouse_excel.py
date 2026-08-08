@@ -11,6 +11,7 @@ from sqlalchemy import desc, func
 # === 按你的项目结构调整这些 import ===
 from app_config import db
 from accounting.currency_exchange_management import get_exchange_rate_for_month
+from constants import SHOE_OUTBOUND_TYPE_MAPPING
 from models import (
     Order,
     OrderShoe,
@@ -399,7 +400,6 @@ def build_finished_outbound_excel(filters: dict):
             ShoeOutboundRecord.shoe_outbound_record_id
             == ShoeOutboundRecordDetail.shoe_outbound_record_id,
         )
-        .filter(ShoeOutboundRecord.outbound_type == 0)  # 仅自产出库
         .group_by(ShoeOutboundRecordDetail.finished_shoe_storage_id)
         .subquery()
     )
@@ -440,7 +440,6 @@ def build_finished_outbound_excel(filters: dict):
             ShoeOutboundRecord.shoe_outbound_record_id
             == ShoeOutboundRecordDetail.shoe_outbound_record_id,
         )
-        .filter(ShoeOutboundRecord.outbound_type == 0)  # 仅自产出库
         .outerjoin(
             outbound_sum_sq,
             outbound_sum_sq.c.fsid == FinishedShoeStorage.finished_shoe_id,
@@ -475,6 +474,7 @@ def build_finished_outbound_excel(filters: dict):
         "工厂型号",
         "颜色",
         "出库单号",
+        "出库类型",
         "出库时间",
         "出库数量",
         "订单总数量",
@@ -491,7 +491,7 @@ def build_finished_outbound_excel(filters: dict):
     _write_header(ws, header_row, header, widths)
 
     data_start_row = header_row + 1
-    center_cols = {10, 11}  # 出库时间、出库数量
+    center_cols = {10, 11, 12}  # 出库类型、出库时间、出库数量
     r = data_start_row
     # 根据查询的结束月份（或当前月份）获取对应月度汇率
     rate_ref_dt = end_dt if end_dt else datetime.now()
@@ -542,6 +542,7 @@ def build_finished_outbound_excel(filters: dict):
                 shoe_rid_v,
                 color_name,
                 record.shoe_outbound_rid,
+                SHOE_OUTBOUND_TYPE_MAPPING.get(record.outbound_type, "生产出库"),
                 _format_dt(record.outbound_datetime),
                 qty,
                 storage.finished_estimated_amount,
@@ -563,7 +564,7 @@ def build_finished_outbound_excel(filters: dict):
     bio = BytesIO()
     wb.save(bio)
     bio.seek(0)
-    filename = f"成品出库记录_自产_{_now_tag()}.xlsx"
+    filename = f"成品出库记录_{_now_tag()}.xlsx"
     return bio, filename
 
 
@@ -652,7 +653,6 @@ def build_finished_inout_excel(filters: dict):
             ShoeOutboundRecord.shoe_outbound_record_id
             == ShoeOutboundRecordDetail.shoe_outbound_record_id,
         )
-        .filter(ShoeOutboundRecord.outbound_type == 0)  # 仅自产出库
         .order_by(desc(ShoeOutboundRecord.outbound_datetime))
         .distinct(ShoeOutboundRecordDetail.record_detail_id)
     )
@@ -686,6 +686,7 @@ def build_finished_inout_excel(filters: dict):
         "单号",
         "时间",
         "数量",
+        "出库类型",
         "备注",
     ]
     widths: list[int] = []
@@ -721,7 +722,7 @@ def build_finished_inout_excel(filters: dict):
                 record.shoe_inbound_rid,
                 _format_dt(record.inbound_datetime),
                 detail.inbound_amount,
-                
+                "-",
                 detail.remark or "",
             ],
             widths,
@@ -757,6 +758,7 @@ def build_finished_inout_excel(filters: dict):
                 record.shoe_outbound_rid,
                 _format_dt(record.outbound_datetime),
                 qty,
+                SHOE_OUTBOUND_TYPE_MAPPING.get(record.outbound_type, "生产出库"),
                 getattr(detail, "remark", "") or "",
             ],
             widths,
@@ -769,7 +771,7 @@ def build_finished_inout_excel(filters: dict):
     bio = BytesIO()
     wb.save(bio)
     bio.seek(0)
-    filename = f"成品出入库合并_自产_{_now_tag()}.xlsx"
+    filename = f"成品出入库合并_{_now_tag()}.xlsx"
     return bio, filename
 
 def _format_amount_map(amount_map: dict | None) -> str:

@@ -263,6 +263,14 @@
         <el-form :model="warehouseDirectForm" label-width="120px" class="mb-2">
             <el-row :gutter="20">
                 <el-col :span="8">
+                    <el-form-item label="出库类型">
+                        <el-select v-model="warehouseDirectForm.outboundType" style="width: 100%">
+                            <el-option label="生产出库" :value="0" />
+                            <el-option label="损失出库" :value="9" />
+                        </el-select>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="8">
                     <el-form-item label="实际出库日期">
                         <el-date-picker
                             v-model="warehouseDirectForm.actualOutboundDate"
@@ -284,6 +292,14 @@
                     </el-form-item>
                 </el-col>
             </el-row>
+            <el-alert
+                v-if="warehouseDirectForm.outboundType === 9"
+                type="warning"
+                :closable="false"
+                show-icon
+                title="损失出库需提交总经理审批，审批通过后系统将自动完成出库并扣减库存。"
+                class="mb-2"
+            />
         </el-form>
 
         <el-table :data="warehouseDirectPagedItems" border stripe size="small" style="width: 100%">
@@ -349,7 +365,7 @@
             <span>
                 <el-button @click="isWarehouseDirectDialogVisible = false">取消</el-button>
                 <el-button type="primary" @click="submitWarehouseDirectOutbound" :loading="isWarehouseDirectSubmitting" :disabled="isWarehouseDirectSubmitting">
-                    确认出库
+                    {{ warehouseDirectForm.outboundType === 9 ? '提交损失出库审批' : '确认出库' }}
                 </el-button>
             </span>
         </template>
@@ -657,6 +673,7 @@ export default {
                 picker: '',
                 remark: '',
                 actualOutboundDate: '',
+                outboundType: 0,
                 items: [],
                 sizeColumns: []
             },
@@ -1308,6 +1325,7 @@ export default {
 
             this.warehouseDirectForm.picker = ''
             this.warehouseDirectForm.remark = ''
+            this.warehouseDirectForm.outboundType = 0
             this.warehouseDirectForm.items = []
             this.warehouseDirectForm.sizeColumns = []
             this.warehouseDirectCurrentPage = 1
@@ -1413,7 +1431,8 @@ export default {
 
         async submitWarehouseDirectOutbound() {
             if (this.isWarehouseDirectSubmitting) return
-            if (!this.warehouseDirectForm.picker) {
+            const isLoss = this.warehouseDirectForm.outboundType === 9
+            if (!isLoss && !this.warehouseDirectForm.picker) {
                 ElMessage.error('请填写拣货人')
                 return
             }
@@ -1450,12 +1469,13 @@ export default {
                     customerIndex: this.warehouseDirectForm._customerIndex || 0,
                     picker: this.warehouseDirectForm.picker,
                     remark: this.warehouseDirectForm.remark,
+                    outboundType: this.warehouseDirectForm.outboundType,
                     actualOutboundDate: this.warehouseDirectForm.actualOutboundDate || undefined,
                     details
                 }
 
                 const res = await axios.post(`${this.$apiBaseUrl}/warehouse/outbound-apply/warehouse-outbound`, payload)
-                ElMessage.success(res.data.message || '出库成功')
+                ElMessage.success(res.data.message || (isLoss ? '损失出库申请已提交，等待总经理审批' : '出库成功'))
                 this.isWarehouseDirectDialogVisible = false
                 this.isMultipleSelection = false
                 this.selectedRows = []

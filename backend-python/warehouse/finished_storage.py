@@ -1295,6 +1295,7 @@ def get_finished_outbound_records():
     customer_product_name = request.args.get("customerProductName")
     order_cid = request.args.get("orderCId")
     customer_brand = request.args.get("customerBrand")
+    outbound_type = request.args.get("outboundType", type=int)
     query = (
         db.session.query(
             Order,
@@ -1305,6 +1306,7 @@ def get_finished_outbound_records():
             ShoeOutboundRecord.shoe_outbound_record_id,
             ShoeOutboundRecord.shoe_outbound_rid,
             ShoeOutboundRecord.outbound_datetime,
+            ShoeOutboundRecord.outbound_type,
             ShoeOutboundRecordDetail,
         )
         .join(Customer, Customer.customer_id == Order.customer_id)
@@ -1351,6 +1353,8 @@ def get_finished_outbound_records():
         query = query.filter(Order.order_cid.ilike(f"%{order_cid}%"))
     if customer_brand and customer_brand != "":
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
+    if outbound_type is not None and outbound_type >= 0:
+        query = query.filter(ShoeOutboundRecord.outbound_type == outbound_type)
     count_result = query.distinct().count()
     total_detail_amount = int(
         query.with_entities(
@@ -1384,6 +1388,7 @@ def get_finished_outbound_records():
             outbound_id,
             outbound_rid,
             outbound_datetime,
+            record_outbound_type,
             record_detail,
         ) = row
         apply_ids = apply_map.get(outbound_id, [])
@@ -1398,6 +1403,10 @@ def get_finished_outbound_records():
             "outboundRId": outbound_rid,
             "outboundId": outbound_id,
             "timestamp": format_datetime(outbound_datetime),
+            "outboundType": record_outbound_type,
+            "outboundTypeLabel": SHOE_OUTBOUND_TYPE_MAPPING.get(
+                record_outbound_type, "生产出库"
+            ),
             "detailAmount": record_detail.outbound_amount,
             "customerBrand": customer.customer_brand,
             "applyIds": apply_ids,
@@ -2667,6 +2676,9 @@ def save_outbound_apply():
     target_status = data.get("status", 0)
     remark = data.get("remark") or ""
     details = data.get("details") or []
+    outbound_type = data.get("outboundType", SHOE_OUTBOUND_TYPE_PRODUCTION)
+    if outbound_type not in SHOE_OUTBOUND_TYPE_MAPPING:
+        return jsonify({"message": "无效的出库类型"}), 400
 
     # 新增：预计出库时间，前端传字符串 "YYYY-MM-DD HH:mm:ss"
     expected_outbound_time_str = data.get("expectedOutboundTime") or None
@@ -2706,6 +2718,7 @@ def save_outbound_apply():
         apply_obj.remark = remark
         apply_obj.business_staff_id = apply_obj.business_staff_id or staff_id
         apply_obj.status = target_status
+        apply_obj.outbound_type = outbound_type
         apply_obj.expected_outbound_datetime = expected_outbound_dt
         ShoeOutboundApplyDetail.query.filter_by(apply_id=apply_obj.apply_id).delete()
     else:
@@ -2719,6 +2732,7 @@ def save_outbound_apply():
             business_staff_id=staff_id,
             status=target_status,
             remark=remark,
+            outbound_type=outbound_type,
             expected_outbound_datetime=expected_outbound_dt,
         )
         db.session.add(apply_obj)
@@ -2892,6 +2906,8 @@ def list_outbound_applies():
         q = q.filter(ShoeOutboundApply.apply_rid.ilike(f"%{apply_rid_kw}%"))
     if customer_name_kw:
         q = q.filter(Customer.customer_name.ilike(f"%{customer_name_kw}%"))
+    # 损失出库有独立审批页面，不在常规出库申请列表中显示
+    q = q.filter(ShoeOutboundApply.outbound_type != SHOE_OUTBOUND_TYPE_LOSS)
     if status is not None and status >= 0:
         q = q.filter(ShoeOutboundApply.status == status)
     else:
@@ -2933,6 +2949,11 @@ def list_outbound_applies():
                 "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(
                     apply_obj.status, "未知状态"
                 ),
+                "applyType": apply_obj.apply_type,
+                "outboundType": apply_obj.outbound_type,
+                "outboundTypeLabel": SHOE_OUTBOUND_TYPE_MAPPING.get(
+                    apply_obj.outbound_type, "生产出库"
+                ),
                 "remark": apply_obj.remark,
                 "expectedOutboundTime": (
                     format_datetime(apply_obj.expected_outbound_datetime)
@@ -2950,6 +2971,194 @@ def list_outbound_applies():
         )
 
     return jsonify({"result": result, "total": total})
+
+
+@finished_storage_bp.route("/warehouse/loss-outbound/list", methods=["GET"])
+def list_loss_outbound_applies():
+    """
+    损失出库申请列表（独立于常规出库申请）
+    Query: page, pageSize, status(默认1待审批), orderRId, applyRId, customerName
+    """
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 20, type=int)
+    status = request.args.get("status", type=int)
+    order_rid_kw = (request.args.get("orderRId") or "").strip()
+    apply_rid_kw = (request.args.get("applyRId") or "").strip()
+    customer_name_kw = (request.args.get("customerName") or "").strip()
+
+    q = (
+        db.session.query(
+            ShoeOutboundApply,
+            Order,
+            Customer,
+            func.coalesce(func.sum(ShoeOutboundApplyDetail.total_pairs), 0).label(
+                "total_pairs"
+            ),
+        )
+        .join(Order, Order.order_id == ShoeOutboundApply.order_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(
+            ShoeOutboundApplyDetail,
+            ShoeOutboundApplyDetail.apply_id == ShoeOutboundApply.apply_id,
+        )
+        .filter(ShoeOutboundApply.outbound_type == SHOE_OUTBOUND_TYPE_LOSS)
+        .group_by(ShoeOutboundApply.apply_id, Order.order_id, Customer.customer_id)
+        .order_by(desc(ShoeOutboundApply.create_time))
+    )
+
+    if status is not None and status >= 0:
+        q = q.filter(ShoeOutboundApply.status == status)
+    if order_rid_kw:
+        q = q.filter(Order.order_rid.ilike(f"%{order_rid_kw}%"))
+    if apply_rid_kw:
+        q = q.filter(ShoeOutboundApply.apply_rid.ilike(f"%{apply_rid_kw}%"))
+    if customer_name_kw:
+        q = q.filter(Customer.customer_name.ilike(f"%{customer_name_kw}%"))
+
+    total = q.count()
+    rows = q.limit(page_size).offset((page - 1) * page_size).all()
+
+    result = []
+    for apply_obj, order, customer, total_pairs in rows:
+        result.append(
+            {
+                "applyId": apply_obj.apply_id,
+                "applyRId": apply_obj.apply_rid,
+                "orderId": order.order_id,
+                "orderRId": order.order_rid,
+                "orderCId": order.order_cid,
+                "customerName": customer.customer_name,
+                "customerBrand": customer.customer_brand,
+                "totalPairs": int(total_pairs or 0),
+                "status": apply_obj.status,
+                "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(
+                    apply_obj.status, "未知状态"
+                ),
+                "remark": apply_obj.remark,
+                "createTime": format_datetime(apply_obj.create_time),
+                "updateTime": format_datetime(apply_obj.update_time),
+                "actualOutboundTime": (
+                    format_datetime(apply_obj.actual_outbound_datetime)
+                    if apply_obj.actual_outbound_datetime
+                    else None
+                ),
+            }
+        )
+
+    return jsonify({"result": result, "total": total})
+
+
+@finished_storage_bp.route("/warehouse/loss-outbound/audit", methods=["POST"])
+def audit_loss_outbound():
+    """
+    总经理审批损失出库；审批通过后直接执行出库（扣库存 + 生成损失出库记录）。
+    Request JSON: { applyId, action: approve|reject, remark? }
+    """
+    data = request.get_json(silent=True) or {}
+    apply_id = data.get("applyId")
+    action = (data.get("action") or "").lower()
+    remark = data.get("remark") or ""
+
+    if not apply_id:
+        return jsonify({"message": "缺少 applyId"}), 400
+    if action not in ("approve", "reject"):
+        return jsonify({"message": "action 只能为 approve / reject"}), 400
+
+    staff_id = _get_current_staff_id()
+    if not staff_id:
+        return jsonify({"message": "无法获取当前登录员工信息"}), 401
+
+    apply_obj: ShoeOutboundApply = ShoeOutboundApply.query.get(apply_id)
+    if not apply_obj:
+        return jsonify({"message": "申请单不存在"}), 404
+    if apply_obj.outbound_type != SHOE_OUTBOUND_TYPE_LOSS:
+        return jsonify({"message": "该申请单不是损失出库"}), 400
+    if apply_obj.status != 1:
+        return jsonify({"message": "只有“待审批”的损失出库申请才能审批"}), 409
+
+    apply_obj.gm_staff_id = staff_id
+    if remark:
+        apply_obj.remark = (apply_obj.remark or "") + f"\n[总经理审批]: {remark}"
+
+    if action == "reject":
+        apply_obj.status = 2
+        db.session.commit()
+        return jsonify({"message": "已驳回损失出库申请", "applyId": apply_id, "status": 2})
+
+    # ===== 审批通过：直接执行出库 =====
+    details = ShoeOutboundApplyDetail.query.filter_by(apply_id=apply_id).all()
+    if not details:
+        return jsonify({"message": "申请单无明细"}), 400
+
+    storage_ids = [d.finished_shoe_storage_id for d in details]
+    storages = (
+        db.session.query(FinishedShoeStorage)
+        .filter(FinishedShoeStorage.finished_shoe_id.in_(storage_ids))
+        .all()
+    )
+    storage_map = {s.finished_shoe_id: s for s in storages}
+    for d in details:
+        s = storage_map.get(d.finished_shoe_storage_id)
+        if not s:
+            return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
+        if (s.finished_amount or 0) < int(d.total_pairs or 0):
+            return (
+                jsonify(
+                    {
+                        "message": f"仓库编号 {s.finished_shoe_id} 库存不足（库存 {s.finished_amount}，出库 {int(d.total_pairs or 0)}）"
+                    }
+                ),
+                400,
+            )
+
+    now_dt = datetime.now()
+    rid_suffix = now_dt.strftime("%Y%m%d%H%M%S%f")
+    outbound_record = ShoeOutboundRecord(
+        shoe_outbound_rid="FOR" + rid_suffix + "T0",
+        outbound_datetime=now_dt,
+        outbound_type=SHOE_OUTBOUND_TYPE_LOSS,
+        apply_id=apply_obj.apply_id,
+        remark=(apply_obj.remark or "")[:40],
+        picker="",
+    )
+    db.session.add(outbound_record)
+    db.session.flush()
+
+    total_amount = 0
+    for d in details:
+        s = storage_map[d.finished_shoe_storage_id]
+        qty = int(d.total_pairs or 0)
+        s.finished_amount = (s.finished_amount or 0) - qty
+        record_detail = ShoeOutboundRecordDetail(
+            shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
+            outbound_amount=qty,
+            finished_shoe_storage_id=d.finished_shoe_storage_id,
+            remark=d.remark,
+        )
+        db.session.add(record_detail)
+        db.session.flush()
+        if _determine_outbound_status(s):
+            s.finished_status = 2
+        d.actual_outbound_pairs = qty
+        total_amount += qty
+
+    outbound_record.outbound_amount = total_amount
+    apply_obj.status = 4
+    apply_obj.warehouse_staff_id = staff_id
+    apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
+    apply_obj.actual_outbound_datetime = now_dt
+    # 损失出库不推进订单完成
+
+    db.session.commit()
+    return jsonify(
+        {
+            "message": "审批通过，已完成损失出库",
+            "applyId": apply_id,
+            "status": 4,
+            "outboundRId": outbound_record.shoe_outbound_rid,
+            "actualTotalPairs": total_amount,
+        }
+    )
 
 
 @finished_storage_bp.route("/warehouse/outbound-apply/detail", methods=["GET"])
@@ -3061,6 +3270,10 @@ def get_outbound_apply_detail():
         "customerBrand": customer.customer_brand if customer else None,
         "status": apply_obj.status,
         "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(apply_obj.status, "未知状态"),
+        "outboundType": apply_obj.outbound_type,
+        "outboundTypeLabel": SHOE_OUTBOUND_TYPE_MAPPING.get(
+            apply_obj.outbound_type, "生产出库"
+        ),
         "remark": apply_obj.remark,
         "businessStaffId": apply_obj.business_staff_id,
         "gmStaffId": apply_obj.gm_staff_id,
@@ -3312,7 +3525,7 @@ def execute_outbound_apply():
     outbound_record = ShoeOutboundRecord(
         shoe_outbound_rid=shoe_outbound_rid,
         outbound_datetime=now_dt,
-        outbound_type=0,
+        outbound_type=apply_obj.outbound_type,
         remark=(apply_obj.remark or ""),
         picker=picker,
     )
@@ -3396,8 +3609,13 @@ def execute_outbound_apply():
     apply_obj.actual_outbound_datetime = now_dt
 
     # 推订单事件（所有涉及的订单）
+    # 损失出库不代表订单正常交付完成，故不推进订单到“完成”状态
     processor: EventProcessor = current_app.config.get("event_processor")
-    if processor and unique_order_ids:
+    if (
+        processor
+        and unique_order_ids
+        and apply_obj.outbound_type != SHOE_OUTBOUND_TYPE_LOSS
+    ):
         orders = (
             db.session.query(Order, FinishedShoeStorage)
             .join(OrderShoe, OrderShoe.order_id == Order.order_id)
@@ -3459,8 +3677,10 @@ def execute_outbound_apply():
 )
 def warehouse_direct_outbound():
     """
-    仓库一步式出库：创建申请单(apply_type=1) + 立即执行出库
-    不走总经理审核流程，直接 status=4。
+    仓库出库：
+      - 生产出库(outbound_type=0)：创建申请单(apply_type=1) + 立即执行出库，直接 status=4。
+      - 损失出库(outbound_type=9)：由总仓发起，仅创建申请单(apply_type=1, status=1)，
+        等待总经理审批(status=3)后，再在成品出库申请列表中执行出库。
     """
     data = request.get_json(silent=True) or {}
     order_id = data.get("orderId")
@@ -3468,12 +3688,16 @@ def warehouse_direct_outbound():
     remark = data.get("remark") or ""
     actual_outbound_date_str = data.get("actualOutboundDate")
     details = data.get("details") or []
+    outbound_type = data.get("outboundType", SHOE_OUTBOUND_TYPE_PRODUCTION)
+    if outbound_type not in SHOE_OUTBOUND_TYPE_MAPPING:
+        return jsonify({"message": "无效的出库类型"}), 400
+    is_loss = outbound_type == SHOE_OUTBOUND_TYPE_LOSS
 
     if not order_id:
         return jsonify({"message": "缺少 orderId"}), 400
     if not isinstance(details, list) or not details:
         return jsonify({"message": "明细不能为空"}), 400
-    if not picker:
+    if not is_loss and not picker:
         return jsonify({"message": "缺少拣货人"}), 400
 
     staff_id = _get_current_staff_id()
@@ -3561,11 +3785,12 @@ def warehouse_direct_outbound():
         apply_rid=apply_rid,
         order_id=order_id,
         business_staff_id=staff_id,
-        warehouse_staff_id=staff_id,
-        status=4,
+        warehouse_staff_id=None if is_loss else staff_id,
+        status=1 if is_loss else 4,
         apply_type=1,
+        outbound_type=outbound_type,
         remark=remark,
-        actual_outbound_datetime=now_dt,
+        actual_outbound_datetime=None if is_loss else now_dt,
     )
     db.session.add(apply_obj)
     db.session.flush()
@@ -3581,17 +3806,28 @@ def warehouse_direct_outbound():
             carton_count=d["carton_count"],
             pairs_per_carton=d["pairs_per_carton"],
             total_pairs=d["total_pairs"],
-            actual_outbound_pairs=d["total_pairs"],
+            actual_outbound_pairs=None if is_loss else d["total_pairs"],
             remark=d["remark"],
         )
         db.session.add(detail_obj)
+
+    # ====== 损失出库：仅创建申请单，等待总经理审批后再执行 ======
+    if is_loss:
+        db.session.commit()
+        return jsonify({
+            "message": "损失出库申请已提交，等待总经理审批",
+            "applyId": apply_obj.apply_id,
+            "applyRId": apply_obj.apply_rid,
+            "status": apply_obj.status,
+            "statusLabel": _OUTBOUND_APPLY_STATUS_LABEL.get(apply_obj.status, "未知状态"),
+        })
 
     # ====== 创建出库记录 ======
     outbound_rid = "FOR" + rid_suffix + "T0"
     outbound_record = ShoeOutboundRecord(
         shoe_outbound_rid=outbound_rid,
         outbound_datetime=now_dt,
-        outbound_type=0,
+        outbound_type=outbound_type,
         apply_id=apply_obj.apply_id,
         remark=remark,
         picker=picker,

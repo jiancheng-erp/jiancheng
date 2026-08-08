@@ -70,6 +70,7 @@
                     <template #default="{ row }">
                         <el-button type="danger" @click="resignStaff(row)">离职</el-button>
                         <el-button type="primary" @click="previewStaff(row)">查看职员信息</el-button>
+                        <el-button type="success" @click="openEditStaff(row)">编辑信息</el-button>
                         <el-button type="warning" @click="openEditWechat(row)">修改微信ID</el-button>
                     </template>
                 </el-table-column>
@@ -144,6 +145,55 @@
             <el-button type="primary" @click="updateWechatId">保存</el-button>
         </span>
     </el-dialog>
+    <el-dialog v-model="editStaffDialogVisible" title="编辑职员信息" width="40%">
+        <el-form :model="editStaffForm" label-width="90px">
+            <el-form-item label="职员姓名">
+                <el-input v-model="editStaffForm.staffName" placeholder="请输入职员姓名"></el-input>
+            </el-form-item>
+            <el-form-item label="职位">
+                <el-select v-model="editStaffForm.characterId" placeholder="请选择职位" clearable>
+                    <el-option
+                        v-for="item in characterData"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                    ></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="部门">
+                <el-select v-model="editStaffForm.departmentId" placeholder="请选择部门" clearable>
+                    <el-option
+                        v-for="item in departmentData"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                    ></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="手机号码">
+                <el-input v-model="editStaffForm.phoneNumber" placeholder="请输入手机号码"></el-input>
+            </el-form-item>
+            <el-form-item label="身份证号">
+                <el-input v-model="editStaffForm.IdNumber" placeholder="请输入身份证号"></el-input>
+            </el-form-item>
+            <el-form-item label="出生日期">
+                <el-date-picker
+                    v-model="editStaffForm.birthDate"
+                    type="date"
+                    placeholder="请选择出生日期"
+                    value-format="YYYY-MM-DD"
+                    style="width: 100%"
+                ></el-date-picker>
+            </el-form-item>
+            <el-form-item label="微信ID">
+                <el-input v-model="editStaffForm.wechatId" placeholder="请输入微信ID"></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="editStaffDialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="updateStaff">保存</el-button>
+        </span>
+    </el-dialog>
 </template>
 
 <script>
@@ -164,8 +214,7 @@ export default {
                 staffName: '',
                 characterId: '',
                 departmentId: ''
-            },
-            previewStaffForm: {
+            },            previewStaffForm: {
                 staffName: '',
                 characterName: '',
                 departmentName: '',
@@ -180,6 +229,17 @@ export default {
                 staffName: '',
                 wechatId: ''
             },
+            editStaffForm: {
+                staffId: '',
+                staffName: '',
+                characterId: '',
+                departmentId: '',
+                phoneNumber: '',
+                IdNumber: '',
+                birthDate: '',
+                wechatId: ''
+            },
+            editStaffDialogVisible: false,
             characterData: [],
             departmentData: [],
             statusData:[
@@ -296,6 +356,45 @@ export default {
                 })
                 this.$message.success('保存成功')
                 this.editWechatDialogVisible = false
+                this.getStaffData()
+            } catch (error) {
+                this.$message.error(error?.response?.data?.error || '保存失败')
+            }
+        },
+        async openEditStaff(row) {
+            try {
+                const response = await axios.post(`${this.$apiBaseUrl}/staffmanage/getstaffinfo`, {
+                    staffId: row.staffId
+                })
+                const data = response.data
+                this.editStaffForm = {
+                    staffId: data.staffId,
+                    staffName: data.staffName,
+                    characterId: data.characterId,
+                    departmentId: data.departmentId,
+                    phoneNumber: data.phoneNumber || '',
+                    IdNumber: data.IdNumber || '',
+                    birthDate: data.birthDate || '',
+                    wechatId: data.wechatId || ''
+                }
+                this.editStaffDialogVisible = true
+            } catch (error) {
+                this.$message.error('加载职员信息失败')
+            }
+        },
+        async updateStaff() {
+            if (!this.editStaffForm.staffId) {
+                this.$message.error('缺少员工ID')
+                return
+            }
+            if (!this.editStaffForm.staffName || !this.editStaffForm.staffName.trim()) {
+                this.$message.error('职员姓名不能为空')
+                return
+            }
+            try {
+                await axios.post(`${this.$apiBaseUrl}/staffmanage/editstaff`, this.editStaffForm)
+                this.$message.success('保存成功')
+                this.editStaffDialogVisible = false
                 this.getStaffData()
             } catch (error) {
                 this.$message.error(error?.response?.data?.error || '保存失败')

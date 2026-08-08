@@ -13,7 +13,8 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from event_processor import EventProcessor
 
-from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, BUSINESS_DEPARTMENT, BUSINESS_DEPARTMENT_IDS, ORDER_FINISH_SYMBOL
+from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, ORDER_FINISH_SYMBOL
+from shared_apis.department import get_business_department_ids
 from general_document.order_export import (
     generate_excel_file,
     generate_amount_excel_file,
@@ -1150,11 +1151,14 @@ def get_display_orders_manager():
 
     entities = q.order_by(Order.order_rid.asc()).all()
 
-    # --- 部门人员映射（避免 KeyError 用 get） ---
+    # --- 部门人员映射（业务部门动态判定：含业务经理/文员角色的部门；避免 KeyError 用 get） ---
+    business_department_ids = get_business_department_ids()
     department_staff = (
         db.session.query(Staff)
-        .filter(Staff.department_id.in_(BUSINESS_DEPARTMENT_IDS))
+        .filter(Staff.department_id.in_(business_department_ids))
         .all()
+        if business_department_ids
+        else []
     )
     id_to_name = {s.staff_id: s.staff_name for s in department_staff}
 
