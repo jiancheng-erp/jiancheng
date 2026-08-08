@@ -26,6 +26,9 @@
           <el-menu-item index="4" @click="handleMenuClick(4)">
             <span>人员管理</span>
           </el-menu-item>
+          <el-menu-item index="5" @click="handleMenuClick(5)">
+            <span>部门管理</span>
+          </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
             <span>个人页面</span>
           </el-menu-item>
@@ -48,6 +51,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import { UserFilled } from '@element-plus/icons-vue'
 import UserManagementView from '../components/UserManagementView.vue';
 import StaffManagementView from '../components/StaffManagementView.vue';
+import DepartmentManagementView from '../components/DepartmentManagementView.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
 import axios from 'axios'
 
@@ -58,6 +62,7 @@ export default {
         AllHeader,
         UserManagementView,
         StaffManagementView,
+        DepartmentManagementView,
         PersonalInfo
     },
     data() {
@@ -86,6 +91,9 @@ export default {
                     break
                 case 4:
                     this.currentComponent = 'StaffManagementView'
+                    break
+                case 5:
+                    this.currentComponent = 'DepartmentManagementView'
                     break
                 case 9:
                     this.Logout()

@@ -108,3 +108,48 @@ def update_wechat_id():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@staff_manage_bp.route("/staffmanage/editstaff", methods=["POST"])
+def edit_staff():
+    staff_id = request.json.get("staffId")
+    if not staff_id:
+        return jsonify({"error": "staffId is required"}), 400
+    staff_name = (request.json.get("staffName") or "").strip()
+    character_id = request.json.get("characterId")
+    department_id = request.json.get("departmentId")
+    id_number = request.json.get("IdNumber")
+    phone_number = request.json.get("phoneNumber")
+    birth_date = request.json.get("birthDate")
+    wechat_id = request.json.get("wechatId")
+    try:
+        staff = Staff.query.filter_by(staff_id=staff_id).first()
+        if not staff:
+            return jsonify({"error": "Staff not found"}), 404
+        if not staff_name:
+            return jsonify({"error": "职员姓名不能为空"}), 400
+        duplicate = Staff.query.filter(
+            Staff.staff_name == staff_name, Staff.staff_id != staff_id
+        ).first()
+        if duplicate:
+            return jsonify({"error": "职员姓名已存在"}), 400
+        if character_id:
+            character = Character.query.filter_by(character_id=character_id).first()
+            if not character:
+                return jsonify({"error": "职位不存在"}), 400
+            staff.character_id = character.character_id
+        if department_id:
+            department = Department.query.filter_by(department_id=department_id).first()
+            if not department:
+                return jsonify({"error": "部门不存在"}), 400
+            staff.department_id = department.department_id
+        staff.staff_name = staff_name
+        staff.id_number = id_number
+        staff.phone_number = phone_number
+        staff.birth_date = birth_date if birth_date else None
+        staff.wechat_id = wechat_id
+        db.session.commit()
+        return jsonify({"message": "Staff updated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

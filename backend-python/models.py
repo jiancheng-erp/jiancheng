@@ -2037,6 +2037,9 @@ class ShoeOutboundApply(db.Model):
     # 1 仓库发起（一步完成，仅通知业务/总经理）
     apply_type = db.Column(db.SmallInteger, nullable=False, default=0)
 
+    # 成品出库类型：0 生产出库，9 损失出库（损失出库需总经理审批后仓库方可执行）
+    outbound_type = db.Column(db.SmallInteger, nullable=False, default=0)
+
     remark = db.Column(db.String(200))
     expected_outbound_datetime = db.Column(db.DateTime)   # 业务填写
     actual_outbound_datetime = db.Column(db.DateTime)     # 仓库执行时写入

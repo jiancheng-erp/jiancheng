@@ -43,6 +43,15 @@
                     <el-menu-item index="purchaseApprovalAdjust" @click="handleMenuClick('purchaseApprovalAdjust')">
                         <span>采购核定差异调整</span>
                     </el-menu-item>
+                    <el-menu-item index="userManagement" @click="handleMenuClick('userManagement')">
+                        <span>用户管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="staffManagement" @click="handleMenuClick('staffManagement')">
+                        <span>人员管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="departmentManagement" @click="handleMenuClick('departmentManagement')">
+                        <span>部门管理</span>
+                    </el-menu-item>
                     <el-menu-item index="logout" @click="logout">
                         <span>退出系统</span>
                     </el-menu-item>
@@ -70,6 +79,9 @@ import MaterialBatchEdit from '../components/MaterialBatchEdit.vue'
 import FinishedStorageOverview from '../components/FinishedStorageOverview.vue'
 import UsageModificationView from '@/Pages/UsageCalculation/components/UsageModificationView.vue'
 import PurchaseApprovalAdjust from '../components/PurchaseApprovalAdjust.vue'
+import UserManagementView from '@/Pages/HumanResourcesDepartment/components/UserManagementView.vue'
+import StaffManagementView from '@/Pages/HumanResourcesDepartment/components/StaffManagementView.vue'
+import DepartmentManagementView from '@/Pages/HumanResourcesDepartment/components/DepartmentManagementView.vue'
 export default {
     components: {
         AllHeader,
@@ -82,7 +94,10 @@ export default {
         MaterialBatchEdit,
         FinishedStorageOverview,
         UsageModificationView,
-        PurchaseApprovalAdjust
+        PurchaseApprovalAdjust,
+        UserManagementView,
+        StaffManagementView,
+        DepartmentManagementView
     },
     data() {
         return {
@@ -122,6 +137,12 @@ export default {
                 this.currentComponent = 'UsageModificationView'
             } else if (index === 'purchaseApprovalAdjust') {
                 this.currentComponent = 'PurchaseApprovalAdjust'
+            } else if (index === 'userManagement') {
+                this.currentComponent = 'UserManagementView'
+            } else if (index === 'staffManagement') {
+                this.currentComponent = 'StaffManagementView'
+            } else if (index === 'departmentManagement') {
+                this.currentComponent = 'DepartmentManagementView'
             }
         },
         async logout() {
