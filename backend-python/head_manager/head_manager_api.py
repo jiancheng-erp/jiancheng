@@ -1,7 +1,7 @@
-from flask import Blueprint, jsonify, request, current_app, session
+from flask import Blueprint, jsonify, request, current_app, session, send_file
 from matplotlib.pylab import logistic
 from models import *
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from datetime import datetime, timedelta
 from event_processor import EventProcessor
 import time
@@ -1480,3 +1480,152 @@ def head_manager_delete_order():
         db.session.rollback()
         logger.error(f"删除订单失败: order_id={order_id}, error={str(e)}")
         return jsonify({"message": f"删除失败: {str(e)}"}), 500
+
+
+# ==================== 总经理订单汇总 ====================
+
+
+def _build_order_summary_query(filters: dict):
+    """按工厂型号(order_shoe)逐行的订单汇总查询。"""
+    # 每个 order_shoe 的双数、金额、币种
+    qty_price_sq = (
+        db.session.query(
+            OrderShoeType.order_shoe_id.label("os_id"),
+            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label(
+                "total_pairs"
+            ),
+            func.coalesce(
+                func.sum(OrderShoeType.unit_price * OrderShoeBatchInfo.total_amount), 0
+            ).label("total_amount"),
+            func.max(OrderShoeType.currency_type).label("currency"),
+        )
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(OrderShoeType.order_shoe_id)
+        .subquery()
+    )
+
+    q = (
+        db.session.query(
+            Order.start_date.label("start_date"),
+            Order.end_date.label("end_date"),
+            Order.order_rid.label("order_rid"),
+            Customer.customer_name.label("customer_name"),
+            Department.department_name.label("department_name"),
+            OrderShoe.customer_product_name.label("customer_product_name"),
+            Shoe.shoe_rid.label("shoe_rid"),
+            qty_price_sq.c.total_pairs.label("total_pairs"),
+            qty_price_sq.c.total_amount.label("total_amount"),
+            qty_price_sq.c.currency.label("currency"),
+        )
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .outerjoin(Staff, Staff.staff_id == Order.salesman_id)
+        .outerjoin(Department, Department.department_id == Staff.department_id)
+        .outerjoin(qty_price_sq, qty_price_sq.c.os_id == OrderShoe.order_shoe_id)
+    )
+
+    if filters.get("start_date_from"):
+        q = q.filter(Order.start_date >= filters["start_date_from"])
+    if filters.get("start_date_to"):
+        q = q.filter(Order.start_date <= filters["start_date_to"])
+    if filters.get("end_date_from"):
+        q = q.filter(Order.end_date >= filters["end_date_from"])
+    if filters.get("end_date_to"):
+        q = q.filter(Order.end_date <= filters["end_date_to"])
+    if filters.get("customer_name"):
+        q = q.filter(Customer.customer_name.ilike(f"%{filters['customer_name']}%"))
+    if filters.get("department_id"):
+        q = q.filter(Staff.department_id == filters["department_id"])
+    if filters.get("order_rid"):
+        q = q.filter(Order.order_rid.ilike(f"%{filters['order_rid']}%"))
+    if filters.get("customer_product_name"):
+        q = q.filter(
+            OrderShoe.customer_product_name.ilike(
+                f"%{filters['customer_product_name']}%"
+            )
+        )
+    if filters.get("shoe_rid"):
+        q = q.filter(Shoe.shoe_rid.ilike(f"%{filters['shoe_rid']}%"))
+
+    q = q.order_by(desc(Order.start_date), Order.order_rid, Shoe.shoe_rid)
+    return q
+
+
+def _collect_order_summary_filters(args):
+    return {
+        "start_date_from": args.get("startDateFrom") or None,
+        "start_date_to": args.get("startDateTo") or None,
+        "end_date_from": args.get("endDateFrom") or None,
+        "end_date_to": args.get("endDateTo") or None,
+        "customer_name": args.get("customerName") or None,
+        "department_id": args.get("departmentId", type=int),
+        "department_name": args.get("departmentName") or None,
+        "order_rid": args.get("orderRId") or None,
+        "customer_product_name": args.get("customerProductName") or None,
+        "shoe_rid": args.get("shoeRId") or None,
+    }
+
+
+def _serialize_order_summary_row(row):
+    return {
+        "startDate": row.start_date.strftime("%Y-%m-%d") if row.start_date else "",
+        "endDate": row.end_date.strftime("%Y-%m-%d") if row.end_date else "",
+        "orderRId": row.order_rid or "",
+        "customerName": row.customer_name or "",
+        "departmentName": row.department_name or "",
+        "customerProductName": row.customer_product_name or "",
+        "shoeRId": row.shoe_rid or "",
+        "totalPairs": int(row.total_pairs or 0),
+        "amount": float(row.total_amount) if row.total_amount is not None else None,
+        "currency": row.currency or "",
+    }
+
+
+@head_manager_bp.route("/headmanager/ordersummary/list", methods=["GET"])
+def get_order_summary_list():
+    """总经理订单汇总（分页，按工厂型号逐行）"""
+    filters = _collect_order_summary_filters(request.args)
+    page = request.args.get("page", default=1, type=int)
+    page_size = request.args.get("pageSize", default=20, type=int)
+
+    q = _build_order_summary_query(filters)
+    total = q.count()
+    rows = q.offset((page - 1) * page_size).limit(page_size).all()
+
+    result = [_serialize_order_summary_row(r) for r in rows]
+    return jsonify({"result": result, "total": total})
+
+
+@head_manager_bp.route("/headmanager/ordersummary/export", methods=["GET"])
+def export_order_summary():
+    """总经理订单汇总导出 Excel（按筛选条件，不分页）"""
+    from general_document.order_summary_excel import build_order_summary_excel
+
+    filters = _collect_order_summary_filters(request.args)
+    rows = _build_order_summary_query(filters).all()
+    data = [
+        {
+            "start_date": r.start_date,
+            "end_date": r.end_date,
+            "order_rid": r.order_rid,
+            "customer_name": r.customer_name,
+            "department_name": r.department_name,
+            "customer_product_name": r.customer_product_name,
+            "shoe_rid": r.shoe_rid,
+            "total_pairs": int(r.total_pairs or 0),
+            "amount": r.total_amount,
+            "currency": r.currency,
+        }
+        for r in rows
+    ]
+    bio, filename = build_order_summary_excel(data, filters)
+    return send_file(
+        bio,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
