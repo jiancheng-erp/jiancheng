@@ -138,3 +138,103 @@ def build_order_summary_excel(rows: list[dict], filters: dict):
     bio.seek(0)
     filename = f"订单汇总_{_now_tag()}.xlsx"
     return bio, filename
+
+
+SELECTION_HEADER = [
+    "订单号",
+    "客人",
+    "工厂型号",
+    "客户型号",
+    "双数",
+    "客户订单号",
+    "客人货期",
+]
+SELECTION_CENTER_COLS = {1, 5, 7}
+
+
+def _fmt_delivery(d) -> str:
+    return f"{d.month}.{d.day}" if d else ""
+
+
+def build_order_selection_summary_excel(rows: list[dict]):
+    """按所选订单鞋型逐行导出汇总。
+
+    rows 字段：order_rid, customer_name, shoe_rid, customer_product_name,
+    total_pairs, order_cid, end_date。
+    """
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "订单汇总"
+    header_len = len(SELECTION_HEADER)
+
+    ws.cell(row=1, column=1, value="订单汇总")
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=header_len)
+    ws.cell(row=1, column=1).font = TITLE_FONT
+    ws.cell(row=1, column=1).alignment = CENTER
+
+    ws.cell(
+        row=2,
+        column=1,
+        value=f"导出时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}    共 {len(rows)} 条",
+    )
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=header_len)
+    ws.cell(row=2, column=1).alignment = RIGHT
+
+    header_row = 4
+    widths = [0] * header_len
+    for col_idx, val in enumerate(SELECTION_HEADER, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=val)
+        cell.font = HEAD_FONT
+        cell.alignment = CENTER
+        cell.fill = HEAD_FILL
+        cell.border = BORDER
+        widths[col_idx - 1] = max(widths[col_idx - 1], _text_width(val))
+
+    data_start = header_row + 1
+    total_pairs_sum = 0
+    for idx, row in enumerate(rows, start=1):
+        pairs = int(row.get("total_pairs") or 0)
+        total_pairs_sum += pairs
+        values = [
+            row.get("order_rid") or "",
+            row.get("customer_name") or "",
+            row.get("shoe_rid") or "",
+            row.get("customer_product_name") or "",
+            pairs,
+            row.get("order_cid") or "",
+            _fmt_delivery(row.get("end_date")),
+        ]
+        r = data_start + idx - 1
+        for col_idx, val in enumerate(values, start=1):
+            cell = ws.cell(row=r, column=col_idx, value=val)
+            cell.border = BORDER
+            if col_idx in SELECTION_CENTER_COLS:
+                cell.alignment = CENTER
+            widths[col_idx - 1] = max(widths[col_idx - 1], _text_width(val))
+
+    total_row = data_start + len(rows)
+    ws.cell(row=total_row, column=1, value="合计")
+    ws.merge_cells(
+        start_row=total_row, start_column=1, end_row=total_row, end_column=4
+    )
+    ws.cell(row=total_row, column=1).font = HEAD_FONT
+    ws.cell(row=total_row, column=1).alignment = CENTER
+    ws.cell(row=total_row, column=1).border = BORDER
+    ws.cell(row=total_row, column=5, value=total_pairs_sum)
+    ws.cell(row=total_row, column=5).font = HEAD_FONT
+    ws.cell(row=total_row, column=5).alignment = CENTER
+    ws.cell(row=total_row, column=5).border = BORDER
+    for col_idx in (6, 7):
+        ws.cell(row=total_row, column=col_idx, value="").border = BORDER
+
+    for idx, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = min(
+            max(8, w * 0.9 + 2), 48
+        )
+    ws.freeze_panes = ws[f"A{data_start}"]
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    filename = f"订单汇总_{_now_tag()}.xlsx"
+    return bio, filename

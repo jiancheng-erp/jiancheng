@@ -59,9 +59,22 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
+        <el-col :span="24">
+            <div class="selection-banner" :class="{ 'is-active': selectedSummaryRows.length }">
+                <span class="selection-banner-text">
+                    已选 <strong>{{ selectedSummaryRows.length }}</strong> 单，合计总双数：<strong class="pairs">{{ selectedTotalPairs }}</strong>
+                </span>
+                <el-button type="success" size="default" :loading="exportingSummary"
+                    :disabled="!selectedSummaryRows.length" @click="exportSelectionSummary">
+                    导出汇总Excel
+                </el-button>
+            </div>
+        </el-col>
+    </el-row>
+    <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
             style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
-            <el-table-column type="selection" width="55" :selectable="isBatchOperableRow" />
+            <el-table-column type="selection" width="55" reserve-selection />
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
             <el-table-column prop="orderSalesman" label="创建业务员" />
@@ -722,6 +735,8 @@ export default {
             imageUrl: '',
             selectedBatchTemplate: {},
             selectedDispatchRows: [],
+            selectedSummaryRows: [],
+            exportingSummary: false,
             batchOrderRidDialogVis: false,
             batchSendDialogVis: false,
             batchFillCandidateRows: [],
@@ -748,6 +763,9 @@ export default {
     computed: {
         isForecastEntry() {
             return this.entryMode === 'forecast'
+        },
+        selectedTotalPairs() {
+            return this.selectedSummaryRows.reduce((sum, row) => sum + (Number(row?.orderTotalPairs) || 0), 0)
         },
         allowDeleteOrder(row) {
             return this.userRole == 4
@@ -3071,7 +3089,47 @@ export default {
             return this.isBatchOperableRow(row) && !!(row?.orderRid || '').trim()
         },
         handleDispatchSelectionChange(selection) {
+            this.selectedSummaryRows = selection || []
             this.selectedDispatchRows = (selection || []).filter((row) => this.isBatchOperableRow(row))
+        },
+        async exportSelectionSummary() {
+            const orderShoeIds = this.selectedSummaryRows
+                .map((row) => row.orderShoeId)
+                .filter((id) => id !== undefined && id !== null)
+            if (!orderShoeIds.length) {
+                ElMessage.warning('请先勾选订单')
+                return
+            }
+            this.exportingSummary = true
+            try {
+                const response = await axios.post(
+                    `${this.$apiBaseUrl}/order/exportselectionsummary`,
+                    { orderShoeIds },
+                    { responseType: 'blob' }
+                )
+                const blob = new Blob([response.data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                })
+                const disposition = response.headers['content-disposition'] || ''
+                let filename = '订单汇总.xlsx'
+                const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)/i)
+                if (match && match[1]) {
+                    filename = decodeURIComponent(match[1])
+                }
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(url)
+            } catch (error) {
+                console.error('exportSelectionSummary failed', error)
+                ElMessage.error('导出汇总Excel失败')
+            } finally {
+                this.exportingSummary = false
+            }
         },
         handleBatchFillDialogSelectionChange(selection) {
             this.batchFillSelectedRows = selection || []
@@ -3280,6 +3338,7 @@ export default {
                 this.orderStore.radio = 'all'
                 this.sortRadio = 'asc'
                 this.selectedDispatchRows = []
+                this.selectedSummaryRows = []
                 this.batchOrderRidDialogVis = false
                 this.batchSendDialogVis = false
                 this.batchFillCandidateRows = []
@@ -3544,6 +3603,36 @@ export default {
 <style scoped>
 .toolbar-row {
     margin-top: 20px;
+}
+
+.selection-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 8px 0 12px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    background-color: #f4f4f5;
+    border: 1px dashed #dcdfe6;
+    color: #909399;
+    transition: all 0.2s ease;
+}
+
+.selection-banner.is-active {
+    background-color: #ecf5ff;
+    border: 1px solid #b3d8ff;
+    color: #303133;
+}
+
+.selection-banner-text {
+    font-size: 15px;
+}
+
+.selection-banner-text .pairs {
+    color: #409eff;
+    font-size: 20px;
+    margin: 0 2px;
 }
 
 .toolbar-wrap {

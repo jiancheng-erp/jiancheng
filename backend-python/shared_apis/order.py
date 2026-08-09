@@ -1399,6 +1399,70 @@ def check_order_rid_exists():
         return jsonify({"result":"订单号未占用", "exists":False}), 200
 
 
+@order_bp.route("/order/exportselectionsummary", methods=["POST"])
+def export_order_selection_summary():
+    """按前端所选订单鞋型（order_shoe）导出汇总 Excel。
+
+    Request JSON: { orderShoeIds: number[] }
+    列：订单号 / 客人 / 工厂型号 / 客户型号 / 双数 / 客户订单号 / 客人货期
+    """
+    from general_document.order_summary_excel import build_order_selection_summary_excel
+
+    data = request.get_json(silent=True) or {}
+    order_shoe_ids = data.get("orderShoeIds") or []
+    order_shoe_ids = [i for i in order_shoe_ids if i is not None]
+    if not order_shoe_ids:
+        return jsonify({"message": "未选择订单"}), 400
+
+    pairs_sq = (
+        db.session.query(
+            OrderShoeType.order_shoe_id.label("order_shoe_id"),
+            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label(
+                "total_pairs"
+            ),
+        )
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .filter(OrderShoeType.order_shoe_id.in_(order_shoe_ids))
+        .group_by(OrderShoeType.order_shoe_id)
+        .subquery()
+    )
+    rows_q = (
+        db.session.query(Order, OrderShoe, Shoe, Customer, pairs_sq.c.total_pairs)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(pairs_sq, pairs_sq.c.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderShoe.order_shoe_id.in_(order_shoe_ids))
+        .order_by(Order.order_rid.asc())
+        .all()
+    )
+    rows = []
+    for order, order_shoe, shoe, customer_obj, total_pairs in rows_q:
+        rows.append(
+            {
+                "order_rid": order.order_rid,
+                "customer_name": customer_obj.customer_name,
+                "shoe_rid": shoe.shoe_rid,
+                "customer_product_name": order_shoe.customer_product_name,
+                "total_pairs": int(total_pairs or 0),
+                "order_cid": order.order_cid,
+                "end_date": order.end_date,
+            }
+        )
+
+    bio, filename = build_order_selection_summary_excel(rows)
+    return send_file(
+        bio,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+
 @order_bp.route("/order/getcurrencyrates", methods=["GET"])
 def get_currency_rates():
     now = datetime.now()
