@@ -126,6 +126,16 @@ export default {
         MaterialStorage,
         OrderMaterialsPage
     },
+    props: {
+        defaultShowAllOrders: {
+            type: Boolean,
+            default: false
+        },
+        defaultSortCondition: {
+            type: String,
+            default: null
+        }
+    },
     data() {
         return {
             customerNameOptions: [],
@@ -137,8 +147,8 @@ export default {
                 statusNodeSearch: null,
                 customerNameSearch: null,
                 customerBrandSearch: null,
-                sortCondition: null,
-                mode: false
+                sortCondition: this.defaultSortCondition,
+                mode: this.defaultShowAllOrders
             },
             currentProdDetailTab: "1",
             isProdDetailDialogOpen: false,

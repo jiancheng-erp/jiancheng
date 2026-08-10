@@ -27,6 +27,10 @@
                         <span>订单关键节点监控</span>
                     </el-menu-item>
 
+                    <el-menu-item index="17" @click="handleMenuClick('OrderProgress', '17')">
+                        <span>订单生产进度</span>
+                    </el-menu-item>
+
                     <el-menu-item index="6" @click="handleMenuClick('RevertEventAnalyse', '6')">
                         <span>退回情况记录统计</span>
                     </el-menu-item>
@@ -107,6 +111,7 @@ import BusinessAnalysis from '../components/BusinessAnalysis/BusinessAnalysis.vu
 import FinishedOutboundAuditGM from '../components/FinishedOutboundAudit/FinishedOutboundAuditGM.vue'
 import LossOutboundAuditGM from '../components/FinishedOutboundAudit/LossOutboundAuditGM.vue'
 import OrderSummary from '../components/OrderSummary/OrderSummary.vue'
+import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
 import { useRouter } from 'vue-router'
 import { bus } from '../hooks/bus'
 
@@ -127,7 +132,8 @@ const components = {
     BusinessAnalysis,
     FinishedOutboundAuditGM,
     LossOutboundAuditGM,
-    OrderSummary
+    OrderSummary,
+    OrderProgress
 }
 let currentComponent = ref('MainBoardPage')
 const currentProps = ref({})
@@ -155,7 +161,8 @@ async function getUserAndCharacter() {
 // 菜单选项切换函数
 function handleMenuClick(value) {
     currentComponent.value = value
-    currentProps.value = {}
+    // 总经理的订单生产进度默认显示全部订单并按最新倒序排列
+    currentProps.value = value === 'OrderProgress' ? { defaultShowAllOrders: true, defaultSortCondition: '最新' } : {}
 }
 
 // 退出登录
