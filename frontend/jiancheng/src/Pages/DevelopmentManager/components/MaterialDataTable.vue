@@ -34,7 +34,8 @@ export default {
     computed: {
         hasZipperPairData() {
             return this.tableData.some(row => row.materialName &&
-                (row.materialName.includes('拉链') || row.materialName.includes('鞋眼') || row.materialName.includes('垫片')))
+                (row.materialName.includes('拉链') || row.materialName.includes('鞋眼') || row.materialName.includes('垫片') ||
+                    row.materialName.includes('帽') !== row.materialName.includes('钉')))
         }
     }
 }
