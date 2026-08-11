@@ -2898,10 +2898,12 @@ export default {
                 row.color = row.color.slice(0, -1) // Remove the last character
             }
         },
-        // 判断材料名称是否为拉链/拉头/鞋眼/垫片（需要配对组）
+        // 判断材料名称是否为拉链/拉头/鞋眼/垫片/帽钉（需要配对组）
         isZipperOrPull(name) {
             if (!name) return false
-            return name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')
+            if (name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')) return true
+            // 帽钉：帽半或钉半可设配对组；同时含"帽"和"钉"视为合并款，不配对
+            return name.includes('帽') !== name.includes('钉')
         },
     }
 }

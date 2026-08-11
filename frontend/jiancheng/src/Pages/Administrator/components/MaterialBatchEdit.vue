@@ -375,10 +375,10 @@
 
         <!-- ================= 拉链配对组对话框 ================= -->
         <el-dialog v-model="zipperPairDialogVisible"
-            title="拉链 / 拉链头 配对组设置"
+            title="配对组设置（拉链/拉头、鞋眼/垫片、帽/钉）"
             width="860px" destroy-on-close>
             <el-alert type="info" :closable="false" style="margin-bottom:12px">
-                为每行拉链/拉头指定配对组编号（1-9）。同一配色下编号相同的拉链与拉头视为一对，每组需同时有拉链和拉链头。
+                为需要配对的行指定配对组编号（1-9）。同一配色下编号相同的拉链与拉头、帽与钉视为一对。帽钉不填编号时将分开采购（各自成行）。
             </el-alert>
             <el-table :data="zipperPairRows" border size="small">
                 <el-table-column label="配色" prop="colorLabel" width="100" />
@@ -390,7 +390,7 @@
                     <template #default="{ row }">
                         <el-input-number v-model="row.pairId" :min="1" :max="9"
                             controls-position="right" style="width:90px" size="small"
-                            :placeholder="row.isZipper ? '拉链' : '拉头'" />
+                            :placeholder="row.pairRole" />
                         <el-button v-if="row.pairId != null" link size="small"
                             style="color:#c0c4cc; margin-left:4px"
                             @click="row.pairId = null">✕</el-button>
@@ -1131,7 +1131,7 @@ export default {
                 g.items.some(i => i.docType === 'purchase_order_item')
             )
         },
-        // 配对组对话框：检测同配色内拉链/拉头、鞋眼/垫片是否成对
+        // 配对组对话框：检测同配色内拉链/拉头、鞋眼/垫片、帽/钉是否成对
         zipperPairWarnings() {
             const names = this.zipperPairRows.map(r => r.materialName || '')
             // Only validate a pair type when BOTH sides are present in the dialog
@@ -1139,31 +1139,40 @@ export default {
                                 && names.some(n => n.includes('拉链头') || n.includes('拉头'))
             const validateEyelet = names.some(n => n.includes('鞋眼'))
                                 && names.some(n => n.includes('垫片'))
+            const validateCapNail = names.some(n => n.includes('帽') && !n.includes('钉'))
+                                 && names.some(n => n.includes('钉') && !n.includes('帽'))
 
-            if (!validateZipper && !validateEyelet) return []
+            if (!validateZipper && !validateEyelet && !validateCapNail) return []
 
             const byGroup = {}
             for (const r of this.zipperPairRows) {
                 if (r.pairId == null) continue
                 const name = r.materialName || ''
+                const isCap = name.includes('帽') && !name.includes('钉')
+                const isNail = name.includes('钉') && !name.includes('帽')
                 const pairType = (name.includes('拉链') || name.includes('拉头'))
                     ? 'zipper'
                     : (name.includes('鞋眼') || name.includes('垫片'))
                         ? 'eyelet'
-                        : null
+                        : (isCap || isNail)
+                            ? 'capnail'
+                            : null
                 if (!pairType) continue
                 if (pairType === 'zipper' && !validateZipper) continue
                 if (pairType === 'eyelet' && !validateEyelet) continue
+                if (pairType === 'capnail' && !validateCapNail) continue
                 const key = `${r._ostId}|${r.pairId}|${pairType}`
                 if (!byGroup[key]) byGroup[key] = {
                     hasA: false, hasB: false,
-                    labelA: pairType === 'zipper' ? '拉链' : '鞋眼',
-                    labelB: pairType === 'zipper' ? '拉链头' : '垫片',
+                    labelA: pairType === 'zipper' ? '拉链' : pairType === 'eyelet' ? '鞋眼' : '帽',
+                    labelB: pairType === 'zipper' ? '拉链头' : pairType === 'eyelet' ? '垫片' : '钉',
                     label: r.colorLabel, pid: r.pairId,
                 }
                 const isB = pairType === 'zipper'
                     ? name.includes('拉链头') || name.includes('拉头')
-                    : name.includes('垫片')
+                    : pairType === 'eyelet'
+                        ? name.includes('垫片')
+                        : isNail
                 if (isB) byGroup[key].hasB = true
                 else byGroup[key].hasA = true
             }
@@ -1390,10 +1399,12 @@ export default {
                 purchase_order_item: 'danger',
             })[docType] || ''
         },
-        // 判断该材料组是否包含拉链/拉头/鞋眼/垫片
+        // 判断该材料组是否包含拉链/拉头/鞋眼/垫片/帽钉
         isZipperMaterial(row) {
             const name = row.materialName || ''
-            return name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')
+            if (name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')) return true
+            // 帽钉：帽半或钉半可配对；同时含"帽"和"钉"视为合并款，不配对
+            return name.includes('帽') !== name.includes('钉')
         },
 
         // ===== 配对组 =====
@@ -1418,6 +1429,8 @@ export default {
                                     : name.includes('拉链') ? '拉链'
                                     : name.includes('鞋眼') ? '鞋眼'
                                     : name.includes('垫片') ? '垫片'
+                                    : (name.includes('帽') && !name.includes('钉')) ? '帽'
+                                    : (name.includes('钉') && !name.includes('帽')) ? '钉'
                                     : name,
                             pairId: it.zipperPairId != null ? Number(it.zipperPairId) : null,
                             _ostId: it.orderShoeTypeId,

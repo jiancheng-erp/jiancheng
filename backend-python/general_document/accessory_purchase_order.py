@@ -180,6 +180,94 @@ def _is_eyelet(item):
     return not _is_washer(item)
 
 
+def _is_cap(item):
+    """判断是否为帽钉的帽半（含"帽"但不含"钉"）。同时含帽和钉视为合并款，非帽半。"""
+    name = item.get("_material_name", "") or item.get("物品名称", "")
+    if not name:
+        return False
+    return "帽" in name and "钉" not in name
+
+
+def _is_nail(item):
+    """判断是否为帽钉的钉半（含"钉"但不含"帽"）。同时含帽和钉视为合并款，非钉半。"""
+    name = item.get("_material_name", "") or item.get("物品名称", "")
+    if not name:
+        return False
+    return "钉" in name and "帽" not in name
+
+
+def _find_matching_nail(cap, nail_items, used_nail=None):
+    """
+    为帽 cap 找配对的钉：必须双方配对组编号非空且相同才配对。
+    未填配对组（编号为空）则不配对，返回 None（帽、钉各自单独成行）。
+    """
+    pid = cap.get("_zipper_pair_id")
+    if pid is None:
+        return None
+    sc = cap.get("_shoe_color", "")
+    mc = cap.get("_material_color", "")
+    used_nail = used_nail if used_nail is not None else set()
+    candidates = [
+        n for n in nail_items
+        if n.get("_zipper_pair_id") == pid and id(n) not in used_nail
+    ]
+    if not candidates:
+        return None
+    for ksc, kmc in [(sc, mc), (sc, ""), ("", mc), ("", "")]:
+        for n in candidates:
+            if (not ksc or n.get("_shoe_color", "") == ksc) and (
+                not kmc or n.get("_material_color", "") == kmc
+            ):
+                return n
+    return candidates[0]
+
+
+def _pair_cap_nail(cap_items, nail_items):
+    """
+    帽 + 钉 配对：仅当帽与钉填写了相同配对组编号时才合并成一行
+    （帽为主，材料货号追加"+钉描述"，仿鞋眼+垫片）。
+    未填配对组或无匹配的帽/钉各自单独成行（支持"分开采购"）。
+
+    返回: (merged_series, leftover_caps, leftover_nails)
+    """
+    if not cap_items or not nail_items:
+        return [], list(cap_items), list(nail_items)
+
+    merged = []
+    used_nail = set()
+    leftover_caps = []
+    for c in cap_items:
+        nail = _find_matching_nail(c, nail_items, used_nail)
+        if nail is None:
+            leftover_caps.append(c)
+            continue
+        used_nail.add(id(nail))
+        mat_desc = c.get("物品名称", "") or _item_display_name(c)
+        mat_desc += " + " + (nail.get("物品名称", "") or _item_display_name(nail))
+        merged.append({
+            "工厂货号": (c.get("_factory_no", "") + " " + c.get("_shoe_color", "")).strip(),
+            "材料货号": mat_desc,
+            "颜色": c.get("_material_color", ""),
+            "单位": c.get("单位", ""),
+            "数量": c.get("数量", ""),
+            "备注": c.get("备注", ""),
+        })
+    leftover_nails = [n for n in nail_items if id(n) not in used_nail]
+    return merged, leftover_caps, leftover_nails
+
+
+def _as_standard_row(item):
+    """将帽/钉等未配对物品转为标准辅料订购单行。"""
+    return {
+        "工厂货号": (item.get("_factory_no", "") + " " + item.get("_shoe_color", "")).strip(),
+        "材料货号": item.get("物品名称", "") or _item_display_name(item),
+        "颜色": item.get("_material_color", ""),
+        "单位": item.get("单位", ""),
+        "数量": item.get("数量", ""),
+        "备注": item.get("备注", ""),
+    }
+
+
 def _build_color_map(item_list):
     """按 _shoe_color 建立映射，同色取第一个。"""
     m = {}
@@ -312,13 +400,23 @@ def split_zipper_orders(purchase_divide_order_dict):
         head_items    = [i for i in items if _is_head(i)]
         eyelet_items  = [i for i in items if _is_eyelet(i)]
         washer_items  = [i for i in items if _is_washer(i)]
+        cap_items     = [i for i in items if _is_cap(i)]
+        nail_items    = [i for i in items if _is_nail(i)]
         other_items   = [
             i for i in items
             if not _is_zipper(i) and not _is_head(i)
             and not _is_eyelet(i) and not _is_washer(i)
+            and not _is_cap(i) and not _is_nail(i)
         ]
 
-        needs_accessory = (zipper_items and head_items) or (eyelet_items and washer_items)
+        # 帽 + 钉：仅在填写了相同配对组编号时才合并，未配对的各自单独成行
+        capnail_series, leftover_caps, leftover_nails = _pair_cap_nail(cap_items, nail_items)
+
+        needs_accessory = (
+            (zipper_items and head_items)
+            or (eyelet_items and washer_items)
+            or bool(capnail_series)
+        )
 
         if needs_accessory:
             accessory_series = []
@@ -384,6 +482,11 @@ def split_zipper_orders(purchase_divide_order_dict):
             elif eyelet_items:
                 # 鞋眼无对应垫片 — 作为普通物品处理
                 other_items = list(eyelet_items) + list(other_items)
+
+            # ── 帽 + 钉 ──────────────────────────────────────────────────
+            accessory_series.extend(capnail_series)
+            # 未配对的帽/钉作为普通物品
+            other_items = list(leftover_caps) + list(leftover_nails) + list(other_items)
 
             zipper_dict[pdo_rid] = {
                 **{k: v for k, v in data.items() if k != "seriesData"},
@@ -460,10 +563,13 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         head_items   = [i for i in acc_items if _is_head(i)]
         eyelet_items = [i for i in acc_items if _is_eyelet(i)]
         washer_items = [i for i in acc_items if _is_washer(i)]
+        cap_items    = [i for i in acc_items if _is_cap(i)]
+        nail_items   = [i for i in acc_items if _is_nail(i)]
         other_items  = [
             i for i in acc_items
             if not _is_zipper(i) and not _is_head(i)
             and not _is_eyelet(i) and not _is_washer(i)
+            and not _is_cap(i) and not _is_nail(i)
         ]
 
         zipper_series = []
@@ -528,6 +634,11 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "数量": e.get("数量", ""),
                     "备注": e.get("备注", ""),
                 })
+
+        # 帽 + 钉 → other_series（仅在填写相同配对组编号时合并；否则各自单独成行）
+        capnail_series, leftover_caps, leftover_nails = _pair_cap_nail(cap_items, nail_items)
+        other_series.extend(capnail_series)
+        other_items = list(leftover_caps) + list(leftover_nails) + list(other_items)
 
         # All other accessory items (饰品, 底材, 包材, etc.) → other_series
         for item in other_items:
