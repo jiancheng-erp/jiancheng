@@ -73,7 +73,8 @@
     </el-row>
     <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
-            style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
+            style="height: 60vh" row-key="orderDbId" :row-class-name="deliveryRowClassName"
+            @selection-change="handleDispatchSelectionChange">
             <el-table-column type="selection" width="55" reserve-selection />
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
@@ -845,19 +846,30 @@ export default {
         formatOrderType(orderType) {
             return orderType === 'F' ? '预报单' : '普通单'
         },
-        deliveryDateStyle(row) {
-            if (!row || !row.orderEndDate) return {}
+        deliveryDaysLeft(row) {
+            if (!row || !row.orderEndDate) return null
             // 已完成/已全部出库的订单不再提示货期
-            if (row.orderStatusVal != null && row.orderStatusVal >= 16) return {}
-            if (typeof row.productionStatus === 'string' && row.productionStatus.startsWith('已全部出库')) return {}
+            if (row.orderStatusVal != null && row.orderStatusVal >= 16) return null
+            if (typeof row.productionStatus === 'string' && row.productionStatus.startsWith('已全部出库')) return null
             const end = new Date(row.orderEndDate)
-            if (isNaN(end.getTime())) return {}
+            if (isNaN(end.getTime())) return null
             const today = new Date()
             today.setHours(0, 0, 0, 0)
             end.setHours(0, 0, 0, 0)
-            const days = Math.ceil((end - today) / (1000 * 60 * 60 * 24))
-            if (days < 15) return { backgroundColor: '#F56C6C', color: '#fff', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }
-            if (days < 30) return { backgroundColor: '#E6A23C', color: '#fff', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }
+            return Math.ceil((end - today) / (1000 * 60 * 60 * 24))
+        },
+        deliveryRowClassName({ row }) {
+            const days = this.deliveryDaysLeft(row)
+            if (days == null) return ''
+            if (days < 15) return 'delivery-danger-row'
+            if (days < 30) return 'delivery-warning-row'
+            return ''
+        },
+        deliveryDateStyle(row) {
+            const days = this.deliveryDaysLeft(row)
+            if (days == null) return {}
+            if (days < 15) return { color: '#F56C6C', fontWeight: 'bold' }
+            if (days < 30) return { color: '#E6A23C', fontWeight: 'bold' }
             return {}
         },
         async getAllColors() {
@@ -3710,5 +3722,23 @@ export default {
     border-right: 5px solid #dcdfe6;
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
+}
+
+/* 货期整行高亮：临近货期（<30天）柔和黄底，紧急（<15天）柔和红底。
+   直接给 td 设背景并用 !important，覆盖斑马纹(stripe)对奇数行的背景，避免有的行不高亮 */
+:deep(.el-table .delivery-warning-row > td.el-table__cell) {
+    background-color: var(--el-color-warning-light-8) !important;
+}
+
+:deep(.el-table .delivery-warning-row:hover > td.el-table__cell) {
+    background-color: var(--el-color-warning-light-7) !important;
+}
+
+:deep(.el-table .delivery-danger-row > td.el-table__cell) {
+    background-color: var(--el-color-danger-light-9) !important;
+}
+
+:deep(.el-table .delivery-danger-row:hover > td.el-table__cell) {
+    background-color: var(--el-color-danger-light-8) !important;
 }
 </style>
