@@ -85,7 +85,11 @@
             <el-table-column prop="customerProductName" label="客户型号" />
             <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
-            <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
+            <el-table-column prop="orderEndDate" label="订单结束日期" sortable>
+                <template #default="scope">
+                    <span :style="deliveryDateStyle(scope.row)">{{ scope.row.orderEndDate }}</span>
+                </template>
+            </el-table-column>
             <el-table-column prop="orderStatus" label="订单状态" />
             <el-table-column label="生产状态" width="100">
                 <template #default="scope">
@@ -840,6 +844,21 @@ export default {
         },
         formatOrderType(orderType) {
             return orderType === 'F' ? '预报单' : '普通单'
+        },
+        deliveryDateStyle(row) {
+            if (!row || !row.orderEndDate) return {}
+            // 已完成/已全部出库的订单不再提示货期
+            if (row.orderStatusVal != null && row.orderStatusVal >= 16) return {}
+            if (typeof row.productionStatus === 'string' && row.productionStatus.startsWith('已全部出库')) return {}
+            const end = new Date(row.orderEndDate)
+            if (isNaN(end.getTime())) return {}
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            end.setHours(0, 0, 0, 0)
+            const days = Math.ceil((end - today) / (1000 * 60 * 60 * 24))
+            if (days < 15) return { backgroundColor: '#F56C6C', color: '#fff', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }
+            if (days < 30) return { backgroundColor: '#E6A23C', color: '#fff', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }
+            return {}
         },
         async getAllColors() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)

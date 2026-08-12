@@ -9,7 +9,7 @@ from login.login import current_user, current_user_info
 import math
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 from event_processor import EventProcessor
 
@@ -1388,6 +1388,369 @@ def get_display_orders_manager():
             r["orderTotalPairs"] = 0
 
     return jsonify(result)
+
+
+# 业务经理统计看板：客户/业务员下单情况、手上未完成订单、近半年热门款式
+PERIOD_DAYS = {
+    "week": 7,
+    "month": 30,
+    "halfyear": 182,
+    "year": 365,
+}
+HOT_SHOE_PERIOD_DAYS = 182  # 近半年
+HOT_SHOE_LIMIT = 20
+
+
+def _business_dept_staff_ids():
+    """业务经理返回本部门人员ID列表；业务文员只返回自己（仅看本人相关）；其余角色返回 None（不限部门）。"""
+    character, staff, _ = current_user_info()
+    if character.character_id == BUSINESS_MANAGER_ROLE:
+        return [
+            s.staff_id
+            for s in db.session.query(Staff.staff_id)
+            .filter(Staff.department_id == staff.department_id)
+            .all()
+        ]
+    if character.character_id == BUSINESS_CLERK_ROLE:
+        return [staff.staff_id]
+    return None
+
+
+def _resolve_stat_range(period, start_str, end_str):
+    """优先使用自定义起止日期，否则按预设周期计算。返回 (start_date, end_date)。"""
+    today = date.today()
+    parsed_start = parsed_end = None
+    if start_str:
+        try:
+            parsed_start = datetime.strptime(start_str, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_start = None
+    if end_str:
+        try:
+            parsed_end = datetime.strptime(end_str, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_end = None
+    if parsed_start and parsed_end:
+        if parsed_start > parsed_end:
+            parsed_start, parsed_end = parsed_end, parsed_start
+        return parsed_start, parsed_end
+    if period not in PERIOD_DAYS:
+        period = "month"
+    return today - timedelta(days=PERIOD_DAYS[period]), today
+
+
+def _order_pairs_subquery():
+    return (
+        db.session.query(
+            Order.order_id.label("order_id"),
+            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label(
+                "total_pairs"
+            ),
+        )
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .group_by(Order.order_id)
+        .subquery()
+    )
+
+
+@order_bp.route("/order/businessstatistics", methods=["GET"])
+def get_business_statistics():
+    period = request.args.get("period", "month")
+    if period not in PERIOD_DAYS:
+        period = "month"
+
+    # 归属范围：业务经理看本部门；业务文员仅看本人；其余角色看全部
+    dept_staff_ids = _business_dept_staff_ids()
+
+    today = date.today()
+    period_start, period_end = _resolve_stat_range(
+        period, request.args.get("startDate"), request.args.get("endDate")
+    )
+    hot_start = today - timedelta(days=HOT_SHOE_PERIOD_DAYS)
+
+    staff_id_to_name = {
+        s.staff_id: s.staff_name for s in db.session.query(Staff).all()
+    }
+
+    # 每单总双数子查询
+    pairs_subq = _order_pairs_subquery()
+
+    # 订单级别数据（本部门全部正式订单）
+    order_q = (
+        db.session.query(
+            Order.order_id,
+            Order.order_rid,
+            Order.customer_id,
+            Customer.customer_name,
+            Customer.customer_brand,
+            Order.salesman_id,
+            Order.start_date,
+            Order.end_date,
+            func.coalesce(pairs_subq.c.total_pairs, 0).label("total_pairs"),
+            OrderStatus.order_current_status,
+        )
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(pairs_subq, pairs_subq.c.order_id == Order.order_id)
+        .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .filter(Order.order_type != "F")
+    )
+    if dept_staff_ids is not None:
+        order_q = order_q.filter(Order.salesman_id.in_(dept_staff_ids))
+    orders = order_q.all()
+
+    # 1) 客户下单情况（按周期，依据订单开始日期）
+    # 2) 业务员下单情况（按周期）
+    customer_stats = {}
+    salesman_stats = {}
+    # 3) 手上未完成订单（当前快照，按客户汇总）
+    unfinished_by_customer = {}
+    unfinished_total_pairs = 0
+
+    for row in orders:
+        pairs = int(row.total_pairs or 0)
+        in_period = row.start_date is not None and period_start <= row.start_date <= period_end
+
+        if in_period:
+            c = customer_stats.setdefault(
+                row.customer_id,
+                {"customerId": row.customer_id, "customerName": row.customer_name, "customerBrand": row.customer_brand or "", "orderCount": 0, "totalPairs": 0},
+            )
+            c["orderCount"] += 1
+            c["totalPairs"] += pairs
+
+            s = salesman_stats.setdefault(
+                row.salesman_id,
+                {
+                    "salesmanId": row.salesman_id,
+                    "salesmanName": staff_id_to_name.get(row.salesman_id, ""),
+                    "orderCount": 0,
+                    "totalPairs": 0,
+                },
+            )
+            s["orderCount"] += 1
+            s["totalPairs"] += pairs
+
+        is_unfinished = (
+            row.order_current_status is None
+            or row.order_current_status < ORDER_FINISH_SYMBOL
+        )
+        if is_unfinished:
+            unfinished_total_pairs += pairs
+            u = unfinished_by_customer.setdefault(
+                row.customer_id,
+                {
+                    "customerId": row.customer_id,
+                    "customerName": row.customer_name,
+                    "customerBrand": row.customer_brand or "",
+                    "orderCount": 0,
+                    "totalPairs": 0,
+                    "orders": [],
+                },
+            )
+            u["orderCount"] += 1
+            u["totalPairs"] += pairs
+            u["orders"].append(
+                {
+                    "orderRid": row.order_rid,
+                    "salesmanName": staff_id_to_name.get(row.salesman_id, ""),
+                    "totalPairs": pairs,
+                    "orderEndDate": row.end_date.strftime("%Y-%m-%d")
+                    if row.end_date
+                    else "",
+                }
+            )
+
+    # 4) 近半年下单频率最高的款式（按工厂型号 shoe_rid）
+    hot_q = (
+        db.session.query(
+            Shoe.shoe_rid,
+            func.count(func.distinct(Order.order_id)).label("order_count"),
+            func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0).label(
+                "total_pairs"
+            ),
+        )
+        .join(OrderShoe, OrderShoe.shoe_id == Shoe.shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
+        .outerjoin(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .outerjoin(
+            OrderShoeBatchInfo,
+            OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+        )
+        .filter(Order.order_type != "F", Order.start_date >= hot_start)
+    )
+    if dept_staff_ids is not None:
+        hot_q = hot_q.filter(Order.salesman_id.in_(dept_staff_ids))
+    hot_rows = (
+        hot_q.group_by(Shoe.shoe_rid)
+        .order_by(func.count(func.distinct(Order.order_id)).desc())
+        .limit(HOT_SHOE_LIMIT)
+        .all()
+    )
+
+    customer_list = sorted(
+        customer_stats.values(), key=lambda x: x["totalPairs"], reverse=True
+    )
+    salesman_list = sorted(
+        salesman_stats.values(), key=lambda x: x["totalPairs"], reverse=True
+    )
+    unfinished_list = sorted(
+        unfinished_by_customer.values(), key=lambda x: x["totalPairs"], reverse=True
+    )
+    hot_list = [
+        {
+            "shoeRId": r.shoe_rid,
+            "orderCount": int(r.order_count or 0),
+            "totalPairs": int(r.total_pairs or 0),
+        }
+        for r in hot_rows
+    ]
+
+    return jsonify(
+        {
+            "period": period,
+            "periodStart": period_start.strftime("%Y-%m-%d"),
+            "periodEnd": period_end.strftime("%Y-%m-%d"),
+            "customerStats": customer_list,
+            "salesmanStats": salesman_list,
+            "unfinishedByCustomer": unfinished_list,
+            "unfinishedTotalPairs": unfinished_total_pairs,
+            "unfinishedOrderCount": sum(u["orderCount"] for u in unfinished_list),
+            "hotShoes": hot_list,
+        }
+    )
+
+
+def _stat_detail_orders(filter_clause, dept_staff_ids, start_date, end_date):
+    """返回给定过滤条件下、指定日期范围内的订单明细列表与汇总。"""
+    staff_id_to_name = {s.staff_id: s.staff_name for s in db.session.query(Staff).all()}
+    pairs_subq = _order_pairs_subquery()
+    q = (
+        db.session.query(
+            Order.order_id,
+            Order.order_rid,
+            Order.customer_id,
+            Customer.customer_name,
+            Order.salesman_id,
+            Order.start_date,
+            Order.end_date,
+            func.coalesce(pairs_subq.c.total_pairs, 0).label("total_pairs"),
+            OrderStatus.order_current_status,
+            OrderStatusReference.order_status_name,
+        )
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .outerjoin(pairs_subq, pairs_subq.c.order_id == Order.order_id)
+        .outerjoin(OrderStatus, OrderStatus.order_id == Order.order_id)
+        .outerjoin(
+            OrderStatusReference,
+            OrderStatus.order_current_status == OrderStatusReference.order_status_id,
+        )
+        .filter(Order.order_type != "F")
+        .filter(Order.start_date >= start_date, Order.start_date <= end_date)
+        .filter(filter_clause)
+    )
+    if dept_staff_ids is not None:
+        q = q.filter(Order.salesman_id.in_(dept_staff_ids))
+    q = q.order_by(Order.start_date.desc())
+
+    orders = []
+    total_pairs = 0
+    for row in q.all():
+        pairs = int(row.total_pairs or 0)
+        total_pairs += pairs
+        is_unfinished = (
+            row.order_current_status is None
+            or row.order_current_status < ORDER_FINISH_SYMBOL
+        )
+        orders.append(
+            {
+                "orderRid": row.order_rid,
+                "customerName": row.customer_name,
+                "salesmanName": staff_id_to_name.get(row.salesman_id, ""),
+                "totalPairs": pairs,
+                "orderStartDate": row.start_date.strftime("%Y-%m-%d") if row.start_date else "",
+                "orderEndDate": row.end_date.strftime("%Y-%m-%d") if row.end_date else "",
+                "orderStatus": row.order_status_name or "N/A",
+                "isUnfinished": is_unfinished,
+            }
+        )
+    return orders, total_pairs
+
+
+@order_bp.route("/order/businessstatisticsdetail", methods=["GET"])
+def get_business_statistics_detail():
+    detail_type = request.args.get("type")
+    key = request.args.get("key")
+    if detail_type not in ("customer", "salesman", "shoe") or not key:
+        return jsonify({"message": "invalid params"}), 400
+
+    dept_staff_ids = _business_dept_staff_ids()
+    start_date, end_date = _resolve_stat_range(
+        request.args.get("period", "month"),
+        request.args.get("startDate"),
+        request.args.get("endDate"),
+    )
+
+    result = {"type": detail_type, "images": []}
+
+    if detail_type == "customer":
+        customer = db.session.query(Customer).filter(Customer.customer_id == key).first()
+        if customer:
+            result["title"] = customer.customer_name + (f"（{customer.customer_brand}）" if customer.customer_brand else "")
+        else:
+            result["title"] = str(key)
+        orders, total_pairs = _stat_detail_orders(
+            Order.customer_id == key, dept_staff_ids, start_date, end_date
+        )
+    elif detail_type == "salesman":
+        s = db.session.query(Staff).filter(Staff.staff_id == key).first()
+        result["title"] = s.staff_name if s else str(key)
+        orders, total_pairs = _stat_detail_orders(
+            Order.salesman_id == key, dept_staff_ids, start_date, end_date
+        )
+    else:  # shoe，按工厂型号 shoe_rid
+        result["title"] = key
+        shoe = db.session.query(Shoe).filter(Shoe.shoe_rid == key).first()
+        if shoe:
+            shoe_types = (
+                db.session.query(ShoeType, Color)
+                .outerjoin(Color, ShoeType.color_id == Color.color_id)
+                .filter(ShoeType.shoe_id == shoe.shoe_id)
+                .all()
+            )
+            for shoe_type, color in shoe_types:
+                if shoe_type.shoe_image_url:
+                    result["images"].append(
+                        {
+                            "colorName": color.color_name if color else "",
+                            "imageUrl": IMAGE_STORAGE_PATH + shoe_type.shoe_image_url,
+                        }
+                    )
+        order_ids_subq = (
+            db.session.query(OrderShoe.order_id)
+            .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+            .filter(Shoe.shoe_rid == key)
+            .subquery()
+        )
+        orders, total_pairs = _stat_detail_orders(
+            Order.order_id.in_(db.session.query(order_ids_subq.c.order_id)),
+            dept_staff_ids,
+            start_date,
+            end_date,
+        )
+
+    result["orders"] = orders
+    result["orderCount"] = len(orders)
+    result["totalPairs"] = total_pairs
+    result["unfinishedOrderCount"] = sum(1 for o in orders if o["isUnfinished"])
+    result["periodStart"] = start_date.strftime("%Y-%m-%d")
+    result["periodEnd"] = end_date.strftime("%Y-%m-%d")
+    return jsonify(result)
+
 
 @order_bp.route("/order/checkorderridexists", methods=["GET"])
 def check_order_rid_exists():

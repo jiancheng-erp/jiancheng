@@ -22,6 +22,9 @@
           <el-menu-item index="2" @click="handleMenuClick(2)">
             <span>订单管理</span>
           </el-menu-item>
+          <el-menu-item index="15" @click="handleMenuClick(15)">
+            <span>业务统计看板</span>
+          </el-menu-item>
           <el-menu-item index="13" @click="handleMenuClick(13)">
             <span>预报单管理</span>
           </el-menu-item>
@@ -81,10 +84,12 @@ import OutboundProduct from '@/Pages/TotalWarehouse/FinishedWarehouse/components
 import HistoryOrder from '../components/HistoryOrder.vue';
 import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue';
 import OrderProgress from '../components/OrderProgress.vue';
+import BusinessStatistics from '../components/BusinessStatistics.vue';
 export default {
     components: {
         AllHeader,
         OrderManagement,
+        BusinessStatistics,
         ForecastManagement,
         CustomerManagement,
         ShoeTypeManagement,
@@ -156,6 +161,9 @@ export default {
                     break
                 case 14:
                     this.currentComponent = 'OrderProgress'
+                    break
+                case 15:
+                    this.currentComponent = 'BusinessStatistics'
                     break
             }
         },
