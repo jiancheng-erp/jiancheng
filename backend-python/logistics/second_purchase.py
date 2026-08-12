@@ -1689,7 +1689,13 @@ def submit_purchase_divide_orders():
             else:
                 size_values = order_size_table["客人码"]
             if "烫底" in material.material_name:
-                hotsole_key = (purchase_order_id, material.material_id, bom_item.material_specification)
+                # 二次采购替换烫底厂家时，只改写 inbound_material_id（新供应商料号），
+                # BOM 仍引用原料号。故按 BOM 原始 material_id 匹配，避免换厂后查不到
+                # 烫底 BOM 行而漏掉烫底采购单。
+                bom_material_id = (
+                    bom_item.material_id if bom_item else purchase_order_item.material_id
+                )
+                hotsole_key = (purchase_order_id, bom_material_id, bom_item.material_specification)
                 if hotsole_key not in _hotsole_processed:
                     _hotsole_processed.add(hotsole_key)
                     hotsole_bom_rows = (
@@ -1700,7 +1706,7 @@ def submit_purchase_divide_orders():
                         .join(Color, Color.color_id == ShoeType.color_id)
                         .filter(
                             Bom.total_bom_id == purchase_order.bom_id,
-                            BomItem.material_id == material.material_id,
+                            BomItem.material_id == bom_material_id,
                         )
                         .all()
                     )
@@ -1724,7 +1730,7 @@ def submit_purchase_divide_orders():
                             .filter(
                                 Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
                                 Bom.bom_type == 0,
-                                BomItem.material_id != material.material_id,
+                                BomItem.material_id != bom_material_id,
                                 BomItem.bom_item_add_type == "0",
                                 ProductionInstructionItem.material_type == "H",
                             )
@@ -2383,7 +2389,13 @@ def download_purchase_order_zip():
             else:
                 size_values = order_size_table["客人码"]
             if "烫底" in material.material_name:
-                hotsole_key = (pdo_rid, material.material_id, bom_item.material_specification if bom_item else purchase_order_item.material_specification)
+                # 二次采购替换烫底厂家时，只改写 inbound_material_id（新供应商料号），
+                # BOM 仍引用原料号。故按 BOM 原始 material_id 匹配，避免换厂后查不到
+                # 烫底 BOM 行而漏掉烫底采购单。
+                bom_material_id = (
+                    bom_item.material_id if bom_item else purchase_order_item.material_id
+                )
+                hotsole_key = (pdo_rid, bom_material_id, bom_item.material_specification if bom_item else purchase_order_item.material_specification)
                 if hotsole_key not in _hotsole_processed:
                     _hotsole_processed.add(hotsole_key)
                     hotsole_bom_rows = (
@@ -2394,7 +2406,7 @@ def download_purchase_order_zip():
                         .join(Color, Color.color_id == ShoeType.color_id)
                         .filter(
                             Bom.total_bom_id == purchase_order.bom_id,
-                            BomItem.material_id == material.material_id,
+                            BomItem.material_id == bom_material_id,
                         )
                         .all()
                     )
@@ -2418,7 +2430,7 @@ def download_purchase_order_zip():
                             .filter(
                                 Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
                                 Bom.bom_type == 0,
-                                BomItem.material_id != material.material_id,
+                                BomItem.material_id != bom_material_id,
                                 BomItem.bom_item_add_type == "0",
                                 ProductionInstructionItem.material_type == "H",
                             )
