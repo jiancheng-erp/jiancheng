@@ -25,6 +25,18 @@ def get_business_department_ids():
     return [row[0] for row in rows]
 
 
+def get_same_department_staff_ids(department_id):
+    """返回与指定部门相同部门的所有员工 staff_id，用于业务部按一二部分隔数据。"""
+    if department_id is None:
+        return []
+    rows = (
+        db.session.query(Staff.staff_id)
+        .filter(Staff.department_id == department_id)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
 @department_bp.route("/general/getbusinessdepartments", methods=["GET"])
 def get_business_departments():
     business_ids = get_business_department_ids()

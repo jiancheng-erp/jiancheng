@@ -25,7 +25,11 @@ from file_locations import IMAGE_STORAGE_PATH, IMAGE_UPLOAD_PATH, FILE_STORAGE_P
 import os
 from login.login import current_user_info
 from logger import logger
-
+from shared_apis.department import (
+    BUSINESS_MANAGER_CHARACTER,
+    BUSINESS_CLERK_CHARACTER,
+    get_same_department_staff_ids,
+)
 production_manager_bp = Blueprint("production_manager_bp", __name__)
 PRODUCTION_INFO_ATTRNAMES = OrderShoeProductionInfo.__table__.columns.keys()
 
@@ -396,6 +400,11 @@ def get_all_order_production_progress():
         )  # 不显示没排期的订单
         .filter(Order.order_id.in_(order_ids))
     )
+    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    character, current_staff, _ = current_user_info()
+    if character.character_id in (BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER):
+        dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
+        query = query.filter(Order.salesman_id.in_(dept_staff_ids))
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":

@@ -8,6 +8,11 @@ from app_config import db
 from file_locations import FILE_STORAGE_PATH
 from general_document.order_export import generate_excel_file, generate_amount_excel_file
 from login.login import current_user_info
+from shared_apis.department import (
+    BUSINESS_MANAGER_CHARACTER,
+    BUSINESS_CLERK_CHARACTER,
+    get_same_department_staff_ids,
+)
 from models import (
     BatchInfoType,
     Customer,
@@ -141,6 +146,10 @@ def list_forecast_sheets():
         db.session.query(ForecastSheet, Customer)
         .join(Customer, ForecastSheet.customer_id == Customer.customer_id)
     )
+    # 业务经理/文员按所在部门（一部/二部）分隔预报单，归属以业务员所属部门推导
+    if role_id in (BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER):
+        dept_staff_ids = get_same_department_staff_ids(staff.department_id)
+        query = query.filter(ForecastSheet.salesman_id.in_(dept_staff_ids))
     if role_id == 21:
         query = query.filter(ForecastSheet.salesman_id == staff.staff_id)
 
