@@ -29,6 +29,7 @@ from general_document.shoe_outbound_list import (
 )
 from shared_apis.utility_func import normalize_category_by_batch_type
 from shared_apis.utility_func import normalize_currency
+from shared_apis.department import get_same_department_staff_ids
 import os
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
@@ -260,7 +261,7 @@ def get_finished_in_out_overview():
 
 @finished_storage_bp.route("/warehouse/getproductoverview", methods=["GET"])
 def get_product_overview():
-    character, _, _ = current_user_info()
+    character, current_staff, _ = current_user_info()
     character_id = getattr(character, "character_id", None)
     hide_outbound_finished = character_id in BUSINESS_CHARACTER_IDS
     page = request.args.get("page", type=int, default=1)
@@ -428,6 +429,11 @@ def get_product_overview():
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if customer_product_name:
         query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
+
+    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    if character_id in BUSINESS_CHARACTER_IDS:
+        dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
+        query = query.filter(Order.salesman_id.in_(dept_staff_ids))
 
     # 审核状态筛选（基于 audit_level）
     if audit_status_num is not None and audit_status_num > -1:
@@ -1355,6 +1361,11 @@ def get_finished_outbound_records():
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if outbound_type is not None and outbound_type >= 0:
         query = query.filter(ShoeOutboundRecord.outbound_type == outbound_type)
+    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    character, current_staff, _ = current_user_info()
+    if getattr(character, "character_id", None) in BUSINESS_CHARACTER_IDS:
+        dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
+        query = query.filter(Order.salesman_id.in_(dept_staff_ids))
     count_result = query.distinct().count()
     total_detail_amount = int(
         query.with_entities(
@@ -2906,6 +2917,11 @@ def list_outbound_applies():
         q = q.filter(ShoeOutboundApply.apply_rid.ilike(f"%{apply_rid_kw}%"))
     if customer_name_kw:
         q = q.filter(Customer.customer_name.ilike(f"%{customer_name_kw}%"))
+    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    character, current_staff, _ = current_user_info()
+    if getattr(character, "character_id", None) in BUSINESS_CHARACTER_IDS:
+        dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
+        q = q.filter(Order.salesman_id.in_(dept_staff_ids))
     # 损失出库有独立审批页面，不在常规出库申请列表中显示
     q = q.filter(ShoeOutboundApply.outbound_type != SHOE_OUTBOUND_TYPE_LOSS)
     if status is not None and status >= 0:
