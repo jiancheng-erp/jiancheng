@@ -73,8 +73,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
-            style="height: 60vh" row-key="orderDbId" :row-class-name="deliveryRowClassName"
-            @selection-change="handleDispatchSelectionChange">
+            style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
             <el-table-column type="selection" width="55" reserve-selection />
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
@@ -86,11 +85,7 @@
             <el-table-column prop="customerProductName" label="客户型号" />
             <el-table-column prop="shoeRId" label="工厂型号" />
             <el-table-column prop="orderStartDate" label="订单开始日期" sortable />
-            <el-table-column prop="orderEndDate" label="订单结束日期" sortable>
-                <template #default="scope">
-                    <span :style="deliveryDateStyle(scope.row)">{{ scope.row.orderEndDate }}</span>
-                </template>
-            </el-table-column>
+            <el-table-column prop="orderEndDate" label="订单结束日期" sortable />
             <el-table-column prop="orderStatus" label="订单状态" />
             <el-table-column label="生产状态" width="100">
                 <template #default="scope">
@@ -339,7 +334,9 @@
                 " :row-class-name="'persistent-shadow-row'" :default-expand-all="true">
             <el-table-column type="expand">
                 <template #default="props">
-                    <el-table :data="props.row.orderShoeTypeBatchInfo" border>
+                    <el-table :data="props.row.orderShoeTypeBatchInfo" border show-summary
+                        class="batch-summary-table"
+                        :summary-method="(param) => getBatchSummary(param, props.row)">
                         <el-table-column prop="packagingInfoName" label="配码名称" sortable />
                         <el-table-column prop="packagingInfoLocale" label="配码地区" sortable />
                         <el-table-column
@@ -845,32 +842,6 @@ export default {
         },
         formatOrderType(orderType) {
             return orderType === 'F' ? '预报单' : '普通单'
-        },
-        deliveryDaysLeft(row) {
-            if (!row || !row.orderEndDate) return null
-            // 已完成/已全部出库的订单不再提示货期
-            if (row.orderStatusVal != null && row.orderStatusVal >= 16) return null
-            if (typeof row.productionStatus === 'string' && row.productionStatus.startsWith('已全部出库')) return null
-            const end = new Date(row.orderEndDate)
-            if (isNaN(end.getTime())) return null
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-            end.setHours(0, 0, 0, 0)
-            return Math.ceil((end - today) / (1000 * 60 * 60 * 24))
-        },
-        deliveryRowClassName({ row }) {
-            const days = this.deliveryDaysLeft(row)
-            if (days == null) return ''
-            if (days < 15) return 'delivery-danger-row'
-            if (days < 30) return 'delivery-warning-row'
-            return ''
-        },
-        deliveryDateStyle(row) {
-            const days = this.deliveryDaysLeft(row)
-            if (days == null) return {}
-            if (days < 15) return { color: '#F56C6C', fontWeight: 'bold' }
-            if (days < 30) return { color: '#E6A23C', fontWeight: 'bold' }
-            return {}
         },
         async getAllColors() {
             const response = await axios.get(`${this.$apiBaseUrl}/general/allcolors`)
@@ -2289,6 +2260,33 @@ export default {
         updateAmountMapping(out_row, inner_row) {
             out_row.amountMapping[inner_row.packagingInfoId] = out_row.quantityMapping[inner_row.packagingInfoId] * inner_row.totalQuantityRatio
         },
+        getBatchSummary(param, outRow) {
+            const { columns, data } = param
+            const ratioProps = new Set(Object.values(this.attrMapping))
+            const quantityMapping = (outRow && outRow.quantityMapping) || {}
+            const amountMapping = (outRow && outRow.amountMapping) || {}
+            const getQty = (row) => {
+                const pid = row.packagingInfoId
+                const q = quantityMapping[pid] !== undefined ? quantityMapping[pid] : quantityMapping[String(pid)]
+                return Number(q) || 0
+            }
+            return columns.map((col, index) => {
+                if (index === 0) return '配码总数'
+                if (col.property && ratioProps.has(col.property)) {
+                    const total = (data || []).reduce((sum, row) => sum + (Number(row[col.property]) || 0) * getQty(row), 0)
+                    return total
+                }
+                if (col.label === '总数量') {
+                    const total = (data || []).reduce((sum, row) => {
+                        const pid = row.packagingInfoId
+                        const amount = amountMapping[pid] !== undefined ? amountMapping[pid] : amountMapping[String(pid)]
+                        return sum + (Number(amount) || 0)
+                    }, 0)
+                    return total
+                }
+                return ''
+            })
+        },
         removeBatchInfoRow(orderShoeRow, batchRow) {
             if (!orderShoeRow || !Array.isArray(orderShoeRow.orderShoeTypeBatchInfo) || !batchRow) {
                 return
@@ -3698,6 +3696,17 @@ export default {
     width: 100%;
 }
 
+.batch-summary-table :deep(.el-table__footer .el-table__cell),
+.batch-summary-table :deep(.el-table__footer-wrapper .el-table__cell) {
+    background-color: #fdf6ec !important;
+    font-weight: 700;
+}
+
+.batch-summary-table :deep(.el-table__footer .el-table__cell .cell),
+.batch-summary-table :deep(.el-table__footer-wrapper .el-table__cell .cell) {
+    color: #e6a23c !important;
+}
+
 :deep(.rid-error .el-input__wrapper) {
     box-shadow: 0 0 0 1px var(--el-color-danger) inset !important;
 }
@@ -3722,23 +3731,5 @@ export default {
     border-right: 5px solid #dcdfe6;
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
-}
-
-/* 货期整行高亮：临近货期（<30天）柔和黄底，紧急（<15天）柔和红底。
-   直接给 td 设背景并用 !important，覆盖斑马纹(stripe)对奇数行的背景，避免有的行不高亮 */
-:deep(.el-table .delivery-warning-row > td.el-table__cell) {
-    background-color: var(--el-color-warning-light-8) !important;
-}
-
-:deep(.el-table .delivery-warning-row:hover > td.el-table__cell) {
-    background-color: var(--el-color-warning-light-7) !important;
-}
-
-:deep(.el-table .delivery-danger-row > td.el-table__cell) {
-    background-color: var(--el-color-danger-light-9) !important;
-}
-
-:deep(.el-table .delivery-danger-row:hover > td.el-table__cell) {
-    background-color: var(--el-color-danger-light-8) !important;
 }
 </style>
