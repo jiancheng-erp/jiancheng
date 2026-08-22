@@ -34,6 +34,8 @@ import os
 
 finished_storage_bp = Blueprint("finished_storage_bp", __name__)
 BUSINESS_CHARACTER_IDS = {4, 21}
+# 业务部文员：只能看见自己录入的订单
+BUSINESS_CLERK_CHARACTER_ID = 21
 
 
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
@@ -430,8 +432,10 @@ def get_product_overview():
     if customer_product_name:
         query = query.filter(OrderShoe.customer_product_name.ilike(f"%{customer_product_name}%"))
 
-    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
-    if character_id in BUSINESS_CHARACTER_IDS:
+    # 业务部文员只看自己录入的订单；业务经理看本业务部（一部/二部）订单
+    if character_id == BUSINESS_CLERK_CHARACTER_ID:
+        query = query.filter(Order.salesman_id == current_staff.staff_id)
+    elif character_id in BUSINESS_CHARACTER_IDS:
         dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
         query = query.filter(Order.salesman_id.in_(dept_staff_ids))
 
@@ -1361,9 +1365,12 @@ def get_finished_outbound_records():
         query = query.filter(Customer.customer_brand.ilike(f"%{customer_brand}%"))
     if outbound_type is not None and outbound_type >= 0:
         query = query.filter(ShoeOutboundRecord.outbound_type == outbound_type)
-    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    # 业务部文员只看自己录入的订单；业务经理看本业务部（一部/二部）订单
     character, current_staff, _ = current_user_info()
-    if getattr(character, "character_id", None) in BUSINESS_CHARACTER_IDS:
+    character_id = getattr(character, "character_id", None)
+    if character_id == BUSINESS_CLERK_CHARACTER_ID:
+        query = query.filter(Order.salesman_id == current_staff.staff_id)
+    elif character_id in BUSINESS_CHARACTER_IDS:
         dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
         query = query.filter(Order.salesman_id.in_(dept_staff_ids))
     count_result = query.distinct().count()
@@ -2917,9 +2924,12 @@ def list_outbound_applies():
         q = q.filter(ShoeOutboundApply.apply_rid.ilike(f"%{apply_rid_kw}%"))
     if customer_name_kw:
         q = q.filter(Customer.customer_name.ilike(f"%{customer_name_kw}%"))
-    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    # 业务部文员只看自己录入的订单；业务经理看本业务部（一部/二部）订单
     character, current_staff, _ = current_user_info()
-    if getattr(character, "character_id", None) in BUSINESS_CHARACTER_IDS:
+    character_id = getattr(character, "character_id", None)
+    if character_id == BUSINESS_CLERK_CHARACTER_ID:
+        q = q.filter(Order.salesman_id == current_staff.staff_id)
+    elif character_id in BUSINESS_CHARACTER_IDS:
         dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
         q = q.filter(Order.salesman_id.in_(dept_staff_ids))
     # 损失出库有独立审批页面，不在常规出库申请列表中显示
