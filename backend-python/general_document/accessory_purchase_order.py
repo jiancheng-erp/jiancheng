@@ -8,6 +8,8 @@ from openpyxl.styles import Alignment, Border, Font, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.page import PageMargins
 
+from decimal import Decimal, ROUND_HALF_UP
+
 from logger import logger
 
 
@@ -61,10 +63,11 @@ def generate_accessory_purchase_order(file_path, order_data):
 
     # ── Data rows ─────────────────────────────────────────────────────────────
     # Merge rows with same 工厂货号 + 材料货号 + 颜色 by summing 数量
+    # 注意：帽钉按配对组拆分的行带有 _pair_id，需纳入合并键，避免拆分后又被合并回一行
     raw_series = order_data.get("seriesData", [])
     merged: dict = {}
     for item in raw_series:
-        key = (item.get("工厂货号", ""), item.get("材料货号", ""), item.get("颜色", ""))
+        key = (item.get("工厂货号", ""), item.get("材料货号", ""), item.get("颜色", ""), item.get("_pair_id"))
         if key in merged:
             try:
                 merged[key]["数量"] = (merged[key]["数量"] or 0) + (item.get("数量") or 0)
@@ -635,10 +638,60 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "备注": e.get("备注", ""),
                 })
 
-        # 帽 + 钉 → other_series（仅在填写相同配对组编号时合并；否则各自单独成行）
-        capnail_series, leftover_caps, leftover_nails = _pair_cap_nail(cap_items, nail_items)
-        other_series.extend(capnail_series)
-        other_items = list(leftover_caps) + list(leftover_nails) + list(other_items)
+        # 帽 + 钉：二次采购不合并。帽各自成行；钉按同配色下帽的配对组拆分成多行
+        # （帽钉 1:1，钉数量按各配对组帽数量比例分配），使同组帽钉相邻。
+        def _capnail_row(src, pair_id, qty):
+            return {
+                "工厂货号": (src.get("_factory_no", "") + " " + src.get("_shoe_color", "")).strip(),
+                "材料货号": src.get("物品名称", "") or _item_display_name(src),
+                "颜色": src.get("_material_color", ""),
+                "单位": src.get("单位", ""),
+                "数量": qty,
+                "备注": src.get("备注", ""),
+                "_pair_id": pair_id,
+            }
+
+        def _to_decimal(v):
+            try:
+                return Decimal(str(v))
+            except Exception:
+                return Decimal(0)
+
+        for c in cap_items:
+            other_series.append(_capnail_row(c, c.get("_zipper_pair_id"), c.get("数量", "")))
+
+        # 统计各配色下帽的配对组数量分布，用于拆分钉
+        caps_by_color = {}
+        for c in cap_items:
+            sc = c.get("_shoe_color", "")
+            pid = c.get("_zipper_pair_id")
+            caps_by_color.setdefault(sc, {})
+            caps_by_color[sc][pid] = caps_by_color[sc].get(pid, Decimal(0)) + _to_decimal(c.get("数量", 0))
+
+        for n in nail_items:
+            sc = n.get("_shoe_color", "")
+            # 仅统计填写了配对组编号的帽
+            valid_pairs = {
+                k: v for k, v in caps_by_color.get(sc, {}).items() if k is not None
+            }
+            # 无帽 / 帽未填配对组 / 只有一个配对组：钉不拆分
+            if len(valid_pairs) <= 1:
+                only_pid = next(iter(valid_pairs)) if valid_pairs else n.get("_zipper_pair_id")
+                other_series.append(_capnail_row(n, only_pid, n.get("数量", "")))
+                continue
+            nail_qty = _to_decimal(n.get("数量", 0))
+            total_cap = sum(valid_pairs.values())
+            pids = sorted(valid_pairs.keys())
+            allocated = Decimal(0)
+            for i, pid in enumerate(pids):
+                if i < len(pids) - 1 and total_cap:
+                    portion = (nail_qty * valid_pairs[pid] / total_cap).quantize(
+                        Decimal("1"), rounding=ROUND_HALF_UP
+                    )
+                    allocated += portion
+                else:
+                    portion = nail_qty - allocated
+                other_series.append(_capnail_row(n, pid, portion))
 
         # All other accessory items (饰品, 底材, 包材, etc.) → other_series
         for item in other_items:
@@ -662,7 +715,13 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             }
 
         if other_series:
-            other_series.sort(key=lambda x: x.get("工厂货号", ""))
+            # 排序：工厂货号 → 配对组（同组帽钉相邻）→ 材料货号
+            other_series.sort(key=lambda x: (
+                x.get("工厂货号", ""),
+                x.get("_pair_id") if x.get("_pair_id") is not None else 32767,
+                x.get("材料货号", ""),
+            ))
+            # 保留 _pair_id 传入写表函数，作为合并键的一部分，防止拆分行被合并
             other_accessory_dict[pdo_rid] = {
                 **base_meta,
                 "颜色列名": "颜色",

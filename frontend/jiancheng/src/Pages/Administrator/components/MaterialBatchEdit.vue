@@ -386,6 +386,11 @@
                 <el-table-column label="型号" prop="materialModel" width="90" show-overflow-tooltip />
                 <el-table-column label="规格" prop="materialSpec" width="90" show-overflow-tooltip />
                 <el-table-column label="颜色" prop="color" width="80" show-overflow-tooltip />
+                <el-table-column label="数量" prop="qty" width="80" align="right">
+                    <template #default="{ row }">
+                        <span>{{ row.qty != null ? row.qty : '-' }}</span>
+                    </template>
+                </el-table-column>
                 <el-table-column label="配对组" width="130" align="center">
                     <template #default="{ row }">
                         <el-input-number v-model="row.pairId" :min="1" :max="9"
@@ -1409,15 +1414,25 @@ export default {
 
         // ===== 配对组 =====
         openZipperPairDialog(row) {
-            // 收集所有拉链/拉链头材料行，按 (配色+材料名+型号+规格+颜色) 合并为一行
+            // 收集所有拉链/拉链头材料行。以链路根（投产指令单项 linkRootId）区分同名材料的多行，
+            // 使同一材料在投产中的两行分别显示；未关联链路根的工艺单/BOM 行按属性归入对应链路。
             const allZipperRows = this.materialGroups.filter(r => this.isZipperMaterial(r))
             const docTypes = new Set(['production_instruction_item', 'craft_sheet_item', 'bom_item'])
             const merged = {}
+            const attrIndex = {}
             for (const matRow of allZipperRows) {
                 for (const it of matRow.items) {
                     if (!docTypes.has(it.docType)) continue
                     const name = it.materialName || matRow.materialName || ''
-                    const key = `${it.orderShoeTypeId}|${name}|${it.materialModel || ''}|${it.materialSpecification || ''}|${it.color || ''}`
+                    const attrKey = `${it.orderShoeTypeId}|${name}|${it.materialModel || ''}|${it.materialSpecification || ''}|${it.color || ''}`
+                    let key
+                    if (it.linkRootId != null) {
+                        key = `root|${it.linkRootId}`
+                    } else if (attrIndex[attrKey]) {
+                        key = attrIndex[attrKey]
+                    } else {
+                        key = `attr|${attrKey}`
+                    }
                     if (!merged[key]) {
                         merged[key] = {
                             colorLabel: this.colorLabelOf(it.orderShoeTypeId),
@@ -1435,12 +1450,18 @@ export default {
                             pairId: it.zipperPairId != null ? Number(it.zipperPairId) : null,
                             _ostId: it.orderShoeTypeId,
                             _docItems: [],
+                            qty: it.totalUsage != null ? it.totalUsage : null,
                         }
                     }
+                    if (!attrIndex[attrKey]) attrIndex[attrKey] = key
                     merged[key]._docItems.push({ docType: it.docType, itemId: it.itemId })
                     // 若任意子项有配对编号则用它（优先非空）
                     if (merged[key].pairId == null && it.zipperPairId != null) {
                         merged[key].pairId = Number(it.zipperPairId)
+                    }
+                    // 用量：取任一子项的核定总用量，用于区分同名材料的多行
+                    if (merged[key].qty == null && it.totalUsage != null) {
+                        merged[key].qty = it.totalUsage
                     }
                 }
             }
