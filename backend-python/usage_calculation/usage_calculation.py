@@ -318,6 +318,11 @@ def get_shoe_bom_items():
                 "supplierName": supplier.supplier_name,
                 "materialCategory": material.material_category,
                 "remark": bom_item.remark,
+                "zipperPairId": (
+                    bom_item.zipper_pair_id
+                    if bom_item.zipper_pair_id is not None
+                    else (production_instruction.zipper_pair_id if production_instruction else None)
+                ),
                 "sizeInfo": sizeInfo,
             }
         )

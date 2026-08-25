@@ -340,6 +340,12 @@
                                 </el-table-column>
                                 <el-table-column prop="approvalUsage" label="核定用量">
                                 </el-table-column>
+                                <el-table-column prop="zipperPairId" label="配对组" width="80" align="center">
+                                    <template #default="scope">
+                                        <el-tag v-if="scope.row.zipperPairId != null" type="info" size="small">{{ scope.row.zipperPairId }}</el-tag>
+                                        <span v-else>-</span>
+                                    </template>
+                                </el-table-column>
                                 <el-table-column prop="remark" label="备注" />
                                 <el-table-column prop="isInboundSperate" label="入库单位是否不同"></el-table-column>
                                 <el-table-column prop="materialInboundName" label="入库材料名称">
