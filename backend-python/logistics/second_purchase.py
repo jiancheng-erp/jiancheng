@@ -1695,7 +1695,9 @@ def submit_purchase_divide_orders():
                 bom_material_id = (
                     bom_item.material_id if bom_item else purchase_order_item.material_id
                 )
-                hotsole_key = (purchase_order_id, bom_material_id, bom_item.material_specification)
+                # 烫底 BOM 行按 material_id 聚合所有颜色（不区分规格），故去重键也不能
+                # 含规格，否则同一材料多规格会重复整组颜色行。
+                hotsole_key = (purchase_order_id, bom_material_id)
                 if hotsole_key not in _hotsole_processed:
                     _hotsole_processed.add(hotsole_key)
                     hotsole_bom_rows = (
@@ -2395,7 +2397,9 @@ def download_purchase_order_zip():
                 bom_material_id = (
                     bom_item.material_id if bom_item else purchase_order_item.material_id
                 )
-                hotsole_key = (pdo_rid, bom_material_id, bom_item.material_specification if bom_item else purchase_order_item.material_specification)
+                # 烫底 BOM 行按 material_id 聚合所有颜色（不区分规格），故去重键也不能
+                # 含规格，否则同一材料多规格会重复整组颜色行。
+                hotsole_key = (pdo_rid, bom_material_id)
                 if hotsole_key not in _hotsole_processed:
                     _hotsole_processed.add(hotsole_key)
                     hotsole_bom_rows = (
