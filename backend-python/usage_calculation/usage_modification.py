@@ -33,11 +33,121 @@ from models import (
     Supplier,
 )
 from shared_apis.batch_info_type import get_order_batch_type_helper
+from wechat_api.send_message_api import send_configurable_message
 
 usage_modification_bp = Blueprint("usage_modification_bp", __name__)
 
 # 已完成采购订单创建（已提交/已下发）对应的采购订单状态
 _COMPLETED_PURCHASE_STATUS = ("2", "3")
+
+
+def _notify_warehouse_manager_usage_modified(bom_item_ids, changes_text):
+    """技术部下发后修改用量后，通知总仓经理，包含修改前/修改后全部信息。"""
+    valid_ids = [i for i in bom_item_ids if i is not None]
+    if not valid_ids:
+        return
+    order_info = (
+        db.session.query(Order.order_rid, Shoe.shoe_rid)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(Bom, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(BomItem, BomItem.bom_id == Bom.bom_id)
+        .filter(BomItem.bom_item_id.in_(valid_ids))
+        .first()
+    )
+    if not order_info:
+        return
+    order_rid, shoe_rid = order_info
+    message = (
+        "技术部已进行下发后用量修改，订单号：{order_rid}，鞋型号：{shoe_rid}\n"
+        "{changes}\n"
+        "请总仓经理及时核对"
+    )
+    send_configurable_message(
+        "tech_usage_modification_notify_warehouse",
+        message,
+        "FanJianMing",
+        context={"order_rid": order_rid, "shoe_rid": shoe_rid, "changes": changes_text},
+        push_to_group=True,
+    )
+
+
+def _fmt_num(value):
+    if value is None or value == "":
+        return "-"
+    dec = _to_decimal(value)
+    if dec is None:
+        return str(value)
+    dec = dec.normalize()
+    return format(dec, "f")
+
+
+def _num_eq(a, b):
+    da, db_ = _to_decimal(a), _to_decimal(b)
+    if da is None and db_ is None:
+        return True
+    if da is None or db_ is None:
+        return False
+    return da == db_
+
+
+def _is_zero(value):
+    dec = _to_decimal(value)
+    return dec is not None and dec == 0
+
+
+def _all_zero(values):
+    return all(_is_zero(v) or _to_decimal(v) is None for v in values)
+
+
+def _sizes_changed(old, new):
+    if len(old) != len(new):
+        return True
+    return any(not _num_eq(o, n) for o, n in zip(old, new))
+
+
+def _fmt_sizes(sizes):
+    return "[" + ", ".join(_fmt_num(s) for s in sizes) + "]"
+
+
+def _build_usage_change_line(
+    name,
+    category,
+    old_unit,
+    new_unit,
+    old_appr,
+    new_appr,
+    old_pur,
+    new_pur,
+    old_sizes,
+    new_sizes,
+    old_size_pur,
+    new_size_pur,
+):
+    """组装单条材料的修改前/修改后明细，仅列出发生变化的字段。更改为 0 的字段不列出。"""
+    parts = []
+    if not _num_eq(old_unit, new_unit) and not _is_zero(new_unit):
+        parts.append(f"  单位用量：{_fmt_num(old_unit)} → {_fmt_num(new_unit)}")
+    if not _num_eq(old_appr, new_appr) and not _is_zero(new_appr):
+        parts.append(f"  核定用量：{_fmt_num(old_appr)} → {_fmt_num(new_appr)}")
+    if not _num_eq(old_pur, new_pur) and not _is_zero(new_pur):
+        parts.append(f"  采购数量：{_fmt_num(old_pur)} → {_fmt_num(new_pur)}")
+    if category == 1:
+        if _sizes_changed(old_sizes, new_sizes) and not _all_zero(new_sizes):
+            parts.append(f"  分码核定：{_fmt_sizes(old_sizes)} → {_fmt_sizes(new_sizes)}")
+        if (
+            old_size_pur
+            and _sizes_changed(old_size_pur, new_size_pur)
+            and not _all_zero(new_size_pur)
+        ):
+            parts.append(
+                f"  分码采购：{_fmt_sizes(old_size_pur)} → {_fmt_sizes(new_size_pur)}"
+            )
+    if not parts:
+        return ""
+    return f"材料：{name}\n" + "\n".join(parts)
+
 
 
 def _to_decimal(value):
@@ -420,6 +530,7 @@ def save_usage_modification():
         }
     """
     items = request.json.get("items", []) if request.json else []
+    change_lines = []
 
     for item in items:
         bom_item_id = item.get("bomItemId")
@@ -437,6 +548,42 @@ def save_usage_modification():
         material_category = item.get("materialCategory", 0)
         size_info = item.get("sizeInfo") or []
 
+        material = (
+            db.session.query(Material)
+            .filter(Material.material_id == bom_item.material_id)
+            .first()
+        )
+        material_name = material.material_name if material else ""
+
+        # 快照修改前的用量信息
+        old_unit = bom_item.unit_usage
+        old_approval = bom_item.total_usage
+        old_sizes = [
+            getattr(bom_item, f"size_{34 + i}_total_usage", None) for i in range(13)
+        ]
+
+        purchase_order_item = None
+        purchase_order_item_id = item.get("purchaseOrderItemId")
+        if purchase_order_item_id is not None:
+            purchase_order_item = (
+                db.session.query(PurchaseOrderItem)
+                .filter(
+                    PurchaseOrderItem.purchase_order_item_id == purchase_order_item_id
+                )
+                .first()
+            )
+        old_purchase = (
+            purchase_order_item.purchase_amount if purchase_order_item else None
+        )
+        old_size_purchase = (
+            [
+                getattr(purchase_order_item, f"size_{34 + i}_purchase_amount", None)
+                for i in range(13)
+            ]
+            if purchase_order_item
+            else []
+        )
+
         # 更新 BOM 用量
         unit_usage = _to_decimal(item.get("unitUsage"))
         if unit_usage is not None:
@@ -452,28 +599,48 @@ def save_usage_modification():
                 setattr(bom_item, f"size_{34 + i}_total_usage", approval_amount)
 
         # 更新采购用量
-        purchase_order_item_id = item.get("purchaseOrderItemId")
-        if purchase_order_item_id is not None:
-            purchase_order_item = (
-                db.session.query(PurchaseOrderItem)
-                .filter(
-                    PurchaseOrderItem.purchase_order_item_id == purchase_order_item_id
-                )
-                .first()
-            )
-            if purchase_order_item is not None:
-                purchase_amount = _to_decimal(item.get("purchaseAmount"))
-                if purchase_amount is not None:
-                    purchase_order_item.purchase_amount = purchase_amount
+        if purchase_order_item is not None:
+            purchase_amount = _to_decimal(item.get("purchaseAmount"))
+            if purchase_amount is not None:
+                purchase_order_item.purchase_amount = purchase_amount
 
-                if material_category == 1:
-                    for i, size_entry in enumerate(size_info):
-                        size_purchase = _to_int(size_entry.get("purchaseAmount"))
-                        setattr(
-                            purchase_order_item,
-                            f"size_{34 + i}_purchase_amount",
-                            size_purchase,
-                        )
+            if material_category == 1:
+                for i, size_entry in enumerate(size_info):
+                    size_purchase = _to_int(size_entry.get("purchaseAmount"))
+                    setattr(
+                        purchase_order_item,
+                        f"size_{34 + i}_purchase_amount",
+                        size_purchase,
+                    )
+
+        line = _build_usage_change_line(
+            material_name,
+            material_category,
+            old_unit,
+            bom_item.unit_usage,
+            old_approval,
+            bom_item.total_usage,
+            old_purchase,
+            purchase_order_item.purchase_amount if purchase_order_item else None,
+            old_sizes,
+            [getattr(bom_item, f"size_{34 + i}_total_usage", None) for i in range(13)],
+            old_size_purchase,
+            (
+                [
+                    getattr(purchase_order_item, f"size_{34 + i}_purchase_amount", None)
+                    for i in range(13)
+                ]
+                if purchase_order_item
+                else []
+            ),
+        )
+        if line:
+            change_lines.append(line)
 
     db.session.commit()
+    if change_lines:
+        _notify_warehouse_manager_usage_modified(
+            [item.get("bomItemId") for item in items], "\n".join(change_lines)
+        )
     return jsonify({"status": "success"})
+

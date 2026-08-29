@@ -70,14 +70,16 @@ def _render(content: str, context: Optional[Dict] = None) -> str:
 
 
 def send_massage_to_users(message, users="SunHaoZheng", push_to_group=False):
+    # 测试模式下只给 SunHaoZheng 发消息
     if config.WECHAT_TEST_MODE:
-        # In test mode, we use a different URL for sending messages.
-        users = "SunHaoZheng"
+        touser = "SunHaoZheng"
+    else:
+        touser = "SunHaoZheng|" + users
     # 下发、退回类消息（push_to_group=True）统一带上具体时间
     if push_to_group:
         message = f"{message}\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     url = f"http://121.43.33.97:8067/send_wechat"
-    payload = {"content": message, "touser": "SunHaoZheng|" + users}
+    payload = {"content": message, "touser": touser}
     response = requests.post(url, json=payload)
     # 仅在需要时（如下发、退回消息）向企业微信群推送，定时通知不推送到群；测试模式不推送到群
     if push_to_group and not config.WECHAT_TEST_MODE:
