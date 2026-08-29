@@ -48,9 +48,80 @@ from models import (
     ProductionInstructionItem,
     CraftSheet,
     CraftSheetItem,
+    Order,
+    OrderShoe,
+    Shoe,
 )
+from wechat_api.send_message_api import send_configurable_message
 
 material_batch_edit_bp = Blueprint("material_batch_edit_bp", __name__)
+
+
+def _material_full_info(material_id, model=None, spec=None, color=None):
+    """组装材料的全部信息（名称/供应商/型号/规格/颜色）。"""
+    mat = (
+        Material.query.filter_by(material_id=material_id).first()
+        if material_id
+        else None
+    )
+    supplier_name = None
+    if mat:
+        supplier = Supplier.query.filter_by(supplier_id=mat.material_supplier).first()
+        supplier_name = supplier.supplier_name if supplier else None
+    return {
+        "material_name": mat.material_name if mat else None,
+        "supplier_name": supplier_name,
+        "model": model,
+        "spec": spec,
+        "color": color,
+    }
+
+
+def _format_material_info(info):
+    if not info:
+        return "（无）"
+    return (
+        f"材料：{info.get('material_name') or '-'}，"
+        f"供应商：{info.get('supplier_name') or '-'}，"
+        f"型号：{info.get('model') or '-'}，"
+        f"规格：{info.get('spec') or '-'}，"
+        f"颜色：{info.get('color') or '-'}"
+    )
+
+
+def _notify_warehouse_manager_material_change(order_shoe_id, action, before=None, after=None):
+    """技术部下发后更改材料后，通知总仓经理，包含修改前/修改后全部信息。"""
+    if not order_shoe_id:
+        return
+    info = (
+        db.session.query(Order.order_rid, Shoe.shoe_rid)
+        .join(OrderShoe, OrderShoe.order_id == Order.order_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .filter(OrderShoe.order_shoe_id == order_shoe_id)
+        .first()
+    )
+    if not info:
+        return
+    order_rid, shoe_rid = info
+    message = (
+        "技术部已进行下发后材料更改（{action}），订单号：{order_rid}，鞋型号：{shoe_rid}\n"
+        "【修改前】{before_info}\n"
+        "【修改后】{after_info}\n"
+        "请总仓经理及时核对"
+    )
+    send_configurable_message(
+        "tech_material_change_notify_warehouse",
+        message,
+        "FanJianMing",
+        context={
+            "action": action,
+            "order_rid": order_rid,
+            "shoe_rid": shoe_rid,
+            "before_info": _format_material_info(before),
+            "after_info": _format_material_info(after),
+        },
+        push_to_group=True,
+    )
 
 
 # ===========================================================================
@@ -680,6 +751,23 @@ def batch_edit_materials():
         return jsonify({"error": f"批量修改失败: {str(e)}"}), 500
 
     total = sum(counts.values())
+    if total > 0:
+        after_material_id = new_material_id or args["material_id"]
+        before = _material_full_info(
+            args["material_id"], args.get("group_model"), args.get("group_spec")
+        )
+        after = _material_full_info(
+            after_material_id,
+            new_model if new_model is not None else args.get("group_model"),
+            new_spec if new_spec is not None else args.get("group_spec"),
+            new_color,
+        )
+        _notify_warehouse_manager_material_change(
+            args["order_shoe_id"],
+            "替换" if new_material_id else "修改",
+            before=before,
+            after=after,
+        )
     return jsonify({
         "message": f"同步修改完成，共更新 {total} 条记录",
         "totalUpdated": total,
@@ -949,6 +1037,13 @@ def batch_delete_material():
         return jsonify({"error": f"删除失败: {str(e)}"}), 500
 
     total = sum(counts.values())
+    if total > 0:
+        before = _material_full_info(
+            material_id, data.get("groupModel"), data.get("groupSpec")
+        )
+        _notify_warehouse_manager_material_change(
+            order_shoe_id, "删除", before=before, after=None
+        )
     return jsonify({"message": f"已删除 {total} 条记录", "counts": counts})
 
 
@@ -1199,6 +1294,13 @@ def batch_add_material():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"新增失败: {str(e)}"}), 500
+
+    _notify_warehouse_manager_material_change(
+        order_shoe_id,
+        "新增",
+        before=None,
+        after=_material_full_info(material_id, mat_model, mat_spec, color),
+    )
 
     written = []
     if pi_item:

@@ -63,5 +63,15 @@
     "content": "订单已发出至二次采购订单阶段，订单号：{order_rid}，鞋型号：{order_shoe_rid}",
     "users": "FanJianMing",
     "description": "二次采购下发通知"
+  },
+  "tech_usage_modification_notify_warehouse": {
+    "content": "技术部已进行下发后用量修改，订单号：{order_rid}，鞋型号：{shoe_rid}\n{changes}\n请总仓经理及时核对",
+    "users": "FanJianMing",
+    "description": "技术部下发后用量修改通知总仓经理"
+  },
+  "tech_material_change_notify_warehouse": {
+    "content": "技术部已进行下发后材料更改（{action}），订单号：{order_rid}，鞋型号：{shoe_rid}\n【修改前】{before_info}\n【修改后】{after_info}\n请总仓经理及时核对",
+    "users": "FanJianMing",
+    "description": "技术部下发后材料更改通知总仓经理"
   }
 }
