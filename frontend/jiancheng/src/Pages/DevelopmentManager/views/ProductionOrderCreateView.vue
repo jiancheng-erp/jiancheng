@@ -231,6 +231,7 @@
                                 <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="unit" label="单位" width="70" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
@@ -329,6 +330,7 @@
                                 <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="unit" label="单位" width="70" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
@@ -426,6 +428,7 @@
                                 <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="unit" label="单位" width="70" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
@@ -538,6 +541,7 @@
                                 <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="unit" label="单位" width="70" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
@@ -635,6 +639,7 @@
                                 <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
                                     <el-table-column prop="materialType" label="材料类型" />
+                                    <el-table-column prop="unit" label="单位" width="70" />
 
                                     <el-table-column prop="materialName" label="材料名称">
                                         <template #default="scope">
@@ -731,6 +736,7 @@
                             <el-col :span="24" :offset="0">
                                 <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                     <el-table-column type="index"></el-table-column>
+                                    <el-table-column prop="unit" label="单位" width="70" />
                                     <el-table-column prop="materialType" label="材料类型">
                                         <template #default="scope">
                                             <el-select
@@ -1164,6 +1170,7 @@
                             <el-table :data="getMaterialDataByType('surfaceMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="unit" label="单位" width="70" />
 
                                 <el-table-column prop="materialName" label="材料名称">
                                     <template #default="scope">
@@ -1263,6 +1270,7 @@
                             <el-table :data="getMaterialDataByType('insideMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="unit" label="单位" width="70" />
 
                                 <el-table-column prop="materialName" label="材料名称">
                                     <template #default="scope">
@@ -1361,6 +1369,7 @@
                             <el-table :data="getMaterialDataByType('accessoryMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="unit" label="单位" width="70" />
 
                                 <el-table-column prop="materialName" label="材料名称">
                                     <template #default="scope">
@@ -1475,6 +1484,7 @@
                             <el-table :data="getMaterialDataByType('outsoleMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="unit" label="单位" width="70" />
                                 <el-table-column prop="materialName" label="材料名称">
                                     <template #default="scope">
                                         <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
@@ -1573,6 +1583,7 @@
                             <el-table :data="getMaterialDataByType('midsoleMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
                                 <el-table-column prop="materialType" label="材料类型" />
+                                <el-table-column prop="unit" label="单位" width="70" />
                                 <el-table-column prop="materialName" label="材料名称">
                                     <template #default="scope">
                                         <el-select v-model="scope.row.materialName" filterable @blur="trimInput(scope.row, 'materialName')" @change="handleMaterialNameSelect(scope.row, $event)">
@@ -1671,6 +1682,7 @@
                         <el-col :span="24" :offset="0">
                             <el-table :data="getMaterialDataByType('hotsoleMaterialData')" border style="width: 100%">
                                 <el-table-column type="index"></el-table-column>
+                                <el-table-column prop="unit" label="单位" width="70" />
                                 <el-table-column prop="materialType" label="材料类型">
                                     <template #default="scope">
                                         <el-select

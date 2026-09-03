@@ -220,6 +220,7 @@
                                 >
                                     <vxe-column type="seq" width="55" row-resize></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
@@ -323,6 +324,7 @@
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
@@ -430,6 +432,7 @@
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
@@ -534,6 +537,7 @@
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
@@ -638,6 +642,7 @@
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <vxe-column field="supplierName" title="厂家名称" width="150" :edit-render="{}">
                                         <template #default="{ row }">
                                             <span>{{ row.supplierName }}</span>
@@ -742,6 +747,7 @@
                                 >
                                     <vxe-column type="seq" width="55"></vxe-column>
                                     <vxe-column field="materialType" title="材料类型" width="80"></vxe-column>
+                                    <vxe-column field="unit" title="单位" width="70"></vxe-column>
                                     <!-- <vxe-column field="materialDetailType" title="材料二级类型"
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #edit="{ row }">
