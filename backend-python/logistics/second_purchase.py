@@ -210,12 +210,16 @@ def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
     return results
 
 
-def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bom_item):
+def _split_accessory_by_order_shoe(
+    order_shoe_id, purchase_order_item, source_bom_item, split_by_pair=False
+):
     """
     按面色拆分辅料采购量。
     直接用 POI 自身的 material_id/model/spec/color 查询该订单鞋款所有配色下的 BOM 条目，
     不依赖 source_bom_item 的 bom_item_id（避免老 BOM 条目 zipper_pair_id=NULL 的干扰）。
-    同色取 zipper_pair_id 最大非 NULL 的行（优先已配对行）。
+    split_by_pair=False：同色取 zipper_pair_id 最大非 NULL 的行（优先已配对行）。
+    split_by_pair=True（鞋眼）：按 (鞋型颜色, 配对组) 分组，使配对鞋眼与单独鞋眼
+    各自成行，按用量占比分摊采购量。
     返回 [(shoe_color_name, amount, zipper_pair_id), ...]
     """
     material_id = purchase_order_item.material_id
@@ -253,36 +257,53 @@ def _split_accessory_by_order_shoe(order_shoe_id, purchase_order_item, source_bo
 
     color_rows = q.all()
 
-    # 按鞋型颜色去重：同色优先保留有 zipper_pair_id 的行
-    seen: dict = {}
-    for r in color_rows:
-        key = r.Color.color_id
-        if key not in seen:
-            seen[key] = r
-        elif seen[key].pair_id is None and r.pair_id is not None:
-            seen[key] = r
-    color_rows = list(seen.values())
+    # 归组：
+    #  - 普通辅料(split_by_pair=False)：按鞋型颜色去重（同色优先保留有 zipper_pair_id 的行）
+    #  - 鞋眼(split_by_pair=True)：按 (鞋型颜色, 配对组) 分组，使配对鞋眼(+垫片)与
+    #    单独鞋眼分别成行
+    if split_by_pair:
+        grouped: dict = {}
+        for r in color_rows:
+            key = (r.Color.color_id, r.pair_id)
+            usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
+            if key not in grouped:
+                grouped[key] = [r.Color.color_name, r.pair_id, usage]
+            else:
+                grouped[key][2] += usage
+        buckets = list(grouped.values())
+    else:
+        seen: dict = {}
+        for r in color_rows:
+            key = r.Color.color_id
+            if key not in seen:
+                seen[key] = r
+            elif seen[key].pair_id is None and r.pair_id is not None:
+                seen[key] = r
+        buckets = [
+            [
+                r.Color.color_name,
+                r.pair_id,
+                Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0),
+            ]
+            for r in seen.values()
+        ]
 
-    if not color_rows:
+    if not buckets:
         return [("", purchase_order_item.purchase_amount, None)]
-    if len(color_rows) == 1:
-        r = color_rows[0]
-        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.pair_id)]
+    if len(buckets) == 1:
+        b = buckets[0]
+        return [(b[0], purchase_order_item.purchase_amount, b[1])]
 
-    total_usage = sum(
-        Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
-        for r in color_rows
-    )
+    total_usage = sum(b[2] for b in buckets)
     if total_usage == 0:
-        return [(r.Color.color_name, purchase_order_item.purchase_amount, r.pair_id)
-                for r in color_rows[:1]]
+        b = buckets[0]
+        return [(b[0], purchase_order_item.purchase_amount, b[1])]
     results = []
     purchase_dec = Decimal(str(purchase_order_item.purchase_amount))
-    for r in color_rows:
-        usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
-        proportion = usage / total_usage
+    for b in buckets:
+        proportion = b[2] / total_usage
         color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        results.append((r.Color.color_name, color_amount, r.pair_id))
+        results.append((b[0], color_amount, b[1]))
     return results
 
 material_order = case(
@@ -1624,10 +1645,16 @@ def submit_purchase_divide_orders():
             }
             # For accessory items (non-standard), split quantity by shoe color
             if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
+                # 鞋眼按 (颜色,配对组) 拆分，配对鞋眼与单独鞋眼各自成行
+                _split_by_pair = (
+                    "鞋眼" in (material.material_name or "")
+                    and "垫片" not in (purchase_order_item.material_model or "")
+                )
                 color_splits = _split_accessory_by_order_shoe(
                     purchase_order.order_shoe_id,
                     purchase_order_item,
                     bom_item,
+                    split_by_pair=_split_by_pair,
                 )
                 for _shoe_color_name, _color_amount, _pair_id in color_splits:
                     _item_copy = dict(_base_item)
@@ -2346,10 +2373,16 @@ def download_purchase_order_zip():
             }
             # 辅料：按配色拆分，使用 POI 自身字段（material_id/model/spec/color）查 BOM
             if material.material_type_id not in _ACCESSORY_SPLIT_EXCLUDE_TYPES:
+                # 鞋眼按 (颜色,配对组) 拆分，配对鞋眼与单独鞋眼各自成行
+                _split_by_pair = (
+                    "鞋眼" in (material.material_name or "")
+                    and "垫片" not in (purchase_order_item.material_model or "")
+                )
                 color_splits = _split_accessory_by_order_shoe(
                     purchase_order.order_shoe_id,
                     purchase_order_item,
                     bom_item,
+                    split_by_pair=_split_by_pair,
                 )
                 for _shoe_color_name, _color_amount, _pair_id in color_splits:
                     _item_copy = dict(_base_item)

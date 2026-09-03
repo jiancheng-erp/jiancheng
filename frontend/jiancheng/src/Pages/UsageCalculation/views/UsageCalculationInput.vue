@@ -144,6 +144,11 @@
                             <el-table-column prop="materialModel" label="材料型号" />
                             <el-table-column prop="materialSpecification" label="材料规格"> </el-table-column>
                             <el-table-column prop="color" label="颜色"> </el-table-column>
+                            <el-table-column prop="zipperPairId" label="配对组" width="80">
+                                <template #default="scope">
+                                    <span>{{ scope.row.zipperPairId ?? '—' }}</span>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="unit" label="单位"> </el-table-column>
                             <el-table-column prop="unitUsage" label="单位用量">
                                 <template #default="scope">
@@ -202,6 +207,11 @@
                                 <el-table-column prop="materialModel" label="材料型号" />
                                 <el-table-column prop="materialSpecification" label="材料规格" />
                                 <el-table-column prop="color" label="颜色"> </el-table-column>
+                                <el-table-column prop="zipperPairId" label="配对组" width="80">
+                                    <template #default="scope">
+                                        <span>{{ scope.row.zipperPairId ?? '—' }}</span>
+                                    </template>
+                                </el-table-column>
                                 <el-table-column prop="unit" label="单位" />
                                 <el-table-column prop="supplierName" label="厂家名称" />
                                 <el-table-column prop="unitUsage" label="单位用量">

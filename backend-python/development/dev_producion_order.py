@@ -1753,12 +1753,39 @@ def download_pic_notes():
 @dev_producion_order_bp.route("/devproductionorder/getmaterialdetail", methods=["GET"])
 def get_material_detail():
     material_name = request.args.get("materialName")
-    material = (
-        db.session.query(Material, MaterialType)
-        .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
-        .filter(Material.material_name == material_name)
-        .first()
-    )
+    supplier_name = (request.args.get("supplierName") or "").strip()
+
+    # 优先按 (材料名, 厂家) 精确匹配：该厂家已有此材料（非新增）时返回其单位
+    material = None
+    if supplier_name and supplier_name != DEFAULT_SUPPLIER:
+        supplier = (
+            db.session.query(Supplier)
+            .filter(Supplier.supplier_name == supplier_name)
+            .first()
+        )
+        if supplier:
+            material = (
+                db.session.query(Material, MaterialType)
+                .join(
+                    MaterialType,
+                    Material.material_type_id == MaterialType.material_type_id,
+                )
+                .filter(
+                    Material.material_name == material_name,
+                    Material.material_supplier == supplier.supplier_id,
+                )
+                .first()
+            )
+
+    # 新增材料（该厂家无此材料）：回退到"询价"厂家记录，按询价给出单位
+    if material is None:
+        material = (
+            db.session.query(Material, MaterialType)
+            .join(MaterialType, Material.material_type_id == MaterialType.material_type_id)
+            .filter(Material.material_name == material_name)
+            .first()
+        )
+
     if material:
         return jsonify(
             {
@@ -1770,6 +1797,7 @@ def get_material_detail():
         )
     else:
         return jsonify({}), 200
+
 
 
 def transform_standard_size_dict_to_grid(standard_size_dict):

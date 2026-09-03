@@ -342,13 +342,15 @@ def get_ordershoe_materials():
             "linkRootId": r[9],
         })
 
-    # 按 material_id 聚合
+    # 按 material_id + 型号 + 规格 + 颜色 聚合（颜色进入 key，使同名同型号同规格
+    # 但颜色不同的材料拆分为独立行，便于单独修改）
     grouped = {}
     for it in items:
         mid = it["materialId"]
         model = it.get("materialModel") or ""
         spec = it.get("materialSpecification") or ""
-        gkey = (mid, model, spec)
+        color = it.get("color") or ""
+        gkey = (mid, model, spec, color)
         if gkey not in grouped:
             grouped[gkey] = {
                 "materialId": mid,
@@ -358,6 +360,7 @@ def get_ordershoe_materials():
                 "materialCategory": it.get("materialCategory", 0),
                 "groupModel": model,
                 "groupSpec": spec,
+                "groupColor": color,
                 "items": [],
                 "colorPresence": set(),
             }
@@ -370,7 +373,7 @@ def get_ordershoe_materials():
         g["colorPresence"] = sorted(g["colorPresence"])
         result.append(g)
 
-    result.sort(key=lambda x: (x["materialName"], x["groupModel"], x["groupSpec"]))
+    result.sort(key=lambda x: (x["materialName"], x["groupModel"], x["groupSpec"], x["groupColor"]))
     return jsonify({"result": result})
 
 
@@ -379,11 +382,12 @@ def get_ordershoe_materials():
 # ===========================================================================
 
 def _resolve_targets(order_shoe_id, scope, order_shoe_type_id, material_id,
-                     group_model=None, group_spec=None):
+                     group_model=None, group_spec=None, group_color=None):
     """
     根据范围确定本次操作要更新的目标集合（以 PI item 为根）。
-    group_model / group_spec: 若指定，则兜底匹配时额外限定 material_model / material_specification，
-    使操作仅影响同名材料下特定型号/规格的记录。
+    group_model / group_spec / group_color: 若指定，则兜底匹配时额外限定
+    material_model / material_specification / 材料颜色，
+    使操作仅影响同名材料下特定型号/规格/颜色的记录。
 
     Returns: dict {
         "pi_item_ids":   [int],   # PI 项 id（链路根）
@@ -393,8 +397,8 @@ def _resolve_targets(order_shoe_id, scope, order_shoe_type_id, material_id,
         "scope_ostids":  [int],   # 本次操作覆盖的配色集合（用于兜底匹配）
     }
     """
-    def _model_clause(alias="pii"):
-        """生成 model/spec 过滤子句及参数（仅在 group_model/spec 不为 None 时添加）。"""
+    def _model_clause(alias="pii", color_col="color"):
+        """生成 model/spec/颜色 过滤子句及参数（仅在对应 group_* 不为 None 时添加）。"""
         clause, extra = "", {}
         if group_model is not None:
             clause += f" AND ({alias}.material_model = :gmodel OR ({alias}.material_model IS NULL AND :gmodel = ''))"
@@ -402,6 +406,9 @@ def _resolve_targets(order_shoe_id, scope, order_shoe_type_id, material_id,
         if group_spec is not None:
             clause += f" AND ({alias}.material_specification = :gspec OR ({alias}.material_specification IS NULL AND :gspec = ''))"
             extra["gspec"] = group_spec
+        if group_color is not None and color_col:
+            clause += f" AND ({alias}.{color_col} = :gcolor OR ({alias}.{color_col} IS NULL AND :gcolor = ''))"
+            extra["gcolor"] = group_color
         return clause, extra
 
     # 1) PI item 候选：order_shoe_id × material_id × scope × [model/spec]
@@ -458,7 +465,7 @@ def _resolve_targets(order_shoe_id, scope, order_shoe_type_id, material_id,
         {"pids": pi_item_ids}).fetchall()
         bom_item_ids.update(r[0] for r in rows)
 
-    bmc, bmp = _model_clause("bi")
+    bmc, bmp = _model_clause("bi", color_col="bom_item_color")
     # BOM 用 bom_item_color 作为颜色列，model/spec 列名相同
     bom_fallback_sql = f"""
         SELECT bi.bom_item_id
@@ -561,6 +568,7 @@ def _validate_payload(data):
         "order_shoe_type_id": int(order_shoe_type_id) if order_shoe_type_id else 0,
         "group_model": data.get("groupModel"),   # None = no filter; "" = explicit empty
         "group_spec": data.get("groupSpec"),
+        "group_color": data.get("groupColor"),
         "new_material_id": int(new_material_id) if new_material_id else None,
         "new_model": new_model,
         "new_spec": new_spec,
@@ -583,6 +591,7 @@ def preview_batch_edit():
         args["order_shoe_type_id"], args["material_id"],
         group_model=args.get("group_model"),
         group_spec=args.get("group_spec"),
+        group_color=args.get("group_color"),
     )
 
     # 供应商变化检测
@@ -665,6 +674,7 @@ def batch_edit_materials():
         args["order_shoe_type_id"], args["material_id"],
         group_model=args.get("group_model"),
         group_spec=args.get("group_spec"),
+        group_color=args.get("group_color"),
     )
 
     new_material_id = args["new_material_id"]
@@ -965,13 +975,15 @@ def batch_delete_material():
 
     t = _resolve_targets(order_shoe_id, scope, order_shoe_type_id, material_id,
                          group_model=data.get("groupModel"),
-                         group_spec=data.get("groupSpec"))
+                         group_spec=data.get("groupSpec"),
+                         group_color=data.get("groupColor"))
 
     # 对于删除操作，采购订单项单独解析，不使用 _resolve_targets 的兜底匹配，
     # 只删除严格通过 BOM 链路找到且与本组材料信息完全匹配的采购订单项。
     # 这防止数据不一致时（如 POI.bom_item_id 指向错误组的 BOM 项）误删其他组的采购订单项。
     group_model = data.get("groupModel")
     group_spec = data.get("groupSpec")
+    group_color = data.get("groupColor")
 
     safe_po_ids = set()
     if t["bom_item_ids"]:
@@ -989,6 +1001,11 @@ def batch_delete_material():
             bi_clause  += " AND (bi.material_specification  = :bi_gs  OR (bi.material_specification  IS NULL AND :bi_gs  = ''))"
             poi_p["poi_gs"] = group_spec
             bi_p["bi_gs"]   = group_spec
+        if group_color is not None:
+            poi_clause += " AND (poi.color = :poi_gc OR (poi.color IS NULL AND :poi_gc = ''))"
+            bi_clause  += " AND (bi.bom_item_color = :bi_gc OR (bi.bom_item_color IS NULL AND :bi_gc = ''))"
+            poi_p["poi_gc"] = group_color
+            bi_p["bi_gc"]   = group_color
 
         rows = db.session.execute(
             text(f"""
@@ -1348,8 +1365,8 @@ def sync_inconsistent_material():
     if not order_shoe_id or not material_id:
         return jsonify({"error": "缺少 orderShoeId 或 materialId"}), 400
 
-    def _mf(alias):
-        """生成 model/spec 过滤子句"""
+    def _mf(alias, color_col="color"):
+        """生成 model/spec/颜色 过滤子句"""
         clause, extra = "", {}
         if group_model is not None:
             clause += (f" AND ({alias}.material_model = :gmodel"
@@ -1359,6 +1376,11 @@ def sync_inconsistent_material():
             clause += (f" AND ({alias}.material_specification = :gspec"
                        f" OR ({alias}.material_specification IS NULL AND :gspec = ''))")
             extra["gspec"] = group_spec
+        _gc = data.get("groupColor")
+        if _gc is not None and color_col:
+            clause += (f" AND ({alias}.{color_col} = :gcolor"
+                       f" OR ({alias}.{color_col} IS NULL AND :gcolor = ''))")
+            extra["gcolor"] = _gc
         return clause, extra
 
     # 1) PI 中已有的 ost_ids（取完整字段，后续 PI→CS 创建时需要）
@@ -1451,7 +1473,7 @@ def sync_inconsistent_material():
 
             if bom:
                 # 查该 BOM 中是否已有该材料+型号+规格的条目
-                bom_mc, bom_mp = _mf("bi")
+                bom_mc, bom_mp = _mf("bi", color_col="bom_item_color")
                 existing_bom_items = db.session.execute(text(f"""
                     SELECT bi.bom_item_id FROM bom_item bi
                     WHERE bi.bom_id = :bid AND bi.material_id = :mid{bom_mc}
@@ -1564,7 +1586,7 @@ def create_missing_bom_items():
     if not order_shoe_id or not material_id or not items_payload:
         return jsonify({"error": "缺少必填参数 orderShoeId / materialId / items"}), 400
 
-    def _mf(alias):
+    def _mf(alias, color_col="color"):
         clause, extra = "", {}
         if group_model is not None:
             clause += (f" AND ({alias}.material_model = :gmodel"
@@ -1574,6 +1596,11 @@ def create_missing_bom_items():
             clause += (f" AND ({alias}.material_specification = :gspec"
                        f" OR ({alias}.material_specification IS NULL AND :gspec = ''))")
             extra["gspec"] = group_spec
+        _gc = data.get("groupColor")
+        if _gc is not None and color_col:
+            clause += (f" AND ({alias}.{color_col} = :gcolor"
+                       f" OR ({alias}.{color_col} IS NULL AND :gcolor = ''))")
+            extra["gcolor"] = _gc
         return clause, extra
 
     # PI 项：按 ost_id 索引，用于取 material_model/spec/color/dept/second_type
@@ -1669,7 +1696,7 @@ def create_missing_po_items():
     supplier_id = material.material_supplier
     supplier_suffix = str(supplier_id).zfill(4)
 
-    def _mf(alias):
+    def _mf(alias, color_col="color"):
         clause, extra = "", {}
         if group_model is not None:
             clause += (f" AND ({alias}.material_model = :gmodel"
@@ -1679,10 +1706,15 @@ def create_missing_po_items():
             clause += (f" AND ({alias}.material_specification = :gspec"
                        f" OR ({alias}.material_specification IS NULL AND :gspec = ''))")
             extra["gspec"] = group_spec
+        _gc = data.get("groupColor")
+        if _gc is not None and color_col:
+            clause += (f" AND ({alias}.{color_col} = :gcolor"
+                       f" OR ({alias}.{color_col} IS NULL AND :gcolor = ''))")
+            extra["gcolor"] = _gc
         return clause, extra
 
     # BOM 项：按 ost_id 索引（取 bom_type=0 一次BOM）
-    bi_mc, bi_mp = _mf("bi")
+    bi_mc, bi_mp = _mf("bi", color_col="bom_item_color")
     bom_rows = db.session.execute(text(f"""
         SELECT bi.bom_item_id, b.order_shoe_type_id,
                bi.material_model, bi.material_specification, bi.bom_item_color,
