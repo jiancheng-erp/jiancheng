@@ -64,10 +64,11 @@ def generate_accessory_purchase_order(file_path, order_data):
     # ── Data rows ─────────────────────────────────────────────────────────────
     # Merge rows with same 工厂货号 + 材料货号 + 颜色 by summing 数量
     # 注意：帽钉按配对组拆分的行带有 _pair_id，需纳入合并键，避免拆分后又被合并回一行
+    # _row_key（bom_item_id）用于让技术部填写的完全相同重复行保持分行，不被合并
     raw_series = order_data.get("seriesData", [])
     merged: dict = {}
     for item in raw_series:
-        key = (item.get("工厂货号", ""), item.get("材料货号", ""), item.get("颜色", ""), item.get("_pair_id"))
+        key = (item.get("工厂货号", ""), item.get("材料货号", ""), item.get("颜色", ""), item.get("_pair_id"), item.get("_row_key"))
         if key in merged:
             try:
                 merged[key]["数量"] = (merged[key]["数量"] or 0) + (item.get("数量") or 0)
@@ -706,6 +707,8 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 "单位": item.get("单位", ""),
                 "数量": item.get("数量", ""),
                 "备注": item.get("备注", ""),
+                # 保留 BOM 行标识，使完全相同的重复行在写表合并阶段不被合并
+                "_row_key": item.get("_row_key"),
             })
 
         base_meta = {k: v for k, v in data.items() if k != "seriesData"}
@@ -719,8 +722,12 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             }
 
         if other_series:
-            # 排序：工厂货号 → 配对组（同组帽钉相邻）→ 材料货号
+            # 排序：优先按 BOM 录入顺序（_row_key=bom_item_id）排列带 BOM 标识的辅料，
+            # 其余（鞋眼/帽钉等无 BOM 标识的拆分行）按 工厂货号→配对组→材料货号，
+            # 保持同组帽钉相邻。
             other_series.sort(key=lambda x: (
+                0 if x.get("_row_key") is not None else 1,
+                x.get("_row_key") if x.get("_row_key") is not None else 0,
                 x.get("工厂货号", ""),
                 x.get("_pair_id") if x.get("_pair_id") is not None else 32767,
                 x.get("材料货号", ""),
