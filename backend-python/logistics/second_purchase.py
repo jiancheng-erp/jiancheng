@@ -220,7 +220,8 @@ def _split_accessory_by_order_shoe(
     split_by_pair=False：同色取 zipper_pair_id 最大非 NULL 的行（优先已配对行）。
     split_by_pair=True（鞋眼）：按 (鞋型颜色, 配对组) 分组，使配对鞋眼与单独鞋眼
     各自成行，按用量占比分摊采购量。
-    返回 [(shoe_color_name, amount, zipper_pair_id), ...]
+    返回 [(shoe_color_name, amount, zipper_pair_id, row_key), ...]
+    row_key（非鞋眼时为 bom_item_id）用于让完全相同的重复 BOM 行在 Excel 合并阶段保持分行。
     """
     material_id = purchase_order_item.material_id
     material_model = purchase_order_item.material_model
@@ -258,52 +259,52 @@ def _split_accessory_by_order_shoe(
     color_rows = q.all()
 
     # 归组：
-    #  - 普通辅料(split_by_pair=False)：按鞋型颜色去重（同色优先保留有 zipper_pair_id 的行）
     #  - 鞋眼(split_by_pair=True)：按 (鞋型颜色, 配对组) 分组，使配对鞋眼(+垫片)与
     #    单独鞋眼分别成行
+    #  - 其它辅料(split_by_pair=False)：每个 BOM 行各自成行，技术部填写的完全相同的
+    #    重复辅料行在采购 Excel 中保持分行（不按鞋型颜色去重）
+    # bucket 结构：[shoe_color_name, pair_id, usage, row_key]
+    # row_key 用于让「完全相同的重复 BOM 行」在采购 Excel 合并阶段保持分行（取 bom_item_id）
     if split_by_pair:
         grouped: dict = {}
         for r in color_rows:
             key = (r.Color.color_id, r.pair_id)
             usage = Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0)
             if key not in grouped:
-                grouped[key] = [r.Color.color_name, r.pair_id, usage]
+                grouped[key] = [r.Color.color_name, r.pair_id, usage, None]
             else:
                 grouped[key][2] += usage
         buckets = list(grouped.values())
     else:
-        seen: dict = {}
-        for r in color_rows:
-            key = r.Color.color_id
-            if key not in seen:
-                seen[key] = r
-            elif seen[key].pair_id is None and r.pair_id is not None:
-                seen[key] = r
         buckets = [
             [
                 r.Color.color_name,
                 r.pair_id,
                 Decimal(str(r.BomItem.total_usage)) if r.BomItem.total_usage else Decimal(0),
+                r.BomItem.bom_item_id,
             ]
-            for r in seen.values()
+            for r in sorted(
+                color_rows,
+                key=lambda x: (x.Color.color_name or "", x.BomItem.bom_item_id),
+            )
         ]
 
     if not buckets:
-        return [("", purchase_order_item.purchase_amount, None)]
+        return [("", purchase_order_item.purchase_amount, None, None)]
     if len(buckets) == 1:
         b = buckets[0]
-        return [(b[0], purchase_order_item.purchase_amount, b[1])]
+        return [(b[0], purchase_order_item.purchase_amount, b[1], b[3])]
 
     total_usage = sum(b[2] for b in buckets)
     if total_usage == 0:
         b = buckets[0]
-        return [(b[0], purchase_order_item.purchase_amount, b[1])]
+        return [(b[0], purchase_order_item.purchase_amount, b[1], b[3])]
     results = []
     purchase_dec = Decimal(str(purchase_order_item.purchase_amount))
     for b in buckets:
         proportion = b[2] / total_usage
         color_amount = (purchase_dec * proportion).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        results.append((b[0], color_amount, b[1]))
+        results.append((b[0], color_amount, b[1], b[3]))
     return results
 
 material_order = case(
@@ -1656,11 +1657,12 @@ def submit_purchase_divide_orders():
                     bom_item,
                     split_by_pair=_split_by_pair,
                 )
-                for _shoe_color_name, _color_amount, _pair_id in color_splits:
+                for _shoe_color_name, _color_amount, _pair_id, _row_key in color_splits:
                     _item_copy = dict(_base_item)
                     _item_copy["数量"] = _color_amount
                     _item_copy["_shoe_color"] = _shoe_color_name or ""
                     _item_copy["_zipper_pair_id"] = _pair_id
+                    _item_copy["_row_key"] = _row_key
                     purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_item_copy)
             else:
                 purchase_divide_order_dict[purchase_order_id]["seriesData"].append(_base_item)
@@ -2384,11 +2386,12 @@ def download_purchase_order_zip():
                     bom_item,
                     split_by_pair=_split_by_pair,
                 )
-                for _shoe_color_name, _color_amount, _pair_id in color_splits:
+                for _shoe_color_name, _color_amount, _pair_id, _row_key in color_splits:
                     _item_copy = dict(_base_item)
                     _item_copy["数量"] = _color_amount
                     _item_copy["_shoe_color"] = _shoe_color_name or ""
                     _item_copy["_zipper_pair_id"] = _pair_id
+                    _item_copy["_row_key"] = _row_key
                     purchase_divide_order_dict[pdo_rid]["seriesData"].append(_item_copy)
             else:
                 # 面料/里料/化工：直接用 JOIN 到的配色
