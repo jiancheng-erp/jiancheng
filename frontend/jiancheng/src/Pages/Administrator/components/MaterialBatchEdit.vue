@@ -1981,8 +1981,9 @@ export default {
             if (!kw) { ElMessage.warning('请输入搜索关键字'); return }
             this.materialSearchLoading = true
             try {
-                const res = await axios.get(`${this.$apiBaseUrl}/material/variants`, {
-                    params: { materialName: kw, pageSize: 50, page: 1, showAll: 'true' },
+                // 直接查 material 基础表，包含尚未被任何单据引用的新材料，避免搜不全
+                const res = await axios.get(`${this.$apiBaseUrl}/material/search-materials`, {
+                    params: { materialName: kw, limit: 50 },
                 })
                 this.materialSearchResults = (res.data.result || []).map(m => ({
                     materialId: m.materialId,

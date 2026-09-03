@@ -14,8 +14,8 @@
         <el-table-column prop="craftName" label="工艺名称"></el-table-column>
         <el-table-column prop="color" label="颜色">
         </el-table-column>
-        <!-- <el-table-column prop="unit" label="单位">
-        </el-table-column> -->
+        <el-table-column prop="unit" label="单位">
+        </el-table-column>
         <el-table-column prop="comment" label="备注">
         </el-table-column>
         <el-table-column prop="processingRemark" label="加工备注">
