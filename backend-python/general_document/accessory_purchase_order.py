@@ -356,6 +356,10 @@ def _find_matching_washer(e, washer_items):
         w.get("_zipper_pair_id") is not None for w in washer_items
     )
 
+    # 垫片已使用配对组编号时，未编号(单独)鞋眼视为无垫片，不追加"+垫片"
+    if washers_have_pid and pid is None:
+        return None
+
     # 使用配对组编号时，严格按编号配对
     if pid is not None and washers_have_pid:
         candidates = [w for w in washer_items if w.get("_zipper_pair_id") == pid]

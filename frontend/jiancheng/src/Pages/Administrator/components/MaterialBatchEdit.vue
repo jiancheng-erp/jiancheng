@@ -1033,6 +1033,7 @@ export default {
             const parts = [this.editTarget.materialName]
             if (this.editTarget.groupModel) parts.push(this.editTarget.groupModel)
             if (this.editTarget.groupSpec) parts.push(this.editTarget.groupSpec)
+            if (this.editTarget.groupColor) parts.push(this.editTarget.groupColor)
             return `同步修改材料：${parts.join(' / ')} (ID: ${this.editTarget.materialId})`
         },
         filteredGroups() {
@@ -1534,7 +1535,7 @@ export default {
 
         // ===== 同步不一致材料 =====
         rowGroupKey(row) {
-            return `${row.materialId}|${row.groupModel || ''}|${row.groupSpec || ''}`
+            return `${row.materialId}|${row.groupModel || ''}|${row.groupSpec || ''}|${row.groupColor || ''}`
         },
         async syncMaterial(row) {
             // 计算两个方向的缺失信息（供确认弹框展示）
@@ -1574,6 +1575,7 @@ export default {
                     materialId: row.materialId,
                     groupModel: row.groupModel ?? null,
                     groupSpec: row.groupSpec ?? null,
+                    groupColor: row.groupColor ?? null,
                 })
                 ElMessage.success(res.data.message || '同步成功')
                 this.fetchMaterials()
@@ -1654,6 +1656,7 @@ export default {
                     materialId: this.bom1SyncTarget.materialId,
                     groupModel: this.bom1SyncTarget.groupModel ?? null,
                     groupSpec: this.bom1SyncTarget.groupSpec ?? null,
+                    groupColor: this.bom1SyncTarget.groupColor ?? null,
                     items: this.bom1SyncRows.map(r => ({
                         ostId: r.ostId,
                         unitUsage: r.unitUsage,
@@ -1755,6 +1758,7 @@ export default {
                     materialId: this.poSyncTarget.materialId,
                     groupModel: this.poSyncTarget.groupModel ?? null,
                     groupSpec: this.poSyncTarget.groupSpec ?? null,
+                    groupColor: this.poSyncTarget.groupColor ?? null,
                     items: this.poSyncRows.map(r => ({
                         ostId: r.ostId,
                         purchaseAmount: r.purchaseAmount,
@@ -1795,6 +1799,7 @@ export default {
                     materialId: target.materialId,
                     groupModel: target.groupModel ?? null,
                     groupSpec: target.groupSpec ?? null,
+                    groupColor: target.groupColor ?? null,
                     scope: this.deleteForm.scope,
                 }
                 if (this.deleteForm.scope === 'color') body.orderShoeTypeId = this.selectedColorTypeId
@@ -2001,6 +2006,7 @@ export default {
                 materialId: this.editTarget.materialId,
                 groupModel: this.editTarget.groupModel ?? null,
                 groupSpec: this.editTarget.groupSpec ?? null,
+                groupColor: this.editTarget.groupColor ?? null,
                 scope: f.scope,
             }
             if (f.scope === 'color') body.orderShoeTypeId = this.selectedColorTypeId

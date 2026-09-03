@@ -242,7 +242,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -341,7 +341,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -439,7 +439,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -552,7 +552,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -650,7 +650,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -769,7 +769,7 @@
                                     </el-table-column>
                                     <el-table-column prop="supplierName" label="厂家名称">
                                         <template #default="scope">
-                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                            <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                                 <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                             </el-select>
                                         </template>
@@ -1181,7 +1181,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -1281,7 +1281,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -1380,7 +1380,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -1494,7 +1494,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -1593,7 +1593,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -1715,7 +1715,7 @@
                                 </el-table-column>
                                 <el-table-column prop="supplierName" label="厂家名称">
                                     <template #default="scope">
-                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
+                                        <el-select v-model="scope.row.supplierName" filterable clearable placeholder="请选择厂家" @change="handleSupplierChange(scope.row)" :maxlength="wordLengths.SUPPLIER_NAME_LENGTH" style="width: 100%">
                                             <el-option v-for="item in supplierNameOptions" :key="item.supplierName" :value="item.supplierName" :label="item.supplierName" />
                                         </el-select>
                                     </template>
@@ -2884,10 +2884,22 @@ export default {
             }
         },
         async handleMaterialNameSelect(row, selectedItem) {
-            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getmaterialdetail?materialName=${row.materialName}`)
-            row.materialId = response.data.materialId
-            row.unit = response.data.unit
-            row.materialType = response.data.materialType
+            await this.refreshMaterialUnit(row)
+        },
+        async handleSupplierChange(row) {
+            await this.refreshMaterialUnit(row)
+        },
+        // 按 (材料名, 厂家) 取单位：该厂家已有此材料返回其单位，新增材料按"询价"单位
+        async refreshMaterialUnit(row) {
+            if (!row.materialName) return
+            const response = await axios.get(`${this.$apiBaseUrl}/devproductionorder/getmaterialdetail`, {
+                params: { materialName: row.materialName, supplierName: row.supplierName || '' }
+            })
+            if (response.data && response.data.materialId != null) {
+                row.materialId = response.data.materialId
+                row.unit = response.data.unit
+                row.materialType = response.data.materialType
+            }
         },
         handleSupplierNameSelect(row, selectedItem) {
             row.supplierName = selectedItem.value

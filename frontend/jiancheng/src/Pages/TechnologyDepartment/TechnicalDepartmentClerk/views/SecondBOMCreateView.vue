@@ -846,7 +846,7 @@ export default {
             }
             const uniqueRows = new Set()
             for (const row of this.bomTestData) {
-                const rowIdentifier = `${row.materialType}-${row.materialName}-${row.color}-${row.supplierName}`
+                const rowIdentifier = `${row.materialType}-${row.materialName}-${row.color}-${row.supplierName}-${row.craftName}-${row.materialModel}-${row.materialSpecification}`
                 if (uniqueRows.has(rowIdentifier)) {
                     this.$message({
                         type: 'warning',
@@ -887,7 +887,7 @@ export default {
             }
             const uniqueRows = new Set()
             for (const row of this.editBomData) {
-                const rowIdentifier = `${row.materialType}-${row.materialName}-${row.color}-${row.supplierName}`
+                const rowIdentifier = `${row.materialType}-${row.materialName}-${row.color}-${row.supplierName}-${row.craftName}-${row.materialModel}-${row.materialSpecification}`
                 if (uniqueRows.has(rowIdentifier)) {
                     this.$message({
                         type: 'warning',
