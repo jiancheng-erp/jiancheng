@@ -2305,6 +2305,55 @@ def get_order_doc_info():
     return jsonify(result)
 
 
+@order_bp.route("/order/getordershoestatusoptions", methods=["GET"])
+def get_order_shoe_status_options():
+    references = (
+        db.session.query(OrderShoeStatusReference)
+        .order_by(OrderShoeStatusReference.status_id.asc())
+        .all()
+    )
+    options = [
+        {"value": ref.status_id, "label": ref.status_name} for ref in references
+    ]
+    return jsonify({"options": options})
+
+
+def _get_linger_info_for_shoe(order_shoe_id, linger_stage_id=None, min_stay_days=0):
+    """Collect active (in-progress) statuses for an order shoe and compute stay days."""
+    query = (
+        db.session.query(OrderShoeStatus, OrderShoeStatusReference)
+        .join(
+            OrderShoeStatusReference,
+            OrderShoeStatus.current_status == OrderShoeStatusReference.status_id,
+        )
+        .filter(
+            OrderShoeStatus.order_shoe_id == order_shoe_id,
+            OrderShoeStatus.current_status_value == 0,
+        )
+    )
+    if linger_stage_id is not None:
+        query = query.filter(OrderShoeStatus.current_status == linger_stage_id)
+    now = datetime.now()
+    names = []
+    earliest = None
+    max_delay = 0
+    for status, ref in query.all():
+        entered = status.update_time or status.create_time
+        delay_days = (now - entered).days if entered else 0
+        if min_stay_days and delay_days < min_stay_days:
+            continue
+        names.append(ref.status_name)
+        if entered and (earliest is None or entered < earliest):
+            earliest = entered
+        if delay_days > max_delay:
+            max_delay = delay_days
+    return {
+        "names": names,
+        "earliest": earliest.strftime("%Y-%m-%d %H:%M:%S") if earliest else "N/A",
+        "maxDelay": max_delay,
+    }
+
+
 @order_bp.route("/order/getorderfullinfo", methods=["GET"])
 def get_order_full_info():
     page = request.args.get("page", 1, type=int)
@@ -2315,6 +2364,14 @@ def get_order_full_info():
     shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
     order_cid_search = request.args.get("orderCIdSearch", "", type=str)
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
+    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
+    min_stay_days = request.args.get("minStayDays", 0, type=int)
+    try:
+        linger_stage_id = (
+            int(linger_stage_value) if linger_stage_value not in (None, "") else None
+        )
+    except (TypeError, ValueError):
+        linger_stage_id = None
 
     character, staff, department = current_user_info()
 
@@ -2455,6 +2512,21 @@ def get_order_full_info():
     #             OrderShoeStatus.current_status >= CRAFT_SHEET_ORDER_SHOE_STATUS
     #         )
 
+    if linger_stage_id is not None or min_stay_days > 0:
+        linger_subquery = db.session.query(OrderShoeStatus.order_shoe_id).filter(
+            OrderShoeStatus.current_status_value == 0
+        )
+        if linger_stage_id is not None:
+            linger_subquery = linger_subquery.filter(
+                OrderShoeStatus.current_status == linger_stage_id
+            )
+        if min_stay_days > 0:
+            cutoff_time = datetime.now() - timedelta(days=min_stay_days)
+            linger_subquery = linger_subquery.filter(
+                OrderShoeStatus.update_time <= cutoff_time
+            )
+        query = query.filter(OrderShoe.order_shoe_id.in_(linger_subquery))
+
     count_result = query.distinct().count()
     response = query.distinct().limit(page_size).offset((page - 1) * page_size).all()
 
@@ -2581,6 +2653,26 @@ def get_order_full_info():
                 "secondPurchaseOrderIssueEventTime": "N/A",
             }
 
+            linger_info = _get_linger_info_for_shoe(
+                order_shoe.order_shoe_id if order_shoe else None,
+                linger_stage_id,
+                min_stay_days,
+            )
+            matched_names = " | ".join(linger_info["names"]) if linger_info["names"] else ""
+            orders_dict[order.order_id]["shoes"][shoe_key].update(
+                {
+                    "matchedStatusName": matched_names,
+                    "matchedStatusUpdateTime": (
+                        linger_info["earliest"] if linger_info["names"] else ""
+                    ),
+                    "matchedStatusDelayText": (
+                        f'{linger_info["maxDelay"]}天' if linger_info["names"] else ""
+                    ),
+                    "_matchedNames": linger_info["names"],
+                    "_matchedDelay": linger_info["maxDelay"],
+                }
+            )
+
         # # Assign BOM based on bom_type
         # if bom:
         #     if bom.bom_type == 0:
@@ -2607,6 +2699,24 @@ def get_order_full_info():
         order_data["shoes"] = list(
             order_data["shoes"].values()
         )  # Convert shoe dict to list
+
+        matched_name_set = []
+        max_matched_delay = 0
+        has_match = False
+        for shoe in order_data["shoes"]:
+            for name in shoe.get("_matchedNames", []):
+                has_match = True
+                if name not in matched_name_set:
+                    matched_name_set.append(name)
+            if shoe.get("_matchedDelay", 0) > max_matched_delay:
+                max_matched_delay = shoe.get("_matchedDelay", 0)
+            shoe.pop("_matchedNames", None)
+            shoe.pop("_matchedDelay", None)
+        order_data["matchedStatusNames"] = " | ".join(matched_name_set)
+        order_data["maxMatchedDelayText"] = (
+            f"{max_matched_delay}天" if has_match else ""
+        )
+
         all_order_event_times = (
             db.session.query(Event).join(
                 Order, Event.event_order_id == Order.order_id
@@ -2673,6 +2783,146 @@ def get_order_full_info():
         
 
     return jsonify({"result": result, "total": count_result})
+
+
+@order_bp.route("/order/getlingerdashboard", methods=["GET"])
+def get_linger_dashboard():
+    linger_stage_value = request.args.get("lingerStageValue", "", type=str)
+    min_stay_days = request.args.get("minStayDays", 0, type=int)
+    page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("pageSize", 20, type=int)
+    try:
+        linger_stage_id = (
+            int(linger_stage_value) if linger_stage_value not in (None, "") else None
+        )
+    except (TypeError, ValueError):
+        linger_stage_id = None
+
+    now = datetime.now()
+    records = []
+
+    # 鞋型阶段滞留：order_shoe_status 中仍在进行中的状态
+    shoe_query = (
+        db.session.query(
+            Order, Customer, Shoe, OrderShoe, OrderShoeStatus, OrderShoeStatusReference
+        )
+        .join(OrderShoe, OrderShoe.order_shoe_id == OrderShoeStatus.order_shoe_id)
+        .join(Order, Order.order_id == OrderShoe.order_id)
+        .join(Customer, Customer.customer_id == Order.customer_id)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(
+            OrderShoeStatusReference,
+            OrderShoeStatusReference.status_id == OrderShoeStatus.current_status,
+        )
+        .filter(OrderShoeStatus.current_status_value == 0)
+    )
+    if linger_stage_id is not None:
+        shoe_query = shoe_query.filter(
+            OrderShoeStatus.current_status == linger_stage_id
+        )
+    for order, customer, shoe, order_shoe, status, ref in shoe_query.all():
+        entered = status.update_time or status.create_time
+        delay_days = (now - entered).days if entered else 0
+        if min_stay_days and delay_days < min_stay_days:
+            continue
+        records.append(
+            {
+                "orderRid": order.order_rid,
+                "customerName": customer.customer_name if customer else "N/A",
+                "lingerStageType": "鞋型",
+                "lingerStage": ref.status_name,
+                "shoeRid": shoe.shoe_rid if shoe else "N/A",
+                "customerProductName": (
+                    order_shoe.customer_product_name if order_shoe else "N/A"
+                ),
+                "lingerSince": (
+                    entered.strftime("%Y-%m-%d %H:%M:%S") if entered else "N/A"
+                ),
+                "delayText": f"{delay_days}天",
+                "_delayDays": delay_days,
+            }
+        )
+
+    # 订单阶段滞留：仅在未按鞋型阶段过滤时统计（阶段选项来自鞋型状态，与订单状态编号空间不同）
+    if linger_stage_id is None:
+        order_query = (
+            db.session.query(Order, Customer, OrderStatus, OrderStatusReference)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(Customer, Customer.customer_id == Order.customer_id)
+            .join(
+                OrderStatusReference,
+                OrderStatusReference.order_status_id
+                == OrderStatus.order_current_status,
+            )
+            .filter(OrderStatus.order_status_value == 0)
+        )
+        for order, customer, status, ref in order_query.all():
+            entered = status.update_time or status.create_time
+            delay_days = (now - entered).days if entered else 0
+            if min_stay_days and delay_days < min_stay_days:
+                continue
+            records.append(
+                {
+                    "orderRid": order.order_rid,
+                    "customerName": customer.customer_name if customer else "N/A",
+                    "lingerStageType": "订单",
+                    "lingerStage": ref.order_status_name,
+                    "shoeRid": "N/A",
+                    "customerProductName": "N/A",
+                    "lingerSince": (
+                        entered.strftime("%Y-%m-%d %H:%M:%S") if entered else "N/A"
+                    ),
+                    "delayText": f"{delay_days}天",
+                    "_delayDays": delay_days,
+                }
+            )
+
+    order_count = sum(1 for r in records if r["lingerStageType"] == "订单")
+    shoe_count = sum(1 for r in records if r["lingerStageType"] == "鞋型")
+    over_seven = sum(1 for r in records if r["_delayDays"] > 7)
+
+    summary = [
+        {"title": "滞留总数", "value": len(records)},
+        {"title": "订单阶段滞留", "value": order_count},
+        {"title": "鞋型阶段滞留", "value": shoe_count},
+        {"title": "超7天", "value": over_seven},
+    ]
+
+    stage_counter = {}
+    for r in records:
+        stage_counter[r["lingerStage"]] = stage_counter.get(r["lingerStage"], 0) + 1
+    stage_distribution = [
+        {"name": name, "value": value}
+        for name, value in sorted(
+            stage_counter.items(), key=lambda item: item[1], reverse=True
+        )
+    ]
+
+    type_distribution = [
+        {"name": "订单阶段", "value": order_count},
+        {"name": "鞋型阶段", "value": shoe_count},
+    ]
+
+    records.sort(key=lambda r: r["_delayDays"], reverse=True)
+    top_records = records[:20]
+    records_total = len(records)
+    start = max(page - 1, 0) * page_size
+    detail_records = records[start : start + page_size]
+    for r in top_records:
+        r.pop("_delayDays", None)
+    for r in detail_records:
+        r.pop("_delayDays", None)
+
+    return jsonify(
+        {
+            "summary": summary,
+            "topRecords": top_records,
+            "records": detail_records,
+            "recordsTotal": records_total,
+            "stageDistribution": stage_distribution,
+            "typeDistribution": type_distribution,
+        }
+    )
 
 
 @order_bp.route("/order/exportorderexcel", methods=["GET"])
