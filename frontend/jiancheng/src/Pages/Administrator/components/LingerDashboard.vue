@@ -60,7 +60,7 @@
         <el-row :gutter="16" class="table-row">
             <el-col :span="24">
                 <el-card shadow="hover" class="panel-card">
-                    <template #header>全部滞留明细</template>
+                    <template #header>滞留明细</template>
                     <el-table :data="records" border stripe height="420">
                         <el-table-column prop="orderRid" label="订单号" width="140" />
                         <el-table-column prop="customerName" label="客人名称" min-width="140" />
@@ -71,6 +71,16 @@
                         <el-table-column prop="lingerSince" label="进入时间" width="180" />
                         <el-table-column prop="delayText" label="滞留时长" width="100" />
                     </el-table>
+                    <el-pagination
+                        class="detail-pagination"
+                        v-model:current-page="currentPage"
+                        v-model:page-size="pageSize"
+                        :page-sizes="[20, 50, 100]"
+                        :total="recordsTotal"
+                        layout="total, sizes, prev, pager, next, jumper"
+                        @current-change="loadRecords"
+                        @size-change="handleSizeChange"
+                    />
                 </el-card>
             </el-col>
         </el-row>
@@ -91,6 +101,9 @@ const minStayDays = ref(0)
 const summary = ref([])
 const topRecords = ref([])
 const records = ref([])
+const currentPage = ref(1)
+const pageSize = ref(20)
+const recordsTotal = ref(0)
 
 const stageChartRef = ref(null)
 const typeChartRef = ref(null)
@@ -163,19 +176,41 @@ function renderTypeChart(data) {
 }
 
 async function loadDashboard() {
+    currentPage.value = 1
     const response = await axios.get(`${apiBaseUrl}/order/getlingerdashboard`, {
         params: {
             lingerStageValue: lingerStageValue.value,
             minStayDays: minStayDays.value,
+            page: currentPage.value,
+            pageSize: pageSize.value,
         },
     })
     summary.value = response.data.summary?.length ? response.data.summary : defaultSummary
     topRecords.value = response.data.topRecords || []
     records.value = response.data.records || []
+    recordsTotal.value = response.data.recordsTotal || 0
 
     await nextTick()
     renderStageChart(response.data.stageDistribution || [])
     renderTypeChart(response.data.typeDistribution || [])
+}
+
+async function loadRecords() {
+    const response = await axios.get(`${apiBaseUrl}/order/getlingerdashboard`, {
+        params: {
+            lingerStageValue: lingerStageValue.value,
+            minStayDays: minStayDays.value,
+            page: currentPage.value,
+            pageSize: pageSize.value,
+        },
+    })
+    records.value = response.data.records || []
+    recordsTotal.value = response.data.recordsTotal || 0
+}
+
+function handleSizeChange() {
+    currentPage.value = 1
+    loadRecords()
 }
 
 onMounted(async () => {
@@ -242,5 +277,11 @@ onMounted(async () => {
 .chart-box {
     width: 100%;
     height: 320px;
+}
+
+.detail-pagination {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
 }
 </style>
