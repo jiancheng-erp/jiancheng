@@ -2363,6 +2363,10 @@ def get_order_full_info():
     shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
     shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
     order_cid_search = request.args.get("orderCIdSearch", "", type=str)
+    start_date_from = request.args.get("startDateFrom", "", type=str)
+    start_date_to = request.args.get("startDateTo", "", type=str)
+    end_date_from = request.args.get("endDateFrom", "", type=str)
+    end_date_to = request.args.get("endDateTo", "", type=str)
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
     linger_stage_value = request.args.get("lingerStageValue", "", type=str)
     min_stay_days = request.args.get("minStayDays", 0, type=int)
@@ -2486,6 +2490,15 @@ def get_order_full_info():
         .group_by(Order.order_id, OrderStatus.order_status_id, OrderShoe.order_shoe_id)
         .order_by(Order.order_id.desc())
     )
+
+    if start_date_from:
+        query = query.filter(func.date(Order.start_date) >= start_date_from)
+    if start_date_to:
+        query = query.filter(func.date(Order.start_date) <= start_date_to)
+    if end_date_from:
+        query = query.filter(func.date(Order.end_date) >= end_date_from)
+    if end_date_to:
+        query = query.filter(func.date(Order.end_date) <= end_date_to)
 
     if character.character_id == DEV_DEPARTMENT_MANAGER:
         query = query.filter(OrderStatus.order_current_status >= ORDER_IN_PROD_STATUS)
@@ -2934,6 +2947,12 @@ def export_order_excel():
     order_search = request.args.get("orderSearch", "", type=str)
     customer_search = request.args.get("customerSearch", "", type=str)
     shoe_rid_search = request.args.get("shoeRIdSearch", "", type=str)
+    shoe_cid_search = request.args.get("shoeCIdSearch", "", type=str)
+    order_cid_search = request.args.get("orderCIdSearch", "", type=str)
+    start_date_from = request.args.get("startDateFrom", "", type=str)
+    start_date_to = request.args.get("startDateTo", "", type=str)
+    end_date_from = request.args.get("endDateFrom", "", type=str)
+    end_date_to = request.args.get("endDateTo", "", type=str)
     convert_to_rmb = request.args.get("convertToRMB", "0") == "1"
     view_past_tasks = request.args.get("viewPastTasks", 0, type=int)
 
@@ -3019,10 +3038,21 @@ def export_order_excel():
             Order.order_rid.like(f"%{order_search}%"),
             Customer.customer_name.like(f"%{customer_search}%"),
             Shoe.shoe_rid.like(f"%{shoe_rid_search}%"),
+            func.coalesce(OrderShoe.customer_product_name, "").like(f"%{shoe_cid_search}%"),
+            func.coalesce(Order.order_cid, "").like(f"%{order_cid_search}%"),
         )
         .group_by(Order.order_id, OrderShoe.order_shoe_id, OrderStatusReference.order_status_id)
         .order_by(Order.order_id.desc())
     )
+
+    if start_date_from:
+        query = query.filter(func.date(Order.start_date) >= start_date_from)
+    if start_date_to:
+        query = query.filter(func.date(Order.start_date) <= start_date_to)
+    if end_date_from:
+        query = query.filter(func.date(Order.end_date) >= end_date_from)
+    if end_date_to:
+        query = query.filter(func.date(Order.end_date) <= end_date_to)
 
     rows = query.all()
 
