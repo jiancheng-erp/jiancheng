@@ -1,6 +1,6 @@
 <template>
   <el-row :gutter="20">
-    <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+    <el-col class="u-page-title" :span="24" :offset="0"
       >二次采购订单创建</el-col
     >
   </el-row>
@@ -66,4 +66,4 @@ export default {
   }
 }
 </script>
-<style></style>
+<style scoped></style>

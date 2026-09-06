@@ -1,11 +1,11 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >订单查询</el-col
         >
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             订单号搜索：
             <el-input
                 v-model="orderSearch"
@@ -16,7 +16,7 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             客人名称搜索：
             <el-input
                 v-model="customerSearch"
@@ -27,7 +27,7 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             工厂型号搜索：
             <el-input
                 v-model="shoeRIdSearch"
@@ -40,7 +40,7 @@
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             客户订单号搜索：
             <el-input
                 v-model="orderCIdSearch"
@@ -51,7 +51,7 @@
                 @change="tableFilter"
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             客户型号搜索：
             <el-input
                 v-model="shoeCIdSearch"
@@ -64,7 +64,7 @@
         </el-col>
     </el-row>
     <el-row>
-        <el-table :data="orderFilterData" border stripe height="600">
+        <el-table :data="orderFilterData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.shoes" :border="true">

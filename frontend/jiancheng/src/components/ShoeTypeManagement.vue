@@ -1,9 +1,9 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">鞋型管理</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">鞋型管理</el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             鞋型号搜索：
             <el-input v-model="inheritIdSearch" placeholder="" clearable @change="getFilterShoes" :suffix-icon="Search"></el-input>
         </el-col>
@@ -21,7 +21,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="shoeTableData" style="width: 100%" stripe border height="580" row-key="shoeId">
+            <el-table :data="shoeTableData" style="width: 100%" stripe border height="calc(100vh - var(--main-table-offset))" row-key="shoeId">
                 <el-table-column type="expand">
                     <template #default="props">
                         <el-table

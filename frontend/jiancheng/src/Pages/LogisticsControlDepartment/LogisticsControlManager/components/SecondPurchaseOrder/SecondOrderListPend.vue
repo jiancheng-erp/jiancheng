@@ -5,15 +5,15 @@
             <h1>全部待处理任务：{{ pendingAmount }}</h1>
         </el-col>        
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="4" :offset="0"><el-button size="default" @click="backToAll">返回全部任务</el-button></el-col>    
         <el-col :span="4" :offset="15"><el-input v-model="searchOrder" placeholder="请输入订单号" :suffix-icon="Search" clearable @input="filterData"></el-input>
         </el-col>
     </el-row>
     
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24">
-            <el-table :data="displayData" style="height: 500px" @row-click="handleRowClick">
+            <el-table class="u-h-500" :data="displayData" @row-click="handleRowClick">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>

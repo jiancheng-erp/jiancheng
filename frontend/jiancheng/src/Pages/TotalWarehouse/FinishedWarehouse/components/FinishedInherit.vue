@@ -23,7 +23,7 @@
                 </el-form-item>
 
                 <el-form-item label="工厂型号">
-                    <el-input v-model="filters.shoeRId" placeholder="输入工厂型号" clearable style="width: 220px" />
+                    <el-input class="u-w-220" v-model="filters.shoeRId" placeholder="输入工厂型号" clearable />
                 </el-form-item>
 
                 <el-form-item label="仅显示有库存">
@@ -31,7 +31,7 @@
                 </el-form-item>
 
                 <el-form-item label="鞋类型">
-                    <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                    <el-select class="u-w-140" v-model="filters.category" clearable placeholder="全部" @change="refresh">
                         <el-option label="男鞋" value="男鞋" />
                         <el-option label="女鞋" value="女鞋" />
                         <el-option label="童鞋" value="童鞋" />
@@ -59,7 +59,7 @@
 
         <el-alert :closable="false" type="info" :title="summaryTitle" show-icon class="mb-2" />
 
-        <el-table :data="pagedModels" border stripe height="540">
+        <el-table :data="pagedModels" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column type="expand" width="50">
                 <template #default="scope">
                     <el-table :data="scope.row.colors" border stripe size="small">

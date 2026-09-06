@@ -4,7 +4,7 @@
         <el-card shadow="never" class="mb-3">
             <el-form :inline="true" :model="query" @submit.prevent>
                 <el-form-item label="订单搜索">
-                    <el-input v-model.trim="query.keyword" placeholder="订单号/客户/鞋型…" style="width: 280px" clearable @keyup.enter.native="loadOrders" />
+                    <el-input class="u-w-280" v-model.trim="query.keyword" placeholder="订单号/客户/鞋型…" clearable @keyup.enter.native="loadOrders" />
                 </el-form-item>
                 <el-form-item label="下发日期">
                     <el-date-picker v-model="query.dates" type="daterange" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" />
@@ -99,11 +99,11 @@
 
                 <el-divider content-position="left">鞋型颜色</el-divider>
                 <div class="flex items-center gap-2 mb-2">
-                    <el-select
+                    <el-select class="u-w-240"
                         v-model="selectedColor"
                         value-key="id"
                         placeholder="选择鞋型颜色"
-                        style="width: 240px"
+                       
                         :loading="shoeColorsLoading"
                         :disabled="shoeColorsLoading || !shoeColorOptions.length"
                     >
@@ -792,7 +792,7 @@ onMounted(() => {
     margin-top: 12px;
 }
 .text-gray-500 {
-    color: #909399;
+    color: var(--color-text-3);
 }
 .muted {
     color: #999;

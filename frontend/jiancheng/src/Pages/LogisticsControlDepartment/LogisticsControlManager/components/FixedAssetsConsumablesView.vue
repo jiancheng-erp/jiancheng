@@ -1,10 +1,10 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >固定资产/耗材采购订单生成</el-col
         >
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="4" :offset="0"
             ><el-button-group>
                 <el-button type="primary" size="default" @click="openCreatePage(null, 0)"
@@ -35,7 +35,7 @@
             >
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="6" :offset="0">
             <div style="display: flex; align-items: center; white-space: nowrap">
                 采购订单编号查询：<el-input
@@ -96,7 +96,7 @@
         </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table
                 v-loading="datafinished"
@@ -145,9 +145,9 @@
         width="90%"
         :close-on-click-modal="false"
     >
-        <el-row :gutter="20" style="margin-top: 20px">
+        <el-row class="u-mt-5" :gutter="20">
             <el-col :span="24" :offset="0">
-                <el-table :data="unsubmitPurchaseOrder" border style="height: 600px">
+                <el-table class="u-h-600" :data="unsubmitPurchaseOrder" border>
                     <el-table-column prop="purchaseOrderRId" label="采购订单编号"></el-table-column>
                     <el-table-column prop="purchaseOrderType" label="采购类型"></el-table-column>
                     <el-table-column prop="orderRId" label="订单编号"></el-table-column>
@@ -221,12 +221,12 @@
                 </div>
             </el-col>
         </el-row>
-        <el-table
+        <el-table class="u-h-400"
             :data="assetFilterTable"
             border
             ref="materialSelectTable"
             @selection-change="handleMaterialSelectionChange"
-            style="height: 400px"
+           
             v-loading="materialAddfinished"
         >
             <el-table-column type="selection" width="55"></el-table-column>
@@ -276,11 +276,11 @@
         :key="currentViewPurchaseOrderId"
     >
         <div style="height: 500px; overflow-y: scroll; overflow-x: hidden">
-            <el-row
+            <el-row class="u-mb-5"
                 v-for="purchaseDivideOrder in purchaseTestData"
                 :key="purchaseDivideOrder"
                 :gutter="20"
-                style="margin-bottom: 20px"
+               
             >
                 <el-col :span="23">
                     <h3>分采购订单编号 {{ purchaseDivideOrder.purchaseDivideOrderId }}</h3>
@@ -462,12 +462,12 @@
     </el-dialog>
     <el-dialog title="采购订单创建页面" v-model="isPurchaseOrderVis" width="90%">
         <el-tabs v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane
+            <el-tab-pane class="u-min-h-500"
                 v-for="item in tabPlaneData"
                 :key="item.purchaseDivideOrderId"
                 :label="item.purchaseDivideOrderId + '    ' + item.supplierName"
                 :name="item.purchaseDivideOrderId"
-                style="min-height: 500px"
+               
             >
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0"
@@ -524,7 +524,7 @@
                         </span>
                     </el-col>
                 </el-row>
-                <el-row :gutter="20" style="margin-top: 20px">
+                <el-row class="u-mt-5" :gutter="20">
                     <el-col :span="24" :offset="0">
                         <div v-if="factoryFieldJudge(item.purchaseDivideOrderType)">
                             <el-table :data="item.assetsItems" border height="500">

@@ -23,7 +23,7 @@
             </el-col>
         </el-row>
         <el-row :gutter="20" style="margin-top: 20px;width: 100%;">
-            <el-table :data="displayData" stripe height="530">
+            <el-table :data="displayData" stripe height="calc(100vh - var(--main-table-offset))">
                 <el-table-column type="index" width="50" />
                 <el-table-column prop="orderRid" label="订单号" />
                 <el-table-column prop="customerName" label="客户名" />

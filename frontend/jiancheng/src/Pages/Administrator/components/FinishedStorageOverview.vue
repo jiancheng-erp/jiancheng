@@ -3,20 +3,20 @@
         <!-- 搜索栏 -->
         <el-form @submit.prevent="fetchOverview" class="search-bar">
             <el-form-item label="订单号">
-                <el-input v-model="filters.orderRId" placeholder="订单号" clearable
-                    style="width: 160px" @keyup.enter="fetchOverview" />
+                <el-input class="u-w-160" v-model="filters.orderRId" placeholder="订单号" clearable
+                    @keyup.enter="fetchOverview" />
             </el-form-item>
             <el-form-item label="鞋型号">
-                <el-input v-model="filters.shoeRId" placeholder="鞋型号" clearable
-                    style="width: 160px" @keyup.enter="fetchOverview" />
+                <el-input class="u-w-160" v-model="filters.shoeRId" placeholder="鞋型号" clearable
+                    @keyup.enter="fetchOverview" />
             </el-form-item>
             <el-form-item label="客户">
-                <el-input v-model="filters.customerName" placeholder="客户名称" clearable
-                    style="width: 160px" @keyup.enter="fetchOverview" />
+                <el-input class="u-w-160" v-model="filters.customerName" placeholder="客户名称" clearable
+                    @keyup.enter="fetchOverview" />
             </el-form-item>
             <el-form-item label="状态">
-                <el-select v-model="filters.statusNum" placeholder="全部" clearable
-                    style="width: 150px">
+                <el-select class="u-w-150" v-model="filters.statusNum" placeholder="全部" clearable
+                   >
                     <el-option :value="0" label="未完成入库" />
                     <el-option :value="1" label="已完成入库" />
                     <el-option :value="2" label="已完成出库" />
@@ -36,7 +36,7 @@
                     style="cursor: pointer;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-size: 13px; color: #909399;">{{ card.label }}</div>
+                            <div style="font-size: 13px; color: var(--color-text-3);">{{ card.label }}</div>
                             <div style="font-size: 28px; font-weight: bold; margin-top: 4px;"
                                 :style="{ color: card.color }">
                                 {{ card.count }}
@@ -62,7 +62,7 @@
             <el-table-column prop="actualAmount" label="实际入库" width="90" align="center" />
             <el-table-column prop="currentStock" label="当前库存" width="90" align="center">
                 <template #default="{ row }">
-                    <span :style="{ color: row.currentStock > 0 ? '#67c23a' : '#909399', fontWeight: 'bold' }">
+                    <span :style="{ color: row.currentStock > 0 ? 'var(--color-success)' : 'var(--color-text-3)', fontWeight: 'bold' }">
                         {{ row.currentStock }}
                     </span>
                 </template>
@@ -107,7 +107,7 @@
                         <el-table-column prop="rid" label="入库单号" width="180" />
                         <el-table-column prop="amount" label="数量" width="80" align="center">
                             <template #default="{ row }">
-                                <span :style="{ color: row.amount < 0 ? '#f56c6c' : '' }">
+                                <span :style="{ color: row.amount < 0 ? 'var(--color-danger)' : '' }">
                                     {{ row.amount }}
                                 </span>
                             </template>
@@ -134,7 +134,7 @@
                                     @click="revertInbound(row)">
                                     撤回
                                 </el-button>
-                                <span v-else style="color: #c0c4cc; font-size: 12px;">—</span>
+                                <span v-else style="color: var(--el-text-color-disabled); font-size: 12px;">—</span>
                             </template>
                         </el-table-column>
                     </el-table>

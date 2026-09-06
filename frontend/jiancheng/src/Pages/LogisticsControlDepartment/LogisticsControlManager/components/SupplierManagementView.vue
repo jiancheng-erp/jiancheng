@@ -1,18 +1,18 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" style="font-size: xx-large; text-align: center;">供应商管理</el-col>
+        <el-col class="u-page-title" :span="24">供应商管理</el-col>
     </el-row>
 
     <el-row :gutter="20">
         <el-col>
-            <el-input v-model="searchQuery" placeholder="搜索供应商名称" clearable @clear="filterSuppliers"
-                @change="filterSuppliers" style="width: 300px;" />
+            <el-input class="u-w-300" v-model="searchQuery" placeholder="搜索供应商名称" clearable @clear="filterSuppliers"
+                @change="filterSuppliers" />
         </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24">
-            <el-table :data="paginatedSupplierData" border style="height: 500px;">
+            <el-table class="u-h-500" :data="paginatedSupplierData" border>
                 <el-table-column prop="supplierName" label="供应商名称"></el-table-column>
                 <el-table-column prop="supplierField" label="供应商供货类型"></el-table-column>
                 <el-table-column label="操作">
@@ -26,8 +26,8 @@
     </el-row>
 
     <!-- Pagination -->
-    <el-row :gutter="20" style="margin-top: 20px;">
-        <el-col :span="24" style="text-align: center;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-text-center" :span="24">
             <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
                 :current-page="currentPage" :page-size="pageSize" :page-sizes="[5, 10, 20, 50]"
                 layout="total, sizes, prev, pager, next, jumper" :total="supplierData.length">
@@ -35,7 +35,7 @@
         </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="4" :offset="20">
             <el-button type="primary" size="default" @click="isCreateSupplierDialogVisible = true">创建新供应商</el-button>
         </el-col>

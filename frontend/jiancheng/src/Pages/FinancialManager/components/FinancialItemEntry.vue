@@ -7,11 +7,11 @@
                 { type: 'String ', message: '项目类别不能为空' }
             ]"
         >
-            <el-select
+            <el-select class="u-w-300"
                 v-model="itemValue"
                 placeholder="请选择一级项目类别"
                 size="large"
-                style="width: 300px"
+               
                 clearable
                 filterable
                 @change="findNextItem(1)"
@@ -31,11 +31,11 @@
                 { type: 'String ', message: '二级科目不能为空' }
             ]"
         >
-            <el-select
+            <el-select class="u-w-300"
                 v-model="projectItem1"
                 placeholder="请选择二级科目"
                 size="large"
-                style="width: 300px"
+               
                 clearable
                 filterable
                 @change="findNextItem(2)"
@@ -55,11 +55,11 @@
                 { type: 'String ', message: '三级科目不能为空' }
             ]"
         >
-            <el-select
+            <el-select class="u-w-300"
                 v-model="projectItem2"
                 placeholder="请选择三级科目"
                 size="large"
-                style="width: 300px"
+               
                 clearable
                 filterable
             >
@@ -81,11 +81,11 @@
             <el-input style="width: 300px;height: 40px;" v-model="ruleForm.recordObjectId"></el-input>
         </el-form-item>
         <el-form-item label="资金流向">
-            <el-select
+            <el-select class="u-w-300"
                 v-model="ruleForm.recordType"
                 placeholder="请选择"
                 size="large"
-                style="width: 300px"
+               
                 clearable
                 filterable
             >

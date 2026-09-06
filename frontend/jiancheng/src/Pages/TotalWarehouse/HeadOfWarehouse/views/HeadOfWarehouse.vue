@@ -9,69 +9,87 @@
         <el-container class="app-body">
             <!-- 侧栏 -->
             <el-aside class="app-aside">
-                <div class="profile">
-                    <el-avatar :icon="UserFilled" :size="80" class="profile-avatar" />
-                    <div class="profile-name">{{ userName }}</div>
+                <div class="aside-brand">
+                    <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+                    <div class="aside-brand-text">
+                        <span class="aside-brand-title">功能导航</span>
+                        <span class="aside-brand-sub">总仓管理</span>
+                    </div>
                 </div>
 
                 <!-- 菜单：自动密度，自身滚动 -->
                 <el-menu default-active="10" class="app-menu" :unique-opened="true">
                     <el-menu-item index="10" @click="handleMenuClick(10)">
+                        <el-icon><DocumentAdd /></el-icon>
                         <span>二次（总仓）采购订单创建</span>
                     </el-menu-item>
                     <el-menu-item index="13" @click="handleMenuClick(13)">
+                        <el-icon><Search /></el-icon>
                         <span>订单查询</span>
                     </el-menu-item>
                     <el-menu-item index="21" @click="handleMenuClick(21)">
+                        <el-icon><Tickets /></el-icon>
                         <span>生产通知单及工艺单</span>
                     </el-menu-item>
                     <el-menu-item index="14" @click="handleMenuClick(14)">
+                        <el-icon><View /></el-icon>
                         <span>未出库材料查看</span>
                     </el-menu-item>
                     <el-menu-item index="19" @click="handleMenuClick(19)">
+                        <el-icon><Sell /></el-icon>
                         <span>按订单出库</span>
                     </el-menu-item>
                     <el-menu-item index="20" @click="handleMenuClick(20)">
+                        <el-icon><Box /></el-icon>
                         <span>通用材料出库</span>
                     </el-menu-item>
                     <el-menu-item index="9" @click="handleMenuClick(9)">
+                        <el-icon><CircleCheck /></el-icon>
                         <span>出入库审核</span>
                     </el-menu-item>
                     <el-menu-item index="16" @click="handleMenuClick(16)">
+                        <el-icon><Memo /></el-icon>
                         <span>出入库明细</span>
                     </el-menu-item>
                     <el-menu-item index="17" @click="handleMenuClick(17)">
+                        <el-icon><ShoppingCart /></el-icon>
                         <span>采购订单信息</span>
                     </el-menu-item>
                     <el-menu-item index="5" @click="handleMenuClick(5)">
+                        <el-icon><Goods /></el-icon>
                         <span>库存</span>
                     </el-menu-item>
                     <el-menu-item index="3" @click="handleMenuClick(3)">
+                        <el-icon><TrendCharts /></el-icon>
                         <span>生产动态明细</span>
                     </el-menu-item>
                     <el-menu-item index="4" @click="handleMenuClick(4)">
+                        <el-icon><Download /></el-icon>
                         <span>文件下载</span>
                     </el-menu-item>
                     <el-menu-item index="6" @click="handleMenuClick(6)">
+                        <el-icon><Files /></el-icon>
                         <span>盘库功能</span>
                     </el-menu-item>
                     <el-menu-item index="18" @click="handleMenuClick(18)">
+                        <el-icon><EditPen /></el-icon>
                         <span>缺失材料补采采购量录入</span>
                     </el-menu-item>
                     <el-menu-item index="15" @click="handleMenuClick(15)">
+                        <el-icon><OfficeBuilding /></el-icon>
                         <span>供货商管理</span>
                     </el-menu-item>
                     <el-menu-item index="8" @click="handleMenuClick(8)">
+                        <el-icon><Management /></el-icon>
                         <span>材料管理</span>
                     </el-menu-item>
                     <el-menu-item index="7" @click="handleMenuClick(7)">
+                        <el-icon><Grid /></el-icon>
                         <span>码段管理</span>
                     </el-menu-item>
                     <el-menu-item index="12" @click="handleMenuClick(12)">
+                        <el-icon><User /></el-icon>
                         <span>个人信息</span>
-                    </el-menu-item>
-                    <el-menu-item index="99" @click="logout()">
-                        <span>退出系统</span>
                     </el-menu-item>
                 </el-menu>
             </el-aside>
@@ -89,7 +107,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import InboundOutboundHistory from '../components/InboundOutboundHistory.vue'
 import FileDownload from '../components/FileDownload.vue'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, DocumentAdd, Search, Tickets, View, Sell, Box, CircleCheck, Memo, ShoppingCart, Goods, TrendCharts, Download, Files, EditPen, OfficeBuilding, Management, Grid, User, SwitchButton, Menu } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 import FixedAssetsConsumablesView from '@/Pages/LogisticsControlDepartment/LogisticsControlManager/components/FixedAssetsConsumablesView.vue'
@@ -132,7 +150,10 @@ export default {
         OutboundByOrder,
         GeneralMaterialOutbound,
         MissingPurchaseAmountInput,
-        BusinessProductionOrder
+        BusinessProductionOrder,
+        DocumentAdd, Search, Tickets, View, Sell, Box, CircleCheck, Memo,
+        ShoppingCart, Goods, TrendCharts, Download, Files, EditPen,
+        OfficeBuilding, Management, Grid, User, SwitchButton, Menu
     },
     data() {
         return {

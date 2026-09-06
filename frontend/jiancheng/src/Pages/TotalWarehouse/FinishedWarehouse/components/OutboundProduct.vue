@@ -64,7 +64,7 @@
     <el-row v-if="isMultipleSelection && selectedRows.length > 0" class="mt-2">
         <el-col :span="24">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 12px; background:#f0f9eb; border-radius:4px; border:1px solid #e1f3d8;">
-                <span style="color:#67c23a; font-weight:500;">已选 {{ selectedRows.length }} 个订单：</span>
+                <span style="color:var(--color-success); font-weight:500;">已选 {{ selectedRows.length }} 个订单：</span>
                 <el-tag
                     v-for="row in selectedRows"
                     :key="row.orderId"
@@ -1773,15 +1773,15 @@ export default {
     gap: 24px;
     padding: 8px 12px;
     margin-bottom: 8px;
-    background: #f5f7fa;
+    background: var(--el-fill-color-light);
     border-radius: 4px;
     font-size: 13px;
-    color: #606266;
+    color: var(--color-text-2);
     text-align: left;
     justify-content: flex-start;
 }
 .dialog-totals b {
-    color: #409eff;
+    color: var(--el-color-primary);
     margin: 0 2px;
 }
 .search-row :deep(.el-col) {

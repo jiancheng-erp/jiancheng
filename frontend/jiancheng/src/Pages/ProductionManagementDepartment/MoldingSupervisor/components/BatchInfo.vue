@@ -1,16 +1,16 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             订单号筛选：
             <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getBatchInfoOverview()"
                 @clear="getBatchInfoOverview" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             鞋型号筛选：
             <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getBatchInfoOverview()"
                 @clear="getBatchInfoOverview()" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             <el-date-picker v-model="dateValueSearch" type="daterange" start-placeholder="开始日期"
                 end-placeholder="结束日期" value-format="YYYY-MM-DD"></el-date-picker>
         </el-col>

@@ -67,7 +67,7 @@
             </el-pagination>
         </div>
         <div v-else>
-            <el-row :gutter="20" style="margin-bottom: 20px;">
+            <el-row class="u-mb-5" :gutter="20">
                 <el-col :span="24">
                     <div style="display:flex; flex-wrap: wrap; gap: 10px;">
                         <div v-for="(shoeSize, index) in shoeSizeColumns">
@@ -80,7 +80,7 @@
                         <el-button size="small" type="primary" @click="autoSelectOrders">自动选择</el-button>
                         <el-button size="small" type="primary" @click="revertInboundQuantityData">重置到货数量数据</el-button>
                         <span>材料单价：</span>
-                        <el-input-number v-model="unitPrice" style="width: 150px;" :min="0" :precision="4"
+                        <el-input-number class="u-w-150" v-model="unitPrice" :min="0" :precision="4"
                             :step="0.0001" size="small"></el-input-number>
                         <span>到货数量：</span>
                         <el-input-number v-model="totalInboundQuantity" style="width: 200px; margin-right: 10px;"
@@ -114,8 +114,8 @@
                             <Top />
                         </el-icon>
                     </el-button>
-                    <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0"
-                        style="margin-left: 20px;">
+                    <el-button class="u-ml-5" type="primary" @click="moveDown" :disabled="topSelected.length === 0"
+                       >
                         <el-icon>
                             <Bottom />
                         </el-icon> 移除

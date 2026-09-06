@@ -1,6 +1,6 @@
 <template>
     <div class="content">
-        <el-row :gutter="20" style="margin-top: 20px">
+        <el-row class="u-mt-5" :gutter="20">
             <el-col :span="4" :offset="0"
                 ><el-input
                     v-model="orderRidFilter"

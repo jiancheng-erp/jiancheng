@@ -5,7 +5,7 @@
         </el-header>
         <el-main height="">
             <el-row :gutter="20">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">生产节点管理</el-col>
+                <el-col class="u-page-title" :span="24" :offset="0">生产节点管理</el-col>
             </el-row>
             <el-row :gutter="20">
                 <Arrow v-if="productionStatus != -1" :status="productionStatus" :workflowType="1"></Arrow>

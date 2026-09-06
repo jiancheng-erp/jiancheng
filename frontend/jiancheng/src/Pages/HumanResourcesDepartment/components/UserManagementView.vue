@@ -1,11 +1,11 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >用户管理</el-col
         >
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             用户名搜索：
             <el-input
                 v-model="userSearch"
@@ -14,7 +14,7 @@
                 suffix-icon=""
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="4" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="4">
             职员姓名搜索：
             <el-input
                 v-model="staffSearch"
@@ -29,7 +29,7 @@
             >
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table
                 :data="filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)"

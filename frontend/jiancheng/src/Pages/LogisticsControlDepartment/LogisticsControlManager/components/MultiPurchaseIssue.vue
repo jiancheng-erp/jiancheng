@@ -1,19 +1,19 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">批量采购订单生成及下发</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">批量采购订单生成及下发</el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             采购订单号搜索：
             <el-input v-model="purchaseOrderSearch" placeholder="" size="default" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             订单号搜索：
             <el-input v-model="OrderSearch" placeholder="" size="default" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             厂家搜索：
             <el-input v-model="supplierSearch" placeholder="" size="default" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
@@ -139,8 +139,8 @@
     </el-dialog>
     <el-dialog title="采购订单详情" v-model="isPurchaseItemDetailDialogVisible" width="80%">
         <div style="height: 500px; overflow-y: scroll; overflow-x: hidden">
-            <el-row v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
-                style="margin-bottom: 20px">
+            <el-row class="u-mb-5" v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
+               >
                 <el-col :span="23">
                     <h3>分采购订单编号 {{ purchaseDivideOrder.purchaseDivideOrderId }}</h3>
                     <h3>工厂名称: {{ purchaseDivideOrder.supplierName }}</h3>
@@ -204,9 +204,9 @@
     <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
         <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
         <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane v-for="item in tabPlaneData" :key="item.totalPurchaseOrderId"
+            <el-tab-pane class="u-min-h-500" v-for="item in tabPlaneData" :key="item.totalPurchaseOrderId"
                 :label="item.totalPurchaseOrderRid + '    ' + item.supplierName" :name="item.totalPurchaseOrderId"
-                style="min-height: 500px">
+               >
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0"><span>订单备注：
                             <el-input :disabled="!modifiedMode" v-model="item.remark" placeholder="" type="textarea"
@@ -232,7 +232,7 @@
                         </span>
                     </el-col>
                 </el-row>
-                <el-row :gutter="20" style="margin-top: 20px">
+                <el-row class="u-mt-5" :gutter="20">
                     <el-col :span="24" :offset="0">
                         <div v-if="factoryFieldJudge(item.totalPurchaseOrderType)">
                             <el-table :data="item.assetsItems" border style="width: 100%" height="500">

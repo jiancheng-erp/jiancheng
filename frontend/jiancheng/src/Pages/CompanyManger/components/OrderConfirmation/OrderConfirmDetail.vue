@@ -33,18 +33,18 @@
                     <table class="excel-table main-table">
                         <thead>
                             <tr>
-                                <th style="width: 130px">鞋图</th>
-                                <th style="width: 90px">工厂款号</th>
+                                <th class="u-w-130">鞋图</th>
+                                <th class="u-w-90">工厂款号</th>
                                 <th style="width: 100px">客户型号</th>
-                                <th style="width: 70px">颜色</th>
-                                <th style="width: 90px">客户颜色</th>
+                                <th class="u-w-70">颜色</th>
+                                <th class="u-w-90">客户颜色</th>
                                 <th style="width: 80px">配码</th>
                                 <th class="size-col" colspan="1" v-for="s in activeSizes" :key="s.amountKey">{{ s.name }}</th>
-                                <th style="width: 55px">对/件</th>
-                                <th style="width: 55px">件数</th>
-                                <th style="width: 55px">双数</th>
-                                <th style="width: 200px">备注</th>
-                                <th style="width: 120px">价格</th>
+                                <th class="u-w-55">对/件</th>
+                                <th class="u-w-55">件数</th>
+                                <th class="u-w-55">双数</th>
+                                <th class="u-w-200">备注</th>
+                                <th class="u-w-120">价格</th>
                                 <th style="width: 110px">金额</th>
                             </tr>
                         </thead>
@@ -522,7 +522,7 @@ async function revertOrder() {
 }
 
 .order-sheet {
-    background: #ffffff;
+    background: var(--el-color-white);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     padding: 24px 28px 30px;
@@ -544,7 +544,7 @@ async function revertOrder() {
     width: 90px;
     height: 3px;
     margin: 12px auto 0;
-    background: linear-gradient(90deg, #409eff, #66b1ff);
+    background: linear-gradient(90deg, var(--el-color-primary), var(--el-color-primary-light-3));
     border-radius: 2px;
 }
 
@@ -553,7 +553,7 @@ async function revertOrder() {
     width: 100%;
     table-layout: fixed;
     font-size: 13px;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .excel-table th,
@@ -577,7 +577,7 @@ async function revertOrder() {
 
 .info-table .info-label {
     background: #eef4ff;
-    color: #3a7bd5;
+    color: var(--el-color-primary);
     font-weight: 600;
     width: 80px;
     white-space: nowrap;
@@ -585,7 +585,7 @@ async function revertOrder() {
 
 .info-table .info-value {
     white-space: nowrap;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .info-table .info-action {
@@ -610,7 +610,7 @@ async function revertOrder() {
 
 .img-cell {
     padding: 6px;
-    background: #fff;
+    background: var(--el-color-white);
 }
 
 .img-cell .img-wrap {

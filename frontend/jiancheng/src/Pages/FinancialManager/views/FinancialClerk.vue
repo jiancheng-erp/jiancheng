@@ -8,9 +8,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">财务管理</span>
+          </div>
         </div>
 
         <!-- 左侧菜单（替代 el-tabs） -->
@@ -19,22 +22,24 @@
             <span>明细展示</span>
           </el-menu-item> -->
           <el-menu-item index="2" @click="handleMenuClick('InOutboundRecords','2')">
+            <el-icon><CircleCheck /></el-icon>
             <span>入库待审核</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick('InboundDetails','3')">
+            <el-icon><Memo /></el-icon>
             <span>入库明细</span>
           </el-menu-item>
           <el-menu-item index="4" @click="handleMenuClick('FinancialRecievableDetail','4')">
+            <el-icon><Money /></el-icon>
             <span>应收记录</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick('InOutboundRecordsForFinished','5')">
+            <el-icon><Tickets /></el-icon>
             <span>成品仓出入库记录</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick('GeneralOrderSearchForWarehouse','6')">
+            <el-icon><Search /></el-icon>
             <span>订单查询</span>
-          </el-menu-item>
-          <el-menu-item index="99" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -50,7 +55,7 @@
 
 <script setup lang="js">
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { Menu, CircleCheck, Memo, Money, Tickets, Search } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
@@ -111,7 +116,7 @@ async function logout() {
   gap: 12px;
   margin-bottom: 16px;
   padding: 8px 20px;
-  background: #ffffff;
+  background: var(--el-color-white);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-soft, 0 6px 16px rgba(0,0,0,.08));
   transition: box-shadow .2s ease;

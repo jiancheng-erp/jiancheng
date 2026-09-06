@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单管理</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">订单管理</el-col>
     </el-row>
     <el-row :gutter="12" class="toolbar-row">
         <el-col :span="24">
@@ -73,7 +73,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-table :data="orderStore.paginatedDisplayData" border stripe @row-dblclick="orderRowDbClick"
-            style="height: 60vh" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
+            height="calc(100vh - var(--main-table-offset))" row-key="orderDbId" @selection-change="handleDispatchSelectionChange">
             <el-table-column type="selection" width="55" reserve-selection />
             <el-table-column prop="orderRid" label="订单号" sortable />
             <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
@@ -106,9 +106,9 @@
                 </template>
             </el-table-column>
         </el-table>
-        <el-pagination :current-page="orderStore.currentPage" :page-size="orderStore.pageSize"
+        <el-pagination class="u-mt-5" :current-page="orderStore.currentPage" :page-size="orderStore.pageSize"
             :total="orderStore.totalItems" @current-change="orderStore.handlePageChange"
-            layout="total,prev,pager,next,jumper" style="margin-top: 20px"></el-pagination>
+            layout="total,prev,pager,next,jumper"></el-pagination>
     </el-row>
 
     <el-dialog title="创建订单鞋型填写" v-model="dialogStore.orderCreationInfoVis" width="100%" fullscreen
@@ -229,7 +229,7 @@
             </el-form-item>
 
             <el-row :gutter="20">
-                <el-col :span="4" :offset="0" style="white-space: nowrap">
+                <el-col class="u-nowrap" :span="4" :offset="0">
                     请选择鞋型号：
                     <el-input v-model="shoeRidFilter" placeholder="鞋型号搜索" size="default" :suffix-icon="'el-icon-search'"
                         @change="getAllShoes()" @clear="getAllShoes()" clearable> </el-input>
@@ -286,9 +286,9 @@
                     </template>
                 </el-table-column>
             </el-table>
-            <el-pagination :current-page="currentOrderCreatePage" :page-size="orderCreatePageSize"
+            <el-pagination class="u-mt-5" :current-page="currentOrderCreatePage" :page-size="orderCreatePageSize"
                 :total="shoeTotalItems" @current-change="handleOrderCreatePageChange"
-                layout="total, prev, pager, next, jumper" style="margin-top: 20px"></el-pagination>
+                layout="total, prev, pager, next, jumper"></el-pagination>
         </el-form>
 
         <template #footer>
@@ -3643,15 +3643,15 @@ export default {
     padding: 10px 16px;
     border-radius: 6px;
     background-color: #f4f4f5;
-    border: 1px dashed #dcdfe6;
-    color: #909399;
+    border: 1px dashed var(--el-border-color);
+    color: var(--color-text-3);
     transition: all 0.2s ease;
 }
 
 .selection-banner.is-active {
-    background-color: #ecf5ff;
+    background-color: var(--el-color-primary-light-9);
     border: 1px solid #b3d8ff;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .selection-banner-text {
@@ -3659,7 +3659,7 @@ export default {
 }
 
 .selection-banner-text .pairs {
-    color: #409eff;
+    color: var(--el-color-primary);
     font-size: 20px;
     margin: 0 2px;
 }
@@ -3704,7 +3704,7 @@ export default {
 
 .batch-summary-table :deep(.el-table__footer .el-table__cell .cell),
 .batch-summary-table :deep(.el-table__footer-wrapper .el-table__cell .cell) {
-    color: #e6a23c !important;
+    color: var(--color-warning) !important;
 }
 
 :deep(.rid-error .el-input__wrapper) {
@@ -3713,22 +3713,22 @@ export default {
 
 /* Clean base style */
 ::v-deep(.persistent-shadow-row > td) {
-    border-top: 5px solid #dcdfe6;
-    border-bottom: 5px solid #dcdfe6;
-    background-color: #fff;
+    border-top: 5px solid var(--el-border-color);
+    border-bottom: 5px solid var(--el-border-color);
+    background-color: var(--el-color-white);
     padding: 12px 16px;
 }
 
 /* Left rounded corners */
 ::v-deep(.persistent-shadow-row > td:first-child) {
-    border-left: 5px solid #dcdfe6;
+    border-left: 5px solid var(--el-border-color);
     border-top-left-radius: 8px;
     border-bottom-left-radius: 8px;
 }
 
 /* Right rounded corners */
 ::v-deep(.persistent-shadow-row > td:last-child) {
-    border-right: 5px solid #dcdfe6;
+    border-right: 5px solid var(--el-border-color);
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
 }

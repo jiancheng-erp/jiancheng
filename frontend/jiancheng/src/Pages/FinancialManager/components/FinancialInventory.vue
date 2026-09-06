@@ -2,14 +2,14 @@
     <el-row>
         <el-col>
             <div style="display: flex; align-items: center; gap: 10px;">
-                <el-select v-model="currentWarehouse" clearable filterable @change="updateInventoryDisplay"
-                    placeholder="仓库搜索" style="width: 200px;">
+                <el-select class="u-w-200" v-model="currentWarehouse" clearable filterable @change="updateInventoryDisplay"
+                    placeholder="仓库搜索">
                     <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :label="item.warehouseName"
                         :value="item.warehouseId">
                     </el-option>
                 </el-select>
-                <el-input v-model="supplierNameFilter" placeholder="供应商搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
+                <el-input class="u-w-200" v-model="supplierNameFilter" placeholder="供应商搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
                 <el-cascader v-model="quantityFilters" :options="quantityFilterOptions" :props="cascaderProps" @change="updateInventoryDisplay"
                     placeholder="请选择数量筛选条件" clearable style="width: 400px;">
                 </el-cascader>
@@ -19,20 +19,20 @@
     <el-row :gutter="20">
         <el-col>
             <div style="display: flex; align-items: center; gap: 10px;">
-                <el-input v-model="materialNameFilter" placeholder="材料名称搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
-                <el-input v-model="materialModelFilter" placeholder="材料型号搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
-                <el-input v-model="materialColorFilter" placeholder="材料颜色搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
-                <el-input v-model="materialSpecificationFilter" placeholder="材料规格搜索" clearable
-                    @change="updateInventoryDisplay" style="width: 200px;"></el-input>
-                <el-input v-model="orderRidFilter" placeholder="订单号搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
-                <el-input v-model="customerProductNameFilter" placeholder="客户鞋型号搜索" clearable
-                    @change="updateInventoryDisplay" style="width: 200px;"></el-input>
-                <el-input v-model="shoeRidFilter" placeholder="工厂型号搜索" clearable @change="updateInventoryDisplay"
-                    style="width: 200px;"></el-input>
+                <el-input class="u-w-200" v-model="materialNameFilter" placeholder="材料名称搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
+                <el-input class="u-w-200" v-model="materialModelFilter" placeholder="材料型号搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
+                <el-input class="u-w-200" v-model="materialColorFilter" placeholder="材料颜色搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
+                <el-input class="u-w-200" v-model="materialSpecificationFilter" placeholder="材料规格搜索" clearable
+                    @change="updateInventoryDisplay"></el-input>
+                <el-input class="u-w-200" v-model="orderRidFilter" placeholder="订单号搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
+                <el-input class="u-w-200" v-model="customerProductNameFilter" placeholder="客户鞋型号搜索" clearable
+                    @change="updateInventoryDisplay"></el-input>
+                <el-input class="u-w-200" v-model="shoeRidFilter" placeholder="工厂型号搜索" clearable @change="updateInventoryDisplay"
+                   ></el-input>
                 <!-- <el-select v-model="statusFilter" multiple style="width:200px；"
                         @change="updateInboundDisplayRecord">
                         <el-option v-for="statusOption in statusFilterOptions"

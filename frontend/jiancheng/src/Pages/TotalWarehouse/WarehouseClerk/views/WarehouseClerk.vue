@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="100" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">仓库管理</span>
+          </div>
         </div>
 
         <!-- 菜单（内部滚动） -->
@@ -25,43 +28,48 @@
             index="1"
             @click="handleMenuClick(1)"
           >
+            <el-icon><Box /></el-icon>
             <span>材料入库</span>
           </el-menu-item>
 
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><Sell /></el-icon>
             <span>材料出库</span>
           </el-menu-item>
 
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <el-icon><ShoppingCart /></el-icon>
             <span>按订单出库</span>
           </el-menu-item>
 
           <el-menu-item index="14" @click="handleMenuClick(14)">
+            <el-icon><SoldOut /></el-icon>
             <span>通用材料出库</span>
           </el-menu-item>
 
           <el-menu-item index="9" @click="handleMenuClick(9)">
+            <el-icon><CircleCheck /></el-icon>
             <span>出入库审核</span>
           </el-menu-item>
 
           <el-menu-item index="13" @click="handleMenuClick(13)">
+            <el-icon><Memo /></el-icon>
             <span>出入库明细</span>
           </el-menu-item>
 
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><Goods /></el-icon>
             <span>库存</span>
           </el-menu-item>
 
           <el-menu-item index="7" @click="handleMenuClick(7)">
+            <el-icon><Search /></el-icon>
             <span>订单查询</span>
           </el-menu-item>
 
           <el-menu-item index="12" @click="handleMenuClick(12)">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-
-          <el-menu-item index="99" @click="logout()">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -77,7 +85,7 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import InboundOutboundHistory from '../../HeadOfWarehouse/components/InboundOutboundHistory.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, Box, Sell, ShoppingCart, SoldOut, CircleCheck, Memo, Goods, Search, User } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 import PurchaseInbound from '../../HeadOfWarehouse/components/PurchaseInbound.vue'
@@ -100,7 +108,17 @@ export default {
         OutboundMaterial,
         FinancialWarehouseDetail,
         OutboundByOrder,
-        GeneralMaterialOutbound
+        GeneralMaterialOutbound,
+        Menu,
+        Box,
+        Sell,
+        ShoppingCart,
+        SoldOut,
+        CircleCheck,
+        Memo,
+        Goods,
+        Search,
+        User
     },
     data() {
         return {

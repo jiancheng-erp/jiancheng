@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main height="">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单鞋型数量审批页面</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">订单鞋型数量审批页面</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -25,7 +25,7 @@
                         @clear="getAmountListData">
                     </el-date-picker>
                 </el-col>
-                <el-col :span="4" :offset="0" style="white-space: nowrap">
+                <el-col class="u-nowrap" :span="4" :offset="0">
                     工段选择：
                     <el-select v-model="departSelect" value-key="" placeholder="" clearable filterable
                         @change="getAmountListData" @clear="getAmountListData">

@@ -100,8 +100,8 @@
             </el-col>
         </el-row>
         <el-row :gutter="20">
-            <el-table :data="assetFilterTable" border ref="materialSelectTable"
-                @selection-change="handleMaterialSelectionChange" style="height: 400px">
+            <el-table class="u-h-400" :data="assetFilterTable" border ref="materialSelectTable"
+                @selection-change="handleMaterialSelectionChange">
                 <el-table-column type="selection" width="55"></el-table-column>
                 <el-table-column prop="materialType" label="材料类型" />
                 <el-table-column prop="materialName" label="材料名称" />

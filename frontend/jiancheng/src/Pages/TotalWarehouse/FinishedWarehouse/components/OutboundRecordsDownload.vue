@@ -80,37 +80,37 @@
             <div class="apply-search-bar">
                 <el-form inline @submit.prevent>
                     <el-form-item label="申请单号">
-                        <el-input
+                        <el-input class="u-w-240"
                             v-model="applySearch.applyRId"
                             placeholder="请输入申请单号"
-                            style="width: 240px;"
+                           
                             clearable
                             @keyup.enter="getApplyList"
                         />
                     </el-form-item>
                     <el-form-item label="订单号">
-                        <el-input
+                        <el-input class="u-w-200"
                             v-model="applySearch.orderRId"
                             placeholder="请输入订单号"
-                            style="width: 200px;"
+                           
                             clearable
                             @keyup.enter="getApplyList"
                         />
                     </el-form-item>
                     <el-form-item label="客户名称">
-                        <el-input
+                        <el-input class="u-w-200"
                             v-model="applySearch.customerName"
                             placeholder="请输入客户名称"
-                            style="width: 200px;"
+                           
                             clearable
                             @keyup.enter="getApplyList"
                         />
                     </el-form-item>
                     <el-form-item label="状态">
-                        <el-select
+                        <el-select class="u-w-160"
                             v-model="applySearch.status"
                             placeholder="全部"
-                            style="width: 160px;"
+                           
                             clearable
                             @change="getApplyList"
                         >

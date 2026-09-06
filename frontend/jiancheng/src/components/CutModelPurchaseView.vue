@@ -1,8 +1,8 @@
 <template>
     <el-container direction="vertical">
         <el-main style="height: 100vh;">
-            <el-row :gutter="20" style="text-align: center;">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">
                     {{ `刀模采购 ${currentOrderRid} ${currentEditPurchaseOrderRid}` }}
                 </el-col>
             </el-row>
@@ -102,9 +102,9 @@
         <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
             <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
             <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-                <el-tab-pane v-for="(item, index) in tabPlaneData" :key="index"
+                <el-tab-pane class="u-min-h-500" v-for="(item, index) in tabPlaneData" :key="index"
                     :label="item.purchaseDivideOrderId + '    ' + item.supplierName" :name="item.purchaseDivideOrderId"
-                    style="min-height: 500px">
+                   >
                     <el-row :gutter="20">
                         <el-col :span="12" :offset="0"><span>订单备注：
                                 <el-input v-model="item.remark" placeholder="" type="textarea" resize="none"
@@ -130,7 +130,7 @@
                             </span>
                         </el-col>
                     </el-row>
-                    <el-row :gutter="20" style="margin-top: 20px">
+                    <el-row class="u-mt-5" :gutter="20">
                         <el-col :span="24" :offset="0">
                             <div v-if="factoryFieldJudge(item.purchaseDivideOrderType)">
                                 <el-table :data="item.assetsItems" border stripe>

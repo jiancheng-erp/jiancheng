@@ -1,20 +1,20 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">生产节点管理</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">生产节点管理</el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             订单号筛选：
             <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getOrderTableData()"
                 @clear="getOrderTableData()" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             鞋型号筛选：
             <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getOrderTableData()"
                 @clear="getOrderTableData()" />
         </el-col>
         <el-col :span="4" :offset="4">
-            <span style="white-space: nowrap">状态点查询：
+            <span class="u-nowrap">状态点查询：
                 <el-select v-model="nodeNameSearch" clearable filterable @change="getOrderTableData()"
                     @clear="getOrderTableData()">
                     <el-option v-for="item in [

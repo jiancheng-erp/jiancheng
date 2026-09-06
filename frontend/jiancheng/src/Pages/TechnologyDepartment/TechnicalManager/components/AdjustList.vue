@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">工艺单创建</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">工艺单创建</el-col>
     </el-row>
     <component :is="components[currentDash]" :pendingTaskData="pendingData" :inProgressTaskData="inProgressData" @backToList="changeToList"
     @changeToPend="changeToPend" @changeToProgress="changeToProgress">

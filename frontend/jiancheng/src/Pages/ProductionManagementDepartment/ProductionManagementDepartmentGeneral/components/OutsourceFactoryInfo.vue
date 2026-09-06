@@ -1,11 +1,11 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="nameSearch" placeholder="搜索厂家" clearable
                 @keypress.enter="getOutsourceFactoryData()" @clear="getOutsourceFactoryData" />
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-button @click="openNewOutsourceFactoryDialog">
             添加厂家
         </el-button>
@@ -13,7 +13,7 @@
         <el-button v-if="isEditing" type="primary" @click="saveOutsourceFactory()">保存</el-button>
         <el-button v-if="isEditing" type="primary" @click="isEditing = false">退出编辑</el-button>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-table :data="outsourceFactoryData" border>
             <el-table-column prop="value" label="厂家名称">
                 <template #default="scope">

@@ -4,8 +4,8 @@
       <AllHeader></AllHeader>
     </el-header>
     <el-main height="">
-      <el-row :gutter="20" style="text-align: center">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+      <el-row class="u-text-center" :gutter="20">
+        <el-col class="u-page-title" :span="24" :offset="0"
           >订单鞋型外包审批页面</el-col
         >
       </el-row>
@@ -19,7 +19,7 @@
           </el-descriptions></el-col
         >
       </el-row>
-      <el-row :gutter="20" style="margin-top: 20px">
+      <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
           鞋型配码信息
           <el-table :data="shoeInfo" border stripe :max-height="200">

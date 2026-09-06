@@ -1,5 +1,5 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col>
             <OrderSchedulingSearchDialog :searchForm="searchForm"  @updateSearchForm="handleSearch" />
         </el-col>
@@ -173,7 +173,7 @@
                 </el-row>
             </el-tab-pane>
         </el-tabs>
-        <el-row :gutter="20" style="margin-top: 20px">
+        <el-row class="u-mt-5" :gutter="20">
             <el-col :span="24" :offset="0">
                 订单数量
                 <el-table v-loading="isLoading" :data="shoeBatchInfo" :span-method="spanMethod" border stripe
@@ -185,13 +185,13 @@
                 </el-table>
             </el-col>
         </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
+        <el-row class="u-mt-5" :gutter="20">
             <el-col :span="24" :offset="0">
                 商务部工艺备注
                 <el-input v-model="currentRow.technicalRemark" autosize type="textarea" readonly />
             </el-col>
         </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
+        <el-row class="u-mt-5" :gutter="20">
             <el-col :span="24" :offset="0">
                 商务部材料备注
                 <el-input v-model="currentRow.materialRemark" autosize type="textarea" readonly />

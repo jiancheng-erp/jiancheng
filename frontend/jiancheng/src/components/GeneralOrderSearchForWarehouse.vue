@@ -1,39 +1,39 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单查询</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">订单查询</el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="6" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="0">
             订单号搜索：
             <el-input v-model="orderSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="2">
             客人名称搜索：
             <el-input v-model="customerSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="2">
             工厂型号搜索：
             <el-input v-model="shoeRIdSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 10px">
-        <el-col :span="6" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="0">
             客户型号搜索：
             <el-input v-model="shoeCIdSearch" placeholder="" size="" :suffix-icon="Search" clearable @change="tableFilter"></el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20" style="margin-top: 10px">
-        <el-col :span="7" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="7" :offset="0">
             订单日期：
-            <el-date-picker v-model="startDateRange" type="daterange" range-separator="至"
+            <el-date-picker class="u-w-240" v-model="startDateRange" type="daterange" range-separator="至"
                 start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
-                style="width: 240px" @change="tableFilter" clearable />
+                @change="tableFilter" clearable />
         </el-col>
-        <el-col :span="7" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="7" :offset="2">
             交货日期：
-            <el-date-picker v-model="endDateRange" type="daterange" range-separator="至"
+            <el-date-picker class="u-w-240" v-model="endDateRange" type="daterange" range-separator="至"
                 start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD"
-                style="width: 240px" @change="tableFilter" clearable />
+                @change="tableFilter" clearable />
         </el-col>
         <el-col :span="6" :offset="1">
             <el-button type="primary" @click="tableFilter">搜索</el-button>
@@ -44,14 +44,14 @@
     </el-row>
     <el-row style="margin-top: 8px" v-if="Object.keys(currencyRates).length">
         <el-col :span="24">
-            <span style="font-size: 13px; color: #909399">实时汇率：</span>
+            <span style="font-size: 13px; color: var(--color-text-3)">实时汇率：</span>
             <el-tag v-for="(rate, currency) in displayRates" :key="currency" size="small" style="margin-right: 6px" type="info">
                 1 {{ currency }} = {{ rate }} RMB
             </el-tag>
         </el-col>
     </el-row>
     <el-row>
-        <el-table :data="orderFilterData" border stripe height="600">
+        <el-table :data="orderFilterData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.shoes" :border="true">

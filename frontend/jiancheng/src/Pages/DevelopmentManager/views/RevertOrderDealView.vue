@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main style="overflow-x: hidden">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">退回投产指令单编辑</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">退回投产指令单编辑</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -41,9 +41,9 @@
                 </el-col>
             </el-row>
 
-            <el-row :gutter="20" style="margin-top: 20px">
+            <el-row class="u-mt-5" :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-table :data="testTableFilterData" border style="height: 400px">
+                    <el-table class="u-h-400" :data="testTableFilterData" border>
                         <el-table-column type="expand">
                             <template #default="scope">
                                 <el-table :data="scope.row.typeInfos" border>
@@ -178,7 +178,7 @@
                         </div>
                     </el-col>
                 </el-row>
-                <el-table :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" style="height: 400px" v-loading="materialAddfinished">
+                <el-table class="u-h-400" :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" v-loading="materialAddfinished">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="materialType" label="材料类型" />
                     <el-table-column prop="materialName" label="材料名称" />
@@ -198,7 +198,7 @@
                 <div style="height: 650px; overflow-y: scroll">
                     <el-row :gutter="20">
                         <el-col :span="24" :offset="0">
-                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                            <el-descriptions class="u-mt-5" title="鞋型基本信息" border direction="vertical" column="4">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                     <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                                 </el-descriptions-item>
@@ -308,7 +308,7 @@
             <el-dialog :title="`编辑投产指令单 ${newProductionInstructionId}`" v-model="isEditDialogVisible" :close-on-click-modal="false" width="100%" fullscreen style="overflow-y: scroll">
                 <el-row :gutter="20">
                     <el-col :span="24" :offset="0">
-                        <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                        <el-descriptions class="u-mt-5" title="鞋型基本信息" border direction="vertical" column="4">
                             <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                 <el-image style="width: 200px; height: 100px" :src="getShoeImageUrl" />
                             </el-descriptions-item>

@@ -16,7 +16,7 @@
                     <el-input v-model="searchCustomerModel" placeholder="客户型号" clearable @input="loadReceivables(1)" />
                 </el-col>
                 <el-col :span="5">
-                    <el-date-picker
+                    <el-date-picker class="u-w-280"
                         v-model="dateRange"
                         type="daterange"
                         start-placeholder="开始日期"
@@ -24,7 +24,7 @@
                         format="YYYY-MM-DD"
                         value-format="YYYY-MM-DD"
                         clearable
-                        style="width: 280px"
+                       
                         @change="loadReceivables(1)"
                     />
                 </el-col>

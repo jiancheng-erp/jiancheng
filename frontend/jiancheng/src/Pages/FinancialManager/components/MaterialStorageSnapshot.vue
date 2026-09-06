@@ -1,15 +1,15 @@
 <template>
     <!-- 查询控制区 -->
-    <div style="background: #fafafa; border: 1px solid #ebeef5; border-radius: 6px; padding: 14px 16px; margin-bottom: 12px;">
+    <div style="background: #fafafa; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; padding: 14px 16px; margin-bottom: 12px;">
         <!-- 第一行：模式选择 -->
         <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 10px;">
-            <span style="font-size: 13px; color: #606266; white-space: nowrap;">查询方式</span>
+            <span style="font-size: 13px; color: var(--color-text-2); white-space: nowrap;">查询方式</span>
             <el-radio-group v-model="queryMode" @change="onQueryModeChange" size="small">
                 <el-radio-button label="snapshot">单日快照</el-radio-button>
                 <el-radio-button label="period">区间变化</el-radio-button>
             </el-radio-group>
             <el-divider direction="vertical" />
-            <span style="font-size: 13px; color: #606266; white-space: nowrap;">视图</span>
+            <span style="font-size: 13px; color: var(--color-text-2); white-space: nowrap;">视图</span>
             <el-radio-group v-model="viewMode" @change="onViewModeChange" size="small">
                 <el-radio-button label="detail">明细</el-radio-button>
                 <el-radio-button label="grouped">按名称汇总</el-radio-button>
@@ -17,28 +17,28 @@
         </div>
         <!-- 第二行：日期 + 仓库 + 供应商 + 材料名称 -->
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-            <el-date-picker v-if="queryMode === 'snapshot'" v-model="dateFilter" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"
-                :disabled-date="disableAfterYesterday" style="width: 160px;" />
-            <el-date-picker v-if="queryMode === 'period'" v-model="dateRangeFilter" type="daterange"
+            <el-date-picker class="u-w-160" v-if="queryMode === 'snapshot'" v-model="dateFilter" type="date" placeholder="选择日期" value-format="YYYY-MM-DD"
+                :disabled-date="disableAfterYesterday" />
+            <el-date-picker class="u-w-280" v-if="queryMode === 'period'" v-model="dateRangeFilter" type="daterange"
                 range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
-                value-format="YYYY-MM-DD" :disabled-date="disableAfterYesterday" style="width: 280px;" />
-            <el-select v-model="currentWarehouse" clearable filterable placeholder="仓库" style="width: 160px;">
+                value-format="YYYY-MM-DD" :disabled-date="disableAfterYesterday" />
+            <el-select class="u-w-160" v-model="currentWarehouse" clearable filterable placeholder="仓库">
                 <el-option v-for="item in warehouseOptions" :key="item.warehouseId" :label="item.warehouseName"
                     :value="item.warehouseId" />
             </el-select>
-            <el-input v-model="supplierNameFilter" placeholder="供应商" clearable style="width: 150px;" />
-            <el-input v-model="materialNameFilter" placeholder="材料名称" clearable style="width: 150px;" />
+            <el-input class="u-w-150" v-model="supplierNameFilter" placeholder="供应商" clearable />
+            <el-input class="u-w-150" v-model="materialNameFilter" placeholder="材料名称" clearable />
         </div>
         <!-- 第三行：明细模式额外筛选 -->
         <div v-if="viewMode === 'detail'" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-            <el-input v-model="materialModelFilter" placeholder="材料型号" clearable style="width: 140px;" />
-            <el-input v-model="materialSpecificationFilter" placeholder="材料规格" clearable style="width: 140px;" />
-            <el-input v-model="materialColorFilter" placeholder="材料颜色" clearable style="width: 140px;" />
-            <el-input v-model="orderRidFilter" placeholder="订单号" clearable style="width: 140px;" />
-            <el-input v-model="customerProductNameFilter" placeholder="客户鞋型号" clearable style="width: 140px;" />
-            <el-input v-model="shoeRidFilter" placeholder="工厂型号" clearable style="width: 140px;" />
-            <el-cascader v-if="queryMode === 'snapshot'" v-model="quantityFilters" :options="quantityFilterOptions" :props="cascaderProps"
-                placeholder="数量筛选条件" clearable style="width: 280px;" />
+            <el-input class="u-w-140" v-model="materialModelFilter" placeholder="材料型号" clearable />
+            <el-input class="u-w-140" v-model="materialSpecificationFilter" placeholder="材料规格" clearable />
+            <el-input class="u-w-140" v-model="materialColorFilter" placeholder="材料颜色" clearable />
+            <el-input class="u-w-140" v-model="orderRidFilter" placeholder="订单号" clearable />
+            <el-input class="u-w-140" v-model="customerProductNameFilter" placeholder="客户鞋型号" clearable />
+            <el-input class="u-w-140" v-model="shoeRidFilter" placeholder="工厂型号" clearable />
+            <el-cascader class="u-w-280" v-if="queryMode === 'snapshot'" v-model="quantityFilters" :options="quantityFilterOptions" :props="cascaderProps"
+                placeholder="数量筛选条件" clearable />
         </div>
         <!-- 操作按钮 -->
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -112,35 +112,35 @@
             <el-table-column prop="openingAmount" label="期初库存" min-width="80" />
             <el-table-column label="采购入库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodInbound > 0 ? '#67c23a' : '' }">
+                    <span :style="{ color: row.periodInbound > 0 ? 'var(--color-success)' : '' }">
                         {{ row.periodInbound > 0 ? `+${row.periodInbound}` : row.periodInbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="生产出库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodOutbound > 0 ? '#e6a23c' : '' }">
+                    <span :style="{ color: row.periodOutbound > 0 ? 'var(--color-warning)' : '' }">
                         {{ row.periodOutbound > 0 ? `-${row.periodOutbound}` : row.periodOutbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="盘库入库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodMakeInbound > 0 ? '#67c23a' : '' }">
+                    <span :style="{ color: row.periodMakeInbound > 0 ? 'var(--color-success)' : '' }">
                         {{ row.periodMakeInbound > 0 ? `+${row.periodMakeInbound}` : row.periodMakeInbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="盘库出库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodMakeOutbound > 0 ? '#e6a23c' : '' }">
+                    <span :style="{ color: row.periodMakeOutbound > 0 ? 'var(--color-warning)' : '' }">
                         {{ row.periodMakeOutbound > 0 ? `-${row.periodMakeOutbound}` : row.periodMakeOutbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="净变化" min-width="80">
                 <template #default="{ row }">
-                    <span :style="{ color: row.netChange > 0 ? '#67c23a' : row.netChange < 0 ? '#f56c6c' : '' }">
+                    <span :style="{ color: row.netChange > 0 ? 'var(--color-success)' : row.netChange < 0 ? 'var(--color-danger)' : '' }">
                         {{ row.netChange > 0 ? `+${row.netChange}` : row.netChange }}
                     </span>
                 </template>
@@ -161,35 +161,35 @@
             <el-table-column prop="openingAmount" label="期初库存" min-width="90" />
             <el-table-column label="采购入库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodInbound > 0 ? '#67c23a' : '' }">
+                    <span :style="{ color: row.periodInbound > 0 ? 'var(--color-success)' : '' }">
                         {{ row.periodInbound > 0 ? `+${row.periodInbound}` : row.periodInbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="生产出库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodOutbound > 0 ? '#e6a23c' : '' }">
+                    <span :style="{ color: row.periodOutbound > 0 ? 'var(--color-warning)' : '' }">
                         {{ row.periodOutbound > 0 ? `-${row.periodOutbound}` : row.periodOutbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="盘库入库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodMakeInbound > 0 ? '#67c23a' : '' }">
+                    <span :style="{ color: row.periodMakeInbound > 0 ? 'var(--color-success)' : '' }">
                         {{ row.periodMakeInbound > 0 ? `+${row.periodMakeInbound}` : row.periodMakeInbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="盘库出库变化" min-width="100">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodMakeOutbound > 0 ? '#e6a23c' : '' }">
+                    <span :style="{ color: row.periodMakeOutbound > 0 ? 'var(--color-warning)' : '' }">
                         {{ row.periodMakeOutbound > 0 ? `-${row.periodMakeOutbound}` : row.periodMakeOutbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="净变化" min-width="80">
                 <template #default="{ row }">
-                    <span :style="{ color: row.netChange > 0 ? '#67c23a' : row.netChange < 0 ? '#f56c6c' : '' }">
+                    <span :style="{ color: row.netChange > 0 ? 'var(--color-success)' : row.netChange < 0 ? 'var(--color-danger)' : '' }">
                         {{ row.netChange > 0 ? `+${row.netChange}` : row.netChange }}
                     </span>
                 </template>

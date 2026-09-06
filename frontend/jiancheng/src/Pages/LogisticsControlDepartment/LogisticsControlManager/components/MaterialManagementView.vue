@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >材料管理</el-col
         >
     </el-row>
@@ -14,7 +14,7 @@
                 style="height: 700px"
             >
                 <el-tab-pane label="材料类型管理" name="材料类型管理">
-                    <el-row :gutter="20" style="margin-top: 20px">
+                    <el-row class="u-mt-5" :gutter="20">
                         <el-col :span="6" :offset="0">
                             <div style="display: flex; align-items: center; white-space: nowrap">
                                 材料名称查询：<el-input
@@ -62,12 +62,12 @@
                         </el-col>
                     </el-row>
 
-                    <el-row :gutter="20" style="margin-top: 20px">
+                    <el-row class="u-mt-5" :gutter="20">
                         <el-col :span="24" :offset="0">
-                            <el-table
+                            <el-table height="calc(100vh - var(--main-table-offset))"
                                 :data="materialTypeFilterData"
                                 border
-                                style="height: 500px"
+                               
                                 v-loading="datafinished"
                             >
                                 <el-table-column type="expand">
@@ -117,7 +117,7 @@
                             </el-table>
                         </el-col>
                     </el-row>
-                    <el-row style="margin-top: 20px">
+                    <el-row class="u-mt-5">
                         <el-col :span="6" :offset="0">
                             <el-pagination
                                 :total="materialTotal"

@@ -17,24 +17,24 @@
         />
       </el-form-item>
       <el-form-item label="按年">
-        <el-date-picker
+        <el-date-picker class="u-w-120"
           v-model="yearPick"
           type="year"
           value-format="YYYY"
           placeholder="选年份"
           clearable
-          style="width: 120px"
+         
           @change="onYearPick"
         />
       </el-form-item>
       <el-form-item label="按月">
-        <el-date-picker
+        <el-date-picker class="u-w-130"
           v-model="monthPick"
           type="month"
           value-format="YYYY-MM"
           placeholder="选月份"
           clearable
-          style="width: 130px"
+         
           @change="onMonthPick"
         />
       </el-form-item>
@@ -53,21 +53,21 @@
         />
       </el-form-item>
       <el-form-item label="客户">
-        <el-input v-model="filters.customerName" placeholder="客户名称" clearable style="width: 150px" />
+        <el-input class="u-w-150" v-model="filters.customerName" placeholder="客户名称" clearable />
       </el-form-item>
       <el-form-item label="部门">
-        <el-select v-model="filters.departmentId" placeholder="全部" clearable style="width: 140px">
+        <el-select class="u-w-140" v-model="filters.departmentId" placeholder="全部" clearable>
           <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="编号">
-        <el-input v-model="filters.orderRId" placeholder="订单编号" clearable style="width: 150px" />
+        <el-input class="u-w-150" v-model="filters.orderRId" placeholder="订单编号" clearable />
       </el-form-item>
       <el-form-item label="客人型号">
-        <el-input v-model="filters.customerProductName" placeholder="客人型号" clearable style="width: 140px" />
+        <el-input class="u-w-140" v-model="filters.customerProductName" placeholder="客人型号" clearable />
       </el-form-item>
       <el-form-item label="工厂型号">
-        <el-input v-model="filters.shoeRId" placeholder="工厂型号" clearable style="width: 140px" />
+        <el-input class="u-w-140" v-model="filters.shoeRId" placeholder="工厂型号" clearable />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSearch">查询</el-button>

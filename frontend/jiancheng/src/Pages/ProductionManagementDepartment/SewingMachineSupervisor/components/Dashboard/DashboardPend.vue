@@ -11,9 +11,9 @@
         </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24">
-            <el-table :data="displayData" style="height: 500px" @row-dblclick="handleRowClick">
+            <el-table class="u-h-500" :data="displayData" @row-dblclick="handleRowClick">
                 <el-table-column prop="taskName" label="任务名称"></el-table-column>
                 <el-table-column prop="orderId" label="订单号"></el-table-column>
                 <el-table-column prop="createTime" label="订单创建时间"></el-table-column>

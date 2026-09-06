@@ -231,12 +231,12 @@
         <el-button size="small" @click="selectAll">全选已入库</el-button>
         <el-button size="small" @click="deselectAll">取消全选</el-button>
         <span style="color:#666; font-size:13px;">按鞋型选择：</span>
-        <el-select
+        <el-select class="u-w-180"
           v-model="executeFilterShoeRId"
           placeholder="全部鞋型"
           clearable
           size="small"
-          style="width:180px;"
+         
           @change="onExecuteShoeFilter"
         >
           <el-option
@@ -251,7 +251,7 @@
 
       <!-- 已选鞋型汇总 -->
       <div v-if="selectedShoeRIdSummary.length" style="margin-bottom:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-        <span style="color:#409eff; font-size:13px; font-weight:500;">已选鞋型：</span>
+        <span style="color:var(--el-color-primary); font-size:13px; font-weight:500;">已选鞋型：</span>
         <el-tag
           v-for="item in selectedShoeRIdSummary"
           :key="item.shoeRId"
@@ -299,31 +299,31 @@
         <el-table-column prop="totalPairs" label="预计出库(双)" width="120" />
         <el-table-column label="实际箱数" width="160">
           <template #default="{ row }">
-            <el-input-number
+            <el-input-number class="u-w-120"
               v-model="row.actualCartonCount"
               :min="0"
               :precision="2"
               controls-position="right"
-              style="width: 120px"
+             
               @change="onCartonChange(row)"
             />
           </template>
         </el-table-column>
         <el-table-column label="实际出库(双)" width="160">
           <template #default="{ row }">
-            <el-input-number
+            <el-input-number class="u-w-120"
               v-model="row.actualPairs"
               :min="0"
               :precision="0"
               controls-position="right"
-              style="width: 120px"
+             
               @change="onPairsChange(row)"
             />
           </template>
         </el-table-column>
         <el-table-column label="差异(双)" width="120">
           <template #default="{ row }">
-            <span :style="{ color: row._diff ? '#e6a23c' : '#67c23a' }">
+            <span :style="{ color: row._diff ? 'var(--color-warning)' : 'var(--color-success)' }">
               {{ row._diff || 0 }}
             </span>
           </template>
@@ -359,7 +359,7 @@
           <span>合计出库箱数：<b>{{ executeTotalActualCartons }}</b> 箱</span>
           <span>合计出库双数：<b>{{ executeTotalActual }}</b> 双</span>
           <span>预计双数：<b>{{ executeTotalExpected }}</b> 双</span>
-          <span>差异：<b :style="{ color: (executeTotalActual - executeTotalExpected) === 0 ? '#67c23a' : '#e6a23c' }">{{ executeTotalActual - executeTotalExpected }}</b> 双</span>
+          <span>差异：<b :style="{ color: (executeTotalActual - executeTotalExpected) === 0 ? 'var(--color-success)' : 'var(--color-warning)' }">{{ executeTotalActual - executeTotalExpected }}</b> 双</span>
         </div>
         <span>
           <el-button @click="executeDialogVisible = false">取消</el-button>
@@ -848,15 +848,15 @@ export default {
   gap: 24px;
   padding: 8px 12px;
   margin-bottom: 8px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 4px;
   font-size: 13px;
-  color: #606266;
+  color: var(--color-text-2);
   text-align: left;
   justify-content: flex-start;
 }
 .dialog-totals b {
-  color: #409eff;
+  color: var(--el-color-primary);
   margin: 0 2px;
 }
 .mb-2 {

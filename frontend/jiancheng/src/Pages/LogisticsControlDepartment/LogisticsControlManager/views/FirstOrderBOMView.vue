@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main height="">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">一次采购订单创建</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">一次采购订单创建</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -79,9 +79,9 @@
                 </el-col>
             </el-row>
 
-            <el-row :gutter="20" style="margin-top: 20px">
+            <el-row class="u-mt-5" :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-table :data="testTableFilterData" border style="height: 400px">
+                    <el-table class="u-h-400" :data="testTableFilterData" border>
                         <el-table-column type="expand">
                             <template #default="parentScope">
                                 <el-table :data="parentScope.row.typeInfos" border>
@@ -313,7 +313,7 @@
                     </el-descriptions-item> -->
                 </el-descriptions>
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
                             <el-table :data="firstBomPreviewData" border style="width: 100%">
                                 <el-table-column prop="materialType" label="材料类型" />
@@ -361,8 +361,8 @@
                         </el-col>
                     </el-row>
 
-                    <el-row v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
-                        style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" v-for="purchaseDivideOrder in purchaseTestData" :key="purchaseDivideOrder" :gutter="20"
+                       >
                         <el-col :span="23">
                             <h3>分采购订单编号 {{ purchaseDivideOrder.purchaseDivideOrderId }}</h3>
                             <h3>工厂名称: {{ purchaseDivideOrder.supplierName }}</h3>
@@ -458,9 +458,9 @@
     <el-dialog title="采购订单创建页面" v-model="purchaseOrderCreateVis" width="80%" :close-on-click-modal="false">
         <span v-if="activeTab === ''"> 无需购买材料，推进流程即可。 </span>
         <el-tabs v-if="activeTab !== ''" v-model="activeTab" type="card" tab-position="top">
-            <el-tab-pane v-for="(item, index) in tabPlaneData" :key="index"
+            <el-tab-pane class="u-min-h-500" v-for="(item, index) in tabPlaneData" :key="index"
                 :label="item.purchaseDivideOrderId + '    ' + item.supplierName" :name="item.purchaseDivideOrderId"
-                style="min-height: 500px">
+               >
                 <el-row :gutter="20">
                     <el-col :span="12" :offset="0"><span>订单备注：
                             <el-input v-model="item.remark" placeholder="" type="textarea" resize="none"
@@ -486,7 +486,7 @@
                         </span>
                     </el-col>
                 </el-row>
-                <el-row :gutter="20" style="margin-top: 20px">
+                <el-row class="u-mt-5" :gutter="20">
                     <el-col :span="24" :offset="0">
                         <div v-if="factoryFieldJudge(item.purchaseDivideOrderType)">
                             <el-table :data="item.assetsItems" border stripe>

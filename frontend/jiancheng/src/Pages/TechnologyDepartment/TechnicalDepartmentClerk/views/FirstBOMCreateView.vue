@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main style="overflow-x: hidden">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0"
                     >一次BOM填写</el-col
                 >
             </el-row>
@@ -55,9 +55,9 @@
                 </el-col>
             </el-row>
 
-            <el-row :gutter="20" style="margin-top: 20px">
+            <el-row class="u-mt-5" :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-table :data="testTableFilterData" border style="height: 400px">
+                    <el-table class="u-h-400" :data="testTableFilterData" border>
                         <el-table-column type="expand">
                             <template #default="parentScope">
                                 <el-table :data="parentScope.row.typeInfos" border>
@@ -337,7 +337,7 @@
                     }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="23">
                             <el-table
                                 :data="orderProduceInfo"
@@ -360,7 +360,7 @@
                             </el-table>
                         </el-col>
                     </el-row>
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="23">
                             <el-table :data="bomPreviewData" border style="width: 100%">
                                 <el-table-column prop="materialType" label="材料类型" />
@@ -418,12 +418,12 @@
                     }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
-                            <el-table
+                            <el-table class="u-h-400"
                                 :data="unIssueBOMData"
                                 border
-                                style="height: 400px"
+                               
                                 @selection-change="handleShoeSelectionChange"
                             >
                                 <el-table-column type="selection" width="55"></el-table-column>
@@ -580,12 +580,12 @@
                         </div>
                     </el-col>
                 </el-row>
-                <el-table
+                <el-table class="u-h-400"
                     :data="assetFilterTable"
                     border
                     ref="materialSelectTable"
                     @selection-change="handleMaterialSelectionChange"
-                    style="height: 400px"
+                   
                     v-loading="materialAddfinished"
                 >
                     <el-table-column type="selection" width="55"></el-table-column>

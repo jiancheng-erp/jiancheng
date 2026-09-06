@@ -1,9 +1,9 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">部门管理</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">部门管理</el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="6" :offset="0" style="white-space: nowrap">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="6" :offset="0">
             部门名称搜索：
             <el-input v-model="departmentSearch" placeholder="请输入部门名称" clearable></el-input>
         </el-col>
@@ -11,12 +11,12 @@
             <el-button type="primary" size="default" @click="openAddDepartmentDialog">添加新部门</el-button>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table
                 :data="filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)"
                 style="width: 100%"
-                height="550"
+                height="calc(100vh - var(--main-table-offset))"
                 border
             >
                 <el-table-column prop="value" label="部门ID" width="120"></el-table-column>

@@ -49,7 +49,7 @@
                             <div class="card-head">
                                 <span class="card-title">订单数 & 下单鞋数量 · 时间分布</span>
                                 <div class="head-actions no-print">
-                                    <el-select v-model="orderTimeAgg" size="small" style="width: 120px" @change="loadOrderSeries">
+                                    <el-select class="u-w-120" v-model="orderTimeAgg" size="small" @change="loadOrderSeries">
                                         <el-option label="按日" value="day" />
                                         <el-option label="按周" value="week" />
                                         <el-option label="按月" value="month" />
@@ -69,7 +69,7 @@
                             <div class="card-head">
                                 <span class="card-title">在制（生产阶段） · 订单/鞋型 数量</span>
                                 <div class="head-actions no-print">
-                                    <el-select v-model="prodAgg" size="small" style="width: 120px" @change="loadProductionSeries">
+                                    <el-select class="u-w-120" v-model="prodAgg" size="small" @change="loadProductionSeries">
                                         <el-option label="按日" value="day" />
                                         <el-option label="按周" value="week" />
                                         <el-option label="按月" value="month" />
@@ -112,7 +112,7 @@
                             <div class="card-head">
                                 <span class="card-title">订单 Top 排名</span>
                                 <div class="head-actions no-print">
-                                    <el-select v-model="metrics.order" size="small" style="width: 140px" @change="loadTopOrders">
+                                    <el-select class="u-w-140" v-model="metrics.order" size="small" @change="loadTopOrders">
                                         <el-option label="按毛利" value="gross_profit" />
                                         <el-option label="按毛利率" value="gross_margin" />
                                         <el-option label="按GMV" value="gmv" />
@@ -152,7 +152,7 @@
                             <div class="card-head">
                                 <span class="card-title">客户 Top 排名</span>
                                 <div class="head-actions no-print">
-                                    <el-select v-model="metrics.customer" size="small" style="width: 160px" @change="loadTopCustomers">
+                                    <el-select class="u-w-160" v-model="metrics.customer" size="small" @change="loadTopCustomers">
                                         <el-option label="按GMV" value="gmv" />
                                         <el-option label="按毛利" value="gross_profit" />
                                         <el-option label="按毛利率" value="gross_margin" />
@@ -271,7 +271,7 @@
                             <div class="card-head">
                                 <span class="card-title">鞋型 Top 排名</span>
                                 <div class="head-actions no-print">
-                                    <el-select v-model="metrics.shoe" size="small" style="width: 160px" @change="loadTopShoes">
+                                    <el-select class="u-w-160" v-model="metrics.shoe" size="small" @change="loadTopShoes">
                                         <el-option label="按使用次数" value="count" />
                                         <el-option label="按平均单价" value="avg_unit_price" />
                                         <el-option label="按GMV" value="gmv" />

@@ -353,7 +353,7 @@ export default defineComponent({
   font-size: 48px;
   font-weight: 700;
   letter-spacing: 2px;
-  background: linear-gradient(120deg, #00eaff, #7df9ff, #ffffff);
+  background: linear-gradient(120deg, #00eaff, #7df9ff, var(--el-color-white));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

@@ -1,6 +1,6 @@
 <template>
 	<el-row :gutter="20">
-		<el-col :span="24" style="font-size: xx-large; text-align: center;">退回任务列表</el-col>
+		<el-col class="u-page-title" :span="24">退回任务列表</el-col>
 	</el-row>
     <el-row :gutter="20">
         <el-col :span="4">

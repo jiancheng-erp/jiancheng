@@ -6,47 +6,58 @@
 
     <el-container class="app-body">
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">财务管理</span>
+          </div>
         </div>
 
         <el-menu :default-active="activeIndex" class="app-menu" :unique-opened="true">
           <el-menu-item index="1" @click="handleMenuClick('FinancialWarehouseDetail', '1')">
+            <el-icon><Tickets /></el-icon>
             <span>总仓出入库记录</span>
           </el-menu-item>
           <el-menu-item index="2" @click="handleMenuClick('FinancialWarehouseInventory', '2')">
+            <el-icon><Goods /></el-icon>
             <span>库存</span>
           </el-menu-item>
           <el-menu-item index="12" @click="handleMenuClick('InOutboundRecordsForAdmin', '12')">
+            <el-icon><CircleCheck /></el-icon>
             <span>行政入库审核</span>
           </el-menu-item>
           <el-menu-item index="9" @click="handleMenuClick('InOutboundRecords', '9')">
+            <el-icon><Tickets /></el-icon>
             <span>成品仓出入库记录</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick('FinancialRecievableDetail', '3')">
+            <el-icon><Money /></el-icon>
             <span>应收记录</span>
           </el-menu-item>
           <el-menu-item index="4" @click="handleMenuClick('GeneralOrderSearchForWarehouse', '4')">
+            <el-icon><Search /></el-icon>
             <span>订单查询</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick('SupplierManagementView', '5')">
+            <el-icon><OfficeBuilding /></el-icon>
             <span>供应商管理</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick('MaterialManagementView', '6')">
+            <el-icon><Management /></el-icon>
             <span>物料管理</span>
           </el-menu-item>
           <el-menu-item index="7" @click="handleMenuClick('DevelopmentPerformanceManagement', '7')">
+            <el-icon><TrendCharts /></el-icon>
             <span>开发绩效管理</span>
           </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick('OrderSearch', '8')">
+            <el-icon><Tickets /></el-icon>
             <span>BOM查询</span>
           </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick('FinancialExchangeManagement', '10')">
+            <el-icon><Coin /></el-icon>
             <span>汇率管理</span>
-          </el-menu-item>
-          <el-menu-item index="99" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -60,7 +71,7 @@
 
 <script setup lang="js">
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { Menu, Tickets, Goods, CircleCheck, Money, Search, OfficeBuilding, Management, TrendCharts, Coin } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
@@ -158,7 +169,7 @@ async function logout() {
 
 .el-main {
   padding: 16px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: var(--radius-xl);
 }
 
@@ -171,7 +182,7 @@ async function logout() {
   gap: 12px;
   margin: 0 0 16px;
   padding: 8px 16px;
-  background: #fff;
+  background: var(--el-color-white);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-soft);

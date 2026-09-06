@@ -1,6 +1,6 @@
 <template>
     <!-- 统计卡片 -->
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="6" v-for="item in statisticList" :key="item.title">
             <el-card shadow="hover" style="border-radius: 12px; text-align: center">
                 <el-statistic :title="item.title" :value="item.value" :prefix-icon="item.icon" />
@@ -24,7 +24,7 @@
         </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="12">
             <el-card shadow="hover" style="border-radius: 12px">
                 <div style="font-weight: bold; margin-bottom: 10px">近期每月订单数变化</div>

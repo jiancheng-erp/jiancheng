@@ -1,16 +1,16 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getOrderShoeTableData()"
                 @clear="getOrderShoeTableData()" />
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getOrderShoeTableData()"
                 @clear="getOrderShoeTableData()" />
         </el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-table :data="orderShoeTableData" border stripe height="600">
+        <el-table :data="orderShoeTableData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column prop="orderRId" label="订单号"></el-table-column>
             <el-table-column prop="shoeRId" label="鞋型号"></el-table-column>
             <el-table-column prop="orderStartDate" label="订单开始日期"></el-table-column>

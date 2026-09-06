@@ -14,9 +14,9 @@
             <el-tab-pane v-for="tab in warehouseTabs" :key="tab.key" :label="tab.label" :name="tab.key">
                 <el-row :gutter="20">
                     <el-col>
-                        <el-input v-model="filters[tab.key].materialName" placeholder="材料名称搜索"
+                        <el-input class="u-w-200" v-model="filters[tab.key].materialName" placeholder="材料名称搜索"
                             @change="reload(tab.key)" @clear="reload(tab.key)" clearable
-                            style="width: 200px;"></el-input>
+                           ></el-input>
                         <el-input v-model="filters[tab.key].supplierName" placeholder="厂家搜索"
                             @change="reload(tab.key)" @clear="reload(tab.key)" clearable
                             style="width: 200px; margin-left: 12px;"></el-input>
@@ -30,7 +30,7 @@
                     <span class="legend-item"><span class="legend-dot status-partial"></span>部分出库</span>
                 </div>
 
-                <el-table v-if="activeTab === tab.key" :data="state[tab.key].tableData" border stripe height="600"
+                <el-table v-if="activeTab === tab.key" :data="state[tab.key].tableData" border stripe height="calc(100vh - var(--main-table-offset))"
                     :row-class-name="rowClassName" style="margin-top: 8px;">
                     <el-table-column prop="materialName" label="材料名称" min-width="160" show-overflow-tooltip />
                     <el-table-column prop="supplierName" label="厂家" min-width="140" show-overflow-tooltip />
@@ -174,12 +174,12 @@ export default {
 }
 
 .header-card .hint {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 
 .tabs {
-    background: #fff;
+    background: var(--el-color-white);
 }
 
 .ml-2 {
@@ -190,7 +190,7 @@ export default {
     margin-top: 10px;
     display: flex;
     gap: 16px;
-    color: #606266;
+    color: var(--color-text-2);
     font-size: 13px;
 }
 
@@ -213,16 +213,16 @@ export default {
 }
 
 .legend-dot.status-partial {
-    background: #ecf5ff;
+    background: var(--el-color-primary-light-9);
 }
 </style>
 
-<style>
-.el-table .row-status-never td.el-table__cell {
+<style scoped>
+:deep(.el-table .row-status-never td.el-table__cell) {
     background-color: #fdf6ec !important;
 }
 
-.el-table .row-status-partial td.el-table__cell {
-    background-color: #ecf5ff !important;
+:deep(.el-table .row-status-partial td.el-table__cell) {
+    background-color: var(--el-color-primary-light-9) !important;
 }
 </style>

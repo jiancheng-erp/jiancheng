@@ -588,6 +588,7 @@ CREATE TABLE `order` (
   `order_id` bigint NOT NULL AUTO_INCREMENT,
   `order_rid` varchar(40) NOT NULL,
   `order_cid` varchar(40) DEFAULT NULL,
+  `order_type` char(1) NOT NULL DEFAULT 'N',
   `batch_info_type_id` int NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,

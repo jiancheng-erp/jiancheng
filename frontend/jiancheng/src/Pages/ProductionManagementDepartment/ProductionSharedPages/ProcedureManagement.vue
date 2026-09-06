@@ -1,16 +1,16 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="procedureSearch" placeholder="搜索工序" clearable @keypress.enter="getProcedureData()"
                 @clear="getProcedureData" />
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-select v-model="teamNameSearch" placeholder="选择工组" @change="getProcedureData()" filterable clearable>
                 <el-option v-for="item in teams" :key="item" :label="item" :value="item"></el-option>
             </el-select>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-button @click="openNewProcedureDialog">
             添加工序
         </el-button>
@@ -18,7 +18,7 @@
         <el-button v-if="isEditing" type="primary" @click="saveProcedure()">保存</el-button>
         <el-button v-if="isEditing" type="primary" @click="isEditing = false">退出编辑</el-button>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-table :data="procedureData" border>
             <el-table-column prop="procedureName" label="工序">
                 <template #default="scope">

@@ -1,5 +1,5 @@
 <template>
-  <el-row :gutter="20" style="margin-top: 20px">
+  <el-row class="u-mt-5" :gutter="20">
     <el-col :span="8" :offset="0">
       <el-radio-group v-model="lineType" size="large">
         <el-radio-button label="裁断" value="0" />
@@ -8,7 +8,7 @@
         <el-radio-button label="成型" value="3" />
       </el-radio-group>
     </el-col>
-    <el-col :span="4" :offset="0" style="white-space: nowrap">
+    <el-col class="u-nowrap" :span="4" :offset="0">
       选择生产线：
       <el-select
         v-model="linenum"
@@ -185,7 +185,7 @@
       <el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
         <el-row :gutter="20">
           <el-col :span="10" :offset="0">
-            <span style="white-space: nowrap">
+            <span class="u-nowrap">
               {{ tab.lineLabel }}：
               <el-select v-model="tab.lineValue" placeholder="" @change="" multiple>
                 <el-option

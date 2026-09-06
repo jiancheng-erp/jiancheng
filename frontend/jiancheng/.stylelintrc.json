@@ -1,0 +1,24 @@
+{
+  "extends": ["stylelint-config-recommended-vue"],
+  "rules": {
+    "color-no-hex": [
+      true,
+      {
+        "message": "请使用 tokens.css 中的 CSS 变量而非硬编码色值",
+        "severity": "warning"
+      }
+    ],
+    "no-descending-specificity": null,
+    "no-duplicate-selectors": null,
+    "font-family-no-missing-generic-family-keyword": null,
+    "no-empty-source": null,
+    "property-no-deprecated": null,
+    "declaration-property-value-keyword-no-deprecated": null
+  },
+  "ignoreFiles": [
+    "dist/**",
+    "node_modules/**",
+    "src/assets/base.css",
+    "src/assets/main.css"
+  ]
+}

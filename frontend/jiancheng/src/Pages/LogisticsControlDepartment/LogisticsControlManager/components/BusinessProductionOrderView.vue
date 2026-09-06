@@ -20,7 +20,7 @@
                 :data="currentTableData"
                 border
                 stripe
-                height="580"
+                height="calc(100vh - var(--main-table-offset))"
                 v-loading="loading"
                 empty-text="暂无满足条件的生产订单"
             >

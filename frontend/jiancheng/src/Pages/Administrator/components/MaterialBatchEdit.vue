@@ -4,8 +4,8 @@
         <div class="toolbar">
             <el-form inline @submit.prevent="searchOrderShoes" class="search-bar">
                 <el-form-item label="订单号/鞋型号">
-                    <el-input v-model="searchKeyword" placeholder="输入订单号或鞋型号搜索"
-                        clearable style="width: 280px" @keyup.enter="searchOrderShoes" />
+                    <el-input class="u-w-280" v-model="searchKeyword" placeholder="输入订单号或鞋型号搜索"
+                        clearable @keyup.enter="searchOrderShoes" />
                 </el-form-item>
                 <el-form-item>
                     <el-button type="primary" @click="searchOrderShoes">搜索</el-button>
@@ -56,7 +56,7 @@
                 <div>
                     <strong>同步修改说明：</strong>
                     本工具以「投产指令单 (PI)」为根，沿 PI → 工艺单 / BOM → 采购订单 的链路
-                    <strong style="color:#e6a23c;">全量联动</strong>。无需勾选文档类型，
+                    <strong style="color:var(--color-warning);">全量联动</strong>。无需勾选文档类型，
                     修改时所有相关记录会自动一起更新。
                     若新材料供应商变化，对应采购订单项会自动搬移到目标供应商的采购分单。
                 </div>
@@ -95,7 +95,7 @@
                                 <strong>{{ row.materialName }}</strong>
                                 <el-tag size="small">ID: {{ row.materialId }}</el-tag>
                                 <el-tag size="small" type="info">供应商: {{ row.supplierName || '-' }}</el-tag>
-                                <span style="color:#909399;">共 {{ row.items.length }} 条记录</span>
+                                <span style="color:var(--color-text-3);">共 {{ row.items.length }} 条记录</span>
                             </div>
                             <el-table :data="row.items" border size="small" style="width: 100%">
                                 <el-table-column label="文档" width="130">
@@ -139,7 +139,7 @@
                                                 {{ it.purchaseDivideOrderRid }}
                                             </el-tag>
                                         </span>
-                                        <span v-else style="color:#c0c4cc">—</span>
+                                        <span v-else style="color:var(--el-text-color-disabled)">—</span>
                                     </template>
                                 </el-table-column>
                             </el-table>
@@ -150,8 +150,8 @@
                 <el-table-column label="材料名称 (型号/规格)" min-width="200" show-overflow-tooltip>
                     <template #default="{ row }">
                         <span>{{ row.materialName }}</span>
-                        <span v-if="row.groupModel" style="color:#909399; margin-left:4px;">{{ row.groupModel }}</span>
-                        <span v-if="row.groupSpec" style="color:#909399; margin-left:4px;">/ {{ row.groupSpec }}</span>
+                        <span v-if="row.groupModel" style="color:var(--color-text-3); margin-left:4px;">{{ row.groupModel }}</span>
+                        <span v-if="row.groupSpec" style="color:var(--color-text-3); margin-left:4px;">/ {{ row.groupSpec }}</span>
                     </template>
                 </el-table-column>
                 <el-table-column prop="supplierName" label="供应商" min-width="130" show-overflow-tooltip />
@@ -231,14 +231,14 @@
                 以下配色在投产指令单/工艺单中存在，但一次BOM中缺失。请填写用量后提交。
             </el-alert>
             <div v-for="r in bom1SyncRows" :key="r.ostId"
-                style="border:1px solid #e4e7ed; border-radius:4px; padding:12px; margin-bottom:12px;">
-                <div style="font-weight:bold; margin-bottom:8px; color:#303133;">
+                style="border:1px solid var(--el-border-color-light); border-radius:4px; padding:12px; margin-bottom:12px;">
+                <div style="font-weight:bold; margin-bottom:8px; color:var(--color-text-1);">
                     配色：{{ r.colorLabel }}
                 </div>
                 <!-- 尺码数量表 -->
                 <div v-loading="r.sizeInfoLoading" style="margin-bottom:10px;">
                     <template v-if="r.sizeInfo && r.sizeInfo.batches.length">
-                        <div style="font-size:12px; color:#606266; margin-bottom:4px;">
+                        <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">
                             尺码数量（合计 <strong>{{ r.sizeInfo.grandTotal }}</strong> 双）
                         </div>
                         <el-table :data="r.sizeInfo.batches" border size="small"
@@ -247,7 +247,7 @@
                             <el-table-column v-for="s in bom1SizeColumns(r)" :key="s" :prop="s" :label="s"
                                 width="52" align="center">
                                 <template #default="{ row }">
-                                    <span :style="row[s] ? '' : 'color:#c0c4cc'">{{ row[s] || 0 }}</span>
+                                    <span :style="row[s] ? '' : 'color:var(--el-text-color-disabled)'">{{ row[s] || 0 }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="total" label="小计" width="60" align="center">
@@ -260,14 +260,14 @@
                 </div>
                 <el-row :gutter="12">
                     <el-col :span="10">
-                        <div style="font-size:12px; color:#606266; margin-bottom:4px;">单位用量</div>
+                        <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">单位用量</div>
                         <el-input-number v-model="r.unitUsage" :min="0" :precision="5" :step="0.01"
                             style="width:100%;" @change="calcBom1Approval(r)" />
                     </el-col>
                     <el-col :span="14">
-                        <div style="font-size:12px; color:#606266; margin-bottom:4px;">
+                        <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">
                             核定用量
-                            <span v-if="r.sizeInfo" style="color:#909399;">
+                            <span v-if="r.sizeInfo" style="color:var(--color-text-3);">
                                 = {{ r.unitUsage }} × {{ r.sizeInfo.grandTotal }}双
                             </span>
                         </div>
@@ -296,17 +296,17 @@
                 以下配色存在一次BOM，但采购订单中缺失。请填写采购用量后提交。
             </el-alert>
             <div v-for="r in poSyncRows" :key="r.ostId"
-                style="border:1px solid #e4e7ed; border-radius:4px; padding:12px; margin-bottom:12px;">
-                <div style="font-weight:bold; margin-bottom:8px; color:#303133;">
+                style="border:1px solid var(--el-border-color-light); border-radius:4px; padding:12px; margin-bottom:12px;">
+                <div style="font-weight:bold; margin-bottom:8px; color:var(--color-text-1);">
                     配色：{{ r.colorLabel }}
-                    <span v-if="r.bomTotalUsage" style="font-weight:normal; font-size:12px; color:#909399; margin-left:8px;">
+                    <span v-if="r.bomTotalUsage" style="font-weight:normal; font-size:12px; color:var(--color-text-3); margin-left:8px;">
                         （一次BOM核定用量：{{ r.bomTotalUsage }}）
                     </span>
                 </div>
                 <!-- 尺码数量表 -->
                 <div v-loading="r.sizeInfoLoading" style="margin-bottom:10px;">
                     <template v-if="r.sizeInfo && r.sizeInfo.batches.length">
-                        <div style="font-size:12px; color:#606266; margin-bottom:4px;">
+                        <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">
                             尺码数量（合计 <strong>{{ r.sizeInfo.grandTotal }}</strong> 双）
                         </div>
                         <el-table :data="r.sizeInfo.batches" border size="small"
@@ -315,7 +315,7 @@
                             <el-table-column v-for="s in poSizeColumns(r)" :key="s" :prop="s" :label="s"
                                 width="52" align="center">
                                 <template #default="{ row }">
-                                    <span :style="row[s] ? '' : 'color:#c0c4cc'">{{ row[s] || 0 }}</span>
+                                    <span :style="row[s] ? '' : 'color:var(--el-text-color-disabled)'">{{ row[s] || 0 }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="total" label="小计" width="60" align="center">
@@ -330,9 +330,9 @@
                     <!-- 尺码材料：输入每双用量，自动计算各尺码数量 -->
                     <template v-if="poSyncTarget && poSyncTarget.materialCategory === 1 && r.sizeInfo && r.sizeInfo.grandTotal > 0">
                         <el-col :span="14">
-                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">每双用量</div>
-                            <el-input-number v-model="r.unitUsage" :min="0" :precision="5" :step="0.001"
-                                style="width:160px;" @change="calcPOSizeAmounts(r)" />
+                            <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">每双用量</div>
+                            <el-input-number class="u-w-160" v-model="r.unitUsage" :min="0" :precision="5" :step="0.001"
+                                @change="calcPOSizeAmounts(r)" />
                             <el-button v-if="r.bomUnitUsage" link type="primary" size="small"
                                 style="margin-left:8px;"
                                 @click="r.unitUsage = r.bomUnitUsage; calcPOSizeAmounts(r)">
@@ -340,16 +340,16 @@
                             </el-button>
                         </el-col>
                         <el-col :span="10">
-                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">采购总量（自动计算）</div>
-                            <span style="font-size:15px; font-weight:bold; color:#303133;">{{ r.purchaseAmount || 0 }}</span>
+                            <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">采购总量（自动计算）</div>
+                            <span style="font-size:15px; font-weight:bold; color:var(--color-text-1);">{{ r.purchaseAmount || 0 }}</span>
                         </el-col>
                     </template>
                     <!-- 非尺码材料：手动输入 -->
                     <template v-else>
                         <el-col :span="24">
-                            <div style="font-size:12px; color:#606266; margin-bottom:4px;">采购用量</div>
-                            <el-input-number v-model="r.purchaseAmount" :min="0" :precision="5" :step="0.1"
-                                style="width:200px;" />
+                            <div style="font-size:12px; color:var(--color-text-2); margin-bottom:4px;">采购用量</div>
+                            <el-input-number class="u-w-200" v-model="r.purchaseAmount" :min="0" :precision="5" :step="0.1"
+                                />
                             <el-button v-if="r.bomTotalUsage" link type="primary" size="small"
                                 style="margin-left:8px;" @click="r.purchaseAmount = r.bomTotalUsage">
                                 使用BOM核定用量
@@ -359,7 +359,7 @@
                 </el-row>
                 <!-- 各尺码计算结果 -->
                 <div v-if="r.sizeInfo && r.sizeInfo.grandTotal > 0 && r.unitUsage > 0 && r.sizeAmounts && Object.keys(r.sizeAmounts).length"
-                    style="margin-top:8px; font-size:12px; color:#606266; background:#f5f7fa; padding:6px 10px; border-radius:4px;">
+                    style="margin-top:8px; font-size:12px; color:var(--color-text-2); background:var(--el-fill-color-light); padding:6px 10px; border-radius:4px;">
                     <span v-for="s in poSizeColumns(r)" :key="s" style="margin-right:14px;">
                         {{ s }}码: <strong>{{ r.sizeAmounts[s] || 0 }}</strong>
                     </span>
@@ -393,11 +393,11 @@
                 </el-table-column>
                 <el-table-column label="配对组" width="130" align="center">
                     <template #default="{ row }">
-                        <el-input-number v-model="row.pairId" :min="1" :max="9"
-                            controls-position="right" style="width:90px" size="small"
+                        <el-input-number class="u-w-90" v-model="row.pairId" :min="1" :max="9"
+                            controls-position="right" size="small"
                             :placeholder="row.pairRole" />
                         <el-button v-if="row.pairId != null" link size="small"
-                            style="color:#c0c4cc; margin-left:4px"
+                            style="color:var(--el-text-color-disabled); margin-left:4px"
                             @click="row.pairId = null">✕</el-button>
                     </template>
                 </el-table-column>
@@ -419,7 +419,7 @@
         <el-dialog v-model="checkDialogVisible" title="材料链路匹配检查" width="960px" destroy-on-close>
             <div v-if="checkLoading" style="text-align:center; padding:40px;">
                 <el-icon class="is-loading" :size="32"><Loading /></el-icon>
-                <div style="margin-top:8px; color:#909399;">正在检查中...</div>
+                <div style="margin-top:8px; color:var(--color-text-3);">正在检查中...</div>
             </div>
             <template v-else-if="checkData">
                 <!-- 概要卡片 -->
@@ -449,7 +449,7 @@
                 </el-alert>
                 <template v-else>
                     <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-                        <span style="font-size:13px; color:#606266;">共 {{ checkData.issues.length }} 个问题项</span>
+                        <span style="font-size:13px; color:var(--color-text-2);">共 {{ checkData.issues.length }} 个问题项</span>
                         <el-tag type="warning" size="small">{{ checkData.autoFixableCount }} 可自动修复</el-tag>
                         <el-tag type="danger" size="small">{{ checkData.totalIssues - checkData.autoFixableCount }} 需手动处理</el-tag>
                     </div>
@@ -535,11 +535,11 @@
                     <el-checkbox label="po" :disabled="!addForm.targets.includes('bom')">采购分单</el-checkbox>
                     <el-checkbox label="cs">工艺单</el-checkbox>
                 </el-checkbox-group>
-                <div style="font-size:12px; color:#909399; margin-top:4px;">至少选择一项；采购分单需先勾选一次BOM</div>
+                <div style="font-size:12px; color:var(--color-text-3); margin-top:4px;">至少选择一项；采购分单需先勾选一次BOM</div>
             </el-form-item>
             <el-form :model="addForm" label-width="100px">
                 <el-form-item label="配色" required>
-                    <el-select v-model="addForm.orderShoeTypeId" placeholder="选择配色（必选）" style="width:240px;"
+                    <el-select class="u-w-240" v-model="addForm.orderShoeTypeId" placeholder="选择配色（必选）"
                         @change="(val) => fetchSizeInfo(val)">
                         <el-option v-for="ct in colorTypes" :key="ct.orderShoeTypeId"
                             :value="ct.orderShoeTypeId"
@@ -549,9 +549,9 @@
 
                 <!-- 尺码数量表 -->
                 <div v-if="addForm.orderShoeTypeId" style="margin-bottom:16px;">
-                    <div style="font-size:13px; color:#606266; margin-bottom:6px; font-weight:bold;">
+                    <div style="font-size:13px; color:var(--color-text-2); margin-bottom:6px; font-weight:bold;">
                         该配色尺码数量
-                        <span v-if="sizeInfo" style="color:#409eff; font-weight:normal; margin-left:8px;">
+                        <span v-if="sizeInfo" style="color:var(--el-color-primary); font-weight:normal; margin-left:8px;">
                             合计 {{ sizeInfo.grandTotal }} 双
                         </span>
                     </div>
@@ -562,7 +562,7 @@
                             <el-table-column v-for="s in sizeColumns" :key="s" :prop="s" :label="s"
                                 width="52" align="center">
                                 <template #default="{ row }">
-                                    <span :style="row[s] ? '' : 'color:#c0c4cc'">{{ row[s] || 0 }}</span>
+                                    <span :style="row[s] ? '' : 'color:var(--el-text-color-disabled)'">{{ row[s] || 0 }}</span>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="total" label="小计" width="62" align="center">
@@ -576,7 +576,7 @@
                     </div>
                 </div>
                 <el-form-item label="材料" required>
-                    <el-input v-model="addMaterialSearchKw" placeholder="搜索材料名称" style="width:280px;"
+                    <el-input class="u-w-280" v-model="addMaterialSearchKw" placeholder="搜索材料名称"
                         @keyup.enter="searchAddMaterials" clearable>
                         <template #append>
                             <el-button @click="searchAddMaterials" :loading="addMaterialSearchLoading">搜索</el-button>
@@ -626,7 +626,7 @@
                             <el-input-number v-model="addForm.approvalAmount" :min="0" :precision="5"
                                 style="width:100%;" placeholder="采购核定数量"
                                 :disabled="!addForm.targets.includes('bom') || isAddSizeMaterial" />
-                            <div style="font-size:11px; color:#909399; margin-top:2px;">
+                            <div style="font-size:11px; color:var(--color-text-3); margin-top:2px;">
                                 <template v-if="isAddSizeMaterial">
                                     配码材料：核定用量 = 各尺码采购量合计（自动）
                                 </template>
@@ -634,8 +634,8 @@
                                     = {{ addForm.unitUsage }} × {{ sizeInfo.grandTotal }}双
                                     <el-button link size="small" type="primary" @click="calcApproval">重新计算</el-button>
                                 </template>
-                                <span v-else-if="!addForm.targets.includes('bom')" style="color:#c0c4cc">（不写入BOM时无需填写）</span>
-                                <span v-else style="color:#c0c4cc">（先选配色后可自动计算）</span>
+                                <span v-else-if="!addForm.targets.includes('bom')" style="color:var(--el-text-color-disabled)">（不写入BOM时无需填写）</span>
+                                <span v-else style="color:var(--el-text-color-disabled)">（先选配色后可自动计算）</span>
                             </div>
                         </el-form-item>
                     </el-col>
@@ -643,10 +643,10 @@
 
                 <!-- 配码材料：各尺码采购量填写 -->
                 <div v-if="isAddSizeMaterial && sizeInfo && sizeColumns.length"
-                    style="border:1px solid #e4e7ed; border-radius:4px; padding:10px 12px; margin-bottom:12px;">
-                    <div style="font-size:13px; color:#606266; margin-bottom:8px; font-weight:bold;">
+                    style="border:1px solid var(--el-border-color-light); border-radius:4px; padding:10px 12px; margin-bottom:12px;">
+                    <div style="font-size:13px; color:var(--color-text-2); margin-bottom:8px; font-weight:bold;">
                         配码数量填写
-                        <span style="font-weight:normal; color:#909399; margin-left:8px;">
+                        <span style="font-weight:normal; color:var(--color-text-3); margin-left:8px;">
                             按每双用量自动计算，可手动调整
                         </span>
                         <el-button link type="primary" size="small" style="margin-left:8px;"
@@ -662,7 +662,7 @@
                             </template>
                         </el-table-column>
                     </el-table>
-                    <div style="font-size:12px; color:#606266; margin-top:6px;">
+                    <div style="font-size:12px; color:var(--color-text-2); margin-top:6px;">
                         采购核定合计：<strong>{{ addForm.approvalAmount || 0 }}</strong>
                     </div>
                 </div>
@@ -694,7 +694,7 @@
             <el-collapse style="margin-bottom:4px;">
                 <el-collapse-item>
                     <template #title>
-                        <span style="font-size:13px; color:#606266;">
+                        <span style="font-size:13px; color:var(--color-text-2);">
                             查看原分布状况
                             <el-tag size="small" type="info" style="margin-left:6px;">
                                 {{ editTarget.items?.length || 0 }} 条记录 /
@@ -718,21 +718,21 @@
                         </el-table-column>
                         <el-table-column label="型号" prop="materialModel" min-width="110">
                             <template #default="{ row }">
-                                <span :style="row.materialModel ? '' : 'color:#c0c4cc'">
+                                <span :style="row.materialModel ? '' : 'color:var(--el-text-color-disabled)'">
                                     {{ row.materialModel || '（空）' }}
                                 </span>
                             </template>
                         </el-table-column>
                         <el-table-column label="规格" prop="materialSpecification" min-width="140">
                             <template #default="{ row }">
-                                <span :style="row.materialSpecification ? '' : 'color:#c0c4cc'">
+                                <span :style="row.materialSpecification ? '' : 'color:var(--el-text-color-disabled)'">
                                     {{ row.materialSpecification || '（空）' }}
                                 </span>
                             </template>
                         </el-table-column>
                         <el-table-column label="颜色" prop="color" min-width="100">
                             <template #default="{ row }">
-                                <span :style="row.color ? '' : 'color:#c0c4cc'">
+                                <span :style="row.color ? '' : 'color:var(--el-text-color-disabled)'">
                                     {{ row.color || '（空）' }}
                                 </span>
                             </template>
@@ -746,7 +746,7 @@
             <el-radio-group v-model="editForm.scope" @change="onScopeChange">
                 <el-radio value="color" :disabled="selectedColorTypeId === 0">
                     仅当前配色
-                    <span style="color:#909399; margin-left:4px;">
+                    <span style="color:var(--color-text-3); margin-left:4px;">
                         ({{ currentColorLabel || '未选择' }})
                     </span>
                 </el-radio>
@@ -839,7 +839,7 @@
                 <el-button @click="loadPreview" :loading="previewLoading" :disabled="!isFormReady">
                     生成影响预览
                 </el-button>
-                <div v-if="!isFormReady" style="color:#909399; font-size:12px; margin-top:6px;">
+                <div v-if="!isFormReady" style="color:var(--color-text-3); font-size:12px; margin-top:6px;">
                     请至少填写一个要修改的字段
                 </div>
             </div>
@@ -2099,7 +2099,7 @@ export default {
 }
 
 .custom-color-name {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 12px;
     margin-left: 2px;
 }
@@ -2113,7 +2113,7 @@ export default {
 
 .filter-bar .stats {
     margin-left: auto;
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 
@@ -2142,19 +2142,19 @@ export default {
 }
 
 .old-val {
-    color: #909399;
+    color: var(--color-text-3);
     text-decoration: line-through;
 }
 
 .new-val {
-    color: #67c23a;
+    color: var(--color-success);
 }
 
 .preview-card {
     border-radius: 6px;
     padding: 16px 12px;
     text-align: center;
-    color: #fff;
+    color: var(--el-color-white);
 }
 
 .preview-card .num {
@@ -2170,18 +2170,18 @@ export default {
 }
 
 .preview-card.success {
-    background: linear-gradient(135deg, #67c23a, #95d475);
+    background: linear-gradient(135deg, var(--color-success), #95d475);
 }
 
 .preview-card.warning {
-    background: linear-gradient(135deg, #e6a23c, #eebe77);
+    background: linear-gradient(135deg, var(--color-warning), #eebe77);
 }
 
 .preview-card.primary {
-    background: linear-gradient(135deg, #409eff, #79bbff);
+    background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
 }
 
 .preview-card.danger {
-    background: linear-gradient(135deg, #f56c6c, #f89898);
+    background: linear-gradient(135deg, var(--color-danger), #f89898);
 }
 </style>

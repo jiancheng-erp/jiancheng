@@ -105,7 +105,7 @@ export default {
 }
 
 .stats {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 </style>

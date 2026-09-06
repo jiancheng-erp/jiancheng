@@ -23,7 +23,7 @@
         <el-table-column v-if="hasZipperPairData" label="配对组" width="80" align="center">
             <template #default="scope">
                 <el-tag v-if="scope.row.zipperPairId != null" type="info" size="small">{{ scope.row.zipperPairId }}</el-tag>
-                <span v-else style="color:#c0c4cc">—</span>
+                <span v-else style="color:var(--el-text-color-disabled)">—</span>
             </template>
         </el-table-column>
     </el-table>

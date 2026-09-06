@@ -1,0 +1,105 @@
+/* =================================================================== */
+/* elements.css — Element Plus / VXE Table 全局微调的统一归口           */
+/*                                                                     */
+/* 目的（P1 起使用）：把当前散落在各组件「非 scoped <style>」里的        */
+/* 全局组件覆盖（.el-xxx / .vxe-xxx）逐步收编到这里，避免全局污染与       */
+/* 重复定义。P0 阶段仅建立入口，暂不迁移，保持视觉不变。                 */
+/* =================================================================== */
+
+/* 预留：后续在此集中放置 Element Plus / VXE 的全局样式覆盖 */
+
+/* vue-cal 日程事件配色（原分散在多个 ProductionSchedulingDialogue 组件的
+   非 scoped <style> 中，内容一致，收编为单一全局定义） */
+.vuecal__event.leisure {
+  background-color: rgba(253, 156, 66, 0.9);
+  border: 1px solid rgb(233, 136, 46);
+  color: #fff;
+}
+.vuecal__event.sport {
+  background-color: rgba(255, 102, 102, 0.9);
+  border: 1px solid rgb(235, 82, 82);
+  color: #fff;
+}
+
+/* 打印表格样式（原在 PurchaseInbound 非 scoped <style> 中，被 InboundRecords /
+   OutboundMaterial 等多个组件通过 .inner-table 复用，收编为全局） */
+.inner-table th,
+.inner-table td {
+    border: 1px solid #000;
+    padding: 4px;
+}
+
+@media print {
+    @page {
+        @bottom-center {
+            content: "第" counter(page) "页 / 共" counter(pages)"页";
+            font-size: 12px;
+            color: black;
+            font-family: SimHei;
+        }
+    }
+
+    .inner-table {
+        border-collapse: collapse;
+        border-spacing: 0;
+    }
+
+    .inner-table th,
+    .inner-table td {
+        border: 1px solid #000;
+        padding: 4px;
+    }
+
+    .inner-table tr {
+        page-break-inside: avoid !important;
+        -webkit-page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-row-group;
+    }
+}
+
+/* =================================================================== */
+/* Element Plus 卡片 / 表格 美化（全局，跟随主题）                       */
+/* 说明：表格仅通过 EP 自带 CSS 变量微调，避免 border-radius+overflow     */
+/*       破坏固定列 / 横向滚动。                                         */
+/* =================================================================== */
+
+/* 卡片 */
+.el-card {
+    border-radius: var(--radius-xl);
+    border: var(--border-width) var(--border-style) var(--border-color);
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+    transition: box-shadow .2s ease;
+}
+.el-card:hover {
+    box-shadow: var(--shadow);
+}
+.el-card__header {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    background: color-mix(in srgb, var(--brand) 5%, var(--panel-bg));
+    border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+/* 表格：表头浅品牌底、行悬浮品牌浅色、边框统一（均走 EP 变量） */
+.el-table {
+    --el-table-header-bg-color: color-mix(in srgb, var(--brand) 6%, var(--panel-bg));
+    --el-table-header-text-color: var(--el-text-color-primary);
+    --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+    --el-table-border-color: var(--el-border-color-lighter);
+    --el-table-border: 1px solid var(--el-border-color-lighter);
+}
+.el-table th.el-table__cell {
+    font-weight: 600;
+}
+
+
+

@@ -18,25 +18,25 @@
                 </el-form-item>
 
                 <el-form-item label="方向">
-                    <el-select v-model="filters.direction" clearable placeholder="全部" @change="refresh" style="width: 120px">
+                    <el-select class="u-w-120" v-model="filters.direction" clearable placeholder="全部" @change="refresh">
                         <el-option label="入库" :value="'IN'" />
                         <el-option label="出库" :value="'OUT'" />
                     </el-select>
                 </el-form-item>
 
                 <el-form-item label="业务单号">
-                    <el-input v-model="filters.keyword" placeholder="rid 模糊" clearable style="width: 200px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-200" v-model="filters.keyword" placeholder="rid 模糊" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
 
                 <el-form-item label="工厂型号">
-                    <el-input v-model="filters.shoeRid" placeholder="型号" clearable style="width: 180px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-180" v-model="filters.shoeRid" placeholder="型号" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
 
                 <el-form-item label="颜色">
-                    <el-input v-model="filters.color" placeholder="颜色" clearable style="width: 140px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-140" v-model="filters.color" placeholder="颜色" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
                 <el-form-item label="鞋类型">
-                    <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                    <el-select class="u-w-140" v-model="filters.category" clearable placeholder="全部" @change="refresh">
                         <el-option label="全部" value="" />
                         <el-option label="男鞋" value="男鞋" />
                         <el-option label="女鞋" value="女鞋" />
@@ -45,7 +45,7 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="分组">
-                    <el-select v-model="filters.groupBy" style="width: 160px" @change="refresh">
+                    <el-select class="u-w-160" v-model="filters.groupBy" @change="refresh">
                         <el-option label="按型号" value="model" />
                         <el-option label="按型号+颜色" value="model_color" />
                     </el-select>
@@ -114,7 +114,7 @@
         </el-row>
 
         <!-- 表格：每行一个型号（或 型号+颜色） -->
-        <el-table :data="rows" border stripe height="560" v-loading="loading">
+        <el-table :data="rows" border stripe height="calc(100vh - var(--main-table-offset))" v-loading="loading">
             <el-table-column prop="shoeRid" label="工厂型号" width="220" show-overflow-tooltip />
             <el-table-column prop="category" label="类型" width="100" show-overflow-tooltip />
             <el-table-column v-if="filters.groupBy === 'model_color'" prop="color" label="颜色" width="160" show-overflow-tooltip />
@@ -378,16 +378,16 @@ export default {
     background: #fef0f0;
 }
 .stats-card.net {
-    background: #ecf5ff;
+    background: var(--el-color-primary-light-9);
 }
 .stats-card.net.net-neg {
     background: #fdf6ec;
 }
 .pos {
-    color: #67c23a;
+    color: var(--color-success);
 }
 .neg {
-    color: #f56c6c;
+    color: var(--color-danger);
 }
 .tag-list {
     display: inline-flex;

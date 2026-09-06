@@ -26,7 +26,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="500"
+            <el-table :data="tableData" border stripe @selection-change="handleSelectionChange" height="calc(100vh - var(--main-table-offset))"
                 :cell-style="getCellStyle">
                 <el-table-column v-if="isMultipleSelection" type="selection" width="55" />
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>

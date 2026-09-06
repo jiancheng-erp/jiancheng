@@ -1,9 +1,9 @@
 <template>
     <el-row :gutter="20">
         <el-col>
-            <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
+            <el-date-picker class="u-w-300" v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
-                @clear="getInboundRecordsTable" clearable style="width: 300px;">
+                @clear="getInboundRecordsTable" clearable>
             </el-date-picker>
             <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable style="width: 200px; margin-left: 20px;">
@@ -27,7 +27,7 @@
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <el-table :data="tableData" border height="600" stripe>
+            <el-table :data="tableData" border height="calc(100vh - var(--main-table-offset))" stripe>
                 <el-table-column v-if="loadReject" width="55">
                     <template #default="scope">
                         <el-radio v-model="selectedRow" :label="scope.row.inboundRecordId"

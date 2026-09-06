@@ -4,7 +4,7 @@
         <div class="mb-2" style="display: flex; gap: 12px; align-items: center">
             <el-button type="primary" @click="openInventDialog">新建盘库</el-button>
             <el-button @click="fetchRecordList">刷新</el-button>
-            <el-input v-model="recordFilters.keyword" placeholder="搜索盘库单号 / 原因" clearable style="width: 240px" @keyup.enter.native="onRecordSearch" />
+            <el-input class="u-w-240" v-model="recordFilters.keyword" placeholder="搜索盘库单号 / 原因" clearable @keyup.enter.native="onRecordSearch" />
             <el-date-picker
                 v-model="recordFilters.dateRange"
                 type="daterange"
@@ -64,7 +64,7 @@
         <el-dialog title="盘库" v-model="invent.visible" width="80%">
             <el-form label-width="96px" :model="invent.form" class="mb-2">
                 <el-form-item label="盘库日期">
-                    <el-date-picker v-model="invent.form.date" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" placeholder="选择日期" :clearable="false" style="width: 220px" />
+                    <el-date-picker class="u-w-220" v-model="invent.form.date" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" placeholder="选择日期" :clearable="false" />
                 </el-form-item>
                 <el-form-item label="盘库原因">
                     <el-input v-model="invent.form.reason" type="textarea" :rows="3" placeholder="例如：季度例行盘点 / 调整异常库存" maxlength="200" show-word-limit style="width: 360px" />
@@ -77,7 +77,7 @@
                     <el-upload action="" :auto-upload="false" :show-file-list="false" accept=".xlsx,.xls" @change="onImportFileChange">
                         <el-button>导入盘库Excel</el-button>
                     </el-upload>
-                    <span style="color: #909399; margin-left: 12px">支持 .xlsx / .xls，表头与导出一致</span>
+                    <span style="color: var(--color-text-3); margin-left: 12px">支持 .xlsx / .xls，表头与导出一致</span>
                 </el-form-item>
             </el-form>
 
@@ -85,11 +85,11 @@
             <el-alert type="info" :closable="false" show-icon class="mb-2" :title="`共 ${invent.page.total} 条 SPU | 当前页总库存：${fmtNumber(inventPageTotal)}`" />
 
             <div class="mb-2" style="display: flex; gap: 12px; align-items: center">
-                <el-input v-model="invent.filters.keyword" placeholder="型号 / 规格 / 颜色 / SPU编号" clearable style="width: 280px" @keyup.enter.native="fetchInventSummary" />
+                <el-input class="u-w-280" v-model="invent.filters.keyword" placeholder="型号 / 规格 / 颜色 / SPU编号" clearable @keyup.enter.native="fetchInventSummary" />
                 <el-button type="primary" @click="fetchInventSummary">查询</el-button>
                 <el-button @click="resetInventFilters">重置</el-button>
 
-                <el-select v-model="invent.sort.by" style="width: 220px" @change="fetchInventSummary">
+                <el-select class="u-w-220" v-model="invent.sort.by" @change="fetchInventSummary">
                     <el-option label="按 总库存" value="total_current_amount" />
                     <el-option label="按 总价格" value="total_value_amount" />
                     <el-option label="按 平均单价" value="avg_unit_price" />
@@ -99,7 +99,7 @@
                     <el-option label="按 颜色" value="color" />
                     <el-option v-for="sz in invent.sizeColumns" :key="'sort-size-' + sz" :label="'按 尺码 ' + sz" :value="'size_' + sz" />
                 </el-select>
-                <el-select v-model="invent.sort.order" style="width: 120px" @change="fetchInventSummary">
+                <el-select class="u-w-120" v-model="invent.sort.order" @change="fetchInventSummary">
                     <el-option label="降序" value="desc" />
                     <el-option label="升序" value="asc" />
                 </el-select>
@@ -295,7 +295,7 @@
     <el-dialog v-model="taskProgress.visible" :title="taskProgress.title" width="560px" :close-on-click-modal="false" :show-close="false">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px">
             <el-progress :percentage="taskProgress.percent" :status="taskProgress.status" style="flex: 1" />
-            <span style="width: 72px; text-align: right; color: #909399">{{ taskProgress.percent }}%</span>
+            <span style="width: 72px; text-align: right; color: var(--color-text-3)">{{ taskProgress.percent }}%</span>
         </div>
 
         <el-alert v-if="taskProgress.subtitle" :title="taskProgress.subtitle" type="info" :closable="false" show-icon class="mb-2" />

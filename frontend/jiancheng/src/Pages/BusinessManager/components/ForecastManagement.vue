@@ -1,6 +1,6 @@
 <template>
   <el-row :gutter="20">
-    <el-col :span="24" style="font-size: xx-large; text-align: center">预报单管理</el-col>
+    <el-col class="u-page-title" :span="24">预报单管理</el-col>
   </el-row>
 
   <el-row :gutter="12" style="margin-top: 16px">
@@ -290,13 +290,13 @@
       <el-table-column prop="packagingInfoName" label="配码" min-width="260" />
       <el-table-column label="单价" width="160">
         <template #default="scope">
-          <el-input-number
+          <el-input-number class="u-w-130"
             v-model="scope.row.unitPrice"
             :min="0"
             :step="0.01"
             :precision="4"
             size="small"
-            style="width: 130px"
+           
           />
         </template>
       </el-table-column>
@@ -387,12 +387,12 @@
       <el-table-column prop="packagingInfoName" label="配码" min-width="220" />
       <el-table-column label="单位数量" min-width="180">
         <template #default="scope">
-          <el-input-number
+          <el-input-number class="u-w-140"
             v-model="rowQuantityForm[scope.row.key]"
             :min="1"
             :step="1"
             size="small"
-            style="width:140px"
+           
           />
         </template>
       </el-table-column>

@@ -181,7 +181,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .smalltable {
   font-size: 12px;
 }

@@ -45,10 +45,10 @@
 
     <el-dialog title="二级财务项目" v-model="addSecondGradeAccountDialogVis" :before-close="handleClose">
         <el-form>
-            <el-select
+            <el-select class="u-w-300"
            v-model ="firstGradeAccountBelonged"
            placeholder="请选择科目"
-           style="width:300px"
+          
            clearable
            filterable
            >
@@ -79,10 +79,10 @@
     
     <el-dialog title="三级财务项目" v-model="addThirdGradeAccountDialogVis" :before-close="handleClose">
         <el-form>
-    <el-select
+    <el-select class="u-w-300"
             v-model ="selectedFirstGradeAccount"
             placeholder="请选择一级科目"
-            style="width:300px"
+           
             clearable
             filterable
             @change="updateSecondGradeAccounts"
@@ -95,10 +95,10 @@
 
             </el-option>
                 </el-select>
-                <el-select
+                <el-select class="u-w-300"
                 v-model = "secondGradeAccountBelonged"
                 placeholder="请选择二级科目"
-                style="width:300px"
+               
                 clearable
                 filterable
                 >
@@ -111,10 +111,10 @@
 
                 </el-option>
                 </el-select>
-                <el-select
+                <el-select class="u-w-300"
                     v-model="newThirdGradeAccountTypeId"
                     placeholder="请选择三级科目种类"
-                    style="width:300px"
+                   
                     clearable
                     filterable
                     >

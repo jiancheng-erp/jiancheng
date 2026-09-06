@@ -1,5 +1,5 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col>
             <el-select v-model="orderRIdSearch" @change="getlogisticsOrderData()" filterable clearable
                 placeholder="订单号筛选" style="width: 200px; margin-right: 20px;">
@@ -13,7 +13,7 @@
             </el-select>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table :data="logisticsOrderData" border stripe style="height: 65vh">
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
