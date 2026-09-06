@@ -9,8 +9,8 @@
                     style="margin-bottom: 12px" />
                 <el-form :inline="true" @submit.prevent>
                     <el-form-item label="搜索">
-                        <el-input v-model="orderKeyword" placeholder="订单号 / 客户名称" clearable :prefix-icon="Search"
-                            style="width: 280px" @keyup.enter="fetchOrders" @clear="fetchOrders" />
+                        <el-input class="u-w-280" v-model="orderKeyword" placeholder="订单号 / 客户名称" clearable :prefix-icon="Search"
+                            @keyup.enter="fetchOrders" @clear="fetchOrders" />
                     </el-form-item>
                     <el-form-item>
                         <el-button type="primary" :loading="orderLoading" @click="fetchOrders">查询</el-button>
@@ -96,14 +96,14 @@
                 <el-table-column prop="unit" label="单位" width="80" />
                 <el-table-column label="单位用量" width="150">
                     <template #default="scope">
-                        <el-input-number v-model="scope.row.unitUsage" :min="0" :controls="false" size="small"
-                            style="width: 120px" @change="onUnitUsageChange(scope.row)" />
+                        <el-input-number class="u-w-120" v-model="scope.row.unitUsage" :min="0" :controls="false" size="small"
+                            @change="onUnitUsageChange(scope.row)" />
                     </template>
                 </el-table-column>
                 <el-table-column label="核定用量" width="180">
                     <template #default="scope">
-                        <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.approvalUsage"
-                            :min="0" :controls="false" size="small" style="width: 120px" disabled />
+                        <el-input-number class="u-w-120" v-if="scope.row.materialCategory == 0" v-model="scope.row.approvalUsage"
+                            :min="0" :controls="false" size="small" disabled />
                         <el-button v-else type="primary" size="small" @click="openSizeDialog(scope.row)">
                             分码用量({{ sumSizeApproval(scope.row) }})
                         </el-button>
@@ -112,8 +112,8 @@
                 <el-table-column label="采购用量" width="180">
                     <template #default="scope">
                         <template v-if="scope.row.purchaseOrderItemId">
-                            <el-input-number v-if="scope.row.materialCategory == 0" v-model="scope.row.purchaseAmount"
-                                :min="0" :controls="false" size="small" style="width: 120px" />
+                            <el-input-number class="u-w-120" v-if="scope.row.materialCategory == 0" v-model="scope.row.purchaseAmount"
+                                :min="0" :controls="false" size="small" />
                             <el-button v-else type="warning" size="small" @click="openSizeDialog(scope.row)">
                                 分码采购({{ sumSizePurchase(scope.row) }})
                             </el-button>
@@ -389,6 +389,6 @@ export default {
 }
 
 .muted {
-    color: #909399;
+    color: var(--color-text-3);
 }
 </style>

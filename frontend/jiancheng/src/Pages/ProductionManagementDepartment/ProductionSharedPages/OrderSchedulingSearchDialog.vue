@@ -7,7 +7,7 @@
             <el-input v-model="localSearchForm.shoeRIdSearch" placeholder="例：3E1122" @change="handleConfirm" clearable />
         </el-form-item>
         <el-form-item label="状态点">
-            <el-select v-model="localSearchForm.statusNodeSearch" placeholder="例：裁断未排期" @change="handleConfirm" clearable style="width: 150px;">
+            <el-select class="u-w-150" v-model="localSearchForm.statusNodeSearch" placeholder="例：裁断未排期" @change="handleConfirm" clearable>
                 <el-option v-for="item in [
                     '裁断未排期',
                     '预备未排期',
@@ -24,7 +24,7 @@
             </el-date-picker>
         </el-form-item>
         <el-form-item label="订单排序">
-            <el-select v-model="localSearchForm.sortCondition" @change="handleConfirm" clearable style="width: 150px;">
+            <el-select class="u-w-150" v-model="localSearchForm.sortCondition" @change="handleConfirm" clearable>
                 <el-option v-for="item in [
                     '最新',
                     '最旧',

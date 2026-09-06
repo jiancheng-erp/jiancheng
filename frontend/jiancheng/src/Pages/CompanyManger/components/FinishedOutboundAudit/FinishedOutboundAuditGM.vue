@@ -240,7 +240,7 @@
       </p>
 
       <p
-        style="margin-bottom: 10px; color: #f56c6c;"
+        style="margin-bottom: 10px; color: var(--color-danger);"
         v-if="invalidSelectedCount > 0"
       >
         其中有 {{ invalidSelectedCount }} 条申请当前状态不为“待总经理审核”，将被自动忽略。

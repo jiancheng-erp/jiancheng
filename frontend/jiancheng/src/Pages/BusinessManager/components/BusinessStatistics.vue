@@ -1,7 +1,7 @@
 <template>
     <div class="stat-page">
         <el-row :gutter="20">
-            <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">业务统计看板</el-col>
+            <el-col class="u-page-title" :span="24" :offset="0">业务统计看板</el-col>
         </el-row>
 
         <el-row :gutter="12" class="stat-toolbar">
@@ -193,7 +193,7 @@
                 </div>
 
                 <div class="detail-toolbar">
-                    <el-input v-model="detailSearch" placeholder="搜索订单号/客户/业务员" size="small" clearable style="width:280px" />
+                    <el-input class="u-w-280" v-model="detailSearch" placeholder="搜索订单号/客户/业务员" size="small" clearable />
                 </div>
                 <el-table :data="pageSlice(detailProcessed, detailPage)" border stripe size="small" max-height="420">
                     <el-table-column prop="orderRid" label="订单号" />
@@ -481,7 +481,7 @@ export default {
 }
 
 .toolbar-range {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 
@@ -490,14 +490,14 @@ export default {
 }
 
 .stat-card {
-    background: #f5f7fa;
+    background: var(--el-fill-color-light);
     border-radius: 8px;
     padding: 18px 20px;
     text-align: center;
 }
 
 .stat-card-title {
-    color: #606266;
+    color: var(--color-text-2);
     font-size: 14px;
     margin-bottom: 8px;
 }
@@ -508,11 +508,11 @@ export default {
 }
 
 .stat-card-value.pairs {
-    color: #409EFF;
+    color: var(--el-color-primary);
 }
 
 .stat-card-value.count {
-    color: #E6A23C;
+    color: var(--color-warning);
 }
 
 .stat-block {
@@ -569,7 +569,7 @@ export default {
 }
 
 .detail-metric span {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 12px;
 }
 
@@ -578,11 +578,11 @@ export default {
 }
 
 .detail-metric strong.pairs {
-    color: #409EFF;
+    color: var(--el-color-primary);
 }
 
 .detail-metric strong.count {
-    color: #E6A23C;
+    color: var(--color-warning);
 }
 
 .detail-images {
@@ -594,14 +594,14 @@ export default {
 
 .detail-image-item {
     text-align: center;
-    border: 1px solid #ebeef5;
+    border: 1px solid var(--el-border-color-lighter);
     border-radius: 6px;
     padding: 6px;
 }
 
 .detail-image-color {
     font-size: 12px;
-    color: #606266;
+    color: var(--color-text-2);
     margin-top: 4px;
 }
 

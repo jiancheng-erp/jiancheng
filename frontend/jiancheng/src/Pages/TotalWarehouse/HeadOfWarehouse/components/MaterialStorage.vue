@@ -1,7 +1,7 @@
 <template>
     <el-row>
         <el-col>
-            <el-select v-model="searchForm.warehouseNameSearch" filterable clearable placeholder="仓库名搜索" style="width: 200px;"
+            <el-select class="u-w-200" v-model="searchForm.warehouseNameSearch" filterable clearable placeholder="仓库名搜索"
                 @change="getMaterialTableData">
                 <el-option v-for="item in warehouseOptions" :value="item.value" :label="item.label"></el-option>
             </el-select>
@@ -23,9 +23,9 @@
                 @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
             <el-input v-model="searchForm.shoeRIdSearch" placeholder="工厂型号搜索" clearable
                 @change="getMaterialTableData" style="width: 200px; margin-left: 20px;" />
-            <el-switch v-model="searchForm.showAllMaterials" inactive-text="有余量库存" active-text="所有库存"
-                @change="getMaterialTableData" style="margin-left: 20px;" />
-            <el-button type="success" :loading="exportLoading" style="margin-left: 20px;" @click="exportInventory('byOrder')">按订单导出</el-button>
+            <el-switch class="u-ml-5" v-model="searchForm.showAllMaterials" inactive-text="有余量库存" active-text="所有库存"
+                @change="getMaterialTableData" />
+            <el-button class="u-ml-5" type="success" :loading="exportLoading" @click="exportInventory('byOrder')">按订单导出</el-button>
             <el-button type="warning" :loading="exportLoading" style="margin-left: 10px;" @click="exportInventory('aggregate')">不按订单导出</el-button>
         </el-col>
     </el-row>
@@ -68,7 +68,7 @@
                     <Top />
                 </el-icon>
             </el-button>
-            <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0" style="margin-left: 20px;">
+            <el-button class="u-ml-5" type="primary" @click="moveDown" :disabled="topSelected.length === 0">
                 <el-icon>
                     <Bottom />
                 </el-icon> 移除

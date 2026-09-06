@@ -21,7 +21,7 @@
                 </el-form-item>
 
                 <el-form-item label="方向">
-                    <el-select v-model="filters.direction" clearable placeholder="全部" @change="refresh" style="width: 120px">
+                    <el-select class="u-w-120" v-model="filters.direction" clearable placeholder="全部" @change="refresh">
                         <el-option label="入库" :value="'IN'" />
                         <el-option label="出库" :value="'OUT'" />
                     </el-select>
@@ -29,19 +29,19 @@
 
                 <!-- 业务单号（rid） -->
                 <el-form-item label="业务单号">
-                    <el-input v-model="filters.keyword" placeholder="按业务单号查询（rid）" clearable style="width: 220px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-220" v-model="filters.keyword" placeholder="按业务单号查询（rid）" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
 
                 <!-- 工厂型号 & 颜色 -->
                 <el-form-item label="工厂型号">
-                    <el-input v-model="filters.shoeRid" placeholder="型号（shoeRid）" clearable style="width: 180px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-180" v-model="filters.shoeRid" placeholder="型号（shoeRid）" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
 
                 <el-form-item label="颜色">
-                    <el-input v-model="filters.color" placeholder="颜色" clearable style="width: 140px" @keyup.enter.native="refresh" />
+                    <el-input class="u-w-140" v-model="filters.color" placeholder="颜色" clearable @keyup.enter.native="refresh" />
                 </el-form-item>
                 <el-form-item label="鞋类型">
-                    <el-select v-model="filters.category" clearable placeholder="全部" @change="refresh" style="width: 140px">
+                    <el-select class="u-w-140" v-model="filters.category" clearable placeholder="全部" @change="refresh">
                         <el-option label="男鞋" value="男鞋" />
                         <el-option label="女鞋" value="女鞋" />
                         <el-option label="童鞋" value="童鞋" />
@@ -501,7 +501,7 @@ export default {
 
 /* 净值卡片：底色随正负动态变化（默认蓝，负值橙） */
 .stats-card.net {
-    background: #ecf5ff; /* 默认蓝底（正/零） */
+    background: var(--el-color-primary-light-9); /* 默认蓝底（正/零） */
     transition: background 0.2s ease;
 }
 .stats-card.net-neg {
@@ -510,9 +510,9 @@ export default {
 
 /* 数量正负色 */
 .pos {
-    color: #67c23a;
+    color: var(--color-success);
 } /* green-500 */
 .neg {
-    color: #f56c6c;
+    color: var(--color-danger);
 } /* red-500 */
 </style>

@@ -69,7 +69,7 @@
             </el-pagination>
         </div>
         <div v-else-if="selectionPage == 1">
-            <el-row :gutter="20" style="margin-bottom: 20px;">
+            <el-row class="u-mb-5" :gutter="20">
                 <el-col :span="6">
                     <span>到货数量：</span>
                     <el-input-number v-model="totalInboundQuantity" style="width: 200px; margin-right: 10px;" :min="0"
@@ -78,7 +78,7 @@
                 </el-col>
                 <el-col :span="6">
                     <span>材料单价：</span>
-                    <el-input-number v-model="unitPrice" style="width: 200px;" :min="0" :precision="4" :step="0.0001"
+                    <el-input-number class="u-w-200" v-model="unitPrice" :min="0" :precision="4" :step="0.0001"
                         size="small"></el-input-number>
                 </el-col>
                 <!-- <el-col :span="12">
@@ -115,8 +115,8 @@
                             <Top />
                         </el-icon>
                     </el-button>
-                    <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0"
-                        style="margin-left: 20px;">
+                    <el-button class="u-ml-5" type="primary" @click="moveDown" :disabled="topSelected.length === 0"
+                       >
                         <el-icon>
                             <Bottom />
                         </el-icon> 移除

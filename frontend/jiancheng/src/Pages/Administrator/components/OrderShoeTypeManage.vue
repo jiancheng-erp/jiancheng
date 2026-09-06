@@ -1,26 +1,26 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单鞋型修改</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">订单鞋型修改</el-col>
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="6" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="0">
             订单号搜索：
             <el-input v-model="orderSearch" placeholder="" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="2">
             客人名称搜索：
             <el-input v-model="customerSearch" placeholder="" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
         </el-col>
-        <el-col :span="6" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="6" :offset="2">
             工厂型号搜索：
             <el-input v-model="shoeRIdSearch" placeholder="" :suffix-icon="Search" clearable
                 @change="tableFilter"></el-input>
         </el-col>
     </el-row>
     <el-row style="margin-top: 12px">
-        <el-table :data="orderData" border stripe height="600">
+        <el-table :data="orderData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column type="expand">
                 <template #default="props">
                     <el-table :data="props.row.shoes" :border="true">

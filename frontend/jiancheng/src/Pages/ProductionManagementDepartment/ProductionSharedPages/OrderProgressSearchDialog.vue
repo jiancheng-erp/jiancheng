@@ -19,7 +19,7 @@
             <el-input v-model="localSearchForm.customerProductNameSearch" placeholder="例：CL-B001" @change="handleConfirm" clearable />
         </el-form-item>
         <el-form-item label="状态点">
-            <el-select v-model="localSearchForm.statusNodeSearch" placeholder="例：生产中" @change="handleConfirm" clearable style="width: 150px;">
+            <el-select class="u-w-150" v-model="localSearchForm.statusNodeSearch" placeholder="例：生产中" @change="handleConfirm" clearable>
                 <el-option v-for="item in [
                     '裁断未开始',
                     '裁断进行中',
@@ -40,7 +40,7 @@
             </el-date-picker>
         </el-form-item>
         <el-form-item label="订单排序">
-            <el-select v-model="localSearchForm.sortCondition" @change="handleConfirm" clearable style="width: 150px;">
+            <el-select class="u-w-150" v-model="localSearchForm.sortCondition" @change="handleConfirm" clearable>
                 <el-option v-for="item in [
                     '最新',
                     '最旧',

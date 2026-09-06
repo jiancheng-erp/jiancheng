@@ -25,10 +25,10 @@
                     <el-col :span="24" :offset="0">
                         <el-descriptions title="" :column="2" border>
                             <el-descriptions-item label="订单编号" align="center">
-                                <el-input style="width: 200px" v-model="orderData.orderRid" :disabled="editOrderInfoDisabled"> </el-input>
+                                <el-input class="u-w-200" v-model="orderData.orderRid" :disabled="editOrderInfoDisabled"> </el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="客户订单" align="center">
-                                <el-input style="width: 200px" v-model="orderData.orderCid" :disabled="editOrderInfoDisabled"> </el-input>
+                                <el-input class="u-w-200" v-model="orderData.orderCid" :disabled="editOrderInfoDisabled"> </el-input>
                             </el-descriptions-item>
                             <el-descriptions-item label="订单类型" align="center">
                                 <el-tag :type="orderData.orderType === 'F' ? 'warning' : 'success'">
@@ -199,17 +199,17 @@
                         <el-table-column prop="shoeRid" label="鞋型编号" sortable />
                         <el-table-column label="客户鞋型编号">
                             <template #default="scope">
-                                <el-input style="width: 200px" v-model="scope.row.shoeCid" :disabled="editOrderInfoDisabled"> </el-input>
+                                <el-input class="u-w-200" v-model="scope.row.shoeCid" :disabled="editOrderInfoDisabled"> </el-input>
                             </template>
                         </el-table-column>
                         <el-table-column prop="currentStatus" label="鞋型状态" />
 
                         <el-table-column label="备注">
                             <template #default="scope">
-                                <el-button v-if="!scope.row.orderShoeRemarkExist && !isFinanceManager" type="primary" size="default" @click="openRemarkDialog(scope.row)" style="margin-left: 20px">添加备注 </el-button>
+                                <el-button class="u-ml-5" v-if="!scope.row.orderShoeRemarkExist && !isFinanceManager" type="primary" size="default" @click="openRemarkDialog(scope.row)">添加备注 </el-button>
 
                                 <el-text v-if="scope.row.orderShoeRemarkExist" style="display: inline-block">{{ scope.row.orderShoeRemarkRep }}</el-text>
-                                <el-button v-if="scope.row.orderShoeRemarkExist && !isFinanceManager" type="warning" size="default" @click="openEditRemarkDialog(scope.row)" style="margin-left: 20px"> 编辑备注 </el-button>
+                                <el-button class="u-ml-5" v-if="scope.row.orderShoeRemarkExist && !isFinanceManager" type="warning" size="default" @click="openEditRemarkDialog(scope.row)"> 编辑备注 </el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -1063,7 +1063,7 @@ export default {
     position: sticky; /* 或 relative */
     top: 0;
     z-index: 1001;
-    background: #fff;
+    background: var(--el-color-white);
     height: 20px;
     overflow: hidden;
     margin-bottom: 6px;
@@ -1084,7 +1084,7 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #909399;
+    color: var(--color-text-3);
     min-height: 32px;
 }
 

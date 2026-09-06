@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" style="font-size: xx-large; text-align: center">绩效管理</el-col>
+        <el-col class="u-page-title" :span="24">绩效管理</el-col>
     </el-row>
     <el-row :gutter="20" style="margin-bottom: 10px">
         <el-col :span="3">
@@ -93,7 +93,7 @@
             </el-col>
         </el-row>
 
-        <el-table :data="paginatedData" border stripe height="500">
+        <el-table :data="paginatedData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column type="expand">
                 <template #default="props">
                     <div v-for="color in props.row.colors" :key="color.shoeTypeId" style="margin-bottom: 10px">

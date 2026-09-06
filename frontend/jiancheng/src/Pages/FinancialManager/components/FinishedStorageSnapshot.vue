@@ -84,21 +84,21 @@
             <el-table-column prop="openingAmount" label="期初数" />
             <el-table-column prop="periodInbound" label="入库变化">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodInbound > 0 ? '#67c23a' : '' }">
+                    <span :style="{ color: row.periodInbound > 0 ? 'var(--color-success)' : '' }">
                         {{ row.periodInbound > 0 ? `+${row.periodInbound}` : row.periodInbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column prop="periodOutbound" label="出库变化">
                 <template #default="{ row }">
-                    <span :style="{ color: row.periodOutbound > 0 ? '#e6a23c' : '' }">
+                    <span :style="{ color: row.periodOutbound > 0 ? 'var(--color-warning)' : '' }">
                         {{ row.periodOutbound > 0 ? `-${row.periodOutbound}` : row.periodOutbound }}
                     </span>
                 </template>
             </el-table-column>
             <el-table-column label="净变化">
                 <template #default="{ row }">
-                    <span :style="{ color: (row.periodInbound - row.periodOutbound) > 0 ? '#67c23a' : (row.periodInbound - row.periodOutbound) < 0 ? '#f56c6c' : '' }">
+                    <span :style="{ color: (row.periodInbound - row.periodOutbound) > 0 ? 'var(--color-success)' : (row.periodInbound - row.periodOutbound) < 0 ? 'var(--color-danger)' : '' }">
                         {{ row.periodInbound - row.periodOutbound > 0 ? `+${row.periodInbound - row.periodOutbound}` : row.periodInbound - row.periodOutbound }}
                     </span>
                 </template>
@@ -336,10 +336,10 @@ async function downloadExcel() {
     padding: 2px 6px;
     margin: 2px;
     border-radius: 6px;
-    background: #f5f7fa;
-    border: 1px solid #ebeef5;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-lighter);
     font-size: 12px;
-    color: #606266;
+    color: var(--color-text-2);
 }
 .pager {
     display: flex;

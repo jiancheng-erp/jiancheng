@@ -6,22 +6,24 @@
 
         <el-container class="app-body">
             <el-aside class="app-aside">
-                <div class="profile">
-                    <el-avatar :icon="UserFilled" :size="80" class="profile-avatar" />
-                    <div class="profile-name">{{ userName }}</div>
+                <div class="aside-brand">
+                    <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+                    <div class="aside-brand-text">
+                        <span class="aside-brand-title">功能导航</span>
+                        <span class="aside-brand-sub">技术管理</span>
+                    </div>
                 </div>
 
                 <!-- 这里增加 :class="menuDensityClass" -->
                 <el-menu default-active="1" class="app-menu" :unique-opened="true" :class="menuDensityClass">
-                    <el-menu-item index="1" @click="handleMenuClick(1)">任务看板</el-menu-item>
-                    <el-menu-item index="2" @click="handleMenuClick(2)">调版分配与下发</el-menu-item>
-                    <el-menu-item index="4" @click="handleMenuClick(4)">生产BOM用量填写审核</el-menu-item>
-                    <el-menu-item index="5" @click="handleMenuClick(5)">退回任务列表</el-menu-item>
-                    <el-menu-item index="3" @click="handleMenuClick(3)">订单查询</el-menu-item>
-                    <el-menu-item index="6" @click="handleMenuClick(6)">工艺单修改管理</el-menu-item>
-                    <el-menu-item index="7" @click="handleMenuClick(7)">生产通知单及工艺单</el-menu-item>
-                    <el-menu-item index="8" @click="handleMenuClick(8)">个人信息</el-menu-item>
-                    <el-menu-item index="9" @click="logout">退出系统</el-menu-item>
+                    <el-menu-item index="1" @click="handleMenuClick(1)"><el-icon><DataBoard /></el-icon><span>任务看板</span></el-menu-item>
+                    <el-menu-item index="2" @click="handleMenuClick(2)"><el-icon><Promotion /></el-icon><span>调版分配与下发</span></el-menu-item>
+                    <el-menu-item index="4" @click="handleMenuClick(4)"><el-icon><DocumentChecked /></el-icon><span>生产BOM用量填写审核</span></el-menu-item>
+                    <el-menu-item index="5" @click="handleMenuClick(5)"><el-icon><Refresh /></el-icon><span>退回任务列表</span></el-menu-item>
+                    <el-menu-item index="3" @click="handleMenuClick(3)"><el-icon><Search /></el-icon><span>订单查询</span></el-menu-item>
+                    <el-menu-item index="6" @click="handleMenuClick(6)"><el-icon><EditPen /></el-icon><span>工艺单修改管理</span></el-menu-item>
+                    <el-menu-item index="7" @click="handleMenuClick(7)"><el-icon><Tickets /></el-icon><span>生产通知单及工艺单</span></el-menu-item>
+                    <el-menu-item index="8" @click="handleMenuClick(8)"><el-icon><User /></el-icon><span>个人信息</span></el-menu-item>
                 </el-menu>
             </el-aside>
 
@@ -34,7 +36,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, Promotion, DocumentChecked, Refresh, Search, EditPen, Tickets, User } from '@element-plus/icons-vue'
 import Dashboard from '../components/TechnicalManagerDashboard.vue'
 import OrderSearch from '../components/OrderSearch.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
@@ -54,7 +56,16 @@ export default {
         BOMReviewList,
         RevertDashboard,
         CraftSheetModifyList,
-        BusinessProductionOrder
+        BusinessProductionOrder,
+        Menu,
+        DataBoard,
+        Promotion,
+        DocumentChecked,
+        Refresh,
+        Search,
+        EditPen,
+        Tickets,
+        User
     },
     data() {
         return {

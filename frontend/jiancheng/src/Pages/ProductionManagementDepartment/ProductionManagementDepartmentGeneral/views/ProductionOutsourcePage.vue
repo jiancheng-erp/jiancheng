@@ -4,8 +4,8 @@
 			<AllHeader></AllHeader>
 		</el-header>
 		<el-main height="">
-			<el-row :gutter="20" style="text-align: center">
-				<el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单鞋型外包页面</el-col>
+			<el-row class="u-text-center" :gutter="20">
+				<el-col class="u-page-title" :span="24" :offset="0">订单鞋型外包页面</el-col>
 			</el-row>
 			<el-row :gutter="20">
 				<el-col :span="24" :offset="0">
@@ -18,7 +18,7 @@
 					</el-descriptions>
 				</el-col>
 			</el-row>
-			<el-row :gutter="20" style="margin-top: 20px">
+			<el-row class="u-mt-5" :gutter="20">
 				<el-col :span="24" :offset="0">
 					订单鞋型数量
 					<el-table :data="shoeInfo" :span-method="shoeBatchInfoTableSpanMethod" border stripe
@@ -128,7 +128,7 @@
 				</el-date-picker>
 			</el-form-item>
 		</el-form>
-		<el-row :gutter="20" style="margin-top: 20px">
+		<el-row class="u-mt-5" :gutter="20">
 			<el-col :span="24" :offset="0">
 				订单鞋型数量
 				<el-table :data="shoeInfo" :span-method="shoeBatchInfoTableSpanMethod" border stripe :max-height="500">

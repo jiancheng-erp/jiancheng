@@ -1,19 +1,19 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">外包信息页面</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">外包信息页面</el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             订单号筛选：
             <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="getOutsourceOverview()"
                 @clear="getOutsourceOverview" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             鞋型号筛选：
             <el-input v-model="shoeRIdSearch" placeholder="请输入鞋型号" clearable @keypress.enter="getOutsourceOverview()"
                 @clear="getOutsourceOverview" />
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             状态点筛选：
             <el-select v-model="nodeNameSearch" clearable filterable @change="getOrderTableData()"
                 @clear="getOrderTableData()">
@@ -74,7 +74,7 @@
                 {{ currentRow.orderEndDate }}
             </el-descriptions-item>
         </el-descriptions>
-        <el-descriptions title="外包信息" border style="margin-top: 20px;">
+        <el-descriptions class="u-mt-5" title="外包信息" border>
             <el-descriptions-item label="工厂型号">
                 {{ currentRow.shoeRId }}
             </el-descriptions-item>
@@ -103,7 +103,7 @@
                 {{ currentRow.materialEstimatedOutboundDate }}
             </el-descriptions-item>
         </el-descriptions>
-        <el-descriptions title="外包具体数量" style="margin-top: 20px;">
+        <el-descriptions class="u-mt-5" title="外包具体数量">
         </el-descriptions>
         <el-table :data="outsourceShoeBatchInfo" border stripe :max-height="500">
             <el-table-column prop="colorName" label="颜色"></el-table-column>
@@ -113,7 +113,7 @@
             </el-table-column>
         </el-table>
 
-        <el-descriptions title="外包成本" style="margin-top: 20px;">
+        <el-descriptions class="u-mt-5" title="外包成本">
         </el-descriptions>
         <OutsourceCostTable :tableData.sync="outsourceCostTable" :outsourceInfoId="currentRow.outsourceInfoId" :totalShoes="outsourceTotalShoes" />
         <template #footer>

@@ -348,7 +348,7 @@ export default {
   align-items:end
 }
 .el-table .is-active {
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
 }
 .placeholder-list {
   display: flex;

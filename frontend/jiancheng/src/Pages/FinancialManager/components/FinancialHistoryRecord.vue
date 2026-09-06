@@ -23,7 +23,7 @@
             </el-col>
         </el-row>
         <el-row :gutter="16" style="margin-top: 20px;width: 100%;">
-            <el-table :data="displayData" stripe height="530">
+            <el-table :data="displayData" stripe height="calc(100vh - var(--main-table-offset))">
                 <el-table-column type="index" width="50" />
                 <el-table-column prop="" label="项目" />
                 <el-table-column prop="" label="类别" />

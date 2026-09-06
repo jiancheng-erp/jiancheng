@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >任务看板</el-col
         >
     </el-row>

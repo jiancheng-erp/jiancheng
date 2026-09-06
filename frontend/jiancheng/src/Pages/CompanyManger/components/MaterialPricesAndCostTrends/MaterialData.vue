@@ -1,19 +1,19 @@
 <template>
     <div class="content">
         <el-row :gutter="16" style="margin-top: 20px; justify-content: space-between; width: 100%">
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 材料名称:
                 <el-input v-model="materialName" placeholder="请输入材料名称" clearable />
             </el-col>
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 材料型号:
                 <el-input v-model="materialModel" placeholder="请输入材料型号" clearable />
             </el-col>
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 材料规格:
                 <el-input v-model="materialSpecification" placeholder="请输入材料规格" clearable />
             </el-col>
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 材料厂家:
                 <el-input v-model="supplierName" placeholder="请输入材料厂家" clearable />
             </el-col>

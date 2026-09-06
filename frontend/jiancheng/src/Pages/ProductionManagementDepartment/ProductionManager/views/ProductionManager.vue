@@ -8,9 +8,12 @@
     <!-- 身体：侧栏 + 主区 -->
     <el-container class="app-body">
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">生产管理</span>
+          </div>
         </div>
 
         <div class="aside-menu">
@@ -19,28 +22,32 @@
             class="app-menu el-menu-vertical-demo"
           >
             <el-menu-item index="1" @click="handleMenuClick(1)">
+              <el-icon><DataBoard /></el-icon>
               <span>主页看板</span>
             </el-menu-item>
             <el-menu-item index="2" @click="handleMenuClick(2)">
+              <el-icon><Calendar /></el-icon>
               <span>生产排期表</span>
             </el-menu-item>
             <el-menu-item index="3" @click="handleMenuClick(3)">
+              <el-icon><Box /></el-icon>
               <span>物料信息</span>
             </el-menu-item>
             <el-menu-item index="5" @click="handleMenuClick(5)">
+              <el-icon><CircleCheck /></el-icon>
               <span>外包审批</span>
             </el-menu-item>
             <el-menu-item index="6" @click="handleMenuClick(6)">
+              <el-icon><Money /></el-icon>
               <span>工价审批</span>
             </el-menu-item>
             <el-menu-item index="9" @click="handleMenuClick(9)">
+              <el-icon><DataAnalysis /></el-icon>
               <span>退回订单统计</span>
             </el-menu-item>
             <el-menu-item index="8" @click="handleMenuClick(8)">
+              <el-icon><User /></el-icon>
               <span>个人信息</span>
-            </el-menu-item>
-            <el-menu-item index="7" @click="logout">
-              <span>退出系统</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -56,7 +63,7 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import Dashboard from '../components/TodoTasksView.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, Calendar, Box, CircleCheck, Money, DataAnalysis, User } from '@element-plus/icons-vue'
 import ProductionSchedulingDialogue from '../components/ProductionSchedulingDialogue.vue'
 import LogisticInfo from '../components/LogisticInfo.vue'
 import OutSourceApproval from '../components/OutSourceApproval.vue'
@@ -79,7 +86,15 @@ export default {
     OrderProgress,
     PersonalInfo,
     MainBoardPage,
-    RevertEventAnalyse
+    RevertEventAnalyse,
+    Menu,
+    DataBoard,
+    Calendar,
+    Box,
+    CircleCheck,
+    Money,
+    DataAnalysis,
+    User
   },
   data() {
     return {

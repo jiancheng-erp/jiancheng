@@ -10,20 +10,20 @@
         <div class="toolbar">
             <el-form inline @submit.prevent="search">
                 <el-form-item label="订单号/工厂型号">
-                    <el-input v-model="query.keyword" placeholder="模糊搜索" clearable style="width: 200px"
+                    <el-input class="u-w-200" v-model="query.keyword" placeholder="模糊搜索" clearable
                         @keyup.enter="search" />
                 </el-form-item>
                 <el-form-item label="倍数阈值">
-                    <el-input-number v-model="query.ratio" :min="1" :step="0.5" :precision="1"
-                        controls-position="right" style="width: 120px" />
+                    <el-input-number class="u-w-120" v-model="query.ratio" :min="1" :step="0.5" :precision="1"
+                        controls-position="right" />
                 </el-form-item>
                 <el-form-item label="最小差值">
-                    <el-input-number v-model="query.minExcess" :min="0" :step="10"
-                        controls-position="right" style="width: 120px" />
+                    <el-input-number class="u-w-120" v-model="query.minExcess" :min="0" :step="10"
+                        controls-position="right" />
                 </el-form-item>
                 <el-form-item label="核定下限">
-                    <el-input-number v-model="query.minApproval" :min="0" :step="10"
-                        controls-position="right" style="width: 120px" />
+                    <el-input-number class="u-w-120" v-model="query.minApproval" :min="0" :step="10"
+                        controls-position="right" />
                 </el-form-item>
                 <el-form-item>
                     <el-checkbox v-model="query.includeZeroApproval">含无核定却采购</el-checkbox>
@@ -90,12 +90,12 @@
                 </el-descriptions>
                 <el-form label-width="110px">
                     <el-form-item label="核定用量">
-                        <el-input-number v-model="editForm.approvalAmount" :min="0" :step="1"
-                            controls-position="right" style="width: 220px" />
+                        <el-input-number class="u-w-220" v-model="editForm.approvalAmount" :min="0" :step="1"
+                            controls-position="right" />
                     </el-form-item>
                     <el-form-item label="调整采购数量">
-                        <el-input-number v-model="editForm.adjustPurchaseAmount" :min="0" :step="1"
-                            controls-position="right" style="width: 220px" />
+                        <el-input-number class="u-w-220" v-model="editForm.adjustPurchaseAmount" :min="0" :step="1"
+                            controls-position="right" />
                         <div class="hint">留空/为 0 时以原采购数量生效</div>
                     </el-form-item>
                 </el-form>
@@ -212,7 +212,7 @@ export default {
     margin-bottom: 8px;
 }
 .stats {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 .pager {
@@ -220,7 +220,7 @@ export default {
     justify-content: flex-end;
 }
 .hint {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 12px;
     margin-left: 8px;
 }

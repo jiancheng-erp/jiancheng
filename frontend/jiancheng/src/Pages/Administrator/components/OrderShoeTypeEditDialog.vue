@@ -28,7 +28,7 @@
                     <span class="shoe-title">工厂型号：{{ shoe.shoeRid }}</span>
                     <div class="customer-product">
                         <span>客户型号：</span>
-                        <el-input v-model="shoe.customerProductName" size="small" style="width: 220px" clearable />
+                        <el-input class="u-w-220" v-model="shoe.customerProductName" size="small" clearable />
                     </div>
                 </div>
 
@@ -331,12 +331,12 @@ export default {
 
 .packaging-tip {
     font-size: 12px;
-    color: #909399;
+    color: var(--color-text-3);
     margin-left: 4px;
 }
 
 .shoe-block {
-    border: 1px solid #ebeef5;
+    border: 1px solid var(--el-border-color-lighter);
     border-radius: 6px;
     padding: 12px 16px;
     margin-bottom: 16px;
@@ -361,14 +361,14 @@ export default {
 }
 
 .shoe-type-block {
-    border-top: 1px dashed #ebeef5;
+    border-top: 1px dashed var(--el-border-color-lighter);
     padding-top: 12px;
     margin-top: 12px;
 }
 
 .field-label {
     font-size: 12px;
-    color: #909399;
+    color: var(--color-text-3);
     margin-bottom: 4px;
 }
 </style>

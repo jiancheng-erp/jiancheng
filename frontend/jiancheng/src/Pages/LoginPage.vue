@@ -188,7 +188,7 @@ const handleSubmit = () => {
   height: 48px;
   border-radius: 12px;
   box-shadow: 0 0 0 1px var(--border-color) inset;
-  background-color: #fff;
+  background-color: var(--el-color-white);
   transition: box-shadow .18s ease, background-color .18s ease;
 }
 
@@ -214,7 +214,7 @@ const handleSubmit = () => {
   border: none;
   font-weight: 800;
   letter-spacing: .4px;
-  color: #fff;
+  color: var(--el-color-white);
   box-shadow: 0 8px 18px rgba(33, 147, 176, .25);
   transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
 }

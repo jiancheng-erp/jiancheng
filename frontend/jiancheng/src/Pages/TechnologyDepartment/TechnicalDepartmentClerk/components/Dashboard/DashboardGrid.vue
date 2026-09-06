@@ -4,11 +4,11 @@
             <h1>待处理任务：</h1>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="6" :offset="0" v-for="colIndex in 4">
             <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getPendingItem(colIndex)" @click="openNewWindow(getPendingItem(colIndex))">
                 <template #header>
-                    <div style="text-align: center;">
+                    <div class="u-text-center">
                         {{ getPendingItem(colIndex).taskName }}
                     </div>
                 </template>
@@ -21,7 +21,7 @@
 
         </el-col>
     </el-row>
-    <el-row :gutter="0" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="0">
         <el-col :span="2" :offset="22">
             <el-button size="large" @click="displayPending">查看更多</el-button>
 
@@ -32,11 +32,11 @@
             <h1>处理中任务：</h1>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="6" :offset="0" v-for="colIndex in 4">
             <el-card shadow="always" :body-style="{ padding: '10px' }" v-if="getinProgressItem(colIndex)" @click="openNewWindow(getinProgressItem(colIndex))">
                 <template #header>
-                    <div style="text-align: center;">
+                    <div class="u-text-center">
                         <span>{{ getinProgressItem(colIndex).taskName }}</span>
                     </div>
                 </template>
@@ -49,7 +49,7 @@
 
         </el-col>
     </el-row>
-    <el-row :gutter="0" style="margin-top: 20px;">
+    <el-row class="u-mt-5" :gutter="0">
         <el-col :span="2" :offset="22">
             <el-button size="large" @click="displayProgress">查看更多</el-button>
 

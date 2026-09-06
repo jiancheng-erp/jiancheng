@@ -270,12 +270,12 @@ export default {
 }
 
 html {
-    background-color: #ffffff;
+    background-color: var(--el-color-white);
     margin: 0px;
 }
 
 body {
-    border: solid 1px #ffffff;
+    border: solid 1px var(--el-color-white);
 }
 </style>
 

@@ -1,13 +1,13 @@
 <template>
     <div class="content">
         <el-row :gutter="20" style="margin-top: 20px; justify-content: space-between">
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 订单号筛选：
                 <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable />
-                <el-button
+                <el-button class="u-ml-5"
                     type="primary"
                     @click="updataParams('orderRid', orderRIdSearch)"
-                    style="margin-left: 20px"
+                   
                     >筛选</el-button
                 >
             </el-col>

@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main style="overflow-x: hidden">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">工艺单退回处理</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">工艺单退回处理</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -49,9 +49,9 @@
                 </el-col>
             </el-row>
 
-            <el-row :gutter="20" style="margin-top: 20px">
+            <el-row class="u-mt-5" :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-table :data="testTableFilterData" border style="height: 400px">
+                    <el-table class="u-h-400" :data="testTableFilterData" border>
                         <el-table-column type="expand">
                             <template #default="scope">
                                 <el-table :data="scope.row.typeInfos" border>
@@ -94,9 +94,9 @@
                     <el-descriptions-item label="订单预计截止日期" align="center">{{ orderData.deadlineTime }}</el-descriptions-item>
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
-                            <el-table :data="unIssueBOMData" border style="height: 400px" @selection-change="handleShoeSelectionChange">
+                            <el-table class="u-h-400" :data="unIssueBOMData" border @selection-change="handleShoeSelectionChange">
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column prop="inheritId" label="工厂型号" align="center" width="100"></el-table-column>
                                 <el-table-column prop="customerId" label="客户型号" align="center"></el-table-column>
@@ -485,11 +485,11 @@
                                         <template #header>
                                             <span>配对组</span>
                                             <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
-                                                <el-icon style="margin-left:2px;color:#409EFF;cursor:help"><QuestionFilled /></el-icon>
+                                                <el-icon style="margin-left:2px;color:var(--el-color-primary);cursor:help"><QuestionFilled /></el-icon>
                                             </el-tooltip>
                                         </template>
                                         <template #default="{ row }">
-                                            <span v-if="isZipperOrPull(row.materialName)" style="font-weight:600;color:#E6A23C">{{ row.zipperPairId }}</span>
+                                            <span v-if="isZipperOrPull(row.materialName)" style="font-weight:600;color:var(--color-warning)">{{ row.zipperPairId }}</span>
                                             <span v-else style="color:#ccc">—</span>
                                         </template>
                                         <template #edit="{ row }">
@@ -875,7 +875,7 @@
                         </div>
                     </el-col>
                 </el-row>
-                <el-table :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" style="height: 400px" v-loading="materialAddfinished">
+                <el-table class="u-h-400" :data="assetFilterTable" border ref="materialSelectTable" @selection-change="handleMaterialSelectionChange" v-loading="materialAddfinished">
                     <el-table-column type="selection" width="55"></el-table-column>
                     <el-table-column prop="materialType" label="材料类型" />
                     <el-table-column prop="materialName" label="材料名称" />
@@ -913,7 +913,7 @@
                 <div style="height: 650px; overflow-y: scroll">
                     <el-row :gutter="20">
                         <el-col :span="23" :offset="0">
-                            <el-descriptions title="鞋型基本信息" border direction="vertical" column="4" style="margin-top: 20px">
+                            <el-descriptions class="u-mt-5" title="鞋型基本信息" border direction="vertical" column="4">
                                 <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                     <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
                                 </el-descriptions-item>

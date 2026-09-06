@@ -4,7 +4,7 @@
         <el-card shadow="never" class="mb-3">
             <el-form :inline="true" :model="query" @submit.prevent>
                 <el-form-item label="搜索">
-                    <el-input v-model.trim="query.keyword" placeholder="订单号/客户/记录ID…" clearable style="width: 280px" @keyup.enter.native="reload">
+                    <el-input class="u-w-280" v-model.trim="query.keyword" placeholder="订单号/客户/记录ID…" clearable @keyup.enter.native="reload">
                         <template #prefix
                             ><el-icon><Search /></el-icon
                         ></template>
@@ -84,10 +84,10 @@
                 <!-- 订单数量（尺码分布） -->
                 <el-divider>订单数量（尺码分布）</el-divider>
                 <div class="flex items-center gap-2 mb-2">
-                    <el-select
+                    <el-select class="u-w-240"
                         v-model="qtyColor"
                         placeholder="选择颜色后加载尺码分布"
-                        style="width: 240px"
+                       
                         :disabled="!detailDialog.record || !shoeColorOptionsInDetail.length"
                         :loading="qtyLoading"
                         clearable

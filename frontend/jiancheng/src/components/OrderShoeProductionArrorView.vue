@@ -67,7 +67,7 @@ export default {
     justify-content: space-between;
     width: 100%;
     overflow-x: auto;
-    background-color: #fff;
+    background-color: var(--el-color-white);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

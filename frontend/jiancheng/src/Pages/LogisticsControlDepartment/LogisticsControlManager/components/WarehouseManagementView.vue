@@ -1,18 +1,18 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >材料仓库管理</el-col
         >
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
-            <el-table :data="warehouseData" border style="height: 500px" v-loading="datafinished">
+            <el-table class="u-h-500" :data="warehouseData" border v-loading="datafinished">
                 <el-table-column prop="warehouseName" label="仓库名称"></el-table-column>
                 <el-table-column prop="addDate" label="创建时间"></el-table-column>
             </el-table>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="4" :offset="20"
             ><el-button type="primary" size="default" @click="openCreateDialog"
                 >创建新仓库</el-button
@@ -22,7 +22,7 @@
 
     <el-dialog title="创建新仓库" v-model="createVis" width="30%">
         <el-row :gutter="20">
-            <el-col :span="3" :offset="0" style="white-space: nowrap">仓库名：</el-col>
+            <el-col class="u-nowrap" :span="3" :offset="0">仓库名：</el-col>
             <el-col :span="12" :offset="0"
                 ><el-input
                     v-model="warehouseName"

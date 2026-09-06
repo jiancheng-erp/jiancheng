@@ -1,7 +1,7 @@
 <template>
     <div class="content">
         <div>
-            <el-date-picker
+            <el-date-picker class="u-h-40"
                 v-model="timeValue"
                 type="datetimerange"
                 start-placeholder="开始时间"
@@ -9,7 +9,7 @@
                 format="YYYY-MM-DD HH:mm:ss"
                 date-format="YYYY/MM/DD ddd"
                 time-format="A hh:mm:ss"
-                style="height: 40px"
+               
                 :default-time="defaultTime"
             />
             <el-button

@@ -101,7 +101,7 @@
             <el-card shadow="never" class="mb-3">
                 <el-form :inline="true">
                     <el-form-item label="材料类型">
-                        <el-select v-model="query.materialTypeId" clearable placeholder="全部" style="width: 220px">
+                        <el-select class="u-w-220" v-model="query.materialTypeId" clearable placeholder="全部">
                             <el-option v-for="t in materialTypesForActiveCategory" :key="t.id" :label="t.name" :value="t.id" />
                         </el-select>
                     </el-form-item>
@@ -202,11 +202,11 @@
                         <div class="footer-actions-scroll" ref="actionsScrollRef">
                             <!-- >= 收纳阈值：完整横排（但尺寸更紧凑） -->
                             <div class="flex items-center gap-3 footer-actions" v-if="!isNarrow">
-                                <el-select size="small" v-model="form.departmentId" placeholder="出库至部门" style="width: 180px" filterable clearable>
+                                <el-select class="u-w-180" size="small" v-model="form.departmentId" placeholder="出库至部门" filterable clearable>
                                     <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                                 </el-select>
-                                <el-input size="small" v-model.trim="form.picker" placeholder="领料人" style="width: 140px" />
-                                <el-input size="small" v-model.trim="form.remark" placeholder="整单备注（可选）" style="width: 200px" />
+                                <el-input class="u-w-140" size="small" v-model.trim="form.picker" placeholder="领料人" />
+                                <el-input class="u-w-200" size="small" v-model.trim="form.remark" placeholder="整单备注（可选）" />
                                 <el-button size="small" type="primary" :loading="submitting" @click="openConfirm">提交出库</el-button>
                             </div>
 

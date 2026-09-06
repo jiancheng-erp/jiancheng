@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main>
-            <el-row :gutter="20" style="text-align: center;">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{`${props.team}数量填报`}}</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">{{`${props.team}数量填报`}}</el-col>
             </el-row>
             <el-dialog title="新建生产数量单" v-model="createReportVis">
                 <el-date-picker v-model="dateValue" type="date" :disabled-date="disabledDate" value-format="YYYY-MM-DD"
@@ -237,10 +237,4 @@ const handleExport = () => {
     exportTableToExcel(tableData.value, columns.value, currentTitle.value + ".xlsx")
 }
 </script>
-<style>
-.rejected {
-    color: red;
-    cursor: pointer;
-    text-decoration: underline;
-}
-</style>
+<style scoped></style>

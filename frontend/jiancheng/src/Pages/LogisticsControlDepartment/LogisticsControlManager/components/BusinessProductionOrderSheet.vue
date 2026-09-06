@@ -41,18 +41,18 @@
             <table class="excel-table main-table">
                 <thead>
                     <tr>
-                        <th style="width: 130px">鞋图</th>
-                        <th style="width: 90px">工厂款号</th>
+                        <th class="u-w-130">鞋图</th>
+                        <th class="u-w-90">工厂款号</th>
                         <th style="width: 100px">客户型号</th>
-                        <th style="width: 70px">颜色</th>
-                        <th style="width: 90px">客户颜色</th>
+                        <th class="u-w-70">颜色</th>
+                        <th class="u-w-90">客户颜色</th>
                         <th style="width: 170px" v-for="cat in materialColumns" :key="cat.key">{{ cat.label }}</th>
                         <th style="width: 80px">配码</th>
                         <th class="size-col" v-for="s in activeSizes" :key="s.amountKey">{{ s.name }}</th>
-                        <th style="width: 55px">对/件</th>
-                        <th style="width: 55px">件数</th>
-                        <th style="width: 55px">双数</th>
-                        <th style="width: 200px">备注</th>
+                        <th class="u-w-55">对/件</th>
+                        <th class="u-w-55">件数</th>
+                        <th class="u-w-55">双数</th>
+                        <th class="u-w-200">备注</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -152,17 +152,17 @@
                     <table class="excel-table main-table">
                         <thead>
                             <tr>
-                                <th style="width: 130px">鞋图</th>
-                                <th style="width: 90px">工厂型号</th>
+                                <th class="u-w-130">鞋图</th>
+                                <th class="u-w-90">工厂型号</th>
                                 <th style="width: 100px">客户型号</th>
-                                <th style="width: 70px">颜色</th>
-                                <th style="width: 90px">客户颜色</th>
-                                <th style="width: 90px">配码</th>
+                                <th class="u-w-70">颜色</th>
+                                <th class="u-w-90">客户颜色</th>
+                                <th class="u-w-90">配码</th>
                                 <th class="size-col" v-for="s in activeSizes" :key="`po-h-${s.amountKey}`">{{ s.name }}</th>
-                                <th style="width: 70px">总双数</th>
-                                <th style="width: 55px">件数</th>
-                                <th style="width: 55px">双数</th>
-                                <th style="width: 200px">备注</th>
+                                <th class="u-w-70">总双数</th>
+                                <th class="u-w-55">件数</th>
+                                <th class="u-w-55">双数</th>
+                                <th class="u-w-200">备注</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -295,8 +295,8 @@
                                     <th style="width: 100px">部件</th>
                                     <th>材料名称</th>
                                     <th>工艺</th>
-                                    <th style="width: 70px">双数</th>
-                                    <th style="width: 70px">用量</th>
+                                    <th class="u-w-70">双数</th>
+                                    <th class="u-w-70">用量</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -742,7 +742,7 @@ async function downloadExcel(type = 'notice') {
 
 .packaging-file-name {
     font-size: 14px;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .packaging-preview {
@@ -755,7 +755,7 @@ async function downloadExcel(type = 'notice') {
 
 .packaging-empty {
     font-size: 14px;
-    color: #909399;
+    color: var(--color-text-3);
 }
 
 .toolbar {
@@ -765,7 +765,7 @@ async function downloadExcel(type = 'notice') {
 }
 
 .order-sheet {
-    background: #ffffff;
+    background: var(--el-color-white);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     padding: 24px 28px 30px;
@@ -787,7 +787,7 @@ async function downloadExcel(type = 'notice') {
     width: 90px;
     height: 3px;
     margin: 12px auto 0;
-    background: linear-gradient(90deg, #409eff, #66b1ff);
+    background: linear-gradient(90deg, var(--el-color-primary), var(--el-color-primary-light-3));
     border-radius: 2px;
 }
 
@@ -796,7 +796,7 @@ async function downloadExcel(type = 'notice') {
     width: 100%;
     table-layout: fixed;
     font-size: 13px;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .excel-table th,
@@ -820,7 +820,7 @@ async function downloadExcel(type = 'notice') {
 
 .info-table .info-label {
     background: #eef4ff;
-    color: #3a7bd5;
+    color: var(--el-color-primary);
     font-weight: 600;
     width: 80px;
     white-space: nowrap;
@@ -828,7 +828,7 @@ async function downloadExcel(type = 'notice') {
 
 .info-table .info-value {
     white-space: nowrap;
-    color: #303133;
+    color: var(--color-text-1);
 }
 
 .main-table thead th {
@@ -848,7 +848,7 @@ async function downloadExcel(type = 'notice') {
 
 .img-cell {
     padding: 6px;
-    background: #fff;
+    background: var(--el-color-white);
 }
 
 .img-cell .img-wrap {
@@ -859,13 +859,13 @@ async function downloadExcel(type = 'notice') {
 }
 
 .no-img {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 12px;
 }
 
 .total-row td {
     font-weight: 700;
-    background: #f5f7fa;
+    background: var(--el-fill-color-light);
 }
 
 .remark-cell .remark-text {
@@ -874,13 +874,13 @@ async function downloadExcel(type = 'notice') {
 }
 
 .instruction-missing {
-    color: #f56c6c;
+    color: var(--color-danger);
     font-weight: 600;
     padding: 6px 0;
 }
 
 .instruction-hint {
-    color: #909399;
+    color: var(--color-text-3);
     padding: 6px 0;
 }
 
@@ -897,7 +897,7 @@ async function downloadExcel(type = 'notice') {
 }
 
 .material-missing-cell {
-    color: #f56c6c;
+    color: var(--color-danger);
     font-weight: 600;
 }
 
@@ -910,15 +910,15 @@ async function downloadExcel(type = 'notice') {
 
 .craft-empty {
     text-align: center;
-    color: #909399;
+    color: var(--color-text-3);
     padding: 40px 0;
-    background: #ffffff;
+    background: var(--el-color-white);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .craft-sheet {
-    background: #ffffff;
+    background: var(--el-color-white);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     padding: 24px 28px 30px;
@@ -931,7 +931,7 @@ async function downloadExcel(type = 'notice') {
 
 .craft-info-table .info-label {
     background: #eef4ff;
-    color: #3a7bd5;
+    color: var(--el-color-primary);
     font-weight: 600;
     width: 90px;
     white-space: nowrap;
@@ -939,11 +939,11 @@ async function downloadExcel(type = 'notice') {
 
 .craft-img-cell {
     width: 150px;
-    background: #fff;
+    background: var(--el-color-white);
 }
 
 .craft-material-table .workshop-cell {
-    background: #f5f7fa;
+    background: var(--el-fill-color-light);
     font-weight: 700;
     writing-mode: vertical-lr;
     letter-spacing: 4px;
@@ -978,7 +978,7 @@ async function downloadExcel(type = 'notice') {
 
 .craft-extra-table .info-label {
     background: #eef4ff;
-    color: #3a7bd5;
+    color: var(--el-color-primary);
     font-weight: 600;
     width: 110px;
     white-space: nowrap;
@@ -1006,7 +1006,7 @@ async function downloadExcel(type = 'notice') {
 
 .craft-image-title {
     font-weight: 600;
-    color: #3a7bd5;
+    color: var(--el-color-primary);
     margin-bottom: 8px;
 }
 

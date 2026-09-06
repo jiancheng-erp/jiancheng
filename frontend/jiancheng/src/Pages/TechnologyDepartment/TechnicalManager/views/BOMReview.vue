@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main style="overflow-x: hidden">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">生产BOM用量审批</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">生产BOM用量审批</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -61,9 +61,9 @@
                         </el-col>
                     </el-row>
 
-                    <el-row :gutter="20" style="margin-top: 20px">
+                    <el-row class="u-mt-5" :gutter="20">
                         <el-col :span="24" :offset="0">
-                            <el-table :data="testTableFilterData" border style="height: 400px">
+                            <el-table class="u-h-400" :data="testTableFilterData" border>
                                 <el-table-column type="expand">
                                     <template #default="scope">
                                         <el-table :data="scope.row.typeInfos" border>
@@ -151,9 +151,9 @@
                                 }}</el-descriptions-item>
                         </el-descriptions>
                         <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
-                            <el-row :gutter="20" style="margin-bottom: 20px">
+                            <el-row class="u-mb-5" :gutter="20">
                                 <el-col :span="24">
-                                    <el-table :data="unIssueBOMData" border style="height: 400px"
+                                    <el-table class="u-h-400" :data="unIssueBOMData" border
                                         @selection-change="handleShoeSelectionChange">
                                         <el-table-column type="selection" width="55"></el-table-column>
                                         <el-table-column prop="inheritId" label="工厂型号" align="center"
@@ -183,8 +183,8 @@
                         fullscreen>
                         <el-row :gutter="20">
                             <el-col :span="24" :offset="0">
-                                <el-descriptions title="鞋型基本信息" border direction="vertical" :column="4"
-                                    style="margin-top: 20px">
+                                <el-descriptions class="u-mt-5" title="鞋型基本信息" border direction="vertical" :column="4"
+                                   >
                                     <el-descriptions-item label="鞋图" :rowspan="3" align="center" :width="200">
                                         <el-image style="width: 200px; height: 100px" :src="currentShoeImageUrl" />
                                     </el-descriptions-item>

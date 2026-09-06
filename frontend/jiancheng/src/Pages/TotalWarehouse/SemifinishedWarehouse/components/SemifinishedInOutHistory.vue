@@ -39,7 +39,7 @@
                     <Top />
                 </el-icon>
             </el-button>
-            <el-button type="primary" @click="moveDown" :disabled="topSelected.length === 0" style="margin-left: 20px;">
+            <el-button class="u-ml-5" type="primary" @click="moveDown" :disabled="topSelected.length === 0">
                 <el-icon>
                     <Bottom />
                 </el-icon> 移除

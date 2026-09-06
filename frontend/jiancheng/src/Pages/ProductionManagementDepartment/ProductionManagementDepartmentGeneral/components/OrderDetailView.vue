@@ -4,8 +4,8 @@
 			<AllHeader></AllHeader>
 		</el-header>
 		<el-main height="">
-			<el-row :gutter="20" style="text-align: center">
-				<el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">订单生产动态明细</el-col>
+			<el-row class="u-text-center" :gutter="20">
+				<el-col class="u-page-title" :span="24" :offset="0">订单生产动态明细</el-col>
 			</el-row>
 			<el-row :gutter="20">
 				<el-col :span="24" :offset="0">
@@ -37,7 +37,7 @@
 			<el-button @click="toggleSelectionMode">
 				{{ isMultipleSelection ? "退出" : "选择多个鞋型" }}
 			</el-button>
-			<el-row :gutter="20" style="margin-top: 20px">
+			<el-row class="u-mt-5" :gutter="20">
 				<el-col :span="24" :offset="0">
 					<el-table :data="orderShoeDataTable" border style="height: 800px"
 						@selection-change="handleSelectionChange">
@@ -86,7 +86,7 @@
 					<el-tab-pane v-for="tab in tabs" :key="tab.name" :label="tab.label" :name="tab.name">
 						<el-row :gutter="20">
 							<el-col :span="10" :offset="0">
-								<span style="white-space: nowrap">
+								<span class="u-nowrap">
 									{{ tab.lineLabel }}：
 									<el-select v-model="tab.lineValue" placeholder="" @change="" multiple>
 										<el-option v-for="item in productionLines[tab.name]" :key="item" :label="item"
@@ -233,7 +233,7 @@
 						</el-row>
 					</el-tab-pane>
 				</el-tabs>
-				<el-row :gutter="20" style="margin-top: 20px">
+				<el-row class="u-mt-5" :gutter="20">
 					<el-col :span="24" :offset="0">
 						鞋型配码信息
 						<el-table :data="shoeBatchInfo" :span-method="spanMethod" border stripe :max-height="500">

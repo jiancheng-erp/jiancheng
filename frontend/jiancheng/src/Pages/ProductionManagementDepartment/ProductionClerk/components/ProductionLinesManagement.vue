@@ -1,11 +1,11 @@
 <template>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="productionTeamSearch" placeholder="搜索车间" clearable @keypress.enter="getProductionLines()"
                 @clear="getProductionLines" />
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-button @click="openNewDialog">
             添加组号
         </el-button>
@@ -13,7 +13,7 @@
         <el-button v-if="isEditing" type="primary" @click="saveProductionLine()">保存</el-button>
         <el-button v-if="isEditing" type="primary" @click="isEditing = false">退出编辑</el-button>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-table :data="productionLinesData" border>
             <el-table-column type="index"></el-table-column>
             <el-table-column prop="productionTeam" label="车间"></el-table-column>

@@ -54,7 +54,7 @@
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="80%">
         <div id="printView" style="padding-left: 20px; padding-right: 20px; color: black; font-family: SimSun">
-            <h2 style="text-align: center">健诚鞋业入库单</h2>
+            <h2 class="u-text-center">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px">
                 <span style="font-weight: bolder; font-size: 16px"> 单据编号：{{ currentRow.inboundRId }} </span>
             </div>
@@ -333,12 +333,12 @@ export default {
 }
 
 html {
-    background-color: #ffffff;
+    background-color: var(--el-color-white);
     margin: 0px;
 }
 
 body {
-    border: solid 1px #ffffff;
+    border: solid 1px var(--el-color-white);
 }
 </style>
 

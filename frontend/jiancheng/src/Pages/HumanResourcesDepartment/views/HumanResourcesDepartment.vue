@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">人事管理</span>
+          </div>
         </div>
 
         <!-- 菜单（内部滚动） -->
@@ -21,19 +24,20 @@
           :unique-opened="true"
         >
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><User /></el-icon>
             <span>用户管理</span>
           </el-menu-item>
           <el-menu-item index="4" @click="handleMenuClick(4)">
+            <el-icon><Avatar /></el-icon>
             <span>人员管理</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><OfficeBuilding /></el-icon>
             <span>部门管理</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
+            <el-icon><Postcard /></el-icon>
             <span>个人页面</span>
-          </el-menu-item>
-          <el-menu-item index="9" @click="handleMenuClick(9)">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -48,7 +52,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, User, Avatar, OfficeBuilding, Postcard } from '@element-plus/icons-vue'
 import UserManagementView from '../components/UserManagementView.vue';
 import StaffManagementView from '../components/StaffManagementView.vue';
 import DepartmentManagementView from '../components/DepartmentManagementView.vue';
@@ -60,6 +64,11 @@ import axios from 'axios'
 export default {
     components: {
         AllHeader,
+        Menu,
+        User,
+        Avatar,
+        OfficeBuilding,
+        Postcard,
         UserManagementView,
         StaffManagementView,
         DepartmentManagementView,

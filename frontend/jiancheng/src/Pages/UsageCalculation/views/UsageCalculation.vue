@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">用量核算</span>
+          </div>
         </div>
 
         <!-- 菜单（侧栏内部滚动，由全局 main.css 控制） -->
@@ -21,37 +24,44 @@
           :unique-opened="true"
         >
           <el-menu-item index="1" @click="handleMenuClick(1)">
+            <el-icon><DataBoard /></el-icon>
             <span>任务看板</span>
           </el-menu-item>
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><DataAnalysis /></el-icon>
             <span>用量计算</span>
           </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
+            <el-icon><Refresh /></el-icon>
             <span>退回任务列表</span>
           </el-menu-item>
           <el-menu-item index="4" @click="handleMenuClick(4)">
+            <el-icon><Tickets /></el-icon>
             <span>生产BOM用量填写</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><EditPen /></el-icon>
             <span>总仓订单缺失材料用量填写</span>
           </el-menu-item>
           <el-menu-item index="11" @click="handleMenuClick(11)">
+            <el-icon><Edit /></el-icon>
             <span>用量修改</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
+            <el-icon><Search /></el-icon>
             <span>订单查询</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <el-icon><Coin /></el-icon>
             <span>材料单价查询</span>
           </el-menu-item>
           <el-menu-item index="7" @click="handleMenuClick(7)">
+            <el-icon><Box /></el-icon>
             <span>物控入/出库</span>
           </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick(8)">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-          <el-menu-item index="9" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -66,7 +76,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, DataAnalysis, Refresh, Tickets, EditPen, Edit, Search, Coin, Box, User } from '@element-plus/icons-vue'
 import Dashboard from '../components/UsageCalculationDashboard.vue';
 import UsageCaculationView from '../components/UsageCalculationView.vue'
 import OrderSearch from '../components/OrderSearch.vue';
@@ -83,6 +93,17 @@ import axios from 'axios'
 export default {
     components: {
         AllHeader,
+        Menu,
+        DataBoard,
+        DataAnalysis,
+        Refresh,
+        Tickets,
+        EditPen,
+        Edit,
+        Search,
+        Coin,
+        Box,
+        User,
         Dashboard,
         UsageCaculationView,
         OrderSearch,

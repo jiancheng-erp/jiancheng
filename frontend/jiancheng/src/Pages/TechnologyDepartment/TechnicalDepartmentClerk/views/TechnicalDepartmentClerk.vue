@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">技术管理</span>
+          </div>
         </div>
 
         <!-- 菜单（内部滚动，由 main.css 的 .app-menu 控制） -->
@@ -21,34 +24,40 @@
           :unique-opened="true"
         >
           <el-menu-item index="1" @click="handleMenuClick(1)">
+            <el-icon><DataBoard /></el-icon>
             <span>任务看板</span>
           </el-menu-item>
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><Promotion /></el-icon>
             <span>调版分配与下发</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <el-icon><DocumentAdd /></el-icon>
             <span>投产指令单创建</span>
           </el-menu-item>
           <el-menu-item index="7" @click="handleMenuClick(7)">
+            <el-icon><Tickets /></el-icon>
             <span>生产BOM用量填写</span>
           </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
+            <el-icon><ShoppingCart /></el-icon>
             <span>总仓订单缺失材料补采</span>
           </el-menu-item>
           <el-menu-item index="11" @click="handleMenuClick(11)">
+            <el-icon><EditPen /></el-icon>
             <span>补填拉头拉链组</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><Refresh /></el-icon>
             <span>退回任务列表</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
+            <el-icon><Search /></el-icon>
             <span>订单查询</span>
           </el-menu-item>
           <el-menu-item index="8" @click="handleMenuClick(8)">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-          <el-menu-item index="9" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -63,7 +72,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, Promotion, DocumentAdd, Tickets, ShoppingCart, EditPen, Refresh, Search, User } from '@element-plus/icons-vue'
 import Dashboard from '@/Pages/TechnologyDepartment/TechnicalDepartmentClerk/components/TechnicalClerkDashboard.vue'
 import OrderSearch from '../components/OrderSearch.vue';
 import PersonalInfo from '@/components/PersonalInfo.vue';
@@ -85,7 +94,17 @@ export default {
         ProductionOrderCreate,
         SecondBOMListView,
         WarehouseMissingMaterialPurchase,
-        MaterialBatchEdit
+        MaterialBatchEdit,
+        Menu,
+        DataBoard,
+        Promotion,
+        DocumentAdd,
+        Tickets,
+        ShoppingCart,
+        EditPen,
+        Refresh,
+        Search,
+        User
     },
     data() {
         return {

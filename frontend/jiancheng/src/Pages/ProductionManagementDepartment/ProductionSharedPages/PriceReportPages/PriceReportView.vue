@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main>
-            <el-row :gutter="20" style="text-align: center;">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">{{ `${props.teams}工序填报`
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">{{ `${props.teams}工序填报`
                 }}</el-col>
             </el-row>
             <el-row :gutter="20">

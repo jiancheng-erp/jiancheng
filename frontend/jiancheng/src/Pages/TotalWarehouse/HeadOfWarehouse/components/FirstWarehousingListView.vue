@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">一次采购入库</el-col>
+        <el-col class="u-page-title" :span="24" :offset="0">一次采购入库</el-col>
     </el-row>
     <component :is="currentDash" :pendingTaskData="textData" :inProgressTaskData="textData2" @backToList="changeToList"
     @changeToPend="changeToPend" @changeToProgress="changeToProgress">
@@ -106,4 +106,4 @@ export default {
     }
 }
 </script>
-<style></style>
+<style scoped></style>

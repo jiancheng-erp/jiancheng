@@ -1,22 +1,22 @@
 <template>
     <div class="content">
         <el-row :gutter="16" style="margin-top: 20px; width: 100%">
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 进行中订单号筛选：
                 <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable />
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 关键节点筛选:
                 <el-select v-model="orderShoeStatus" placeholder="请选择" style="width: 100%">
                     <el-option v-for="item in orderStatusOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 工厂型号筛选:
                 <el-input v-model="shoeRidSearch" placeholder="请输入工厂型号" size="normal" clearable/>
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 客户型号筛选:
                 <el-input v-model="shoeNameSearch" placeholder="请输入客户型号" size="normal" clearable/>
             </el-col>

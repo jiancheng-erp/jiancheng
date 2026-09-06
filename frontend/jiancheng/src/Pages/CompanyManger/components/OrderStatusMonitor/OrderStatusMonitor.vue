@@ -64,15 +64,15 @@ const handleTabsEdit = (targetName, action) => {
 }
 </script>
 
-<style>
-.demo-tabs > .el-tabs__content {
+<style scoped>
+.demo-tabs > :deep(.el-tabs__content) {
     color: #6b778c;
 }
 .demo-tabs {
     height: calc(100% - 40px);
     width: calc(100% - 40px);
 }
-.el-tab-pane {
+:deep(.el-tab-pane) {
     height: 100%;
     overflow: auto;
 }

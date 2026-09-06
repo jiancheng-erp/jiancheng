@@ -1,12 +1,12 @@
 <template>
   <el-row :gutter="20">
-    <el-col :span="24" style="font-size: xx-large; text-align: center">历史订单</el-col>
+    <el-col class="u-page-title" :span="24">历史订单</el-col>
   </el-row>
 
   <!-- 简洁工具栏：筛选维度与刷新 -->
   <el-row :gutter="10" style="margin-top: 16px">
     <el-col :span="6">
-      <el-select v-model="filterStatus" placeholder="筛选维度" size="default" style="width: 180px" @change="reload">
+      <el-select class="u-w-180" v-model="filterStatus" placeholder="筛选维度" size="default" @change="reload">
         <el-option label="经理审核视图" :value="'0'" />
         <el-option label="业务创建视图" :value="'1'" />
       </el-select>
@@ -55,7 +55,7 @@
 
   <!-- 表格 -->
   <el-row :gutter="20" style="margin-top: 12px">
-    <el-table :data="paginatedDisplayData" border stripe height="500" :loading="loading" @row-dblclick="orderRowDbClick">
+    <el-table :data="paginatedDisplayData" border stripe height="calc(100vh - var(--main-table-offset))" :loading="loading" @row-dblclick="orderRowDbClick">
       <el-table-column prop="orderRid" label="订单号" sortable />
       <el-table-column prop="orderSalesman" label="创建业务员" />
       <el-table-column prop="orderSupervisor" label="审核" />
@@ -74,13 +74,13 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination
+    <el-pagination class="u-mt-5"
       :current-page="currentPage"
       :page-size="pageSize"
       :total="totalItems"
       @current-change="handlePageChange"
       layout="total,prev,pager,next,jumper"
-      style="margin-top: 20px"
+     
     />
   </el-row>
 </template>

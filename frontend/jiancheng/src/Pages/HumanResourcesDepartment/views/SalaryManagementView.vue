@@ -1,8 +1,8 @@
 <template>
     <el-container direction="vertical">
         <el-main style="height: 100vh;">
-            <el-row :gutter="20" style="text-align: center;">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center;">
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">
                     员工薪资管理
                 </el-col>
             </el-row>

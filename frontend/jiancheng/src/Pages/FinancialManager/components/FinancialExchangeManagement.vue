@@ -5,12 +5,12 @@
                 <div class="title">汇率管理（按月）</div>
                 <div class="actions">
                     <span class="base-currency">基础货币：{{ baseCurrencyLabel }}</span>
-                    <el-date-picker
+                    <el-date-picker class="u-w-160"
                         v-model="selectedMonth"
                         type="month"
                         value-format="YYYY-MM"
                         placeholder="选择月份"
-                        style="width: 160px"
+                       
                         @change="onMonthChange"
                     />
                     <el-button size="small" :loading="loading" @click="refreshData">刷新</el-button>
@@ -278,7 +278,7 @@ async function handleDelete(row: ConversionRow) {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #606266;
+    color: var(--color-text-2);
 }
 
 .base-currency {
@@ -286,6 +286,6 @@ async function handleDelete(row: ConversionRow) {
 }
 
 .placeholder {
-    color: #c0c4cc;
+    color: var(--el-text-color-disabled);
 }
 </style>

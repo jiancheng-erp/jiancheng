@@ -1,25 +1,25 @@
 <template>
     <div class="content">
         <el-row :gutter="16" style="margin-top: 20px; width: 100%">
-            <el-col :span="4" :offset="0" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="0">
                 订单号筛选：
                 <el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable />
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 责任部门筛选:
                 <el-select v-model="responsibleDepartmentSearch" placeholder="请选择" style="width: 100%">
                     <el-option v-for="item in departmentOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 发起部门筛选:
                 <el-select v-model="initialDepartmentSearch" placeholder="请选择" style="width: 100%">
                     <el-option v-for="item in departmentOptions" :key="item.value" :label="item.label"
                         :value="item.value"></el-option>
                 </el-select>
             </el-col>
-            <el-col :span="4" :offset="2" style="white-space: nowrap">
+            <el-col class="u-nowrap" :span="4" :offset="2">
                 退回月份筛选:
                 <el-date-picker v-model="monthFilter" type="month" placeholder="选择月份" format="YYYY-MM"
                     value-format="YYYY-MM" style="width: 100%" clearable />

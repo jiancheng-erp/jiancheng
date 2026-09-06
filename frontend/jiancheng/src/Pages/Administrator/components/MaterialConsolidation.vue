@@ -3,13 +3,13 @@
         <!-- 搜索栏 -->
         <el-form inline @submit.prevent="fetchVariants" class="search-bar">
             <el-form-item label="材料名称">
-                <el-input v-model="search.materialName" placeholder="模糊搜索" clearable style="width:180px" @keyup.enter="fetchVariants" />
+                <el-input class="u-w-180" v-model="search.materialName" placeholder="模糊搜索" clearable @keyup.enter="fetchVariants" />
             </el-form-item>
             <el-form-item label="供应商">
-                <el-input v-model="search.supplierName" placeholder="模糊搜索" clearable style="width:180px" @keyup.enter="fetchVariants" />
+                <el-input class="u-w-180" v-model="search.supplierName" placeholder="模糊搜索" clearable @keyup.enter="fetchVariants" />
             </el-form-item>
             <el-form-item label="材料类型">
-                <el-input v-model="search.materialType" placeholder="模糊搜索" clearable style="width:150px" @keyup.enter="fetchVariants" />
+                <el-input class="u-w-150" v-model="search.materialType" placeholder="模糊搜索" clearable @keyup.enter="fetchVariants" />
             </el-form-item>
             <el-form-item>
                 <el-checkbox v-model="search.showAll">显示所有（含无重复）</el-checkbox>
@@ -136,12 +136,12 @@
 
             <!-- 搜索与匹配栏 -->
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
-                <el-input v-model="mergeSearch.keyword" placeholder="搜索型号/规格/颜色" clearable style="width:220px" @keyup.enter="fetchMergeVariants(1)" />
+                <el-input class="u-w-220" v-model="mergeSearch.keyword" placeholder="搜索型号/规格/颜色" clearable @keyup.enter="fetchMergeVariants(1)" />
                 <el-button type="primary" size="small" @click="fetchMergeVariants(1)">搜索</el-button>
                 <el-button type="warning" size="small" @click="autoMatchSimilar">
                     <el-icon style="margin-right:4px"><Warning /></el-icon>自动匹配相似
                 </el-button>
-                <span v-if="mergeSelectedVariants.length" style="color:#409eff; font-size:13px; margin-left:auto;">
+                <span v-if="mergeSelectedVariants.length" style="color:var(--el-color-primary); font-size:13px; margin-left:auto;">
                     已选 {{ mergeSelectedVariants.length }} 个变体
                 </span>
             </div>
@@ -526,11 +526,11 @@ export default {
     margin-top: 12px;
 }
 </style>
-<style>
-/* 相似度行高亮（不能 scoped，因为 el-table 内部渲染） */
-.similar-row-0 { background-color: rgba(230, 162, 60, 0.12) !important; }
-.similar-row-1 { background-color: rgba(64, 158, 255, 0.12) !important; }
-.similar-row-2 { background-color: rgba(103, 194, 58, 0.12) !important; }
-.similar-row-3 { background-color: rgba(245, 108, 108, 0.12) !important; }
-.similar-row-4 { background-color: rgba(144, 147, 153, 0.12) !important; }
+<style scoped>
+/* 相似度行高亮（el-table 内部渲染，用 :deep 穿透） */
+:deep(.similar-row-0) { background-color: rgba(230, 162, 60, 0.12) !important; }
+:deep(.similar-row-1) { background-color: rgba(64, 158, 255, 0.12) !important; }
+:deep(.similar-row-2) { background-color: rgba(103, 194, 58, 0.12) !important; }
+:deep(.similar-row-3) { background-color: rgba(245, 108, 108, 0.12) !important; }
+:deep(.similar-row-4) { background-color: rgba(144, 147, 153, 0.12) !important; }
 </style>

@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">生产管理</span>
+          </div>
         </div>
 
         <!-- 菜单（内部滚动） -->
@@ -21,31 +24,36 @@
           :unique-opened="true"
         >
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><TrendCharts /></el-icon>
             <span>生产进度</span>
           </el-menu-item>
           <el-menu-item index="11" @click="handleMenuClick(11)">
+            <el-icon><Calendar /></el-icon>
             <span>订单排期</span>
           </el-menu-item>
           <el-menu-item index="9" @click="handleMenuClick(9)">
+            <el-icon><Histogram /></el-icon>
             <span>生产报表</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
+            <el-icon><Box /></el-icon>
             <span>物料信息</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><Share /></el-icon>
             <span>外包信息</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <el-icon><CircleCheck /></el-icon>
             <span>数量审批</span>
           </el-menu-item>
           <el-menu-item index="7" @click="handleMenuClick(7)">
+            <el-icon><OfficeBuilding /></el-icon>
             <span>外包厂家</span>
           </el-menu-item>
           <el-menu-item index="10" @click="handleMenuClick(10)">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-          <el-menu-item index="8" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -70,7 +78,7 @@ import ProductionManagement from '../components/ProductionManagement.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import NewProductionScheduling from '../components/NewProductionScheduling.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, TrendCharts, Calendar, Histogram, Box, Share, CircleCheck, OfficeBuilding, User } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
@@ -92,6 +100,15 @@ export default {
     ProductionReport,
     PersonalInfo,
     NewProductionScheduling,
+    Menu,
+    TrendCharts,
+    Calendar,
+    Histogram,
+    Box,
+    Share,
+    CircleCheck,
+    OfficeBuilding,
+    User,
   },
   data() {
     return {

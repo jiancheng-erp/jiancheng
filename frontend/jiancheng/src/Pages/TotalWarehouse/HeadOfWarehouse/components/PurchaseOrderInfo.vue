@@ -1,6 +1,6 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="24" :offset="0">
             <div class="search-bar">
                 <el-input v-model="orderRIdSearch" placeholder="订单号筛选" clearable @keypress.enter="getPurchaseOrderData()"
                     @clear="getPurchaseOrderData" />
@@ -25,8 +25,8 @@
             </div>
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-            <el-table :data="purchaseOrderData" border stripe height="500">
+    <el-row class="u-mt-5" :gutter="20">
+            <el-table :data="purchaseOrderData" border stripe height="calc(100vh - var(--main-table-offset))">
                 <!-- <el-table-column prop="bomRId" label="BOM编号" width="100" show-overflow-tooltip></el-table-column> -->
                 <el-table-column prop="purchaseOrderStatus" label="采购单状态"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -115,9 +115,4 @@ export default {
     }
 }
 </script>
-<style>
-.search-bar {
-    width: 150px;
-    margin-right: 20px;
-}
-</style>
+<style scoped></style>

@@ -980,65 +980,16 @@ export default {
     },
 }
 </script>
-<style>
-.demo-form-inline .el-input {
+<style scoped>
+.demo-form-inline :deep(.el-input) {
     --el-input-width: 220px;
 }
 
-.demo-form-inline .el-select {
+.demo-form-inline :deep(.el-select) {
     --el-select-width: 220px;
 }
 
-.radio-class .el-radio__label {
+.radio-class :deep(.el-radio__label) {
     display: none;
-}
-</style>
-
-<style>
-/* 确保表头固定和分页逻辑 */
-/* Print styles */
-@media print {
-
-    @page {
-        @bottom-center {
-            content: "第" counter(page) "页 / 共" counter(pages)"页";
-            font-size: 12px;
-            color: black;
-            font-family: SimHei;
-        }
-    }
-
-    .inner-table {
-        border-collapse: collapse;
-        border-spacing: 0;
-    }
-
-    .inner-table th,
-    .inner-table td {
-        border: 1px solid #000;
-        padding: 4px;
-    }
-
-    .inner-table tr {
-        page-break-inside: avoid !important;
-        -webkit-page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-
-    thead {
-        display: table-header-group;
-    }
-
-    tfoot {
-        display: table-row-group;
-    }
-}
-</style>
-
-<style>
-.inner-table th,
-.inner-table td {
-    border: 1px solid #000;
-    padding: 4px;
 }
 </style>

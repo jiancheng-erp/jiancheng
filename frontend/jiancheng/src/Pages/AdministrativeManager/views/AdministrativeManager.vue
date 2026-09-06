@@ -6,23 +6,26 @@
 
     <el-container class="app-body">
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">行政管理</span>
+          </div>
         </div>
 
         <el-menu :default-active="defaultActive" class="app-menu" :unique-opened="true">
           <el-menu-item index="inbound" @click="handleMenuClick('inbound')">
+            <el-icon><Box /></el-icon>
             <span>行政入库</span>
           </el-menu-item>
           <el-menu-item index="outbound" @click="handleMenuClick('outbound')">
+            <el-icon><SoldOut /></el-icon>
             <span>行政出库</span>
           </el-menu-item>
           <el-menu-item index="profile" @click="handleMenuClick('profile')">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-          <el-menu-item index="logout" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -36,7 +39,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, Box, SoldOut, User } from '@element-plus/icons-vue'
 import axios from 'axios'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import PurchaseInbound from '@/Pages/TotalWarehouse/HeadOfWarehouse/components/PurchaseInbound.vue'
@@ -47,7 +50,11 @@ export default {
     AllHeader,
     PersonalInfo,
     PurchaseInbound,
-    OutboundMaterial
+    OutboundMaterial,
+    Menu,
+    Box,
+    SoldOut,
+    User
   },
   data() {
     return {

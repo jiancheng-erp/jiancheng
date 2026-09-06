@@ -19,19 +19,19 @@
         <el-card shadow="never" class="mb-3">
             <el-form :inline="true">
                 <el-form-item label="材料名称">
-                    <el-input v-model.trim="filters.materialName" clearable placeholder="材料名称" style="width: 180px"
+                    <el-input class="u-w-180" v-model.trim="filters.materialName" clearable placeholder="材料名称"
                         @change="reload" @clear="reload" />
                 </el-form-item>
                 <el-form-item label="厂家">
-                    <el-input v-model.trim="filters.supplierName" clearable placeholder="厂家" style="width: 180px"
+                    <el-input class="u-w-180" v-model.trim="filters.supplierName" clearable placeholder="厂家"
                         @change="reload" @clear="reload" />
                 </el-form-item>
                 <el-form-item label="型号">
-                    <el-input v-model.trim="filters.materialModel" clearable placeholder="型号" style="width: 140px"
+                    <el-input class="u-w-140" v-model.trim="filters.materialModel" clearable placeholder="型号"
                         @change="reload" @clear="reload" />
                 </el-form-item>
                 <el-form-item label="规格">
-                    <el-input v-model.trim="filters.materialSpec" clearable placeholder="规格" style="width: 140px"
+                    <el-input class="u-w-140" v-model.trim="filters.materialSpec" clearable placeholder="规格"
                         @change="reload" @clear="reload" />
                 </el-form-item>
                 <el-form-item>
@@ -77,17 +77,17 @@
                 <el-pagination background layout="total, prev, pager, next, jumper" :total="total"
                     :page-size="pageSize" :current-page="currentPage" @current-change="(p) => { currentPage = p; reload() }" />
                 <div class="flex items-center gap-3 footer-actions">
-                    <el-select size="small" v-model="form.outboundType" style="width: 150px">
+                    <el-select class="u-w-150" size="small" v-model="form.outboundType">
                         <el-option label="通用材料出库" :value="7" />
                         <el-option label="行政出库" :value="6" />
                         <el-option label="废料处理" :value="1" />
                     </el-select>
-                    <el-select size="small" v-model="form.departmentId" placeholder="出库至部门(可选)" style="width: 180px"
+                    <el-select class="u-w-180" size="small" v-model="form.departmentId" placeholder="出库至部门(可选)"
                         filterable clearable>
                         <el-option v-for="d in departments" :key="d.value" :label="d.label" :value="d.value" />
                     </el-select>
-                    <el-input size="small" v-model.trim="form.picker" placeholder="领料人" style="width: 130px" />
-                    <el-input size="small" v-model.trim="form.remark" placeholder="用途说明（可选）" style="width: 220px" />
+                    <el-input class="u-w-130" size="small" v-model.trim="form.picker" placeholder="领料人" />
+                    <el-input class="u-w-220" size="small" v-model.trim="form.remark" placeholder="用途说明（可选）" />
                     <el-button size="small" type="primary" :loading="submitting"
                         :disabled="selectedRows.length === 0" @click="openConfirm">提交出库</el-button>
                 </div>
@@ -508,7 +508,7 @@ onMounted(() => {
 }
 
 .header-card .hint {
-    color: #909399;
+    color: var(--color-text-3);
     font-size: 13px;
 }
 
@@ -542,7 +542,7 @@ onMounted(() => {
 
 .dialog-summary {
     margin-top: 12px;
-    color: #606266;
+    color: var(--color-text-2);
     font-size: 13px;
 }
 

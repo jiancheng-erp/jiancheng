@@ -1,0 +1,46 @@
+/* =================================================================== */
+/* tokens.css — 设计变量唯一数据源（间距 / 字号 / 语义色）              */
+/* 说明：仅新增语义化 token，全部复用 assets/main.css 已有的品牌与       */
+/*       Element Plus 变量，纯增量，不改变现有视觉。                     */
+/* =================================================================== */
+
+:root {
+  /* 间距刻度（4px 基准） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* 字号刻度 */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+
+  /* 字重 */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+
+  /* 语义色（映射到已有品牌 / Element Plus 变量） */
+  --color-primary: var(--brand);
+  --color-primary-strong: var(--brand-strong);
+  --color-success: var(--el-color-success);
+  --color-warning: var(--el-color-warning);
+  --color-danger: var(--el-color-danger);
+  --color-info: var(--el-color-info);
+
+  --color-text-1: var(--el-text-color-primary);
+  --color-text-2: var(--el-text-color-regular);
+  --color-text-3: var(--el-text-color-secondary);
+
+  --color-bg: var(--panel-bg);
+  --color-border-1: var(--border-color);
+}

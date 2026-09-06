@@ -1,31 +1,31 @@
 <template>
-    <el-row :gutter="10" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="10">
         <el-col :span="8" :offset="0">
             <el-button-group>
-                <el-button size="default" type="primary" @click="exportOrder" style="margin-bottom: 20px;">配码订单导出</el-button>
-                <el-button size="default" type="primary" @click="exportAmountOrder" style="margin-bottom: 20px;">数量订单导出</el-button>
-                <el-button size="default" type="primary" @click="exportProductionOrder" style="margin-bottom: 20px;">配码生产订单导出</el-button>
-                <el-button size="default" type="primary" @click="exportProductionAmountOrder" style="margin-bottom: 20px;">数量生产订单导出</el-button>
+                <el-button class="u-mb-5" size="default" type="primary" @click="exportOrder">配码订单导出</el-button>
+                <el-button class="u-mb-5" size="default" type="primary" @click="exportAmountOrder">数量订单导出</el-button>
+                <el-button class="u-mb-5" size="default" type="primary" @click="exportProductionOrder">配码生产订单导出</el-button>
+                <el-button class="u-mb-5" size="default" type="primary" @click="exportProductionAmountOrder">数量生产订单导出</el-button>
             </el-button-group>        
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="filters.orderNumberSearch" placeholder="请输入订单号" clearable @keypress.enter="filterOrders()"
                 @clear="filterOrders" />
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="filters.customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="filterOrders()"
                 @clear="filterOrders" />
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="filters.orderCIdSearch" placeholder="请输入客户订单号" clearable @keypress.enter="filterOrders()"
                 @clear="filterOrders" />
         </el-col>
-        <el-col :span="4" :offset="0" style="white-space: nowrap;">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             <el-input v-model="filters.customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="filterOrders()"
                 @clear="filterOrders" />
         </el-col>
     </el-row>
-    <el-table :data="currentTableData" border stripe height="600" @selection-change="handleSelection">
+    <el-table :data="currentTableData" border stripe height="calc(100vh - var(--main-table-offset))" @selection-change="handleSelection">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderRid" label="订单号" />
         <el-table-column prop="orderCid" label="客户订单号" />

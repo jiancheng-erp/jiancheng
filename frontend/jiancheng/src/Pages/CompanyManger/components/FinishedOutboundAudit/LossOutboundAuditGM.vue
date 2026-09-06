@@ -3,7 +3,7 @@
     <!-- 筛选 -->
     <el-form :inline="true" class="mb-2">
       <el-form-item label="状态">
-        <el-select v-model="filters.status" style="width: 140px" @change="onSearch">
+        <el-select class="u-w-140" v-model="filters.status" @change="onSearch">
           <el-option label="待审批" :value="1" />
           <el-option label="已通过" :value="4" />
           <el-option label="已驳回" :value="2" />
@@ -11,13 +11,13 @@
         </el-select>
       </el-form-item>
       <el-form-item label="订单号">
-        <el-input v-model="filters.orderRId" placeholder="订单号" clearable style="width: 160px" />
+        <el-input class="u-w-160" v-model="filters.orderRId" placeholder="订单号" clearable />
       </el-form-item>
       <el-form-item label="申请单号">
-        <el-input v-model="filters.applyRId" placeholder="申请单号" clearable style="width: 180px" />
+        <el-input class="u-w-180" v-model="filters.applyRId" placeholder="申请单号" clearable />
       </el-form-item>
       <el-form-item label="客户名称">
-        <el-input v-model="filters.customerName" placeholder="客户名称" clearable style="width: 160px" />
+        <el-input class="u-w-160" v-model="filters.customerName" placeholder="客户名称" clearable />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSearch">查询</el-button>
@@ -46,7 +46,7 @@
             <el-button type="success" size="small" @click="openAudit(row, 'approve')">通过</el-button>
             <el-button type="danger" size="small" @click="openAudit(row, 'reject')">驳回</el-button>
           </template>
-          <span v-else style="color: #909399;">—</span>
+          <span v-else style="color: var(--color-text-3);">—</span>
         </template>
       </el-table-column>
     </el-table>
@@ -87,7 +87,7 @@
       :title="auditAction === 'approve' ? '通过损失出库申请' : '驳回损失出库申请'"
       width="460px"
     >
-      <p v-if="auditAction === 'approve'" style="margin-bottom: 10px; color: #e6a23c;">
+      <p v-if="auditAction === 'approve'" style="margin-bottom: 10px; color: var(--color-warning);">
         通过后将立即执行损失出库并扣减库存，操作不可逆。
       </p>
       <el-form :model="auditForm" label-width="80px">

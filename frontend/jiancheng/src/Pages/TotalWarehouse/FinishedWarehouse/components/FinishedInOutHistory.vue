@@ -29,7 +29,7 @@
             </el-col>
         </el-row>
 
-        <el-table :data="tableData" border stripe height="500">
+        <el-table :data="tableData" border stripe height="calc(100vh - var(--main-table-offset))">
             <el-table-column prop="orderRId" label="订单号" width="120" />
             <el-table-column prop="shoeRId" label="工厂型号" width="180" />
             <el-table-column prop="batchType" label="类型" width="100" />

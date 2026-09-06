@@ -1,19 +1,19 @@
 <template>
-	<el-row :gutter="20" style="margin-top: 20px">
-		<el-col :span="4" :offset="0" style="white-space: nowrap;">
+	<el-row class="u-mt-5" :gutter="20">
+		<el-col class="u-nowrap" :span="4" :offset="0">
 			<el-input v-model="orderRIdSearch" placeholder="请输入订单号" clearable @keypress.enter="handleSearch"
 				@clear="handleSearch" />
 		</el-col>
-		<el-col :span="4" :offset="0" style="white-space: nowrap;">
+		<el-col class="u-nowrap" :span="4" :offset="0">
 			<el-input v-model="customerNameSearch" placeholder="请输入客户名称" clearable @keypress.enter="handleSearch"
 				@clear="handleSearch" />
 		</el-col>
-		<el-col :span="4" :offset="0" style="white-space: nowrap;">
+		<el-col class="u-nowrap" :span="4" :offset="0">
 			<el-input v-model="customerBrandSearch" placeholder="请输入客户商标" clearable @keypress.enter="handleSearch"
 				@clear="handleSearch" />
 		</el-col>
 	</el-row>
-	<el-row :gutter="20" style="margin-top: 20px">
+	<el-row class="u-mt-5" :gutter="20">
 		<el-button v-if="isMultipleSelection" @click="openMultipleShoesDialog">
 			排产
 		</el-button>

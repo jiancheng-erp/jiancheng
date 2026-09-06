@@ -4,8 +4,8 @@
             <AllHeader></AllHeader>
         </el-header>
         <el-main style="overflow-x: hidden">
-            <el-row :gutter="20" style="text-align: center">
-                <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">材料用量填写</el-col>
+            <el-row class="u-text-center" :gutter="20">
+                <el-col class="u-page-title" :span="24" :offset="0">材料用量填写</el-col>
             </el-row>
             <el-row :gutter="20">
                 <el-col :span="24" :offset="0">
@@ -50,9 +50,9 @@
                 </el-col>
             </el-row>
 
-            <el-row :gutter="20" style="margin-top: 20px">
+            <el-row class="u-mt-5" :gutter="20">
                 <el-col :span="24" :offset="0">
-                    <el-table :data="testTableFilterData" border style="height: 400px" :default-expand-all="true">
+                    <el-table class="u-h-400" :data="testTableFilterData" border :default-expand-all="true">
                         <el-table-column type="expand">
                             <template #default="parentScope">
                                 <el-table :data="parentScope.row.typeInfos" border>
@@ -190,7 +190,7 @@
                     </el-descriptions-item> -->
                 </el-descriptions>
                 <div style="height: 600px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
                             <el-table :data="orderProduceInfo" border style="width: 100%" :span-method="arraySpanMethod">
                                 <el-table-column v-for="column in filteredColumns" :key="column.prop" :prop="column.prop" :label="column.label"></el-table-column>
@@ -198,7 +198,7 @@
                             </el-table>
                         </el-col>
                     </el-row>
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
                             <el-table :data="bomPreviewData" border style="width: 100%">
                                 <el-table-column prop="materialType" label="材料类型" />
@@ -248,9 +248,9 @@
                     </el-descriptions-item> -->
                 </el-descriptions>
                 <div style="height: 400px; overflow-y: scroll; overflow-x: hidden">
-                    <el-row :gutter="20" style="margin-bottom: 20px">
+                    <el-row class="u-mb-5" :gutter="20">
                         <el-col :span="24">
-                            <el-table :data="unIssueBOMData" border style="height: 400px" @selection-change="handleShoeSelectionChange" :default-expand-all="true">
+                            <el-table class="u-h-400" :data="unIssueBOMData" border @selection-change="handleShoeSelectionChange" :default-expand-all="true">
                                 <el-table-column type="selection" width="55"></el-table-column>
                                 <el-table-column type="expand">
                                     <template #default="parentScope">

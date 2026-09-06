@@ -1,6 +1,6 @@
 <template>
   <el-row :gutter="20">
-    <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+    <el-col class="u-page-title" :span="24" :offset="0"
       >生产详情</el-col
     >
   </el-row>
@@ -12,7 +12,7 @@
       </el-button-group>
     </el-col>
   </el-row>
-  <component :is="currentComponent" style="margin-top: 20px;"></component>
+  <component class="u-mt-5" :is="currentComponent"></component>
 </template>
 
 <script>
@@ -43,15 +43,4 @@ export default {
 }
 </script>
 
-<style>
-.vuecal__event.leisure {
-  background-color: rgba(253, 156, 66, 0.9);
-  border: 1px solid rgb(233, 136, 46);
-  color: #fff;
-}
-.vuecal__event.sport {
-  background-color: rgba(255, 102, 102, 0.9);
-  border: 1px solid rgb(235, 82, 82);
-  color: #fff;
-}
-</style>
+<style scoped></style>

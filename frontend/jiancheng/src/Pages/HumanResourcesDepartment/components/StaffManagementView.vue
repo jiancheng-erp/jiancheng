@@ -1,11 +1,11 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >人员管理</el-col
         >
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+    <el-row class="u-mt-5" :gutter="20">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             职员姓名搜索：
             <el-input
                 v-model="staffSearch"
@@ -14,7 +14,7 @@
                 suffix-icon=""
             ></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             职员职位筛选：
             <el-select v-model="characterIdFilter" placeholder="请选择职位" clearable>
                 <el-option
@@ -25,7 +25,7 @@
                 ></el-option>
             </el-select>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             职员部门筛选：
             <el-select v-model="departmentIdFilter" placeholder="请选择部门" clearable>
                 <el-option
@@ -36,7 +36,7 @@
                 ></el-option>
             </el-select>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             职员状态筛选：
             <el-select v-model="statusFilter" placeholder="请选择部门" clearable>
                 <el-option
@@ -53,12 +53,12 @@
             >
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="24" :offset="0">
             <el-table
                 :data="filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)"
                 style="width: 100%"
-                height="550"
+                height="calc(100vh - var(--main-table-offset))"
                 border
             >
                 <el-table-column prop="staffName" label="职员姓名"></el-table-column>

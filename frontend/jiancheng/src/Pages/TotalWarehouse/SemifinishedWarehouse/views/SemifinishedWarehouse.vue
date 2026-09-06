@@ -9,9 +9,12 @@
     <el-container class="app-body">
       <!-- 侧栏 -->
       <el-aside class="app-aside">
-        <div class="profile">
-          <el-avatar :icon="UserFilled" :size="80" />
-          <div class="profile-name">{{ userName }}</div>
+        <div class="aside-brand">
+          <div class="aside-brand-badge"><el-icon><Menu /></el-icon></div>
+          <div class="aside-brand-text">
+            <span class="aside-brand-title">功能导航</span>
+            <span class="aside-brand-sub">半成品仓</span>
+          </div>
         </div>
 
         <!-- 菜单（侧栏内部滚动，由全局 main.css 控制） -->
@@ -21,22 +24,24 @@
           :unique-opened="true"
         >
           <el-menu-item index="1" @click="handleMenuClick(1)">
+            <el-icon><Box /></el-icon>
             <span>半成品入库</span>
           </el-menu-item>
           <el-menu-item index="5" @click="handleMenuClick(5)">
+            <el-icon><Tickets /></el-icon>
             <span>入\出库记录</span>
           </el-menu-item>
           <el-menu-item index="3" @click="handleMenuClick(3)">
+            <el-icon><Goods /></el-icon>
             <span>库存</span>
           </el-menu-item>
           <el-menu-item index="2" @click="handleMenuClick(2)">
+            <el-icon><TrendCharts /></el-icon>
             <span>生产动态明细</span>
           </el-menu-item>
           <el-menu-item index="6" @click="handleMenuClick(6)">
+            <el-icon><User /></el-icon>
             <span>个人信息</span>
-          </el-menu-item>
-          <el-menu-item index="4" @click="logout">
-            <span>退出系统</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -54,7 +59,7 @@ import AllHeader from '@/components/AllHeader.vue'
 import SemiInboundOutbound from '../components/SemiInboundOutbound.vue'
 import SemifinishedInOutHistory from '../components/SemifinishedInOutHistory.vue'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
-import { UserFilled } from '@element-plus/icons-vue'
+import { UserFilled, Menu, Box, Tickets, Goods, TrendCharts, User } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
 import InOutboundRecords from '../components/InOutboundRecords.vue'
@@ -65,7 +70,13 @@ export default {
         SemiInboundOutbound,
         SemifinishedInOutHistory,
         OrderProgress,
-        InOutboundRecords
+        InOutboundRecords,
+        Menu,
+        Box,
+        Tickets,
+        Goods,
+        TrendCharts,
+        User
     },
     data() {
         return {

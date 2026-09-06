@@ -5,20 +5,20 @@
                 end-placeholder="结束日期" value-format="YYYY-MM-DD" @change="getInboundRecordsTable"
                 @clear="getInboundRecordsTable" clearable>
             </el-date-picker>
-            <el-input v-model="inboundRIdSearch" placeholder="入库单号搜索" style="width: 200px;"
+            <el-input class="u-w-200" v-model="inboundRIdSearch" placeholder="入库单号搜索"
                 @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
-            <el-input v-model="orderRIdSearch" placeholder="订单号搜索" style="width: 200px;"
+            <el-input class="u-w-200" v-model="orderRIdSearch" placeholder="订单号搜索"
                 @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
-            <el-input v-model="shoeRIdSearch" placeholder="工厂型号搜索" style="width: 200px;"
+            <el-input class="u-w-200" v-model="shoeRIdSearch" placeholder="工厂型号搜索"
                 @change="getInboundRecordsTable" @clear="getInboundRecordsTable" clearable>
             </el-input>
         </el-col>
     </el-row>
     <el-row :gutter="20">
         <el-col :span="24">
-            <el-table :data="tableData" border stripe height="500" show-summary :summary-method="getSummaries">
+            <el-table :data="tableData" border stripe height="calc(100vh - var(--main-table-offset))" show-summary :summary-method="getSummaries">
                 <el-table-column prop="inboundRId" label="入库单号"></el-table-column>
                 <el-table-column prop="timestamp" label="操作时间"></el-table-column>
                 <el-table-column prop="orderRId" label="订单号"></el-table-column>
@@ -44,7 +44,7 @@
 
     <el-dialog title="入库单详情" v-model="dialogVisible" width="80%">
         <div id="printView" style="padding-left: 20px; padding-right: 20px;color:black; font-family: SimSun;">
-            <h2 style="text-align: center;">健诚鞋业入库单</h2>
+            <h2 class="u-text-center">健诚鞋业入库单</h2>
             <div style="display: flex; justify-content: flex-end; padding: 5px;">
                 <span style="font-weight: bolder;font-size: 16px;">
                     单据编号：{{ currentRow.inboundRId }}
@@ -229,12 +229,12 @@ export default {
 }
 
 html {
-    background-color: #ffffff;
+    background-color: var(--el-color-white);
     margin: 0px;
 }
 
 body {
-    border: solid 1px #ffffff;
+    border: solid 1px var(--el-color-white);
 }
 </style>
 

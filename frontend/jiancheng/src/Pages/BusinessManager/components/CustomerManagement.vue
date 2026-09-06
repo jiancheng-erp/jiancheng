@@ -1,15 +1,15 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center"
+        <el-col class="u-page-title" :span="24" :offset="0"
             >客户管理</el-col
         >
     </el-row>
     <el-row :gutter="20">
-        <el-col :span="4" :offset="0" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="0">
             客户名称：
             <el-input v-model="searchName" placeholder="请输入要筛选的客户名称" clearable @input="getFilterData"></el-input>
         </el-col>
-        <el-col :span="4" :offset="2" style="white-space: nowrap">
+        <el-col class="u-nowrap" :span="4" :offset="2">
             客户商标：
             <el-input v-model="searchBrand" placeholder="请输入要筛选的客户商标" clearable @input="getFilterData"></el-input>
         </el-col>
@@ -21,7 +21,7 @@
                 style="width: 100%"
                 stripe
                 border
-                height="500"
+                height="calc(100vh - var(--main-table-offset))"
             >
                 <el-table-column
                     prop="customerName"

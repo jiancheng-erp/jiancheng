@@ -1,10 +1,10 @@
 <template>
     <el-row :gutter="20">
-        <el-col :span="24" :offset="0" style="font-size: xx-large; text-align: center">
+        <el-col class="u-page-title" :span="24" :offset="0">
             个人信息
         </el-col>
     </el-row>
-    <el-row :gutter="20" style="margin-top: 20px">
+    <el-row class="u-mt-5" :gutter="20">
         <el-col :span="12" :offset="6">
             <el-form :model="passwordForm" :rules="rules" ref="passwordForm" label-width="120px">
                 <el-form-item label="当前密码" prop="currentPassword">
