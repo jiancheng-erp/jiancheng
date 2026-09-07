@@ -47,7 +47,7 @@
                     <el-table-column prop="totalSewingAmount" label="针车"></el-table-column>
                     <el-table-column prop="totalMoldingAmount" label="成型"></el-table-column>
                 </el-table-column>
-                <el-table-column label="生产信息">
+                <el-table-column v-if="showProdDetail" label="生产信息">
                     <template #default="scope">
                         <el-button type="primary" size="small" @click="openProdDetailDialog(scope.row)">
                             查看
@@ -134,6 +134,10 @@ export default {
         defaultSortCondition: {
             type: String,
             default: null
+        },
+        showProdDetail: {
+            type: Boolean,
+            default: true
         }
     },
     data() {
