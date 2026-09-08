@@ -67,6 +67,10 @@
                         <el-icon><SoldOut /></el-icon>
                         <span>订单出库</span>
                     </el-menu-item>
+                    <el-menu-item index="18" @click="handleMenuClick('InOutboundRecords', '18')">
+                        <el-icon><List /></el-icon>
+                        <span>材料入/出库记录</span>
+                    </el-menu-item>
                     <el-menu-item index="16" @click="handleMenuClick('OrderSummary', '16')">
                         <el-icon><Files /></el-icon>
                         <span>订单汇总</span>
@@ -105,7 +109,7 @@
 
 <script setup lang="js">
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled, Menu, DataBoard, DataAnalysis, Monitor, Odometer, Refresh, TrendCharts, Coin, DocumentChecked, Money, SoldOut, Files, CircleCheck, PieChart, OfficeBuilding, Checked, User } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, DataAnalysis, Monitor, Odometer, Refresh, TrendCharts, Coin, DocumentChecked, Money, SoldOut, Files, CircleCheck, PieChart, OfficeBuilding, Checked, User, List } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ref, onMounted, getCurrentInstance } from 'vue'
 import CostCalcAndProfitAnalysis from '../components/CostCalcAndProfitAnalysis/CostCalcAndProfitAnalysis.vue'
@@ -127,6 +131,7 @@ import FinishedOutboundAuditGM from '../components/FinishedOutboundAudit/Finishe
 import LossOutboundAuditGM from '../components/FinishedOutboundAudit/LossOutboundAuditGM.vue'
 import OrderSummary from '../components/OrderSummary/OrderSummary.vue'
 import OrderProgress from '@/Pages/ProductionManagementDepartment/ProductionSharedPages/OrderProgress.vue'
+import InOutboundRecords from '@/Pages/FinancialManager/components/FinancialWarehouseDetail.vue'
 import { useRouter } from 'vue-router'
 import { bus } from '../hooks/bus'
 
@@ -148,7 +153,8 @@ const components = {
     FinishedOutboundAuditGM,
     LossOutboundAuditGM,
     OrderSummary,
-    OrderProgress
+    OrderProgress,
+    InOutboundRecords
 }
 let currentComponent = ref('MainBoardPage')
 const currentProps = ref({})
