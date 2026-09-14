@@ -58,7 +58,7 @@ def insert_row_with_format(ws, row_to_copy, new_row_idx):
             new_cell.alignment = cell.alignment.copy()
             new_cell.number_format = cell.number_format
             
-def delete_extra_size_columns(ws, size_name_list, start_col_letter="E", total_size_count=13):
+def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_size_count=13):
     """
     删除从 start_col_letter 开始的尺码列，只保留非空名称对应的列。
     size_name_list: 尺码名称列表（可能含 '', None）
@@ -113,7 +113,19 @@ def fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_nam
         if "E7" in ws:
             cell.alignment = ws["E7"].alignment
 
-def insert_series_data(wb: Workbook, series_data, col, row):
+
+def remove_price_amount_columns(ws, size_name_list, start_col_letter="F"):
+    """删除订单导出中的单价(PRICE)与金额(AMOUNT)两列（含表头与数据）。"""
+    start_col = column_index_from_string(start_col_letter)
+    actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
+    qty_idx = start_col + actual_size_cols
+    price_idx = qty_idx + 3
+    amount_idx = qty_idx + 4
+    ws.delete_cols(amount_idx, 1)
+    ws.delete_cols(price_idx, 1)
+
+
+def insert_series_data(wb: Workbook, series_data, col, row, include_price=True):
     all_size_names = []
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -161,7 +173,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("E")
+                temp_column = column_index_from_string("F")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -172,9 +184,9 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"D{row}"] = "尺码"
-                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("E")
+                ws[f"E{row}"] = "尺码"
+                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("F")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -204,7 +216,7 @@ def insert_series_data(wb: Workbook, series_data, col, row):
 
                         col_idx = column_index_from_string("B")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
-                        col_idx += 1
+                        col_idx = column_index_from_string("D")
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
@@ -230,14 +242,19 @@ def insert_series_data(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         currency_fmt = get_currency_format(entry.get("currency_type"), decimals=2)
 
-                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_price.value = unit_price
-                        cell_price.number_format = currency_fmt
-                        col_idx += 1
+                        if include_price:
+                            cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_price.value = unit_price
+                            cell_price.number_format = currency_fmt
+                            col_idx += 1
 
-                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_amount.value = unit_price * total_quantity * count
-                        cell_amount.number_format = currency_fmt
+                            cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_amount.value = unit_price * total_quantity * count
+                            cell_amount.number_format = currency_fmt
+                        else:
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            col_idx += 1
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
 
                         row += 1
 
@@ -278,9 +295,12 @@ def insert_series_data(wb: Workbook, series_data, col, row):
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
-                
-def insert_series_data_amount(wb: Workbook, series_data, col, row):
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    if not include_price:
+        remove_price_amount_columns(ws, all_size_names)
+
+
+def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price=True):
     all_size_names = []
     ws = wb.active
     grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -328,7 +348,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("E")
+                temp_column = column_index_from_string("F")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -339,9 +359,9 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"D{row}"] = "尺码"
-                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("E")
+                ws[f"E{row}"] = "尺码"
+                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("F")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -372,7 +392,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
 
                         col_idx = column_index_from_string("B")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
-                        col_idx += 1
+                        col_idx = column_index_from_string("D")
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
@@ -386,7 +406,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                             col_idx += 1
 
                         total_quantity = packaging.get("totalQuantityRatio", 0)
-                        
+
                         unit_price = entry.get("unit_price", 0)
 
                         ws[f"{get_column_letter(col_idx)}{row}"] = total_quantity
@@ -397,14 +417,19 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
                         col_idx += 1
                         currency_fmt = get_currency_format(entry.get("currency_type"), decimals=2)
 
-                        cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_price.value = unit_price
-                        cell_price.number_format = currency_fmt
-                        col_idx += 1
+                        if include_price:
+                            cell_price = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_price.value = unit_price
+                            cell_price.number_format = currency_fmt
+                            col_idx += 1
 
-                        cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
-                        cell_amount.value = unit_price * total_quantity * count
-                        cell_amount.number_format = currency_fmt
+                            cell_amount = ws[f"{get_column_letter(col_idx)}{row}"]
+                            cell_amount.value = unit_price * total_quantity * count
+                            cell_amount.number_format = currency_fmt
+                        else:
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
+                            col_idx += 1
+                            ws[f"{get_column_letter(col_idx)}{row}"] = ""
 
                         row += 1
 
@@ -445,7 +470,9 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row):
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    if not include_price:
+        remove_price_amount_columns(ws, all_size_names)
 
 
 # Function to save the workbook after modification
@@ -454,13 +481,13 @@ def save_workbook(wb, new_file_path):
 
 
 # Main function to generate the Excel file
-def generate_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_excel_file(template_path, new_file_path, order_data: dict, metadata: dict, include_price: bool = True):
     logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data(wb, order_data, "A", 9)
+    insert_series_data(wb, order_data, "A", 9, include_price=include_price)
 
     # insert shoe size name
     # column = "E"
@@ -473,13 +500,13 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     save_workbook(wb, new_file_path)
     logger.debug(f"Workbook saved as {new_file_path}")
     
-def generate_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict):
+def generate_amount_excel_file(template_path, new_file_path, order_data: dict, metadata: dict, include_price: bool = True):
     logger.debug(f"Generating Excel file")
     # Load template
     wb = load_template(template_path, new_file_path)
     ws = wb.active
     # Insert the series data
-    insert_series_data_amount(wb, order_data, "A", 9)
+    insert_series_data_amount(wb, order_data, "A", 9, include_price=include_price)
 
     # insert shoe size name
     # column = "E"

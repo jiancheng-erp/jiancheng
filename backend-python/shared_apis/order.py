@@ -3356,16 +3356,20 @@ def export_order():
     send_name = f"导出订单_{order_rid}.xlsx"
     timestamp = str(time.time())
 
+    # 业务部文员导出的订单不允许包含金额信息（由前端按角色传入 includePrice=0）
+    include_price = request.args.get("includePrice", default=1, type=int)
+    include_price = bool(include_price)
+
     if output_type == 0:
         new_file_name = f"导出配码订单_{timestamp}.xlsx"
         send_name = f"导出配码订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出配码订单", new_file_name)
-        generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+        generate_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data, include_price=include_price)
     else:
         new_file_name = f"导出数量订单_{timestamp}.xlsx"
         send_name = f"导出数量订单_{order_rid}.xlsx"
         new_file_path = os.path.join(FILE_STORAGE_PATH, "业务部文件", "导出数量订单", new_file_name)
-        generate_amount_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data)
+        generate_amount_excel_file(template_path, new_file_path, order_shoe_mapping, meta_data, include_price=include_price)
 
     return send_file(new_file_path, as_attachment=True, download_name=send_name)
 
