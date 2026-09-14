@@ -58,7 +58,7 @@ def insert_row_with_format(ws, row_to_copy, new_row_idx):
             new_cell.alignment = cell.alignment.copy()
             new_cell.number_format = cell.number_format
             
-def delete_extra_size_columns(ws, size_name_list, start_col_letter="F", total_size_count=13):
+def delete_extra_size_columns(ws, size_name_list, start_col_letter="E", total_size_count=13):
     """
     删除从 start_col_letter 开始的尺码列，只保留非空名称对应的列。
     size_name_list: 尺码名称列表（可能含 '', None）
@@ -114,7 +114,7 @@ def fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_nam
             cell.alignment = ws["E7"].alignment
 
 
-def remove_price_amount_columns(ws, size_name_list, start_col_letter="F"):
+def remove_price_amount_columns(ws, size_name_list, start_col_letter="E"):
     """删除订单导出中的单价(PRICE)与金额(AMOUNT)两列（含表头与数据）。"""
     start_col = column_index_from_string(start_col_letter)
     actual_size_cols = sum(1 for name in size_name_list if name not in ("", None))
@@ -173,7 +173,7 @@ def insert_series_data(wb: Workbook, series_data, col, row, include_price=True):
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("F")
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -184,9 +184,9 @@ def insert_series_data(wb: Workbook, series_data, col, row, include_price=True):
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"E{row}"] = "尺码"
-                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("F")
+                ws[f"D{row}"] = "尺码"
+                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -216,7 +216,7 @@ def insert_series_data(wb: Workbook, series_data, col, row, include_price=True):
 
                         col_idx = column_index_from_string("B")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
-                        col_idx = column_index_from_string("D")
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
@@ -295,7 +295,7 @@ def insert_series_data(wb: Workbook, series_data, col, row, include_price=True):
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
     if not include_price:
         remove_price_amount_columns(ws, all_size_names)
 
@@ -348,7 +348,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price
 
             # 🟨 写入尺码行（第一个鞋型写到第 8 行，其余插入新行）
             if not first_customer_shoe_written:
-                temp_column = column_index_from_string("F")
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}8"]
                     cell.value = name
@@ -359,9 +359,9 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price
             else:
                 insert_row_with_format(ws, row, row + 1)
                 ws.row_dimensions[row].height = NORMAL_ROW_HEIGHT
-                ws[f"E{row}"] = "尺码"
-                ws[f"E{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
-                temp_column = column_index_from_string("F")
+                ws[f"D{row}"] = "尺码"
+                ws[f"D{row}"].font = Font(bold=True)  # 🟩 “尺码” 也加粗
+                temp_column = column_index_from_string("E")
                 for name in size_names:
                     cell = ws[f"{get_column_letter(temp_column)}{row}"]
                     cell.value = name
@@ -392,7 +392,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price
 
                         col_idx = column_index_from_string("B")
                         ws[f"{get_column_letter(col_idx)}{row}"] = cust_name
-                        col_idx = column_index_from_string("D")
+                        col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = color
                         col_idx += 1
                         ws[f"{get_column_letter(col_idx)}{row}"] = packaging.get("packagingInfoName")
@@ -470,7 +470,7 @@ def insert_series_data_amount(wb: Workbook, series_data, col, row, include_price
             if row - merge_start_row > 1:
                 ws.merge_cells(f"B{merge_start_row}:B{row - 1}")
     delete_extra_size_columns(ws, all_size_names)
-    fix_header_merges_after_size_columns(ws, size_start_col_letter="F", size_name_list=all_size_names)
+    fix_header_merges_after_size_columns(ws, size_start_col_letter="E", size_name_list=all_size_names)
     if not include_price:
         remove_price_amount_columns(ws, all_size_names)
 
