@@ -56,6 +56,8 @@ let currentTotalRows = ref(0)
 let selectData = ref([])
 let staffId = localStorage.getItem('staffid')
 let role = localStorage.getItem('role')
+// 业务部文员(role=21)导出的订单/生产订单不允许显示金额信息
+const includePriceParam = parseInt(role, 10) === 21 ? '&includePrice=0' : ''
 
 const filters = reactive({
     orderNumberSearch: '',
@@ -137,7 +139,7 @@ function exportOrder() {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
-                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=0`,
+                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=0${includePriceParam}`,
                     )
                 }
             }
@@ -157,7 +159,7 @@ function exportAmountOrder() {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
-                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=1`,
+                        `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=1${includePriceParam}`,
                     )
                 }
             }
@@ -177,7 +179,7 @@ function exportProductionOrder() {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
-                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=0`,
+                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=0${includePriceParam}`,
                     )
                 }
             }
@@ -197,7 +199,7 @@ function exportProductionAmountOrder() {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
                     window.open(
-                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=1`,
+                        `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=1${includePriceParam}`,
                     )
                 }
             }
