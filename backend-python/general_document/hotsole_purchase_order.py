@@ -195,7 +195,7 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
     ws["L4"].font = hdr_bold
 
     # Insert order details（原第4行 → 现第2行）
-    ws["H2"] = order_data.get("订单信息", "") + " " + order_data.get("客户名", "") + " " + order_data.get("商标", "")
+    ws["H2"] = (order_data.get("订单信息") or "") + " " + (order_data.get("客户名") or "") + " " + (order_data.get("商标") or "")
     ws["B2"] = order_data.get("供应商", "")
 
     # Insert series data（原start_row=7 → 现5）
@@ -230,7 +230,7 @@ def generate_hotsole_excel_file(template_path, new_file_path, order_data):
 
     ws[f"A{base + 2}"] = "交货期限:"
     ws.merge_cells(start_row=base + 2, start_column=2, end_row=base + 2, end_column=12)
-    deadline_text = (order_data.get("交货期限", "") + "    如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。").strip()
+    deadline_text = ((order_data.get("交货期限") or "") + "    如有特殊情况提前5天反馈，无故延期有贵公司承担后续责任。").strip()
     ws[f"B{base + 2}"] = deadline_text
     ws[f"B{base + 2}"].alignment = left_wrap
     ws.row_dimensions[base + 2].height = 30

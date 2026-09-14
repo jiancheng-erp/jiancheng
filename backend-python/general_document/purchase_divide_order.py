@@ -34,7 +34,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
 
     # ── Row 2: supplier / order_rid / date ───────────────────────────────────
     ws.merge_cells("A2:C2")
-    ws["A2"] = "供应商：" + order_data.get("供应商", "")
+    ws["A2"] = "供应商：" + (order_data.get("供应商") or "")
     ws["A2"].alignment = left_align
 
     ws.merge_cells("D2:E2")
@@ -127,7 +127,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
     # 发货地址 / 联系人
     r += 1
     ws.merge_cells(f"A{r}:D{r}")
-    ws[f"A{r}"] = "发货地址：" + order_data.get("发货地址", "")
+    ws[f"A{r}"] = "发货地址：" + (order_data.get("发货地址") or "")
     ws[f"A{r}"].alignment = left_align
     ws[f"A{r}"].font = Font(size=9)
     ws.merge_cells(f"E{r}:H{r}")
@@ -139,7 +139,7 @@ def generate_excel_file(template_path, new_file_path, order_data):
     # 交货周期 / 责任条款
     r += 1
     ws.merge_cells(f"A{r}:D{r}")
-    ws[f"A{r}"] = "交货周期：" + order_data.get("交货期限", "")
+    ws[f"A{r}"] = "交货周期：" + (order_data.get("交货期限") or "")
     ws[f"A{r}"].alignment = left_align
     ws[f"A{r}"].font = Font(color="0070C0", size=9)
     ws.merge_cells(f"E{r}:H{r}")

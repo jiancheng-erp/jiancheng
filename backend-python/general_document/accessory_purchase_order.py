@@ -40,14 +40,14 @@ def generate_accessory_purchase_order(file_path, order_data):
     left_align = Alignment(horizontal="left", vertical="center", wrap_text=False)
 
     ws.merge_cells("A2:B2")
-    ws["A2"] = "供应商：" + order_data.get("供应商", "")
+    ws["A2"] = "供应商：" + (order_data.get("供应商") or "")
     ws["A2"].alignment = left_align
 
     ws.merge_cells("C2:F2")
     ws["C2"] = (
-        order_data.get("客户名", "")
-        + "  " + order_data.get("订单信息", "")
-        + "  " + order_data.get("商标", "")
+        (order_data.get("客户名") or "")
+        + "  " + (order_data.get("订单信息") or "")
+        + "  " + (order_data.get("商标") or "")
     ).strip()
     ws["C2"].alignment = left_align
     ws.row_dimensions[2].height = 20
@@ -249,7 +249,7 @@ def _pair_cap_nail(cap_items, nail_items):
         mat_desc = c.get("物品名称", "") or _item_display_name(c)
         mat_desc += " + " + (nail.get("物品名称", "") or _item_display_name(nail))
         merged.append({
-            "工厂货号": (c.get("_factory_no", "") + " " + c.get("_shoe_color", "")).strip(),
+            "工厂货号": ((c.get("_factory_no") or "") + " " + (c.get("_shoe_color") or "")).strip(),
             "材料货号": mat_desc,
             "颜色": c.get("_material_color", ""),
             "单位": c.get("单位", ""),
@@ -263,7 +263,7 @@ def _pair_cap_nail(cap_items, nail_items):
 def _as_standard_row(item):
     """将帽/钉等未配对物品转为标准辅料订购单行。"""
     return {
-        "工厂货号": (item.get("_factory_no", "") + " " + item.get("_shoe_color", "")).strip(),
+        "工厂货号": ((item.get("_factory_no") or "") + " " + (item.get("_shoe_color") or "")).strip(),
         "材料货号": item.get("物品名称", "") or _item_display_name(item),
         "颜色": item.get("_material_color", ""),
         "单位": item.get("单位", ""),
@@ -453,7 +453,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                 for z in sorted(zipper_items, key=lambda x: (x.get("_shoe_color", ""), x.get("物品名称", "") or x.get("_material_name", ""))):
                     head = _pick_head_for_zipper_z(z)
                     accessory_series.append({
-                        "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
+                        "工厂货号": ((z.get("_factory_no") or "") + " " + (z.get("_shoe_color") or "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
                         "颜色": _item_color_desc(head),
                         "单位": z.get("单位", ""),
@@ -464,7 +464,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                 # 拉链无对应拉链头 — 直接输出
                 for z in sorted(zipper_items, key=lambda x: x.get("_shoe_color", "")):
                     accessory_series.append({
-                        "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
+                        "工厂货号": ((z.get("_factory_no") or "") + " " + (z.get("_shoe_color") or "")).strip(),
                         "材料货号": z.get("物品名称", "") or _item_display_name(z),
                         "颜色": "",  # 拉链头缺失时无拉头颜色
                         "单位": z.get("单位", ""),
@@ -480,7 +480,7 @@ def split_zipper_orders(purchase_divide_order_dict):
                     if washer is not None:
                         mat_desc += "+" + _item_color_desc(washer)
                     accessory_series.append({
-                        "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
+                        "工厂货号": ((e.get("_factory_no") or "") + " " + (e.get("_shoe_color") or "")).strip(),
                         "材料货号": mat_desc,
                         "颜色": e.get("_material_color", ""),
                         "单位": e.get("单位", ""),
@@ -617,7 +617,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             for z in sorted(zipper_items, key=lambda x: (x.get("_shoe_color", ""), x.get("物品名称", "") or x.get("_material_name", ""))):
                 head = _pick_head_for_zipper(z) if head_items else {}
                 zipper_series.append({
-                    "工厂货号": (z.get("_factory_no", "") + " " + z.get("_shoe_color", "")).strip(),
+                    "工厂货号": ((z.get("_factory_no") or "") + " " + (z.get("_shoe_color") or "")).strip(),
                     "材料货号": z.get("物品名称", "") or _item_display_name(z),
                     "颜色": _item_color_desc(head) if head else "",
                     "单位": z.get("单位", ""),
@@ -635,7 +635,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                         mat_desc += "+" + _item_color_desc(washer)
                 color_val  = e.get("_material_color", "")
                 other_series.append({
-                    "工厂货号": (e.get("_factory_no", "") + " " + e.get("_shoe_color", "")).strip(),
+                    "工厂货号": ((e.get("_factory_no") or "") + " " + (e.get("_shoe_color") or "")).strip(),
                     "材料货号": mat_desc,
                     "颜色": color_val,
                     "单位": e.get("单位", ""),
@@ -647,7 +647,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         # （帽钉 1:1，钉数量按各配对组帽数量比例分配），使同组帽钉相邻。
         def _capnail_row(src, pair_id, qty):
             return {
-                "工厂货号": (src.get("_factory_no", "") + " " + src.get("_shoe_color", "")).strip(),
+                "工厂货号": ((src.get("_factory_no") or "") + " " + (src.get("_shoe_color") or "")).strip(),
                 "材料货号": src.get("物品名称", "") or _item_display_name(src),
                 "颜色": src.get("_material_color", ""),
                 "单位": src.get("单位", ""),
@@ -701,7 +701,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
         # All other accessory items (饰品, 底材, 包材, etc.) → other_series
         for item in other_items:
             other_series.append({
-                "工厂货号": (item.get("_factory_no", "") + " " + item.get("_shoe_color", "")).strip(),
+                "工厂货号": ((item.get("_factory_no") or "") + " " + (item.get("_shoe_color") or "")).strip(),
                 "材料货号": item.get("物品名称", "") or _item_display_name(item),
                 "颜色": item.get("_material_color", ""),
                 "单位": item.get("单位", ""),

@@ -133,7 +133,7 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     # 发货地址 / 联系人
     r_footer = row + 1
     ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=5)
-    ws[f"A{r_footer}"] = "发货地址：" + order_data.get("发货地址", "")
+    ws[f"A{r_footer}"] = "发货地址：" + (order_data.get("发货地址") or "")
     ws[f"A{r_footer}"].alignment = left_align_footer
     ws[f"A{r_footer}"].font = font9
     ws.merge_cells(start_row=r_footer, start_column=6, end_row=r_footer, end_column=12)
@@ -145,7 +145,7 @@ def generate_size_excel_file(template_path, new_file_path, order_data):
     # 交货周期 / 责任条款
     r_footer += 1
     ws.merge_cells(start_row=r_footer, start_column=1, end_row=r_footer, end_column=5)
-    ws[f"A{r_footer}"] = "交货周期：" + order_data.get("交货期限", "")
+    ws[f"A{r_footer}"] = "交货周期：" + (order_data.get("交货期限") or "")
     ws[f"A{r_footer}"].alignment = left_align_footer
     ws[f"A{r_footer}"].font = Font(color="0070C0", size=9)
     ws.merge_cells(start_row=r_footer, start_column=6, end_row=r_footer, end_column=12)
