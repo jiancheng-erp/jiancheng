@@ -507,7 +507,7 @@
                                         v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
                                         <template #header>
                                             <span>配对组</span>
-                                            <el-tooltip content="拉链与拉头、鞋眼与垫片填写相同数字即为一对（1-9）" placement="top">
+                                            <el-tooltip content="拉链与拉头、鞋眼与垫片、帽或饰扣与钉，填写相同数字即为一对（1-9）" placement="top">
                                                 <el-icon style="margin-left:2px;color:var(--el-color-primary);cursor:help"><QuestionFilled /></el-icon>
                                             </el-tooltip>
                                         </template>
@@ -1449,7 +1449,7 @@
                                     v-if="getMaterialDataByType('accessoryMaterialData').some(r => isZipperOrPull(r.materialName))">
                                     <template #header>
                                         <span>配对组</span>
-                                        <el-tooltip content="拉链与拉头、鞋眼与垫片填写相同数字即为一对（1-9）" placement="top">
+                                        <el-tooltip content="拉链与拉头、鞋眼与垫片、帽或饰扣与钉，填写相同数字即为一对（1-9）" placement="top">
                                             <el-icon style="margin-left:2px;color:var(--el-color-primary);cursor:help"><QuestionFilled /></el-icon>
                                         </el-tooltip>
                                     </template>
@@ -2922,12 +2922,12 @@ export default {
                 row.color = row.color.slice(0, -1) // Remove the last character
             }
         },
-        // 判断材料名称是否为拉链/拉头/鞋眼/垫片/帽钉（需要配对组）
+        // 判断材料名称是否为拉链/拉头/鞋眼/垫片/帽钉/饰扣钉（需要配对组）
         isZipperOrPull(name) {
             if (!name) return false
             if (name.includes('拉链') || name.includes('鞋眼') || name.includes('垫片')) return true
-            // 帽钉：帽半或钉半可设配对组；同时含"帽"和"钉"视为合并款，不配对
-            return name.includes('帽') !== name.includes('钉')
+            // 帽钉/饰扣钉：帽(或饰扣)半或钉半可设配对组；同时含"帽"/"饰扣"和"钉"视为合并款，不配对
+            return (name.includes('帽') || name.includes('饰扣')) !== name.includes('钉')
         },
     }
 }
