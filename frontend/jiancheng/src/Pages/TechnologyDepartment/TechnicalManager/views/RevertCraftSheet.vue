@@ -484,7 +484,7 @@
                                         :edit-render="{ autoFocus: 'input' }">
                                         <template #header>
                                             <span>配对组</span>
-                                            <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）" placement="top">
+                                            <el-tooltip content="拉链与拉头填写相同数字即为一对（1-9）；帽或饰扣与钉同理" placement="top">
                                                 <el-icon style="margin-left:2px;color:var(--el-color-primary);cursor:help"><QuestionFilled /></el-icon>
                                             </el-tooltip>
                                         </template>
@@ -2216,12 +2216,12 @@ export default {
                 row.color = row.color.slice(0, -1)
             }
         },
-        // 判断材料名称是否为拉链/拉头/帽钉（需要配对组）
+        // 判断材料名称是否为拉链/拉头/帽钉/饰扣钉（需要配对组）
         isZipperOrPull(name) {
             if (!name) return false
             if (name.includes('拉链头') || (name.includes('拉链') && !name.includes('拉链头'))) return true
-            // 帽钉：帽半或钉半可设配对组；同时含"帽"和"钉"视为合并款，不配对
-            return name.includes('帽') !== name.includes('钉')
+            // 帽钉/饰扣钉：帽(或饰扣)半或钉半可设配对组；同时含"帽"/"饰扣"和"钉"视为合并款，不配对
+            return (name.includes('帽') || name.includes('饰扣')) !== name.includes('钉')
         },
     }
 }

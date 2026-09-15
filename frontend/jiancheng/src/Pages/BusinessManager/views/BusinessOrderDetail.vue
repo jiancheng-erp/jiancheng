@@ -231,14 +231,14 @@
         </el-container>
     </el-container>
 
-    <el-dialog title="鞋型备注" v-model="remarkDialogVis" width="50%">
-        <el-form>
+    <el-dialog title="鞋型备注" v-model="remarkDialogVis" width="700px">
+        <el-form label-width="80px">
             <el-form-item label="工艺备注">
-                <el-input type="textarea" :rows="2" v-model="this.remarkForm.technicalRemark" :show-word-limit="true" :maxlength="255"></el-input>
+                <el-input type="textarea" :rows="6" v-model="this.remarkForm.technicalRemark" :show-word-limit="true" :maxlength="255"></el-input>
             </el-form-item>
 
             <el-form-item label="材料备注">
-                <el-input type="textarea" :rows="2" v-model="this.remarkForm.materialRemark" :show-word-limit="true" :maxlength="255"></el-input>
+                <el-input type="textarea" :rows="6" v-model="this.remarkForm.materialRemark" :show-word-limit="true" :maxlength="255"></el-input>
             </el-form-item>
         </el-form>
 

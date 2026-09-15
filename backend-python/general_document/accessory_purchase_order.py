@@ -185,19 +185,19 @@ def _is_eyelet(item):
 
 
 def _is_cap(item):
-    """判断是否为帽钉的帽半（含"帽"但不含"钉"）。同时含帽和钉视为合并款，非帽半。"""
+    """判断是否为帽钉/饰扣钉的帽(或饰扣)半（含"帽"或"饰扣"但不含"钉"）。同时含帽/饰扣和钉视为合并款，非帽半。"""
     name = item.get("_material_name", "") or item.get("物品名称", "")
     if not name:
         return False
-    return "帽" in name and "钉" not in name
+    return ("帽" in name or "饰扣" in name) and "钉" not in name
 
 
 def _is_nail(item):
-    """判断是否为帽钉的钉半（含"钉"但不含"帽"）。同时含帽和钉视为合并款，非钉半。"""
+    """判断是否为帽钉/饰扣钉的钉半（含"钉"但不含"帽"/"饰扣"）。同时含帽或饰扣和钉视为合并款，非钉半。"""
     name = item.get("_material_name", "") or item.get("物品名称", "")
     if not name:
         return False
-    return "钉" in name and "帽" not in name
+    return "钉" in name and "帽" not in name and "饰扣" not in name
 
 
 def _find_matching_nail(cap, nail_items, used_nail=None):
@@ -255,6 +255,7 @@ def _pair_cap_nail(cap_items, nail_items):
             "单位": c.get("单位", ""),
             "数量": c.get("数量", ""),
             "备注": c.get("备注", ""),
+            "_pair_id": c.get("_zipper_pair_id"),
         })
     leftover_nails = [n for n in nail_items if id(n) not in used_nail]
     return merged, leftover_caps, leftover_nails
@@ -643,8 +644,8 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "备注": e.get("备注", ""),
                 })
 
-        # 帽 + 钉：二次采购不合并。帽各自成行；钉按同配色下帽的配对组拆分成多行
-        # （帽钉 1:1，钉数量按各配对组帽数量比例分配），使同组帽钉相邻。
+        # 帽/饰扣 + 钉：填写了相同配对组编号且匹配成功的合并为一行；
+        # 未配对（或未匹配到对方）的帽/饰扣、钉各自单独成行（同旧逻辑，支持"分开采购"）。
         def _capnail_row(src, pair_id, qty):
             return {
                 "工厂货号": ((src.get("_factory_no") or "") + " " + (src.get("_shoe_color") or "")).strip(),
@@ -662,18 +663,21 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             except Exception:
                 return Decimal(0)
 
-        for c in cap_items:
+        capnail_merged, leftover_caps, leftover_nails = _pair_cap_nail(cap_items, nail_items)
+        other_series.extend(capnail_merged)
+
+        for c in leftover_caps:
             other_series.append(_capnail_row(c, c.get("_zipper_pair_id"), c.get("数量", "")))
 
-        # 统计各配色下帽的配对组数量分布，用于拆分钉
+        # 统计未配对帽在各配色下的配对组数量分布，用于拆分未配对的钉
         caps_by_color = {}
-        for c in cap_items:
+        for c in leftover_caps:
             sc = c.get("_shoe_color", "")
             pid = c.get("_zipper_pair_id")
             caps_by_color.setdefault(sc, {})
             caps_by_color[sc][pid] = caps_by_color[sc].get(pid, Decimal(0)) + _to_decimal(c.get("数量", 0))
 
-        for n in nail_items:
+        for n in leftover_nails:
             sc = n.get("_shoe_color", "")
             # 仅统计填写了配对组编号的帽
             valid_pairs = {
