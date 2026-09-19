@@ -185,19 +185,19 @@ def _is_eyelet(item):
 
 
 def _is_cap(item):
-    """判断是否为帽钉/饰扣钉的帽(或饰扣)半（含"帽"或"饰扣"但不含"钉"）。同时含帽/饰扣和钉视为合并款，非帽半。"""
+    """判断是否为帽钉/饰扣钉/登山扣钉的帽(或饰扣、登山扣)半（含"帽"/"饰扣"/"登山扣"但不含"钉"）。同时含帽/饰扣/登山扣和钉视为合并款，非帽半。"""
     name = item.get("_material_name", "") or item.get("物品名称", "")
     if not name:
         return False
-    return ("帽" in name or "饰扣" in name) and "钉" not in name
+    return ("帽" in name or "饰扣" in name or "登山扣" in name) and "钉" not in name
 
 
 def _is_nail(item):
-    """判断是否为帽钉/饰扣钉的钉半（含"钉"但不含"帽"/"饰扣"）。同时含帽或饰扣和钉视为合并款，非钉半。"""
+    """判断是否为帽钉/饰扣钉/登山扣钉的钉半（含"钉"但不含"帽"/"饰扣"/"登山扣"）。同时含帽或饰扣或登山扣和钉视为合并款，非钉半。"""
     name = item.get("_material_name", "") or item.get("物品名称", "")
     if not name:
         return False
-    return "钉" in name and "帽" not in name and "饰扣" not in name
+    return "钉" in name and "帽" not in name and "饰扣" not in name and "登山扣" not in name
 
 
 def _find_matching_nail(cap, nail_items, used_nail=None):
