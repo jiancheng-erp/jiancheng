@@ -3927,6 +3927,34 @@ def warehouse_direct_outbound():
     if len(storage_map) != len(set(storage_ids)):
         return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
 
+    # 损失出库不会立即扣库存（需等总经理审批后才执行），若同一库存记录已有
+    # 待审批的损失出库申请，此时提交新申请会在库存校验时通过，但等前一个申请
+    # 审批通过扣库存后，本申请再审批就会因库存不足被永久卡在"待审批"。
+    # 故在提交阶段直接拦截，避免同一库存记录被重复占用。
+    if is_loss:
+        conflict = (
+            db.session.query(
+                ShoeOutboundApply.apply_rid,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id,
+            )
+            .join(
+                ShoeOutboundApplyDetail,
+                ShoeOutboundApplyDetail.apply_id == ShoeOutboundApply.apply_id,
+            )
+            .filter(
+                ShoeOutboundApply.outbound_type == SHOE_OUTBOUND_TYPE_LOSS,
+                ShoeOutboundApply.status == 1,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id.in_(storage_ids),
+            )
+            .first()
+        )
+        if conflict:
+            conflict_rid, conflict_storage_id = conflict
+            return jsonify({
+                "message": f"仓库编号 {conflict_storage_id} 已存在待审批的损失出库申请（{conflict_rid}），"
+                           f"请等待总经理审批该申请后再提交，避免重复申请"
+            }), 409
+
     for d in parsed_details:
         s = storage_map[d["storage_id"]]
         if (s.finished_amount or 0) < d["total_pairs"]:
