@@ -171,7 +171,7 @@ def get_business_reviewers():
                 "staffId": reviewer.staff_id,
                 "staffName": reviewer.staff_name,
                 "characterId": reviewer.character_id,
-                "roleLabel": "业务经理" if reviewer.character_id == BUSINESS_MANAGER_CHARACTER else "业务文员",
+                "roleLabel": "业务经理" if reviewer.character_id == BUSINESS_MANAGER_CHARACTER else "业务部",
             }
         )
     return jsonify(result), 200
