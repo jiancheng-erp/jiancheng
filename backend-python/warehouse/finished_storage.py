@@ -3124,17 +3124,20 @@ def audit_loss_outbound():
     )
     storage_map = {s.finished_shoe_id: s for s in storages}
     for d in details:
-        s = storage_map.get(d.finished_shoe_storage_id)
-        if not s:
+        if not storage_map.get(d.finished_shoe_storage_id):
             return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
-        if (s.finished_amount or 0) < int(d.total_pairs or 0):
-            return (
-                jsonify(
-                    {
-                        "message": f"仓库编号 {s.finished_shoe_id} 库存不足（库存 {s.finished_amount}，出库 {int(d.total_pairs or 0)}）"
-                    }
-                ),
-                400,
+
+    # 部分明细可能因同库存记录的另一笔损失出库申请已先审批通过而导致库存不足；
+    # 此处不再整单拒绝，而是按当前实际库存自动核准（多退少不补），避免总仓需要
+    # 重新逐条填写（鞋型/明细往往很多）。差异会记入申请单备注供追溯。
+    adjustments = []
+    for d in details:
+        s = storage_map[d.finished_shoe_storage_id]
+        requested = int(d.total_pairs or 0)
+        available = int(s.finished_amount or 0)
+        if available < requested:
+            adjustments.append(
+                f"仓库编号{s.finished_shoe_id}: 申请{requested}，按当前库存{available}核准"
             )
 
     now_dt = datetime.now()
@@ -3153,7 +3156,10 @@ def audit_loss_outbound():
     total_amount = 0
     for d in details:
         s = storage_map[d.finished_shoe_storage_id]
-        qty = int(d.total_pairs or 0)
+        qty = min(int(d.total_pairs or 0), int(s.finished_amount or 0))
+        d.actual_outbound_pairs = qty
+        if qty <= 0:
+            continue
         s.finished_amount = (s.finished_amount or 0) - qty
         record_detail = ShoeOutboundRecordDetail(
             shoe_outbound_record_id=outbound_record.shoe_outbound_record_id,
@@ -3165,7 +3171,6 @@ def audit_loss_outbound():
         db.session.flush()
         if _determine_outbound_status(s):
             s.finished_status = 2
-        d.actual_outbound_pairs = qty
         total_amount += qty
 
     outbound_record.outbound_amount = total_amount
@@ -3173,16 +3178,19 @@ def audit_loss_outbound():
     apply_obj.warehouse_staff_id = staff_id
     apply_obj.outbound_record_id = outbound_record.shoe_outbound_record_id
     apply_obj.actual_outbound_datetime = now_dt
+    if adjustments:
+        apply_obj.remark = (apply_obj.remark or "") + "\n[库存不足自动核准调整]: " + "; ".join(adjustments)
     # 损失出库不推进订单完成
 
     db.session.commit()
     return jsonify(
         {
-            "message": "审批通过，已完成损失出库",
+            "message": "审批通过，已完成损失出库" + ("（部分明细因库存不足已按当前库存自动核准）" if adjustments else ""),
             "applyId": apply_id,
             "status": 4,
             "outboundRId": outbound_record.shoe_outbound_rid,
             "actualTotalPairs": total_amount,
+            "adjustments": adjustments,
         }
     )
 
@@ -3926,6 +3934,34 @@ def warehouse_direct_outbound():
     storage_map = {s.finished_shoe_id: s for s in storages}
     if len(storage_map) != len(set(storage_ids)):
         return jsonify({"message": "部分明细对应的成品库存记录不存在"}), 400
+
+    # 损失出库不会立即扣库存（需等总经理审批后才执行），若同一库存记录已有
+    # 待审批的损失出库申请，此时提交新申请会在库存校验时通过，但等前一个申请
+    # 审批通过扣库存后，本申请再审批就会因库存不足被永久卡在"待审批"。
+    # 故在提交阶段直接拦截，避免同一库存记录被重复占用。
+    if is_loss:
+        conflict = (
+            db.session.query(
+                ShoeOutboundApply.apply_rid,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id,
+            )
+            .join(
+                ShoeOutboundApplyDetail,
+                ShoeOutboundApplyDetail.apply_id == ShoeOutboundApply.apply_id,
+            )
+            .filter(
+                ShoeOutboundApply.outbound_type == SHOE_OUTBOUND_TYPE_LOSS,
+                ShoeOutboundApply.status == 1,
+                ShoeOutboundApplyDetail.finished_shoe_storage_id.in_(storage_ids),
+            )
+            .first()
+        )
+        if conflict:
+            conflict_rid, conflict_storage_id = conflict
+            return jsonify({
+                "message": f"仓库编号 {conflict_storage_id} 已存在待审批的损失出库申请（{conflict_rid}），"
+                           f"请等待总经理审批该申请后再提交，避免重复申请"
+            }), 409
 
     for d in parsed_details:
         s = storage_map[d["storage_id"]]
