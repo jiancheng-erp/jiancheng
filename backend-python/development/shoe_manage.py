@@ -194,6 +194,7 @@ def edit_shoe():
     new_shoe_rid = request.json.get("shoeRid")
     shoe_designer = request.json.get("shoeDesigner")
     shoe_department_id = request.json.get("shoeDepartmentId")
+    shoe_type_colors = request.json.get("shoeTypeColors") or []
     existing_shoe = db.session.query(Shoe).filter(Shoe.shoe_id == shoe_id).first()
     if not existing_shoe:
         return jsonify({"error": "shoe not found given shoe_id"}), 400
@@ -201,8 +202,24 @@ def edit_shoe():
         return jsonify({"error": "工厂型号不可在此处修改，请使用「编辑鞋型号」功能，以确保文件路径同步更新"}), 400
     existing_shoe.shoe_designer = shoe_designer
     existing_shoe.shoe_department_id = shoe_department_id
+
+    # 编辑对话框里新勾选的颜色此前只更新了表单，未落库为鞋款(ShoeType)，导致"修改成功"但列表看不到新鞋款
+    existing_color_ids = {
+        row[0]
+        for row in db.session.query(ShoeType.color_id).filter(ShoeType.shoe_id == shoe_id).all()
+    }
+    added_count = 0
+    for color_item in shoe_type_colors:
+        color_id = color_item.get("value") if isinstance(color_item, dict) else color_item
+        if color_id is None or color_id in existing_color_ids:
+            continue
+        db.session.add(ShoeType(shoe_id=shoe_id, color_id=color_id))
+        existing_color_ids.add(color_id)
+        added_count += 1
+
     db.session.commit()
-    return jsonify({"message": "edit shoe OK"}), 200
+    message = "edit shoe OK" + (f"，已新增 {added_count} 个鞋款颜色" if added_count else "")
+    return jsonify({"message": message}), 200
     
 @shoe_manage_bp.route("/shoemanage/getorderassociation", methods=["GET"])
 def get_order_association():
