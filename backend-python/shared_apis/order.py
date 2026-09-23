@@ -46,6 +46,12 @@ ORDER_STATUS_CLERK_DISPLAY_MSG = {
     0:"未提交",
     1:"已提交"
 }
+# 业务部助理角色码
+BUSINESS_ASSISTANT_ROLE = 27
+ORDER_STATUS_ASSISTANT_DISPLAY_MSG = {
+    0:"未提交",
+    1:"已提交"
+}
 # 技术部文员
 TECHNICAL_CLERK_ROLE = 15
 
@@ -677,7 +683,7 @@ def get_order_info_business():
     character, _, _ = current_user_info()
     hide_price_detail = False
     if character is not None:
-        hide_price_detail = character.character_id == BUSINESS_CLERK_ROLE
+        hide_price_detail = character.character_id == BUSINESS_ASSISTANT_ROLE
     entity = (
         db.session.query(
             Order,
@@ -734,6 +740,7 @@ def get_order_info_business():
         "orderStatusVal": (
             entity.OrderStatus.order_status_value if entity.OrderStatus else "N/A"
         ),
+        "supervisorId": entity.Order.supervisor_id,
         "orderShoeAllData": [],
     }
     # Query the latest revert event from 总经理, only show when order is still at status 6 (not yet re-submitted)
@@ -1128,14 +1135,18 @@ def get_display_orders_manager():
         )
     )
 
-    # --- 角色与归属维度（经理可切换主管/业务，文员固定业务） ---
+    # --- 角色与归属维度（经理可切换主管/业务；文员可切换自己审批的/自己的；助理固定自己的） ---
     if current_user_role == BUSINESS_MANAGER_ROLE:
         # filterStatus == "0" 看 “主管”，否则看 “业务”
         owner_col = Order.supervisor_id if filter_status == "0" else Order.salesman_id
         msg_mapping = ORDER_STATUS_MANAGER_DISPLAY_MSG
     elif current_user_role == BUSINESS_CLERK_ROLE:
-        owner_col = Order.salesman_id
+        # filterStatus == "0" 看被指派给自己审批的订单，否则看自己创建的订单
+        owner_col = Order.supervisor_id if filter_status == "0" else Order.salesman_id
         msg_mapping = ORDER_STATUS_CLERK_DISPLAY_MSG
+    elif current_user_role == BUSINESS_ASSISTANT_ROLE:
+        owner_col = Order.salesman_id
+        msg_mapping = ORDER_STATUS_ASSISTANT_DISPLAY_MSG
     else:
         return jsonify({"message": "invalid user role"}), 401
 
@@ -1161,6 +1172,7 @@ def get_display_orders_manager():
         else []
     )
     id_to_name = {s.staff_id: s.staff_name for s in department_staff}
+    id_to_character = {s.staff_id: s.character_id for s in department_staff}
 
     # --- 结果组装 ---
     result = []
@@ -1173,7 +1185,15 @@ def get_display_orders_manager():
             order_status_message = order_status_reference.order_status_name
             if order_status.order_current_status == ORDER_CREATION_STATUS:
                 if order_status.order_status_value is not None:
-                    order_status_message += " \n" + msg_mapping[order_status.order_status_value]
+                    stage_msg = msg_mapping.get(order_status.order_status_value, "")
+                    if order_status.order_status_value == 1:
+                        # 提交后当前持有人可能是文员或经理，根据 supervisor 角色细化文案
+                        supervisor_role = id_to_character.get(order.supervisor_id)
+                        if supervisor_role == BUSINESS_CLERK_ROLE:
+                            stage_msg = "待文员补充单价"
+                        elif supervisor_role == BUSINESS_MANAGER_ROLE:
+                            stage_msg = "待经理审批下发"
+                    order_status_message += " \n" + stage_msg
 
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
@@ -1402,16 +1422,16 @@ HOT_SHOE_LIMIT = 20
 
 
 def _business_dept_staff_ids():
-    """业务经理返回本部门人员ID列表；业务文员只返回自己（仅看本人相关）；其余角色返回 None（不限部门）。"""
+    """业务经理/业务文员返回本部门人员ID列表；业务助理只返回自己（仅看本人相关）；其余角色返回 None（不限部门）。"""
     character, staff, _ = current_user_info()
-    if character.character_id == BUSINESS_MANAGER_ROLE:
+    if character.character_id in (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE):
         return [
             s.staff_id
             for s in db.session.query(Staff.staff_id)
             .filter(Staff.department_id == staff.department_id)
             .all()
         ]
-    if character.character_id == BUSINESS_CLERK_ROLE:
+    if character.character_id == BUSINESS_ASSISTANT_ROLE:
         return [staff.staff_id]
     return None
 
@@ -1888,10 +1908,10 @@ def get_all_orders():
                 OrderStatus.order_current_status < ORDER_FINISH_SYMBOL,
             )
         )
-    # 业务经理/文员只看本业务部（按业务员所属部门归属）的订单；其它角色（生产/物控/总经理等）看全部
+    # 业务经理看本业务部（按业务员所属部门归属）的订单；文员/助理只看自己创建或自己审批的；其它角色（生产/物控/总经理等）看全部
     try:
         character, staff, _ = current_user_info()
-        if character.character_id in (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE):
+        if character.character_id == BUSINESS_MANAGER_ROLE:
             dept_staff_ids = [
                 s.staff_id
                 for s in db.session.query(Staff.staff_id)
@@ -1899,6 +1919,13 @@ def get_all_orders():
                 .all()
             ]
             entities = entities.filter(Order.salesman_id.in_(dept_staff_ids))
+        elif character.character_id in (BUSINESS_CLERK_ROLE, BUSINESS_ASSISTANT_ROLE):
+            entities = entities.filter(
+                or_(
+                    Order.salesman_id == staff.staff_id,
+                    Order.supervisor_id == staff.staff_id,
+                )
+            )
     except Exception:
         pass
     if desc_symbol:
@@ -1908,8 +1935,10 @@ def get_all_orders():
     result = []
     staff_entities = (db.session.query(Staff).all())
     staff_id_to_name_mapping = {}
+    staff_id_to_character_mapping = {}
     for staff in staff_entities:
         staff_id_to_name_mapping[staff.staff_id] = staff.staff_name
+        staff_id_to_character_mapping[staff.staff_id] = staff.character_id
     for entity in entities:
         order, order_shoe, shoe, customer, order_status, order_status_reference = entity
         formatted_start_date = order.start_date.strftime("%Y-%m-%d")
@@ -1927,7 +1956,11 @@ def get_all_orders():
                     order_status.order_status_value != None
                     and order_status.order_status_value == 1
                 ):
-                    order_status_message += " \n待经理审核下发"
+                    supervisor_role = staff_id_to_character_mapping.get(order.supervisor_id)
+                    if supervisor_role == BUSINESS_CLERK_ROLE:
+                        order_status_message += " \n待文员补充单价"
+                    else:
+                        order_status_message += " \n待经理审批下发"
         if order.production_list_upload_status != PACKAGING_SPECS_UPLOADED:
             order_status_message += "\n包装材料待上传"
 
@@ -3356,9 +3389,12 @@ def export_order():
     send_name = f"导出订单_{order_rid}.xlsx"
     timestamp = str(time.time())
 
-    # 业务部文员导出的订单不允许包含金额信息（由前端按角色传入 includePrice=0）
+    # 业务部助理导出的订单不允许包含金额信息（服务端强制，不信任前端传入的 includePrice）
     include_price = request.args.get("includePrice", default=1, type=int)
     include_price = bool(include_price)
+    export_character, _, _ = current_user_info()
+    if export_character is not None and export_character.character_id == BUSINESS_ASSISTANT_ROLE:
+        include_price = False
 
     if output_type == 0:
         new_file_name = f"导出配码订单_{timestamp}.xlsx"
@@ -3380,6 +3416,9 @@ def export_production_order():
     order_ids = request.args.get("orderIds").split(",")
     include_price = request.args.get("includePrice", default=1, type=int)
     include_price = bool(include_price)
+    export_character, _, _ = current_user_info()
+    if export_character is not None and export_character.character_id == BUSINESS_ASSISTANT_ROLE:
+        include_price = False
     response = (
         db.session.query(
             Order,

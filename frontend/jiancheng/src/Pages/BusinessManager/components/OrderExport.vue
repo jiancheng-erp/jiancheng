@@ -56,8 +56,8 @@ let currentTotalRows = ref(0)
 let selectData = ref([])
 let staffId = localStorage.getItem('staffid')
 let role = localStorage.getItem('role')
-// 业务部文员(role=21)导出的订单/生产订单不允许显示金额信息
-const includePriceParam = parseInt(role, 10) === 21 ? '&includePrice=0' : ''
+// 业务部助理(role=27)导出的订单/生产订单不允许显示金额信息（服务端也会强制校验，此处仅为减少不必要的数据传输）
+const includePriceParam = parseInt(role, 10) === 27 ? '&includePrice=0' : ''
 
 const filters = reactive({
     orderNumberSearch: '',
@@ -90,7 +90,7 @@ async function filterOrders() {
 
 async function getAllOrders() {
     let response
-    if (role == 21) {
+    if (role == 21 || role == 27) {
         response = await axios.get(`${apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
             currentStaffId: staffId
         })

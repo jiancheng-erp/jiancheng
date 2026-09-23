@@ -21,6 +21,16 @@ export default [
     }
   },
   {
+    path: '/business/businessorderdetail/orderid=:orderId/assistant',
+    name: 'business-orderdetail-assistant',
+    component: BusinessOrderDetail,
+    props: true,
+    meta: {
+      requiresAuth: true,
+      role: 27
+    }
+  },
+  {
     path: '/business/businessorderdetail/orderid=:orderId/finance',
     name: 'business-orderdetail-finance',
     component: BusinessOrderDetail,

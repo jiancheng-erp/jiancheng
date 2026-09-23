@@ -11,11 +11,11 @@
                     v-model="orderStore.selectedOrderStatus"
                     placeholder="请选择订单类型"
                     size="default"
-                    :disabled="role === '21'"
+                    :disabled="role === '27'"
                     @change="handleOrderStatusChange"
                     class="toolbar-status-select"
                 >
-                    <el-option v-for="item in orderStore.orderStatusOption" :key="item" :label="item" :value="item" />
+                    <el-option v-for="item in visibleOrderStatusOptions" :key="item" :label="item" :value="item" />
                 </el-select>
                 <el-radio-group v-model="orderStore.radio" size="small" @change="orderStore.filterDisplayOrder()">
                     <el-radio-button label="全部订单" value="all" />       
@@ -215,15 +215,15 @@
                 <el-input v-model="newOrderForm.salesman" disabled></el-input>
             </el-form-item>
 
-            <el-form-item label="选择审批经理" prop="supervisorId" :rules="[
+            <el-form-item label="选择审批人" prop="supervisorId" :rules="[
                 {
                     required: true,
                     message: '内容不能为空',
                     trigger: ['blur']
                 }
             ]">
-                <el-select v-model="newOrderForm.supervisorId" filterable placeholder="请选择下发经理">
-                    <el-option v-for="item in this.departmentNameList" :key="item.staffId" :label="item.staffName"
+                <el-select v-model="newOrderForm.supervisorId" filterable placeholder="请选择文员或经理">
+                    <el-option v-for="item in this.departmentNameList" :key="item.staffId" :label="`${item.staffName}（${item.roleLabel}）`"
                         :value="item.staffId"></el-option>
                 </el-select>
             </el-form-item>
@@ -766,6 +766,13 @@ export default {
         isForecastEntry() {
             return this.entryMode === 'forecast'
         },
+        // 文员不开放全部订单，只能看自己创建或自己审批的
+        visibleOrderStatusOptions() {
+            if (this.role === '21') {
+                return this.orderStore.orderStatusOption.filter((item) => item !== '全部订单')
+            }
+            return this.orderStore.orderStatusOption
+        },
         selectedTotalPairs() {
             return this.selectedSummaryRows.reduce((sum, row) => sum + (Number(row?.orderTotalPairs) || 0), 0)
         },
@@ -848,13 +855,15 @@ export default {
             this.colorOptions = response.data
         },
         initialStatusFilter() {
-            if (this.role === '21') {
+            if (this.role === '27') {
                 this.orderStore.selectedOrderStatus = '我发起的订单'
-                this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
+            } else if (this.role === '21') {
+                // 文员不看全部订单，默认展示分配给自己审批的订单
+                this.orderStore.selectedOrderStatus = '我审批的订单'
             } else {
                 this.orderStore.selectedOrderStatus = '我审批的订单'
-                this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
             }
+            this.handleOrderStatusChange(this.orderStore.selectedOrderStatus)
         },
         handleOrderCreatePageChange(newPage) {
             this.currentOrderCreatePage = newPage
@@ -2573,7 +2582,7 @@ export default {
         async getAllOrders() {
             // const response = await axios.get(`${this.$apiBaseUrl}/order/getallorders`)
 
-            if (this.role == 21) {
+            if (this.role == 21 || this.role == 27) {
                 const response = await axios.get(`${this.$apiBaseUrl}/order/getbusinessdisplayorderbyuser`, {
                     currentStaffId: staffId
                 })
@@ -2990,6 +2999,8 @@ export default {
                 url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/admin`
             } else if (this.userRole == 21) {
                 url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/clerk`
+            } else if (this.userRole == 27) {
+                url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/assistant`
             }
             window.open(url, '_blank')
         },
@@ -3621,7 +3632,7 @@ export default {
     watch: {
         async 'dialogStore.orderCreationInfoVis'(newValue) {
             if (newValue) {
-                const response = await axios.get(`${this.$apiBaseUrl}/general/getbusinessmanagers`)
+                const response = await axios.get(`${this.$apiBaseUrl}/general/getbusinessreviewers`)
                 this.departmentNameList = response.data
             }
         }
