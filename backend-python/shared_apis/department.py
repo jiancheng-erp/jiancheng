@@ -8,7 +8,8 @@ department_bp = Blueprint("department_bp", __name__)
 BUSINESS_DEPARTMENT_ID = 10
 BUSINESS_MANAGER_CHARACTER = 4
 BUSINESS_CLERK_CHARACTER = 21
-BUSINESS_ROLE_IDS = [BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER]
+BUSINESS_ASSISTANT_CHARACTER = 27
+BUSINESS_ROLE_IDS = [BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER, BUSINESS_ASSISTANT_CHARACTER]
 
 
 def get_business_department_ids():
@@ -144,13 +145,33 @@ def get_business_managers():
 #业务职员查询接口
 @department_bp.route("/general/getbusinessclerks", methods=["GET"])
 def get_business_clerks():
-    business_clerks = (db.session.query(Staff).filter_by(Staff.character_id == BUSINESS_CLERK_CHARACTER).all())
+    business_clerks = (db.session.query(Staff).filter(Staff.character_id == BUSINESS_CLERK_CHARACTER).all())
     result = []
     for clerk in business_clerks:
         result.append(
             {
                 "staffId":clerk.staff_id,
                 "staffName":clerk.staff_name
+            }
+        )
+    return jsonify(result), 200
+
+#业务审批人查询接口（文员+经理，供助理/文员建单时选择提交对象）
+@department_bp.route("/general/getbusinessreviewers", methods=["GET"])
+def get_business_reviewers():
+    reviewers = (
+        db.session.query(Staff)
+        .filter(Staff.character_id.in_([BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER]))
+        .all()
+    )
+    result = []
+    for reviewer in reviewers:
+        result.append(
+            {
+                "staffId": reviewer.staff_id,
+                "staffName": reviewer.staff_name,
+                "characterId": reviewer.character_id,
+                "roleLabel": "业务经理" if reviewer.character_id == BUSINESS_MANAGER_CHARACTER else "业务文员",
             }
         )
     return jsonify(result), 200

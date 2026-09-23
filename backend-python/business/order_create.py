@@ -34,6 +34,7 @@ department_name = "业务部"
 ALLOWED_EXTENSIONS = {"xls", "xlsx"}
 BUSINESS_MANAGER_ROLE = 4
 BUSINESS_CLERK_ROLE = 21
+BUSINESS_ASSISTANT_ROLE = 27
 ORDER_TYPE_NORMAL = "N"
 ORDER_TYPE_FORECAST = "F"
 
@@ -497,7 +498,7 @@ def order_price_update():
     staff_entity = db.session.query(Staff).filter(Staff.staff_id == staff_id).first()
     if not staff_entity:
         return jsonify({"error": "operator not found"}), 404
-    if staff_entity.character_id != BUSINESS_MANAGER_ROLE:
+    if staff_entity.character_id not in (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE):
         return jsonify({"error": "no permission to update price"}), 403
 
     for order_shoe_type_id in unit_price_form.keys():
@@ -518,6 +519,50 @@ def order_price_update():
     time_t = time.time()
     logger.debug("time taken is update price is" + str(time_t - time_s))
     return jsonify({"msg": "ok"}), 200
+
+
+@order_create_bp.route("/ordercreate/forwardtomanager", methods=["POST"])
+def order_forward_to_manager():
+    """业务文员补完单价后，把订单转交给指定业务经理审核下发（不改变 order_status_value，仅切换当前经手人）。"""
+    order_id = request.json.get("orderId")
+    staff_id = request.json.get("staffId")
+    target_manager_id = request.json.get("managerId")
+
+    staff_entity = db.session.query(Staff).filter(Staff.staff_id == staff_id).first()
+    if not staff_entity or staff_entity.character_id != BUSINESS_CLERK_ROLE:
+        return jsonify({"error": "只有业务文员可以转交经理审核"}), 403
+
+    manager_entity = db.session.query(Staff).filter(Staff.staff_id == target_manager_id).first()
+    if not manager_entity or manager_entity.character_id != BUSINESS_MANAGER_ROLE:
+        return jsonify({"error": "目标人员不是业务经理"}), 400
+
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    order_status = db.session.query(OrderStatus).filter(OrderStatus.order_id == order_id).first()
+    if not order_entity or not order_status:
+        return jsonify({"error": "order not found"}), 404
+    if order_status.order_current_status != 6 or order_status.order_status_value != 1:
+        return jsonify({"error": "订单当前状态不允许转交"}), 400
+    if str(order_entity.supervisor_id) != str(staff_id):
+        return jsonify({"error": "该订单当前不在您的待办中"}), 403
+
+    order_shoe_type_entities = (
+        db.session.query(OrderShoeType)
+        .join(OrderShoe, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .filter(OrderShoe.order_id == order_id)
+        .all()
+    )
+    price_missing = []
+    for entity_ost in order_shoe_type_entities:
+        unit_price = entity_ost.unit_price or 0
+        currency_type = entity_ost.currency_type
+        if float(unit_price) <= 0 or not currency_type:
+            price_missing.append(entity_ost.order_shoe_type_id)
+    if price_missing:
+        return jsonify({"error": "订单存在未填写的鞋型价格，无法转交经理"}), 400
+
+    order_entity.supervisor_id = target_manager_id
+    db.session.commit()
+    return jsonify({"msg": "已转交经理审核"}), 200
 
 
 @order_create_bp.route("/ordercreate/proceedevent", methods=["POST"])
@@ -558,6 +603,8 @@ def order_send_previous():
         staff_name = staff_entity.staff_name
     else:
         return jsonify({"msg": "operator not found"}), 404
+    if staff_entity.character_id not in (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE):
+        return jsonify({"error": "no permission to revert order"}), 403
     entity = (
         db.session.query(Order, OrderStatus)
         .filter_by(order_id=order_id)
@@ -589,9 +636,15 @@ def order_send_previous():
 def order_next_step():
     order_id = request.json.get("orderId")
     staff_id = request.json.get("staffId")
+    staff_entity = db.session.query(Staff).filter(Staff.staff_id == staff_id).first()
+    if not staff_entity or staff_entity.character_id != BUSINESS_MANAGER_ROLE:
+        return jsonify({"error": "只有业务经理可以审核并下发"}), 403
     entity = db.session.query(Order).filter(Order.order_id == order_id).first()
     if not entity:
         return jsonify({"error": "order not found"}), 404
+    supervisor_entity = db.session.query(Staff).filter(Staff.staff_id == entity.supervisor_id).first()
+    if not supervisor_entity or supervisor_entity.character_id != BUSINESS_MANAGER_ROLE:
+        return jsonify({"error": "订单尚未转交经理审核，无法下发"}), 400
     order_rid = entity.order_rid
     order_shoe_rid = (
         db.session.query(OrderShoe, Shoe)

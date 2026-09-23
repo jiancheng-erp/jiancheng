@@ -179,16 +179,7 @@ const router = createRouter({
       component: BusinessManager,
       meta:{
         requiresAuth: true,
-        role: 4
-      }
-    },
-    {
-      path :'/businessmanager',
-      name : 'businessmanager',
-      component:BusinessManager,
-      meta:{
-        requirsAuth:true,
-        role:21
+        role: [4, 21, 27]
       }
     },
     {

@@ -64,9 +64,10 @@
                                 <el-button v-if="orderClerkEditable && !isFinanceManager" @click="proceedOrder" type="primary"> 提交订单下发 </el-button>
                                 <el-button v-if="this.userIsManager && this.readyPending" type="warning" @click="sendOrderNext" :disabled="this.role == 21 ? true : false"> 下发 </el-button>
 
-                                <el-button v-if="this.userIsManager && this.orderManagerEditable" type="warning" @click="sendOrderPrevious" :disabled="this.role == 21 ? true : false">
+                                <el-button v-if="this.canRevertOrder" type="warning" @click="sendOrderPrevious">
                                     退回
                                 </el-button>
+                                <el-button v-if="this.canForwardToManager" type="success" @click="openForwardToManagerDialog"> 转交经理审核 </el-button>
                                 <el-button v-if="allowSaveTemplate && !isFinanceManager" type="primary" @click="openSaveTemplateDialog"> 保存为模板 </el-button>
                             </el-descriptions-item>
                         </el-descriptions>
@@ -291,6 +292,23 @@
             </span>
         </template>
     </el-dialog>
+
+    <el-dialog title="转交经理审核" v-model="forwardToManagerDialogVis" width="30%">
+        <el-form label-position="top">
+            <el-form-item label="选择业务经理">
+                <el-select v-model="forwardTargetManagerId" filterable placeholder="请选择业务经理" style="width: 100%">
+                    <el-option v-for="item in forwardManagerOptions" :key="item.staffId" :label="item.staffName" :value="item.staffId"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
+
+        <template #footer>
+            <span>
+                <el-button @click="forwardToManagerDialogVis = false">取消</el-button>
+                <el-button type="primary" @click="submitForwardToManager">确认转交</el-button>
+            </span>
+        </template>
+    </el-dialog>
 </template>
 
 <script>
@@ -320,8 +338,20 @@ export default {
         userIsManager() {
             return this.role == 4
         },
+        userIsClerk() {
+            return this.role == 21
+        },
         canViewPrice() {
-            return this.userIsManager || this.isFinanceManager
+            return this.userIsManager || this.userIsClerk || this.isFinanceManager
+        },
+        isCurrentHandler() {
+            return String(this.orderData.supervisorId) === String(this.staffId)
+        },
+        canForwardToManager() {
+            return this.userIsClerk && this.orderManagerEditable && this.isCurrentHandler
+        },
+        canRevertOrder() {
+            return (this.userIsManager || this.userIsClerk) && (this.orderManagerEditable || this.orderClerkEditable)
         },
         canEditPrice() {
             return this.canViewPrice && !this.editOrderInfoDisabled
@@ -425,6 +455,9 @@ export default {
             unitPriceAccessMapping: {},
             currencyTypeAccessMapping: {},
             customerColorAccessMapping: {},
+            forwardToManagerDialogVis: false,
+            forwardManagerOptions: [],
+            forwardTargetManagerId: '',
             batchInfoType: {},
             attrMappingToRatio: {
                 size34Name: 'size34Ratio',
@@ -698,6 +731,35 @@ export default {
             }
             this.getOrderInfo()
             // #!TODO
+        },
+        async openForwardToManagerDialog() {
+            try {
+                const response = await axios.get(`${this.$apiBaseUrl}/general/getbusinessmanagers`)
+                this.forwardManagerOptions = response.data || []
+                this.forwardTargetManagerId = ''
+                this.forwardToManagerDialogVis = true
+            } catch (error) {
+                ElMessage.error('加载经理列表失败')
+            }
+        },
+        async submitForwardToManager() {
+            if (!this.forwardTargetManagerId) {
+                ElMessage.error('请选择业务经理')
+                return
+            }
+            try {
+                await axios.post(`${this.$apiBaseUrl}/ordercreate/forwardtomanager`, {
+                    orderId: this.orderDBId,
+                    staffId: this.staffId,
+                    managerId: this.forwardTargetManagerId
+                })
+                ElMessage.success('已转交经理审核')
+                this.forwardToManagerDialogVis = false
+                this.getOrderInfo()
+            } catch (error) {
+                const message = error?.response?.data?.error || '转交失败'
+                ElMessage.error(message)
+            }
         },
         async sendOrderNext() {
             const ridOk = await this.validateOrderRidForDispatch()

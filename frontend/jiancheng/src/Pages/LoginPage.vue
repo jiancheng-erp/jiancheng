@@ -90,6 +90,7 @@ const handleSubmit = () => {
         else if (r === 1) window.location.href = 'administrator'
         else if (r === 25) window.location.href = 'laborcostreportclerk'
         else if (r === 26) window.location.href = 'productionboard'
+        else if (r === 27) window.location.href = 'businessmanager'
 
         loading.close()
       })

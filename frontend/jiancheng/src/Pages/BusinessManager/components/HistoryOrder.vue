@@ -263,6 +263,8 @@ export default {
         url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/admin`
       } else if (this.userRole === '21') {
         url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/clerk`
+      } else if (this.userRole === '27') {
+        url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}/assistant`
       } else {
         url = `${window.location.origin}/business/businessorderdetail/orderid=${orderId}`
       }

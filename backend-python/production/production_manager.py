@@ -28,6 +28,7 @@ from logger import logger
 from shared_apis.department import (
     BUSINESS_MANAGER_CHARACTER,
     BUSINESS_CLERK_CHARACTER,
+    BUSINESS_ASSISTANT_CHARACTER,
     get_same_department_staff_ids,
 )
 production_manager_bp = Blueprint("production_manager_bp", __name__)
@@ -400,11 +401,13 @@ def get_all_order_production_progress():
         )  # 不显示没排期的订单
         .filter(Order.order_id.in_(order_ids))
     )
-    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导
+    # 业务经理/文员只看本业务部（一部/二部）订单，归属以业务员所属部门推导；业务助理只看自己录入的
     character, current_staff, _ = current_user_info()
-    if character.character_id in (BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER):
+    if character.character_id in (BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER, BUSINESS_ASSISTANT_CHARACTER):
         dept_staff_ids = get_same_department_staff_ids(current_staff.department_id)
         query = query.filter(Order.salesman_id.in_(dept_staff_ids))
+    if character.character_id == BUSINESS_ASSISTANT_CHARACTER:
+        query = query.filter(Order.salesman_id == current_staff.staff_id)
     if order_rid and order_rid != "":
         query = query.filter(Order.order_rid.ilike(f"%{order_rid}%"))
     if shoe_rid and shoe_rid != "":
