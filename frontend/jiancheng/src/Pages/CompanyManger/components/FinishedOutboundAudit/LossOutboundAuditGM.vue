@@ -88,7 +88,7 @@
       width="460px"
     >
       <p v-if="auditAction === 'approve'" style="margin-bottom: 10px; color: var(--color-warning);">
-        通过后将立即执行损失出库并扣减库存，操作不可逆。
+        通过后将立即执行损失出库并扣减库存，操作不可逆。若明细中部分仓库编号库存已因其他申请被占用，系统将自动按当前库存核准，不会要求重新填写。
       </p>
       <el-form :model="auditForm" label-width="80px">
         <el-form-item label="审批意见">
@@ -210,7 +210,16 @@ export default {
           action: this.auditAction,
           remark: this.auditForm.remark
         })
-        ElMessage.success(res.data.message || '操作成功')
+        if (res.data.adjustments && res.data.adjustments.length) {
+          ElMessage({
+            type: 'warning',
+            duration: 8000,
+            showClose: true,
+            message: `${res.data.message}：${res.data.adjustments.join('；')}`
+          })
+        } else {
+          ElMessage.success(res.data.message || '操作成功')
+        }
         this.auditDialogVisible = false
         this.loadTable()
       } catch (e) {
