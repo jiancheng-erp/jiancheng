@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from app_config import db
 from models import *
+from login.login import current_user_info
 
 department_bp = Blueprint("department_bp", __name__)
 
@@ -128,10 +129,18 @@ def delete_department():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-#业务经理查询接口
+#业务经理查询接口（一部/二部不互通，只返回与当前用户同部门的经理）
 @department_bp.route("/general/getbusinessmanagers", methods=["GET"])
 def get_business_managers():
-    business_managers = (db.session.query(Staff).filter_by(character_id = BUSINESS_MANAGER_CHARACTER).all())
+    _, current_staff, _ = current_user_info()
+    business_managers = (
+        db.session.query(Staff)
+        .filter(
+            Staff.character_id == BUSINESS_MANAGER_CHARACTER,
+            Staff.department_id == current_staff.department_id,
+        )
+        .all()
+    )
     result = []
     for business_manager in business_managers:
         result.append(
@@ -142,10 +151,18 @@ def get_business_managers():
         )
     return jsonify(result), 200
 
-#业务职员查询接口
+#业务职员查询接口（一部/二部不互通，只返回与当前用户同部门的文员）
 @department_bp.route("/general/getbusinessclerks", methods=["GET"])
 def get_business_clerks():
-    business_clerks = (db.session.query(Staff).filter(Staff.character_id == BUSINESS_CLERK_CHARACTER).all())
+    _, current_staff, _ = current_user_info()
+    business_clerks = (
+        db.session.query(Staff)
+        .filter(
+            Staff.character_id == BUSINESS_CLERK_CHARACTER,
+            Staff.department_id == current_staff.department_id,
+        )
+        .all()
+    )
     result = []
     for clerk in business_clerks:
         result.append(
@@ -156,12 +173,16 @@ def get_business_clerks():
         )
     return jsonify(result), 200
 
-#业务审批人查询接口（文员+经理，供助理/文员建单时选择提交对象）
+#业务审批人查询接口（文员+经理，供助理/文员建单时选择提交对象；一部/二部不互通，只返回同部门人员）
 @department_bp.route("/general/getbusinessreviewers", methods=["GET"])
 def get_business_reviewers():
+    _, current_staff, _ = current_user_info()
     reviewers = (
         db.session.query(Staff)
-        .filter(Staff.character_id.in_([BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER]))
+        .filter(
+            Staff.character_id.in_([BUSINESS_MANAGER_CHARACTER, BUSINESS_CLERK_CHARACTER]),
+            Staff.department_id == current_staff.department_id,
+        )
         .all()
     )
     result = []
