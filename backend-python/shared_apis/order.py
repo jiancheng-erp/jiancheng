@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal, InvalidOperation
 from event_processor import EventProcessor
 
-from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, ORDER_FINISH_SYMBOL
+from constants import IN_PRODUCTION_ORDER_NUMBER, SHOESIZERANGE, ORDER_FINISH_SYMBOL, GENERAL_MANAGER_ROLE
 from shared_apis.department import get_business_department_ids
 from general_document.order_export import (
     generate_excel_file,
@@ -54,6 +54,8 @@ ORDER_STATUS_ASSISTANT_DISPLAY_MSG = {
 }
 # 技术部文员
 TECHNICAL_CLERK_ROLE = 15
+# 订单导出时可查看金额信息的角色白名单，其余角色（含未登录/未识别角色）一律隐藏金额
+ORDER_EXPORT_PRICE_VISIBLE_ROLES = (BUSINESS_MANAGER_ROLE, BUSINESS_CLERK_ROLE, GENERAL_MANAGER_ROLE)
 
 # 鞋型初始状态（投产指令单创建）
 DEV_ORDER_SHOE_STATUS = 0
@@ -3389,11 +3391,16 @@ def export_order():
     send_name = f"导出订单_{order_rid}.xlsx"
     timestamp = str(time.time())
 
-    # 业务部助理导出的订单不允许包含金额信息（服务端强制，不信任前端传入的 includePrice）
+    # 仅白名单角色导出的订单允许包含金额信息（服务端强制，不信任前端传入的 includePrice）
+    # 该路由为免登录路由（前端用 window.open 直接下载，不带 Authorization），current_user_info 依赖 JWT，
+    # 未带 token 时需要容错，否则任何角色访问都会报错
     include_price = request.args.get("includePrice", default=1, type=int)
     include_price = bool(include_price)
-    export_character, _, _ = current_user_info()
-    if export_character is not None and export_character.character_id == BUSINESS_ASSISTANT_ROLE:
+    try:
+        export_character, _, _ = current_user_info()
+    except Exception:
+        export_character = None
+    if export_character is None or export_character.character_id not in ORDER_EXPORT_PRICE_VISIBLE_ROLES:
         include_price = False
 
     if output_type == 0:
@@ -3416,8 +3423,12 @@ def export_production_order():
     order_ids = request.args.get("orderIds").split(",")
     include_price = request.args.get("includePrice", default=1, type=int)
     include_price = bool(include_price)
-    export_character, _, _ = current_user_info()
-    if export_character is not None and export_character.character_id == BUSINESS_ASSISTANT_ROLE:
+    # 该路由为免登录路由（前端用 window.open 直接下载，不带 Authorization），需容错处理未带 token 的情况
+    try:
+        export_character, _, _ = current_user_info()
+    except Exception:
+        export_character = None
+    if export_character is None or export_character.character_id not in ORDER_EXPORT_PRICE_VISIBLE_ROLES:
         include_price = False
     response = (
         db.session.query(
