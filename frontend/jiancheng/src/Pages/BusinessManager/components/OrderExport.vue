@@ -127,6 +127,35 @@ function dataCut() {
     )
 }
 
+// 下载路由为免登录路由（服务端依赖 JWT 判断角色以决定是否包含金额），window.open 不会携带
+// Authorization 请求头，导致服务端始终把调用方当作匿名用户处理、强制隐藏金额。
+// 改用 axios（自动带上全局 Authorization 头）+ blob 下载，保证角色能被正确识别。
+async function downloadFile(url, defaultFilename) {
+    try {
+        const response = await axios.get(url, { responseType: 'blob' })
+        const blob = new Blob([response.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const disposition = response.headers['content-disposition'] || ''
+        let filename = defaultFilename
+        const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)/i)
+        if (match && match[1]) {
+            filename = decodeURIComponent(match[1])
+        }
+        const objectUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = objectUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(objectUrl)
+    } catch (error) {
+        console.error('导出失败', error)
+        ElMessage.error('导出失败')
+    }
+}
+
 function exportOrder() {
     if (selectData.value.length === 0) {
         ElMessage.warning('请选择要导出的订单')
@@ -138,8 +167,9 @@ function exportOrder() {
                 if (action === 'confirm') {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
-                    window.open(
+                    downloadFile(
                         `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=0${includePriceParam}`,
+                        '导出配码订单.xlsx'
                     )
                 }
             }
@@ -158,8 +188,9 @@ function exportAmountOrder() {
                 if (action === 'confirm') {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
-                    window.open(
+                    downloadFile(
                         `${apiBaseUrl}/order/exportorder?orderIds=${exportOrderIds.toString()}&outputType=1${includePriceParam}`,
+                        '导出数量订单.xlsx'
                     )
                 }
             }
@@ -178,8 +209,9 @@ function exportProductionOrder() {
                 if (action === 'confirm') {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
-                    window.open(
+                    downloadFile(
                         `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=0${includePriceParam}`,
+                        '导出配码生产订单.xlsx'
                     )
                 }
             }
@@ -198,8 +230,9 @@ function exportProductionAmountOrder() {
                 if (action === 'confirm') {
                     // get order db id from selectData
                     const exportOrderIds = selectData.value.map(order => order.orderDbId)
-                    window.open(
+                    downloadFile(
                         `${apiBaseUrl}/order/exportproductionorder?orderIds=${exportOrderIds.toString()}&outputType=1${includePriceParam}`,
+                        '导出数量生产订单.xlsx'
                     )
                 }
             }
