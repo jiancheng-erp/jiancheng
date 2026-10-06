@@ -281,6 +281,14 @@
                                 </template>
                             </el-table-column>
                             <el-table-column prop="storageAmount" label="使用仓库数量"></el-table-column>
+                            <el-table-column label="一次采购烫底（仅供参考）" min-width="220">
+                                <template #default="scope">
+                                    <div v-for="(hs, hsIndex) in scope.row.firstPurchaseHotsole || []" :key="hsIndex">
+                                        {{ [hs.supplierName, hs.materialName, hs.materialModel, hs.materialSpecification, hs.color].filter(Boolean).join(' ') }}
+                                        <span>：采购 {{ hs.purchaseAmount }}{{ hs.unit }}</span>
+                                    </div>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="remark" label="开发部备注"></el-table-column>
                             <el-table-column label="操作">
                                 <template #default="scope">

@@ -11,7 +11,7 @@ from sqlalchemy import desc, func
 # === 按你的项目结构调整这些 import ===
 from app_config import db
 from accounting.currency_exchange_management import get_exchange_rate_for_month
-from constants import SHOE_OUTBOUND_TYPE_MAPPING
+from constants import SHOE_OUTBOUND_TYPE_MAPPING, FINISHED_STORAGE_STATUS
 from models import (
     Order,
     OrderShoe,
@@ -873,6 +873,103 @@ def build_finished_inout_summary_by_model_excel(
     wb.save(bio)
     bio.seek(0)
     filename = f"成品仓库存出入库明细_{_now_tag()}.xlsx"
+    return bio, filename
+
+
+# ================== 导出：成品仓实时库存（与「库存-实时库存」列表一致） ==================
+
+
+def build_finished_storage_excel(rows: list[dict], filters: dict):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "成品仓实时库存"
+
+    header = [
+        "订单号",
+        "工厂型号",
+        "类型",
+        "客户名称",
+        "客户订单号",
+        "客户鞋型",
+        "客户商标",
+        "设计师",
+        "调版师",
+        "颜色",
+        "计划入库数量",
+        "实际入库数量",
+        "鞋型库存",
+        "外加工",
+        "状态",
+        "完成时间",
+    ]
+
+    parts = []
+    for label, key in (
+        ("订单号", "order_rid"),
+        ("工厂型号", "shoe_rid"),
+        ("客户名称", "customer_name"),
+        ("客户订单号", "order_cid"),
+        ("客户鞋型", "customer_product_name"),
+        ("客户商标", "customer_brand"),
+        ("鞋类型", "category"),
+    ):
+        if filters.get(key):
+            parts.append(f"{label}: {filters[key]}")
+    status_num = filters.get("storage_status_num")
+    if status_num is not None and status_num > -1:
+        parts.append(f"状态: {FINISHED_STORAGE_STATUS.get(status_num, status_num)}")
+    if filters.get("only_in_stock"):
+        parts.append("仅显示有库存订单")
+
+    widths: list[int] = []
+    header_row = _write_title_filters(ws, "成品仓实时库存", len(header), filters)
+    ws.cell(row=3, column=1, value="筛选条件：" + (" | ".join(parts) if parts else "（无筛选条件）"))
+    _write_header(ws, header_row, header, widths)
+
+    center_cols = {11, 12, 13, 14}
+    row_idx = header_row + 1
+    total_estimated = total_actual = total_current = 0
+    for row in rows:
+        estimated = row.get("estimatedInboundAmount") or 0
+        actual = row.get("actualInboundAmount") or 0
+        current = row.get("currentAmount") or 0
+        total_estimated += estimated
+        total_actual += actual
+        total_current += current
+        values = [
+            row.get("orderRId", ""),
+            row.get("shoeRId", ""),
+            row.get("batchType", ""),
+            row.get("customerName", ""),
+            row.get("orderCId", ""),
+            row.get("customerProductName", ""),
+            row.get("customerBrand", ""),
+            row.get("designer", ""),
+            row.get("adjuster", ""),
+            row.get("colorName", ""),
+            estimated,
+            actual,
+            current,
+            "是" if row.get("isOutsourced") else "否",
+            row.get("storageStatusLabel", ""),
+            row.get("finishedTime") or "",
+        ]
+        _write_data_row(ws, row_idx, values, widths, center_cols=center_cols)
+        row_idx += 1
+
+    summary = [""] * len(header)
+    summary[0] = "合计"
+    summary[10], summary[11], summary[12] = total_estimated, total_actual, total_current
+    _write_data_row(ws, row_idx, summary, widths, center_cols=center_cols)
+    ws.cell(row=row_idx, column=1).font = HEAD_FONT
+
+    ws.freeze_panes = ws[f"A{header_row + 1}"]
+    _apply_widths(ws, widths)
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    filename = f"成品仓实时库存_{_now_tag()}.xlsx"
     return bio, filename
 
 

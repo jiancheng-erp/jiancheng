@@ -261,6 +261,12 @@ def create_new_order():
     # new order status should be fixed
     order_status = NEW_ORDER_STATUS
     order_salesman_id = order_info["salesmanId"]
+    order_salesman_name = (order_info.get("salesman") or "").strip()
+    if not order_salesman_name:
+        salesman_staff = (
+            db.session.query(Staff).filter(Staff.staff_id == order_salesman_id).first()
+        )
+        order_salesman_name = salesman_staff.staff_name if salesman_staff else ""
     order_shoe_type_list = order_info["orderShoeTypes"]
     customer_shoe_names = order_info["customerShoeName"]
     order_type = normalize_order_type(order_info.get("orderType"))
@@ -278,6 +284,7 @@ def create_new_order():
         start_date=order_start_date,
         end_date=order_end_date,
         salesman_id=order_salesman_id,
+        salesman_name=order_salesman_name,
         production_list_upload_status="0",
         amount_list_upload_status="0",
         supervisor_id=supervisor_id,
@@ -761,6 +768,7 @@ def order_next_step_split_forecast():
                 start_date=order_entity.start_date,
                 end_date=order_entity.end_date,
                 salesman_id=order_entity.salesman_id,
+                salesman_name=order_entity.salesman_name,
                 production_list_upload_status=order_entity.production_list_upload_status,
                 amount_list_upload_status=order_entity.amount_list_upload_status,
                 supervisor_id=order_entity.supervisor_id,
@@ -965,6 +973,29 @@ def order_cid_update():
         order_entity.order_cid = order_cid
     else:
         return jsonify({"error": "order not found"}), 400
+    db.session.commit()
+    return jsonify({"msg": "ok"}), 200
+
+
+@order_create_bp.route("/ordercreate/updateordersalesman", methods=["POST"])
+def order_salesman_update():
+    character, _, _ = current_user_info()
+    if getattr(character, "character_id", None) not in (
+        BUSINESS_MANAGER_ROLE,
+        BUSINESS_CLERK_ROLE,
+        BUSINESS_ASSISTANT_ROLE,
+    ):
+        return jsonify({"error": "无权限修改业务员"}), 403
+    order_id = request.json.get("orderId")
+    salesman_name = (request.json.get("salesmanName") or "").strip()
+    if not salesman_name:
+        return jsonify({"error": "业务员不能为空"}), 400
+    if len(salesman_name) > 40:
+        return jsonify({"error": "业务员名称过长"}), 400
+    order_entity = db.session.query(Order).filter(Order.order_id == order_id).first()
+    if not order_entity:
+        return jsonify({"error": "order not found"}), 400
+    order_entity.salesman_name = salesman_name
     db.session.commit()
     return jsonify({"msg": "ok"}), 200
 

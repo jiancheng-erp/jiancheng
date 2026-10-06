@@ -20,6 +20,7 @@
                 <el-form-item label="仅显示有库存订单" style="display: inline-block; margin-left: 12px">
                     <el-switch v-model="showOnlyInStock" @change="getTableData" />
                 </el-form-item>
+                <el-button type="success" :loading="exportLoading" style="margin-left: 12px" @click="exportExcel">导出Excel</el-button>
             </el-col>
         </el-row>
 
@@ -131,6 +132,7 @@ export default {
             // 新增：两个本页筛选
             category: '', // 男鞋 / 女鞋 / 童鞋 / 其它（空=全部）
             showOnlyInStock: false, // 仅显示有库存
+            exportLoading: false,
 
             pageSize: PAGESIZE,
             pageSizes: PAGESIZES,
@@ -206,6 +208,53 @@ export default {
 
             const response2 = await axios.get(`${this.$apiBaseUrl}/warehouse/gettotalstockoffinishedstorage`)
             this.totalStock = Number(response2?.data?.totalStock || 0)
+        },
+        async exportExcel() {
+            if (this.exportLoading) {
+                return
+            }
+            this.exportLoading = true
+            try {
+                const params = {
+                    orderRId: this.searchFilters.orderRIdSearch,
+                    shoeRId: this.searchFilters.shoeRIdSearch,
+                    customerName: this.searchFilters.customerNameSearch,
+                    customerProductName: this.searchFilters.customerProductNameSearch,
+                    orderCId: this.searchFilters.orderCIdSearch,
+                    customerBrand: this.searchFilters.customerBrandSearch,
+                    storageStatusNum: this.storageStatusNum,
+                    ...(this.category ? { category: this.category } : {}),
+                    showAll: this.showOnlyInStock ? 1 : 0
+                }
+                const res = await axios.get(`${this.$apiBaseUrl}/warehouse/export/finished-storage`, {
+                    params,
+                    responseType: 'blob'
+                })
+                let filename = '成品仓实时库存.xlsx'
+                const disposition = res.headers['content-disposition'] || res.headers['Content-Disposition']
+                if (disposition) {
+                    const match = disposition.match(/filename\*=UTF-8''(.+)|filename="?([^";]+)"?/)
+                    if (match) {
+                        filename = decodeURIComponent(match[1] || match[2])
+                    }
+                }
+                const blob = new Blob([res.data], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(link.href)
+                this.$message.success('导出成功')
+            } catch (error) {
+                console.error(error)
+                this.$message.error('导出失败')
+            } finally {
+                this.exportLoading = false
+            }
         },
         async viewRecords(row) {
             const params = { storageId: row.storageId }

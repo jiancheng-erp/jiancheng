@@ -726,7 +726,7 @@ def get_order_info_business():
         "orderType": entity.Order.order_type,
         "batchInfoTypeName": entity.BatchInfoType.batch_info_type_name,
         "batchInfoType": batch_info_type_response,
-        "orderStaffName": entity.Staff.staff_name,
+        "orderStaffName": entity.Order.salesman_name or entity.Staff.staff_name,
         "dateInfo": formatted_start_date + " —— " + formatted_end_date,
         "startDate": formatted_start_date,
         "endDate": formatted_end_date,
@@ -3275,6 +3275,24 @@ def get_technical_confirm_status():
     return jsonify({"status": "鞋型辅料材料规格已由技术部确认！"})
 
 
+def _resolve_export_salesman(order_ids):
+    """导出订单用的业务员：优先取订单上填写的业务员，未填写时回退为创建人姓名；
+    多个订单时去重后用「、」连接。"""
+    orders = (
+        db.session.query(Order, Staff.staff_name)
+        .outerjoin(Staff, Staff.staff_id == Order.salesman_id)
+        .filter(Order.order_id.in_(order_ids))
+        .order_by(Order.order_id)
+        .all()
+    )
+    names = []
+    for order, staff_name in orders:
+        name = (order.salesman_name or staff_name or "").strip()
+        if name and name not in names:
+            names.append(name)
+    return "、".join(names)
+
+
 @order_bp.route("/order/exportorder", methods=["GET"])
 def export_order():
     output_type = request.args.get("outputType", type=int)
@@ -3382,7 +3400,8 @@ def export_order():
 
     # 构建 meta_data（备用用作整体字段）
     meta_data = {
-        "batchSizeNames": batch_size_names_map  # 如果你后续也需要在模板中用
+        "batchSizeNames": batch_size_names_map,  # 如果你后续也需要在模板中用
+        "salesman": _resolve_export_salesman(order_ids),
     }
 
     template_path = os.path.join(FILE_STORAGE_PATH, "订单模板.xlsx")
@@ -3533,7 +3552,7 @@ def export_production_order():
         .filter(Order.order_id == order_ids[0])
         .first()
     )
-    meta_data = {"sizeNames": []}
+    meta_data = {"sizeNames": [], "salesman": _resolve_export_salesman(order_ids)}
     # add size_name of batch info type
     for i in range(len(SHOESIZERANGE)):
         meta_data["sizeNames"].append(getattr(shoe_size_names, f"size_{i+34}_name"))

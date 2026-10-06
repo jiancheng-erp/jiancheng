@@ -416,6 +416,7 @@ class Order(db.Model):
         db.Integer,
     )
     salesman_id = db.Column(db.Integer, nullable=False)
+    salesman_name = db.Column(db.String(40), nullable=True)
     production_list_upload_status = db.Column(db.String(1), nullable=True)
     amount_list_upload_status = db.Column(db.String(1), nullable=True)
     batch_info_type_id = db.Column(db.Integer, nullable=False)

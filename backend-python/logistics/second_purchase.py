@@ -177,6 +177,91 @@ def _get_hotsole_latest_craft(hotsole_bi):
     return hotsole_bi.craft_name
 
 
+def _attach_first_purchase_hotsole_refs(items, total_bom_id):
+    """把一次采购负责的烫底类材料（H 类、非「烫底」本身）作为参考信息挂到
+    总仓采购的「烫底」条目上（firstPurchaseHotsole），仅供查看，不单独成行、不参与保存。"""
+    entities = (
+        db.session.query(
+            BomItem,
+            Material,
+            Supplier,
+            PurchaseOrderItem,
+            ProductionInstructionItem,
+        )
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(Material, Material.material_id == BomItem.material_id)
+        .join(Supplier, Material.material_supplier == Supplier.supplier_id)
+        .join(
+            ProductionInstructionItem,
+            ProductionInstructionItem.production_instruction_item_id
+            == BomItem.production_instruction_item_id,
+        )
+        .outerjoin(
+            PurchaseOrderItem, PurchaseOrderItem.bom_item_id == BomItem.bom_item_id
+        )
+        .filter(
+            Bom.total_bom_id == total_bom_id,
+            ProductionInstructionItem.material_type == "H",
+            Material.material_name != "烫底",
+        )
+        .order_by(Supplier.supplier_name, Material.material_name)
+        .all()
+    )
+
+    refs = {}
+    for bom_item, material, supplier, purchase_order_item, pii in entities:
+        key = (
+            supplier.supplier_name,
+            material.material_name,
+            bom_item.material_model,
+            bom_item.material_specification,
+            bom_item.bom_item_color or "",
+        )
+        purchase_amount = (
+            purchase_order_item.purchase_amount
+            if purchase_order_item and purchase_order_item.purchase_amount is not None
+            else Decimal(0.00)
+        )
+        if key not in refs:
+            refs[key] = {
+                "supplierName": supplier.supplier_name,
+                "materialName": material.material_name,
+                "materialModel": bom_item.material_model,
+                "materialSpecification": bom_item.material_specification,
+                "color": bom_item.bom_item_color,
+                "unit": material.material_unit,
+                "craftName": pii.pre_craft_name or bom_item.craft_name,
+                "approvalUsage": bom_item.total_usage or Decimal(0.00),
+                "purchaseAmount": purchase_amount,
+            }
+        else:
+            refs[key]["approvalUsage"] += bom_item.total_usage or Decimal(0.00)
+            refs[key]["purchaseAmount"] += purchase_amount
+
+    if not refs:
+        return
+    ref_list = list(refs.values())
+    for item in items:
+        if "烫底" in (item.get("materialName") or ""):
+            item["firstPurchaseHotsole"] = ref_list
+
+
+def _get_shoe_color_rank(order_shoe_id):
+    """鞋型颜色顺序：按该订单鞋款下鞋型（order_shoe_type）录入顺序，返回 {颜色名: 序号}。"""
+    rows = (
+        db.session.query(Color.color_name)
+        .join(ShoeType, ShoeType.color_id == Color.color_id)
+        .join(OrderShoeType, OrderShoeType.shoe_type_id == ShoeType.shoe_type_id)
+        .filter(OrderShoeType.order_shoe_id == order_shoe_id)
+        .order_by(OrderShoeType.order_shoe_type_id)
+        .all()
+    )
+    rank = {}
+    for (color_name,) in rows:
+        rank.setdefault(color_name or "", len(rank))
+    return rank
+
+
 def _split_accessory_by_shoe_color(total_bom_id, material_id, purchase_amount):
     """Legacy wrapper — no longer used for new downloads. Kept for compatibility."""
     color_rows = (
@@ -774,6 +859,12 @@ def get_shoe_bom_items():
         for value in combined_items.values()
     ]
 
+    total_bom = (
+        db.session.query(TotalBom).filter(TotalBom.total_bom_rid == bom_rid).first()
+    )
+    if total_bom:
+        _attach_first_purchase_hotsole_refs(result, total_bom.total_bom_id)
+
     return jsonify(result)
 
 
@@ -903,6 +994,14 @@ def get_purchase_items_for_edit():
                 ),
             }
         )
+
+    purchase_order = (
+        db.session.query(PurchaseOrder)
+        .filter(PurchaseOrder.purchase_order_rid == purchase_order_id)
+        .first()
+    )
+    if purchase_order:
+        _attach_first_purchase_hotsole_refs(result, purchase_order.bom_id)
 
     return jsonify(result)
 
@@ -1739,6 +1838,7 @@ def submit_purchase_divide_orders():
                             Bom.total_bom_id == purchase_order.bom_id,
                             BomItem.material_id == bom_material_id,
                         )
+                        .order_by(OrderShoeType.order_shoe_type_id, BomItem.bom_item_id)
                         .all()
                     )
                     # 通过 order_shoe_type_id 关联同鞋型的一次BOM（bom_type=0），
@@ -1908,7 +2008,9 @@ def submit_purchase_divide_orders():
     )
     generated_files = []
     # Split into standard, zipper 辅料订购单, and other 辅料订购单 formats
-    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
+    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(
+        purchase_divide_order_dict, _get_shoe_color_rank(order_shoe_id)
+    )
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(
@@ -2448,6 +2550,7 @@ def download_purchase_order_zip():
                             Bom.total_bom_id == purchase_order.bom_id,
                             BomItem.material_id == bom_material_id,
                         )
+                        .order_by(OrderShoeType.order_shoe_type_id, BomItem.bom_item_id)
                         .all()
                     )
                     # 通过 order_shoe_type_id 关联同鞋型的一次BOM（bom_type=0），
@@ -2582,7 +2685,10 @@ def download_purchase_order_zip():
 
     generated_files = []
     # Split into standard, zipper 辅料订购单, and other 辅料订购单 formats
-    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(purchase_divide_order_dict)
+    standard_pdo_dict, zipper_pdo_dict, other_acc_pdo_dict = split_second_purchase_orders(
+        purchase_divide_order_dict,
+        _get_shoe_color_rank(order_shoe_info.PurchaseOrder.order_shoe_id),
+    )
     template_path = os.path.join(FILE_STORAGE_PATH, "标准采购订单.xlsx")
     size_template_path = os.path.join(FILE_STORAGE_PATH, "新标准采购订单尺码版.xlsx")
     hotsole_template_path = os.path.join(FILE_STORAGE_PATH, "烫底标准采购订单.xlsx")

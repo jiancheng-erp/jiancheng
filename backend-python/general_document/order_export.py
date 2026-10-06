@@ -488,6 +488,8 @@ def generate_excel_file(template_path, new_file_path, order_data: dict, metadata
     ws = wb.active
     # Insert the series data
     insert_series_data(wb, order_data, "A", 9, include_price=include_price)
+    if metadata.get("salesman"):
+        ws["A6"] = "业务员：" + metadata["salesman"]
 
     # insert shoe size name
     # column = "E"
@@ -507,6 +509,8 @@ def generate_amount_excel_file(template_path, new_file_path, order_data: dict, m
     ws = wb.active
     # Insert the series data
     insert_series_data_amount(wb, order_data, "A", 9, include_price=include_price)
+    if metadata.get("salesman"):
+        ws["A6"] = "业务员：" + metadata["salesman"]
 
     # insert shoe size name
     # column = "E"
