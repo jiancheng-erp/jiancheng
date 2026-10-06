@@ -256,6 +256,7 @@ def _pair_cap_nail(cap_items, nail_items):
             "数量": c.get("数量", ""),
             "备注": c.get("备注", ""),
             "_pair_id": c.get("_zipper_pair_id"),
+            "_shoe_color": c.get("_shoe_color") or "",
         })
     leftover_nails = [n for n in nail_items if id(n) not in used_nail]
     return merged, leftover_caps, leftover_nails
@@ -531,12 +532,15 @@ def split_zipper_orders(purchase_divide_order_dict):
 _STANDARD_TYPE_IDS = {1, 2, 4}
 
 
-def split_second_purchase_orders(purchase_divide_order_dict):
+def split_second_purchase_orders(purchase_divide_order_dict, color_rank=None):
     """
     二次采购专用分类函数：
       - 面料(1)、里料(2)、化工(4, 热熔胶等) → 标准采购订单格式
       - 拉链 + 拉链头 → 辅料订购单格式（拉头颜色列，单独一张单子）
       - 其余辅料（鞋眼+垫片、饰品等）→ 辅料订购单格式（颜色列，单独一张单子）
+
+    color_rank: {鞋型颜色名: 序号}，各订单内的行按该顺序（采购录入的鞋型颜色顺序）排列；
+    未在其中的颜色排在最后。
 
     返回:
         standard_dict       : pdo_rid → 标准格式数据
@@ -546,11 +550,16 @@ def split_second_purchase_orders(purchase_divide_order_dict):
     standard_dict = {}
     zipper_dict = {}
     other_accessory_dict = {}
+    color_rank = color_rank or {}
+
+    def _rank(shoe_color):
+        return color_rank.get(shoe_color or "", len(color_rank))
 
     for pdo_rid, data in purchase_divide_order_dict.items():
         items = data["seriesData"]
 
         std_items = [i for i in items if i.get("_material_type_id") in _STANDARD_TYPE_IDS]
+        std_items.sort(key=lambda i: _rank(i.get("_shoe_color")))
         acc_items = [i for i in items if i.get("_material_type_id") not in _STANDARD_TYPE_IDS]
 
         # ── Standard items ────────────────────────────────────────────────────
@@ -615,7 +624,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 matched = _find_matching_head(z, sc_head_map, sc_heads[0])
                 return matched
 
-            for z in sorted(zipper_items, key=lambda x: (x.get("_shoe_color", ""), x.get("物品名称", "") or x.get("_material_name", ""))):
+            for z in sorted(zipper_items, key=lambda x: (_rank(x.get("_shoe_color")), x.get("物品名称", "") or x.get("_material_name", ""))):
                 head = _pick_head_for_zipper(z) if head_items else {}
                 zipper_series.append({
                     "工厂货号": ((z.get("_factory_no") or "") + " " + (z.get("_shoe_color") or "")).strip(),
@@ -624,6 +633,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "单位": z.get("单位", ""),
                     "数量": z.get("数量", ""),
                     "备注": z.get("备注", ""),
+                    "_shoe_color": z.get("_shoe_color") or "",
                 })
 
         # 鞋眼 + 垫片 → other_series
@@ -642,6 +652,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                     "单位": e.get("单位", ""),
                     "数量": e.get("数量", ""),
                     "备注": e.get("备注", ""),
+                    "_shoe_color": e.get("_shoe_color") or "",
                 })
 
         # 帽/饰扣 + 钉：填写了相同配对组编号且匹配成功的合并为一行；
@@ -655,6 +666,7 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 "数量": qty,
                 "备注": src.get("备注", ""),
                 "_pair_id": pair_id,
+                "_shoe_color": src.get("_shoe_color") or "",
             }
 
         def _to_decimal(v):
@@ -713,12 +725,13 @@ def split_second_purchase_orders(purchase_divide_order_dict):
                 "备注": item.get("备注", ""),
                 # 保留 BOM 行标识，使完全相同的重复行在写表合并阶段不被合并
                 "_row_key": item.get("_row_key"),
+                "_shoe_color": item.get("_shoe_color") or "",
             })
 
         base_meta = {k: v for k, v in data.items() if k != "seriesData"}
 
         if zipper_series:
-            zipper_series.sort(key=lambda x: x.get("工厂货号", ""))
+            zipper_series.sort(key=lambda x: _rank(x.get("_shoe_color")))
             zipper_dict[pdo_rid] = {
                 **base_meta,
                 "颜色列名": "拉头颜色",
@@ -726,10 +739,12 @@ def split_second_purchase_orders(purchase_divide_order_dict):
             }
 
         if other_series:
-            # 排序：优先按 BOM 录入顺序（_row_key=bom_item_id）排列带 BOM 标识的辅料，
+            # 排序：先按鞋型颜色顺序（采购录入顺序），同色内优先按 BOM 录入顺序
+            # （_row_key=bom_item_id）排列带 BOM 标识的辅料，
             # 其余（鞋眼/帽钉等无 BOM 标识的拆分行）按 工厂货号→配对组→材料货号，
             # 保持同组帽钉相邻。
             other_series.sort(key=lambda x: (
+                _rank(x.get("_shoe_color")),
                 0 if x.get("_row_key") is not None else 1,
                 x.get("_row_key") if x.get("_row_key") is not None else 0,
                 x.get("工厂货号", ""),

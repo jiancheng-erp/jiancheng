@@ -830,7 +830,7 @@ def generate_production_excel_file(
     ws["D3"] = start_date
     ws["I3"] = end_date
     ws["N3"] = customer_rid
-    ws["Q3"] = q3_value
+    ws["Q3"] = (q3_value or "") + (metadata.get("salesman") or "")
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
     if include_price:
@@ -893,7 +893,7 @@ def generate_production_amount_excel_file(
     ws["D3"] = start_date
     ws["I3"] = end_date
     ws["N3"] = customer_rid
-    ws["Q3"] = q3_value
+    ws["Q3"] = (q3_value or "") + (metadata.get("salesman") or "")
     set_global_font(ws, font_size=14)  # 这里设置全局字体
     auto_adjust_column_width(ws, max_width=30)
     if include_price:

@@ -50,7 +50,8 @@
                                 <el-button v-if="orderData.wrapRequirementUploadStatus === '已上传包装文件' && !isFinanceManager" type="primary" size="default" @click="download(2)">查看</el-button>
                             </el-descriptions-item>
                             <el-descriptions-item label="订单业务员" align="center">
-                                {{ orderData.orderStaffName }}
+                                <el-input class="u-w-200" v-model="orderData.orderStaffName" :disabled="!canEditSalesman" maxlength="40"> </el-input>
+                                <el-button v-if="canEditSalesman" type="primary" style="margin-left: 8px" @click="saveSalesman">保存业务员</el-button>
                             </el-descriptions-item>
                             <el-descriptions-item label="信息操作" align="center">
                                 <el-button v-if="allowEditInfo" @click="toggleEditInfo" type="warning"> 修改信息 </el-button>
@@ -341,6 +342,10 @@ export default {
         userIsClerk() {
             return this.role == 21
         },
+        canEditSalesman() {
+            // 业务经理/文员/助理在任意订单状态（含已下发）都可修改业务员
+            return [4, 21, 27].includes(Number(this.role))
+        },
         canViewPrice() {
             return this.userIsManager || this.userIsClerk || this.isFinanceManager
         },
@@ -426,6 +431,7 @@ export default {
             staffId: localStorage.getItem('staffid'),
             orderData: {},
             originalOrderRid: '',
+            originalSalesmanName: '',
             revertInfo: null,
             orderDBId: '',
             orderCurStatus: '',
@@ -555,6 +561,7 @@ export default {
             console.log(response.data)
             this.orderData = response.data
             this.originalOrderRid = this.normalizeOrderRid(this.orderData.orderRid)
+            this.originalSalesmanName = this.orderData.orderStaffName
             this.orderShoeData = response.data.orderShoeAllData
             this.batchInfoType = response.data.batchInfoType
             this.orderDBId = this.orderData.orderId
@@ -581,6 +588,28 @@ export default {
             console.log(this.editOrderInfoDisabled)
             console.log(this.orderCurStatus)
             console.log(this.orderCurStatus == 6)
+        },
+        async saveSalesman() {
+            const salesmanName = (this.orderData.orderStaffName || '').trim()
+            if (!salesmanName) {
+                ElMessage.warning('业务员不能为空')
+                this.orderData.orderStaffName = this.originalSalesmanName
+                return
+            }
+            if (salesmanName === this.originalSalesmanName) {
+                return
+            }
+            try {
+                await axios.post(`${this.$apiBaseUrl}/ordercreate/updateordersalesman`, {
+                    orderId: this.orderId,
+                    salesmanName
+                })
+                this.originalSalesmanName = salesmanName
+                this.orderData.orderStaffName = salesmanName
+                ElMessage.success('业务员已更新')
+            } catch (error) {
+                ElMessage.error('业务员更新失败')
+            }
         },
         async submitOrderInfo() {
             this.orderData.orderRid = this.normalizeOrderRid(this.orderData.orderRid)

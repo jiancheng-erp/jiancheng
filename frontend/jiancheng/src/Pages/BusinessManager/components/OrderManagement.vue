@@ -208,11 +208,11 @@
             <el-form-item label="业务员" prop="salesman" :rules="[
                 {
                     required: true,
-                    message: '请选择业务员',
+                    message: '请填写业务员',
                     trigger: ['blur']
                 }
             ]">
-                <el-input v-model="newOrderForm.salesman" disabled></el-input>
+                <el-input v-model="newOrderForm.salesman" placeholder="默认为当前用户名，可修改" clearable></el-input>
             </el-form-item>
 
             <el-form-item label="选择审批人" prop="supervisorId" :rules="[

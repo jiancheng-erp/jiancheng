@@ -22,6 +22,7 @@ from general_document.finished_warehouse_excel import (
     build_finished_outbound_excel,
     build_finished_inout_excel,
     build_finished_inout_summary_by_model_excel,
+    build_finished_storage_excel,
 )
 from general_document.shoe_outbound_list import (
     generate_finished_outbound_apply_excel,
@@ -40,6 +41,10 @@ BUSINESS_ASSISTANT_CHARACTER_ID = 27
 
 @finished_storage_bp.route("/warehouse/getfinishedstorages", methods=["GET"])
 def get_finished_in_out_overview():
+    return _collect_finished_storages()
+
+
+def _collect_finished_storages(paginate=True):
     """
     鏌ヨ鎴愬搧鍏?鍑哄簱鎬昏锛堟敮鎸佲€滀粎鍙叆搴撯€濊繃婊わ級
     inboundableOnly:
@@ -128,20 +133,20 @@ def get_finished_in_out_overview():
             Customer.customer_brand.ilike(f"%{customer_brand}%")
         )
 
-    if category_kw == "鐢烽瀷":
-        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%鐢?"))
-    elif category_kw == "濂抽瀷":
-        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%濂?"))
-    elif category_kw == "绔ラ瀷":
-        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%绔?"))
-    elif category_kw == "鍏跺畠":
+    if category_kw == "男鞋":
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%男%"))
+    elif category_kw == "女鞋":
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%女%"))
+    elif category_kw == "童鞋":
+        base_query = base_query.filter(BatchInfoType.batch_info_type_name.like("%童%"))
+    elif category_kw == "其它":
         base_query = base_query.filter(
             or_(
                 BatchInfoType.batch_info_type_name.is_(None),
                 and_(
-                    not_(BatchInfoType.batch_info_type_name.like("%鐢?")),
-                    not_(BatchInfoType.batch_info_type_name.like("%濂?")),
-                    not_(BatchInfoType.batch_info_type_name.like("%绔?")),
+                    not_(BatchInfoType.batch_info_type_name.like("%男%")),
+                    not_(BatchInfoType.batch_info_type_name.like("%女%")),
+                    not_(BatchInfoType.batch_info_type_name.like("%童%")),
                 ),
             )
         )
@@ -175,21 +180,22 @@ def get_finished_in_out_overview():
     total = db.session.query(func.count()).select_from(id_subq).scalar()
 
     # 鍙栧綋椤典富閿紙鍙寜 order_rid 鎺掑簭锛屼篃鍙敼涓哄垱寤烘椂闂寸瓑锛?
-    page_ids = (
-        db.session.query(id_subq.c.sid)
-        .order_by(id_subq.c.order_rid_for_sort.asc())
-        .limit(number)
-        .offset((page - 1) * number)
-        .all()
+    page_ids_query = db.session.query(id_subq.c.sid).order_by(
+        id_subq.c.order_rid_for_sort.asc()
     )
-    page_ids = [x[0] for x in page_ids]
+    if paginate:
+        page_ids_query = page_ids_query.limit(number).offset((page - 1) * number)
+    page_ids = [x[0] for x in page_ids_query.all()]
     if not page_ids:
         return {"result": [], "total": total}
 
     # 鈥斺€?鐢ㄥ綋椤典富閿洖鏌ュ畬鏁存槑缁?鈥斺€旓紙涓庡師 base_query 鍚屾牱鐨勫垪锛?
-    page_query = base_query.filter(
-        FinishedShoeStorage.finished_shoe_id.in_(page_ids)
-    ).order_by(Order.order_rid.asc())
+    page_query = base_query
+    if paginate:
+        page_query = page_query.filter(
+            FinishedShoeStorage.finished_shoe_id.in_(page_ids)
+        )
+    page_query = page_query.order_by(Order.order_rid.asc())
     rows = page_query.all()
 
     # 鈥斺€?缁勮杩斿洖 鈥斺€?
@@ -2499,6 +2505,30 @@ def export_shoe_inout_summary_by_model():
     bio, filename = build_finished_inout_summary_by_model_excel(
         summary["rows"], summary["stat"], filters
     )
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@finished_storage_bp.route("/warehouse/export/finished-storage", methods=["GET"])
+def export_finished_storage():
+    """导出成品仓实时库存，筛选条件与 /warehouse/getfinishedstorages 一致（不分页）。"""
+    data = _collect_finished_storages(paginate=False)
+    filters = {
+        "order_rid": request.args.get("orderRId"),
+        "shoe_rid": request.args.get("shoeRId"),
+        "customer_name": request.args.get("customerName"),
+        "customer_product_name": request.args.get("customerProductName"),
+        "order_cid": request.args.get("orderCId"),
+        "customer_brand": request.args.get("customerBrand"),
+        "category": request.args.get("category"),
+        "storage_status_num": request.args.get("storageStatusNum", type=int),
+        "only_in_stock": request.args.get("showAll", default=0, type=int) == 1,
+    }
+    bio, filename = build_finished_storage_excel(data["result"], filters)
     return send_file(
         bio,
         as_attachment=True,
