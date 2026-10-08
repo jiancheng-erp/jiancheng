@@ -3152,7 +3152,11 @@ export default {
                 })
                 const disposition = response.headers['content-disposition'] || ''
                 let filename = '订单汇总.xlsx'
-                const match = disposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)/i)
+                // 必须优先匹配 filename*=（UTF-8 编码的完整文件名），服务端为兼容旧客户端同时返回了
+                // ASCII 回退的 filename=（会丢失中文字符），若正则顺序颠倒会导致文件名丢失中文部分。
+                const utf8Match = disposition.match(/filename\*=UTF-8''([^"';]+)/i)
+                const asciiMatch = disposition.match(/filename=["']?([^"';]+)["']?/i)
+                const match = utf8Match || asciiMatch
                 if (match && match[1]) {
                     filename = decodeURIComponent(match[1])
                 }
