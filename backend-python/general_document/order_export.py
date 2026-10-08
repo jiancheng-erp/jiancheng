@@ -28,6 +28,8 @@ def get_currency_format(currency_type: str, decimals: int = 3) -> str:
 
 # Function to load the Excel template and prepare for modification
 def load_template(template_path, new_file_path):
+    # Ensure the destination directory exists before copying the template
+    os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
     # Copy the template to a new file
     shutil.copy(template_path, new_file_path)
     # Load the new workbook
