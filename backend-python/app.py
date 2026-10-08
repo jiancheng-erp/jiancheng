@@ -34,7 +34,10 @@ def create_app(config=None):
     app.config.from_object(config_obj)
     
     # Enable CORS
-    CORS(app, supports_credentials=True)
+    # expose_headers 是必须的：前端部分导出功能使用 axios+blob 方式下载文件（以便携带
+    # Authorization 头），需要在 JS 里读取 Content-Disposition 头解析真实文件名；
+    # 浏览器默认不会把该响应头暴露给跨域 JS，必须显式声明才能读取到。
+    CORS(app, supports_credentials=True, expose_headers=["Content-Disposition"])
     
     # Initialize database (db instance from app_config)
     db.init_app(app)
@@ -87,6 +90,7 @@ def create_app(config=None):
         "/craftsheet/downloadcraftsheet",
         "/order/exportorder",
         "/order/exportproductionorder",
+        "/order/downloadpackagingdoc",
         "/multiissue/downloadtotalpurchaseorder",
         "/logistics/downloadlastpurchaseorders",
         "/logistics/downloadpackagepurchaseorders",
