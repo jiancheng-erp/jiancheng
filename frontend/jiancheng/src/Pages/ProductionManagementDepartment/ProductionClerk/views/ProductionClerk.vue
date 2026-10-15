@@ -26,13 +26,13 @@
               <el-icon><Memo /></el-icon>
               <span>订单生产明细</span>
             </el-menu-item>
+            <el-menu-item index="7" @click="handleMenuClick(7)">
+              <el-icon><Finished /></el-icon>
+              <span>业务生产订单</span>
+            </el-menu-item>
             <el-menu-item index="3" @click="handleMenuClick(3)">
               <el-icon><Management /></el-icon>
               <span>组号名字管理</span>
-            </el-menu-item>
-            <el-menu-item index="5" @click="handleMenuClick(5)">
-              <el-icon><Download /></el-icon>
-              <span>业务生产订单下载</span>
             </el-menu-item>
             <el-menu-item index="6" @click="handleMenuClick(6)">
               <el-icon><Printer /></el-icon>
@@ -59,9 +59,9 @@
   import QuantityReportOverview from '../components/QuantityReportOverview.vue'
   import ProductionLinesManagement from '../components/ProductionLinesManagement.vue'
   import PersonalInfo from '@/components/PersonalInfo.vue'
-  import BusinessOrderDownload from '../components/BusinessOrderDownload.vue'
   import ProductionInstructionDownload from '../components/ProductionInstructionDownload.vue'
-  import { UserFilled, Menu, Histogram, Memo, Management, Download, Printer, User } from '@element-plus/icons-vue'
+  import OrderApprovalOverview from '../../ProductionSharedPages/OrderApprovalOverview.vue'
+  import { UserFilled, Menu, Histogram, Memo, Management, Download, Printer, User, Finished } from '@element-plus/icons-vue'
   import { ref } from 'vue'
   import axios from 'axios'
   import { logout } from '@/Pages/utils/logOut'
@@ -73,8 +73,9 @@
       OrderProgress,
       ProductionLinesManagement,
       PersonalInfo,
-      BusinessOrderDownload,
       ProductionInstructionDownload,
+      OrderApprovalOverview,
+      Finished,
       Menu,
       Histogram,
       Memo,
@@ -114,11 +115,11 @@
           case 4:
             this.currentComponent = 'PersonalInfo'
             break
-          case 5:
-            this.currentComponent = 'BusinessOrderDownload'
-            break
           case 6:
             this.currentComponent = 'ProductionInstructionDownload'
+            break
+          case 7:
+            this.currentComponent = 'OrderApprovalOverview'
             break
         }
       },
