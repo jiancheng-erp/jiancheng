@@ -31,6 +31,10 @@
             <el-icon><Calendar /></el-icon>
             <span>订单排期</span>
           </el-menu-item>
+          <el-menu-item index="12" @click="handleMenuClick(12)">
+            <el-icon><Finished /></el-icon>
+            <span>业务生产订单</span>
+          </el-menu-item>
           <el-menu-item index="9" @click="handleMenuClick(9)">
             <el-icon><Histogram /></el-icon>
             <span>生产报表</span>
@@ -78,7 +82,8 @@ import ProductionManagement from '../components/ProductionManagement.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
 import NewProductionScheduling from '../components/NewProductionScheduling.vue'
-import { UserFilled, Menu, TrendCharts, Calendar, Histogram, Box, Share, CircleCheck, OfficeBuilding, User } from '@element-plus/icons-vue'
+import OrderApprovalOverview from '../../ProductionSharedPages/OrderApprovalOverview.vue'
+import { UserFilled, Menu, TrendCharts, Calendar, Histogram, Box, Share, CircleCheck, OfficeBuilding, User, Finished } from '@element-plus/icons-vue'
 import { ref } from 'vue'
 import axios from 'axios'
 import { logout } from '@/Pages/utils/logOut'
@@ -100,6 +105,8 @@ export default {
     ProductionReport,
     PersonalInfo,
     NewProductionScheduling,
+    OrderApprovalOverview,
+    Finished,
     Menu,
     TrendCharts,
     Calendar,
@@ -135,6 +142,9 @@ export default {
           break
         case 11:
           this.currentComponent = 'NewProductionScheduling'
+          break
+        case 12:
+          this.currentComponent = 'OrderApprovalOverview'
           break
         case 3:
           this.currentComponent = 'LogisticInfo'

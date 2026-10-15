@@ -29,6 +29,10 @@
               <el-icon><Calendar /></el-icon>
               <span>生产排期表</span>
             </el-menu-item>
+            <el-menu-item index="10" @click="handleMenuClick(10)">
+              <el-icon><Finished /></el-icon>
+              <span>业务生产订单</span>
+            </el-menu-item>
             <el-menu-item index="3" @click="handleMenuClick(3)">
               <el-icon><Box /></el-icon>
               <span>物料信息</span>
@@ -63,13 +67,14 @@
 <script>
 import AllHeader from '@/components/AllHeader.vue'
 import Dashboard from '../components/TodoTasksView.vue'
-import { UserFilled, Menu, DataBoard, Calendar, Box, CircleCheck, Money, DataAnalysis, User } from '@element-plus/icons-vue'
+import { UserFilled, Menu, DataBoard, Calendar, Box, CircleCheck, Money, DataAnalysis, User, Finished } from '@element-plus/icons-vue'
 import ProductionSchedulingDialogue from '../components/ProductionSchedulingDialogue.vue'
 import LogisticInfo from '../components/LogisticInfo.vue'
 import OutSourceApproval from '../components/OutSourceApproval.vue'
 import WagesApproval from '../components/WagesApproval.vue'
 import OrderProgress from '../components/OrderProgress.vue'
 import PersonalInfo from '@/components/PersonalInfo.vue'
+import OrderApprovalOverview from '../../ProductionSharedPages/OrderApprovalOverview.vue'
 import MainBoardPage from '@/Pages/CompanyManger/components/MainBoardPage.vue'
 import RevertEventAnalyse from '@/Pages/CompanyManger/components/RevertEventAnalyse/RevertEventAnalyse.vue'
 import axios from 'axios'
@@ -85,6 +90,7 @@ export default {
     WagesApproval,
     OrderProgress,
     PersonalInfo,
+    OrderApprovalOverview,
     MainBoardPage,
     RevertEventAnalyse,
     Menu,
@@ -94,7 +100,8 @@ export default {
     CircleCheck,
     Money,
     DataAnalysis,
-    User
+    User,
+    Finished
   },
   data() {
     return {
@@ -135,6 +142,9 @@ export default {
           break
         case 9:
           this.currentComponent = 'RevertEventAnalyse'
+          break
+        case 10:
+          this.currentComponent = 'OrderApprovalOverview'
           break
         case 8:
           this.currentComponent = 'PersonalInfo'

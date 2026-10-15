@@ -3,7 +3,7 @@ import constants
 import time
 from app_config import db
 from flask import Blueprint, jsonify, request, send_file, current_app
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_, and_, case
 from api_utility import to_snake, to_camel, estimate_status_converter
 from login.login import current_user, current_user_info
 import math
@@ -2187,6 +2187,173 @@ def get_all_orders():
             r["orderTotalPairs"] = 0
 
     return jsonify(result)
+
+
+# 总经理确认阶段（总经理审核前订单所处状态）
+ORDER_GENERAL_MANAGER_CONFIRM_STATUS = 7
+APPROVAL_OVERVIEW_CATEGORIES = ("unsubmitted", "pendingGm", "issued", "completed")
+
+
+def _approval_overview_condition(category):
+    """
+    unsubmitted: 业务未提交（生产订单创建阶段，业务员尚未提交）
+    pendingGm:   业务已提交，总经理未审核（业务提交后的文员/经理处理阶段 + 待总经理确认）
+    issued:      总经理已审核并下发（状态已越过总经理确认，且订单尚未完成）
+    completed:   已完成订单（状态达到完成标志）
+    """
+    if category == "completed":
+        return OrderStatus.order_current_status >= ORDER_FINISH_SYMBOL
+    if category == "unsubmitted":
+        return and_(
+            OrderStatus.order_current_status == ORDER_CREATION_STATUS,
+            OrderStatus.order_status_value == 0,
+        )
+    if category == "pendingGm":
+        return or_(
+            and_(
+                OrderStatus.order_current_status == ORDER_CREATION_STATUS,
+                OrderStatus.order_status_value == 1,
+            ),
+            OrderStatus.order_current_status == ORDER_GENERAL_MANAGER_CONFIRM_STATUS,
+        )
+    return and_(
+        OrderStatus.order_current_status > ORDER_GENERAL_MANAGER_CONFIRM_STATUS,
+        OrderStatus.order_current_status < ORDER_FINISH_SYMBOL,
+    )
+
+
+@order_bp.route("/order/getorderapprovaloverview", methods=["GET"])
+def get_order_approval_overview():
+    """生产文员查看订单在业务提交 / 总经理审核 / 下发 / 完成各环节的分布。"""
+    category = request.args.get("category", "unsubmitted")
+    if category not in APPROVAL_OVERVIEW_CATEGORIES:
+        return jsonify({"message": "invalid category"}), 400
+    page = max(request.args.get("page", 1, type=int), 1)
+    page_size = min(max(request.args.get("pageSize", 10, type=int), 1), 200)
+    order_rid = (request.args.get("orderRid") or "").strip()
+    order_cid = (request.args.get("orderCid") or "").strip()
+    customer_name = (request.args.get("customerName") or "").strip()
+    customer_brand = (request.args.get("customerBrand") or "").strip()
+
+    def build_query(target_category, *entities):
+        q = (
+            db.session.query(*entities)
+            .select_from(Order)
+            .join(OrderStatus, OrderStatus.order_id == Order.order_id)
+            .join(Customer, Order.customer_id == Customer.customer_id)
+            .filter(Order.order_type != "F")
+            .filter(_approval_overview_condition(target_category))
+        )
+        if order_rid:
+            q = q.filter(Order.order_rid.like(f"%{order_rid}%"))
+        if order_cid:
+            q = q.filter(func.coalesce(Order.order_cid, "").like(f"%{order_cid}%"))
+        if customer_name:
+            q = q.filter(Customer.customer_name.like(f"%{customer_name}%"))
+        if customer_brand:
+            q = q.filter(
+                func.coalesce(Customer.customer_brand, "").like(f"%{customer_brand}%")
+            )
+        return q
+
+    counts = {
+        key: build_query(key, func.count(Order.order_id)).scalar() or 0
+        for key in APPROVAL_OVERVIEW_CATEGORIES
+    }
+
+    rows = (
+        build_query(category, Order, Customer, OrderStatus)
+        .order_by(Order.order_id.desc())
+        .limit(page_size)
+        .offset((page - 1) * page_size)
+        .all()
+    )
+
+    order_ids = [order.order_id for order, _, _ in rows]
+    status_names = {
+        ref.order_status_id: ref.order_status_name
+        for ref in db.session.query(OrderStatusReference).all()
+    }
+    staff_map = {
+        s.staff_id: s for s in db.session.query(Staff).all()
+    }
+
+    shoe_map = {}
+    pairs_map = {}
+    if order_ids:
+        for order_id, shoe_rid, product_name in (
+            db.session.query(OrderShoe.order_id, Shoe.shoe_rid, OrderShoe.customer_product_name)
+            .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+            .filter(OrderShoe.order_id.in_(order_ids))
+            .order_by(OrderShoe.order_shoe_id.asc())
+            .all()
+        ):
+            shoe_map.setdefault(order_id, []).append(
+                {"shoeRId": shoe_rid, "customerProductName": product_name}
+            )
+        pairs_map = {
+            order_id: int(total or 0)
+            for order_id, total in db.session.query(
+                OrderShoe.order_id,
+                func.coalesce(func.sum(OrderShoeBatchInfo.total_amount), 0),
+            )
+            .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+            .join(
+                OrderShoeBatchInfo,
+                OrderShoeBatchInfo.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .filter(OrderShoe.order_id.in_(order_ids))
+            .group_by(OrderShoe.order_id)
+            .all()
+        }
+
+    result = []
+    for order, customer, order_status in rows:
+        status_msg = status_names.get(order_status.order_current_status, "N/A")
+        if order_status.order_current_status == ORDER_CREATION_STATUS:
+            if order_status.order_status_value == 0:
+                stage_msg = "业务员未提交"
+            else:
+                supervisor = staff_map.get(order.supervisor_id)
+                if supervisor and supervisor.character_id == BUSINESS_CLERK_ROLE:
+                    stage_msg = "待文员补充单价"
+                else:
+                    stage_msg = "待经理审批下发"
+            status_msg += " \n" + stage_msg
+        elif order_status.order_current_status == ORDER_GENERAL_MANAGER_CONFIRM_STATUS:
+            status_msg += " \n待总经理审核"
+
+        salesman = staff_map.get(order.salesman_id)
+        supervisor = staff_map.get(order.supervisor_id)
+        shoes = shoe_map.get(order.order_id, [])
+        result.append(
+            {
+                "orderDbId": order.order_id,
+                "orderRid": order.order_rid,
+                "orderCid": order.order_cid,
+                "orderType": order.order_type,
+                "customerName": customer.customer_name,
+                "customerBrand": customer.customer_brand,
+                "orderStartDate": order.start_date.strftime("%Y-%m-%d") if order.start_date else "",
+                "orderEndDate": order.end_date.strftime("%Y-%m-%d") if order.end_date else "",
+                "orderSalesman": salesman.staff_name if salesman else (order.salesman_name or ""),
+                "orderSupervisor": supervisor.staff_name if supervisor else "",
+                "shoeRIds": [s["shoeRId"] for s in shoes],
+                "customerProductNames": [
+                    s["customerProductName"] for s in shoes if s["customerProductName"]
+                ],
+                "orderTotalPairs": pairs_map.get(order.order_id, 0),
+                "orderStatus": status_msg,
+                "orderStatusVal": order_status.order_current_status,
+                "updateTime": (
+                    order_status.update_time.strftime("%Y-%m-%d %H:%M:%S")
+                    if order_status.update_time
+                    else ""
+                ),
+            }
+        )
+
+    return jsonify({"total": counts[category], "counts": counts, "orders": result})
 
 
 @order_bp.route("/order/getallorderstatus", methods=["GET"])
