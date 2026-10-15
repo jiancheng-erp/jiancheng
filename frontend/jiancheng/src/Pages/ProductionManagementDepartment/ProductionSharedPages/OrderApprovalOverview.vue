@@ -38,34 +38,34 @@
 			height="560"
 			empty-text="暂无符合条件的订单"
 		>
-			<el-table-column prop="orderRid" label="订单号" min-width="120" />
-			<el-table-column prop="orderCid" label="客户订单号" min-width="120" />
+			<el-table-column prop="orderRid" label="订单号" min-width="110" />
+			<el-table-column prop="orderCid" label="客户订单号" min-width="110" />
 			<el-table-column label="鞋型号" min-width="140">
-				<template #default="scope">{{ (scope.row.shoeRIds || []).join('、') }}</template>
-			</el-table-column>
-			<el-table-column label="客户鞋型号" min-width="140">
-				<template #default="scope">{{ (scope.row.customerProductNames || []).join('、') }}</template>
-			</el-table-column>
-			<el-table-column prop="customerName" label="客户名称" min-width="120" />
-			<el-table-column prop="customerBrand" label="客户商标" min-width="100" />
-			<el-table-column prop="orderTotalPairs" label="总双数" width="90" />
-			<el-table-column prop="orderSalesman" label="业务员" width="100" />
-			<el-table-column prop="orderSupervisor" label="审批人" width="100" />
-			<el-table-column prop="orderStartDate" label="开始日期" width="110" />
-			<el-table-column prop="orderEndDate" label="结束日期" width="110" />
-			<el-table-column label="订单状态" min-width="190">
 				<template #default="scope">
-					<span class="status-text">{{ scope.row.orderStatus }}</span>
+					<div>{{ (scope.row.shoeRIds || []).join('、') }}</div>
+					<div class="sub-text">{{ (scope.row.customerProductNames || []).join('、') }}</div>
 				</template>
 			</el-table-column>
-			<el-table-column prop="updateTime" label="状态更新时间" width="170" />
-			<el-table-column v-if="showActions" label="操作" width="300">
+			<el-table-column prop="customerName" label="客户名称" min-width="90" />
+			<el-table-column prop="customerBrand" label="客户商标" min-width="90" />
+			<el-table-column prop="orderTotalPairs" label="总双数" width="80" />
+			<el-table-column prop="orderSalesman" label="业务员" width="95" />
+			<el-table-column prop="orderSupervisor" label="审批人" width="95" />
+			<el-table-column prop="orderStartDate" label="开始日期" width="100" />
+			<el-table-column prop="orderEndDate" label="结束日期" width="100" />
+			<el-table-column label="订单状态" min-width="150">
 				<template #default="scope">
-					<template v-if="Number(scope.row.orderStatusVal) >= ORDER_IN_PRODUCTION_STATUS">
-						<el-button type="primary" size="small" @click="exportProduction(scope.row, 0)">配码导出</el-button>
-						<el-button type="primary" size="small" @click="exportProduction(scope.row, 1)">数量导出</el-button>
-						<el-button type="success" size="small" @click="downloadPackaging(scope.row)">包装资料</el-button>
-					</template>
+					<div class="status-text">{{ scope.row.orderStatus }}</div>
+					<div class="sub-text">{{ scope.row.updateTime }}</div>
+				</template>
+			</el-table-column>
+			<el-table-column v-if="showActions" label="操作" width="110" align="center">
+				<template #default="scope">
+					<div v-if="Number(scope.row.orderStatusVal) >= ORDER_IN_PRODUCTION_STATUS" class="action-cell">
+						<el-button link type="primary" size="small" @click="exportProduction(scope.row, 0)">配码导出</el-button>
+						<el-button link type="primary" size="small" @click="exportProduction(scope.row, 1)">数量导出</el-button>
+						<el-button link type="success" size="small" @click="downloadPackaging(scope.row)">包装资料</el-button>
+					</div>
 				</template>
 			</el-table-column>
 		</el-table>
@@ -229,6 +229,21 @@ function downloadPackaging(row) {
 
 .status-text {
 	white-space: pre-line;
+}
+
+.sub-text {
+	color: #909399;
+	font-size: 12px;
+}
+
+.action-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.action-cell :deep(.el-button + .el-button) {
+	margin-left: 0;
 }
 
 .pagination-row {
