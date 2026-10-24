@@ -151,7 +151,7 @@
                 <vxe-column title="调整鞋码数量" fixed="right" width="120">
                     <template #default="scope">
                         <vxe-button status="primary" @click="openShoeSizesDialog(scope)" :disabled="scope.row.materialType
-                            !== '底材' && scope.row.materialType !== '烫底'">打开</vxe-button>
+                            !== '底材' && scope.row.materialType !== '烫底' && scope.row.materialCategory != 1">打开</vxe-button>
                     </template>
                 </vxe-column>
             </vxe-table>

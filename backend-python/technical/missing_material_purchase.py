@@ -71,10 +71,10 @@ def _sum_list(nums) -> Decimal:
 
 
 def _is_size_based(mt: str, category=None) -> bool:
-    # 大底/中底/烫底恒为尺码材料；面料(S)按材料 category 决定（1=尺码）。
+    # 大底/中底/烫底恒为尺码材料；面料(S)、辅料(A)按材料 category 决定（1=尺码）。
     if mt in ("O", "M", "H"):
         return True
-    if mt == "S" and category == 1:
+    if mt in ("S", "A") and category == 1:
         return True
     return False
 
@@ -1331,6 +1331,16 @@ def purchase_save():
     if not item_map:
         return jsonify({"success": False, "message": "无明细可处理"}), 400
 
+    mat_category_map: Dict[int, int] = {}
+    _mat_ids = {int(x.material_id) for x in item_map.values() if x.material_id}
+    if _mat_ids:
+        for mid, category in (
+            db.session.query(Material.material_id, Material.material_category)
+            .filter(Material.material_id.in_(_mat_ids))
+            .all()
+        ):
+            mat_category_map[int(mid)] = category
+
     updated = 0
     staged_rows: List[Tuple[WMRItem, Decimal, Optional[List[int]]]] = []
 
@@ -1344,7 +1354,12 @@ def purchase_save():
             continue
 
         mat_type_code = (getattr(model_item, "material_type", "") or "").strip()
-        is_size_based = mat_type_code in ("O", "M", "H")  # 大底/中底/烫底
+        is_size_based = _is_size_based(
+            mat_type_code,
+            mat_category_map.get(int(model_item.material_id))
+            if model_item.material_id
+            else None,
+        )
 
         size_arr = parse_size_purchase_arr(row)
         if is_size_based:
