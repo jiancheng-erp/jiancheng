@@ -563,6 +563,9 @@ def get_materials():
             shoe_size_columns = size_table["大底"]
         elif material.material_name == "中底":
             shoe_size_columns = size_table["中底"]
+        elif material.material_category == 1 and material_type.material_type_id == 3:
+            # 辅料尺码材料（category==1）与烫底/大底一样用大底码
+            shoe_size_columns = size_table.get("大底") or size_table.get("客人码", [])
         elif material.material_category == 1:
             # 面料等尺码材料（category==1）用客人码
             shoe_size_columns = size_table.get("客人码", [])

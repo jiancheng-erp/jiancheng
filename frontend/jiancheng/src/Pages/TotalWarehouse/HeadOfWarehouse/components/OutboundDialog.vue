@@ -44,7 +44,7 @@
                 <el-table-column prop="currentAmount" label="库存" />
                 <el-table-column prop="outboundQuantity" label="出库数量">
                     <template #default="scope">
-                        <el-input-number v-if="scope.row.materialName !== '大底'" size="small"
+                        <el-input-number v-if="scope.row.materialName !== '大底' && scope.row.materialCategory != 1" size="small"
                             v-model="scope.row.outboundQuantity" :min="0" :precision="5"
                             :step="0.00001"></el-input-number>
                         <el-button v-else type="primary"

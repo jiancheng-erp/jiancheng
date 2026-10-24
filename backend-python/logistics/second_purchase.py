@@ -45,6 +45,26 @@ _ACCESSORY_SPLIT_EXCLUDE_TYPES = {1, 2, 4}
 MATERIAL_REUSE_OUTBOUND_TYPE = 8
 
 
+def _is_size_fabric(production_instruction_item, material):
+    """面料(S)按 material_category 决定：category==1 时为尺码面料（用客人码）。"""
+    return (
+        production_instruction_item is not None
+        and production_instruction_item.material_type == "S"
+        and material.material_category == 1
+    )
+
+
+def _is_size_accessory(production_instruction_item, material):
+    """辅料(A)按 material_category 决定：category==1 时与烫底/大底一样按码分配（用大底码）。"""
+    return material.material_category == 1 and (
+        material.material_type_id == 3
+        or (
+            production_instruction_item is not None
+            and production_instruction_item.material_type == "A"
+        )
+    )
+
+
 def _reserve_material_reuse_outbound(order_id, order_shoe_id, warehouse_usage_info, remark=""):
     """为库存利用创建一条待审(status=0)材料复用出库单(type=8)，占用 pending_outbound。
 
@@ -1673,11 +1693,12 @@ def submit_purchase_divide_orders():
         # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
         # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
         # 面料(S)按 category 决定：category==1 时也走尺码表分支（用客人码）。烫底不变。
+        # 辅料(A)按 category 决定：category==1 时与烫底/大底一样走尺码表分支（用大底码）。
         _mat_name = material.material_name or ""
-        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底")) or (
-            production_instruction_item is not None
-            and production_instruction_item.material_type == "S"
-            and material.material_category == 1
+        _is_size_material = (
+            any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+            or _is_size_fabric(production_instruction_item, material)
+            or _is_size_accessory(production_instruction_item, material)
         )
         if not _is_size_material:
             if purchase_order_id not in purchase_divide_order_dict:
@@ -1814,6 +1835,8 @@ def submit_purchase_divide_orders():
                 size_values = order_size_table.get("中底", order_size_table["客人码"])
             elif "楦头" in material.material_name:
                 size_values = order_size_table.get("楦头", order_size_table["客人码"])
+            elif _is_size_accessory(production_instruction_item, material):
+                size_values = order_size_table.get("大底", order_size_table["客人码"])
             else:
                 size_values = order_size_table["客人码"]
             if "烫底" in material.material_name:
@@ -2421,11 +2444,12 @@ def download_purchase_order_zip():
         # 其余（辅料/面料等）走普通分支。这样同一分采购订单即使混有烫底和其他
         # 材料，也能分别生成正确的 Excel，而不会因整单类型而丢失非烫底材料。
         # 面料(S)按 category 决定：category==1 时也走尺码表分支（用客人码）。烫底不变。
+        # 辅料(A)按 category 决定：category==1 时与烫底/大底一样走尺码表分支（用大底码）。
         _mat_name = material.material_name or ""
-        _is_size_material = any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底")) or (
-            production_instruction_item is not None
-            and production_instruction_item.material_type == "S"
-            and material.material_category == 1
+        _is_size_material = (
+            any(k in _mat_name for k in ("大底", "中底", "楦头", "烫底"))
+            or _is_size_fabric(production_instruction_item, material)
+            or _is_size_accessory(production_instruction_item, material)
         )
         if not _is_size_material:
             if pdo_rid not in purchase_divide_order_dict:
@@ -2526,6 +2550,8 @@ def download_purchase_order_zip():
                 size_values = order_size_table.get("中底", order_size_table["客人码"])
             elif "楦头" in material.material_name:
                 size_values = order_size_table.get("楦头", order_size_table["客人码"])
+            elif _is_size_accessory(production_instruction_item, material):
+                size_values = order_size_table.get("大底", order_size_table["客人码"])
             else:
                 size_values = order_size_table["客人码"]
             if "烫底" in material.material_name:
