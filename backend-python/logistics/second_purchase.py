@@ -5,7 +5,7 @@ import os
 import zipfile
 from itertools import groupby
 from operator import itemgetter
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_DOWN, ROUND_HALF_UP
 
 import json
 
@@ -63,6 +63,117 @@ def _is_size_accessory(production_instruction_item, material):
             and production_instruction_item.material_type == "A"
         )
     )
+
+
+def _split_size_accessory_by_shoe_color(purchase_order, purchase_order_item, bom_item):
+    """分码辅料按鞋型颜色拆分采购码数。
+    在同一二次 BOM 下查找该辅料(material/model/spec/color 一致)的所有鞋型颜色 BOM 行，
+    每个码按各颜色 BOM 用量占比分摊采购量（最大余数法保证总数不变）。
+    返回 [(shoe_color_name, {actual_size: amount}), ...]；仅一种颜色时直接返回采购项原码数。
+    """
+    def _own_amounts():
+        return {
+            size: getattr(purchase_order_item, f"size_{size}_purchase_amount", 0) or 0
+            for size in SHOESIZERANGE
+        }
+
+    material_id = bom_item.material_id if bom_item else purchase_order_item.material_id
+    q = (
+        db.session.query(BomItem, Color)
+        .join(Bom, BomItem.bom_id == Bom.bom_id)
+        .join(OrderShoeType, Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(
+            Bom.total_bom_id == purchase_order.bom_id,
+            BomItem.material_id == material_id,
+        )
+    )
+    if purchase_order_item.material_model:
+        q = q.filter(BomItem.material_model == purchase_order_item.material_model)
+    if purchase_order_item.material_specification:
+        q = q.filter(
+            BomItem.material_specification == purchase_order_item.material_specification
+        )
+    if purchase_order_item.color:
+        q = q.filter(BomItem.bom_item_color == purchase_order_item.color)
+
+    groups = {}
+    for bi, color in q.order_by(Color.color_id, BomItem.bom_item_id).all():
+        usage = groups.setdefault(
+            color.color_id, {"name": color.color_name or "", "usage": {}}
+        )["usage"]
+        for size in SHOESIZERANGE:
+            usage[size] = usage.get(size, Decimal(0)) + Decimal(
+                str(getattr(bi, f"size_{size}_total_usage", 0) or 0)
+            )
+    group_list = list(groups.values())
+    if len(group_list) <= 1:
+        return [(group_list[0]["name"] if group_list else "", _own_amounts())]
+
+    result = [(g["name"], {}) for g in group_list]
+    for size in SHOESIZERANGE:
+        total = Decimal(str(getattr(purchase_order_item, f"size_{size}_purchase_amount", 0) or 0))
+        weights = [g["usage"].get(size, Decimal(0)) for g in group_list]
+        weight_sum = sum(weights)
+        if weight_sum <= 0:
+            allocated = [total] + [Decimal(0)] * (len(group_list) - 1)
+        else:
+            raw = [total * w / weight_sum for w in weights]
+            allocated = [r.to_integral_value(rounding=ROUND_DOWN) for r in raw]
+            leftover = total - sum(allocated)
+            order = sorted(
+                range(len(raw)), key=lambda i: raw[i] - allocated[i], reverse=True
+            )
+            for i in order:
+                if leftover < 1:
+                    break
+                allocated[i] += 1
+                leftover -= 1
+            allocated[0] += leftover
+        for (_, amounts), value in zip(result, allocated):
+            amounts[size] = int(value) if value == value.to_integral_value() else float(value)
+    return result
+
+
+def _build_size_accessory_rows(
+    purchase_order,
+    purchase_order_item,
+    bom_item,
+    material,
+    order_shoe_rid,
+    size_values,
+    order_size_table,
+    customer_size_map,
+):
+    """分码辅料采购单行：型号列=工厂型号+鞋型颜色，类别列=材料名称+型号+规格+颜色。"""
+    item_full_name = " ".join(
+        part
+        for part in (
+            material.material_name,
+            bom_item.material_model if bom_item else purchase_order_item.material_model,
+            bom_item.material_specification if bom_item else purchase_order_item.material_specification,
+            bom_item.bom_item_color if bom_item else purchase_order_item.color,
+        )
+        if part
+    )
+    remark = bom_item.remark if bom_item else purchase_order_item.remark
+    rows = []
+    for shoe_color_name, amounts in _split_size_accessory_by_shoe_color(
+        purchase_order, purchase_order_item, bom_item
+    ):
+        obj = {
+            "物品名称": item_full_name,
+            "型号": f"{order_shoe_rid}{shoe_color_name}",
+            "类别": item_full_name,
+            "备注": remark,
+        }
+        for index, size_value in enumerate(size_values):
+            customer_value = order_size_table["客人码"][index]
+            if customer_value in customer_size_map:
+                obj[size_value] = amounts.get(customer_size_map[customer_value], 0)
+        rows.append(obj)
+    return rows
 
 
 def _reserve_material_reuse_outbound(order_id, order_shoe_id, warehouse_usage_info, remark=""):
@@ -1932,6 +2043,36 @@ def submit_purchase_divide_orders():
                             }
                         size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
                 continue
+            elif _is_size_accessory(production_instruction_item, material):
+                size_dict_key = purchase_order_id + "::辅料尺码"
+                if size_dict_key not in size_purchase_divide_order_dict:
+                    size_purchase_divide_order_dict[size_dict_key] = {
+                        "供应商": supplier.supplier_name,
+                        "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                        "备注": purchase_divide_order.purchase_order_remark,
+                        "客户名": customer_name,
+                        "商标": customer_brand,
+                        "环保要求": purchase_divide_order.purchase_order_environmental_request,
+                        "发货地址": purchase_divide_order.shipment_address,
+                        "交货期限": purchase_divide_order.shipment_deadline,
+                        "订单信息": order_rid,
+                        "pdo_rid": purchase_order_id,
+                        "分类": "辅料尺码",
+                        "seriesData": [],
+                    }
+                size_purchase_divide_order_dict[size_dict_key]["seriesData"].extend(
+                    _build_size_accessory_rows(
+                        purchase_order,
+                        purchase_order_item,
+                        bom_item,
+                        material,
+                        order_shoe_rid,
+                        size_values,
+                        order_size_table,
+                        customer_size_map,
+                    )
+                )
+                continue
             else:
             # 4️⃣ 转换为实际尺码并构造最终的 obj
                 # 尺码面料（S）没有单独的物品名称列，把名称/型号/规格/颜色合并填入型号列
@@ -2646,6 +2787,36 @@ def download_purchase_order_zip():
                                 "seriesData": [],
                             }
                         size_purchase_divide_order_dict[size_dict_key]["seriesData"].append(obj)
+                continue
+            elif _is_size_accessory(production_instruction_item, material):
+                size_dict_key = pdo_rid + "::辅料尺码"
+                if size_dict_key not in size_purchase_divide_order_dict:
+                    size_purchase_divide_order_dict[size_dict_key] = {
+                        "供应商": supplier.supplier_name,
+                        "日期": datetime.datetime.now().strftime("%Y-%m-%d"),
+                        "备注": purchase_divide_order.purchase_order_remark,
+                        "客户名": customer_name,
+                        "商标": customer_brand,
+                        "环保要求": purchase_divide_order.purchase_order_environmental_request,
+                        "发货地址": purchase_divide_order.shipment_address,
+                        "交货期限": purchase_divide_order.shipment_deadline,
+                        "订单信息": order_rid,
+                        "pdo_rid": pdo_rid,
+                        "分类": "辅料尺码",
+                        "seriesData": [],
+                    }
+                size_purchase_divide_order_dict[size_dict_key]["seriesData"].extend(
+                    _build_size_accessory_rows(
+                        purchase_order,
+                        purchase_order_item,
+                        bom_item,
+                        material,
+                        order_shoe_rid,
+                        size_values,
+                        order_size_table,
+                        customer_size_map,
+                    )
+                )
                 continue
             else:
                 # 尺码面料（S）没有单独的物品名称列，把名称/型号/规格/颜色合并填入型号列
