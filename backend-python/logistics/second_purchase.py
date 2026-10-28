@@ -2109,8 +2109,11 @@ def submit_purchase_divide_orders():
                         if is_size_fabric
                         else (
                             purchase_order_item.material_specification
-                            if purchase_order_item.material_specification
-                            else ""
+                            or (
+                                (purchase_order_item.color or "")
+                                if ("大底" in material.material_name or "中底" in material.material_name)
+                                else ""
+                            )
                         )
                     ),
                     "备注": bom_item.remark,
@@ -2849,8 +2852,11 @@ def download_purchase_order_zip():
                         if is_size_fabric
                         else (
                             purchase_order_item.material_specification
-                            if purchase_order_item.material_specification
-                            else ""
+                            or (
+                                (purchase_order_item.color or "")
+                                if ("大底" in material.material_name or "中底" in material.material_name)
+                                else ""
+                            )
                         )
                     ),
                     "备注": (bom_item.remark if bom_item else purchase_order_item.remark),
