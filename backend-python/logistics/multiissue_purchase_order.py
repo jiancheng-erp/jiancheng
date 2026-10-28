@@ -988,7 +988,12 @@ def submit_total_purchase_order():
                         f"{material_color or ''}"
                     ).strip(),
                     "型号": material_name + " " + material_model if material_model else "",
-                    "类别": material_specification or "",
+                    "类别": material_specification
+                    or (
+                        (material_color or "")
+                        if ("大底" in material_name or "中底" in material_name)
+                        else ""
+                    ),
                     "备注": bom_item.remark if bom_item else "",
                 }
                 for size_dic in shoe_size_list:
