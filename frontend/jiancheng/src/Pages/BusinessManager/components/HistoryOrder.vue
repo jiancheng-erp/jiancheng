@@ -53,10 +53,26 @@
     </el-col>
   </el-row>
 
+  <el-row :gutter="20">
+    <el-col :span="24">
+      <div class="selection-banner" :class="{ 'is-active': selectedSummaryRows.length }">
+        <span class="selection-banner-text">
+          已选 <strong>{{ selectedSummaryRows.length }}</strong> 单，合计总双数：<strong class="pairs">{{ selectedTotalPairs }}</strong>
+        </span>
+        <el-button type="success" size="default" :loading="exportingSummary"
+          :disabled="!selectedSummaryRows.length" @click="exportSelectionSummary">
+          导出汇总Excel
+        </el-button>
+      </div>
+    </el-col>
+  </el-row>
+
   <!-- 表格 -->
   <el-row :gutter="20" style="margin-top: 12px">
-    <el-table :data="paginatedDisplayData" border stripe height="calc(100vh - var(--main-table-offset))" :loading="loading" @row-dblclick="orderRowDbClick">
+    <el-table ref="historyTable" :data="paginatedDisplayData" border stripe height="calc(100vh - var(--main-table-offset))" :loading="loading" row-key="orderDbId" @row-dblclick="orderRowDbClick" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" reserve-selection />
       <el-table-column prop="orderRid" label="订单号" sortable />
+      <el-table-column prop="orderTotalPairs" label="总双数" width="100" sortable />
       <el-table-column prop="orderSalesman" label="创建业务员" />
       <el-table-column prop="orderSupervisor" label="审核" />
       <el-table-column prop="orderCid" label="客户订单号" />
@@ -107,6 +123,10 @@ export default {
       currentPage: 1,
       pageSize: 20,
 
+      // 勾选汇总
+      selectedSummaryRows: [],
+      exportingSummary: false,
+
       // 轻量筛选
       orderRidFilter: '',
       orderCidFilter: '',
@@ -146,6 +166,9 @@ export default {
     paginatedDisplayData() {
       const start = (this.currentPage - 1) * this.pageSize
       return this.displayData.slice(start, start + this.pageSize)
+    },
+    selectedTotalPairs() {
+      return this.selectedSummaryRows.reduce((sum, row) => sum + (Number(row?.orderTotalPairs) || 0), 0)
     }
   },
   mounted() {
@@ -164,6 +187,8 @@ export default {
     async reload() {
       this.currentPage = 1
       await this.getHistoryOrders()
+      this.$refs.historyTable?.clearSelection()
+      this.selectedSummaryRows = []
       this.applyFilters()
     },
 
@@ -252,6 +277,53 @@ export default {
       this.currentPage = p
     },
 
+    handleSelectionChange(selection) {
+      this.selectedSummaryRows = selection || []
+    },
+
+    async exportSelectionSummary() {
+      const orderShoeIds = this.selectedSummaryRows
+        .map((row) => row.orderShoeId)
+        .filter((id) => id !== undefined && id !== null)
+      if (!orderShoeIds.length) {
+        ElMessage.warning('请先勾选订单')
+        return
+      }
+      this.exportingSummary = true
+      try {
+        const response = await axios.post(
+          `${this.$apiBaseUrl}/order/exportselectionsummary`,
+          { orderShoeIds },
+          { responseType: 'blob' }
+        )
+        const blob = new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+        const disposition = response.headers['content-disposition'] || ''
+        let filename = '订单汇总.xlsx'
+        // 优先匹配 filename*=（UTF-8 完整文件名），ASCII 回退的 filename= 会丢失中文
+        const utf8Match = disposition.match(/filename\*=UTF-8''([^"';]+)/i)
+        const asciiMatch = disposition.match(/filename=["']?([^"';]+)["']?/i)
+        const match = utf8Match || asciiMatch
+        if (match && match[1]) {
+          filename = decodeURIComponent(match[1])
+        }
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('exportSelectionSummary failed', error)
+        ElMessage.error('导出汇总Excel失败')
+      } finally {
+        this.exportingSummary = false
+      }
+    },
+
     orderRowDbClick(row) {
       this.openOrderDetail(row.orderDbId)
     },
@@ -275,5 +347,33 @@ export default {
 </script>
 
 <style scoped>
-/* 可按需补充样式 */
+.selection-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 0 12px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background-color: #f4f4f5;
+  border: 1px dashed var(--el-border-color);
+  color: var(--color-text-3);
+  transition: all 0.2s ease;
+}
+
+.selection-banner.is-active {
+  background-color: var(--el-color-primary-light-9);
+  border: 1px solid #b3d8ff;
+  color: var(--color-text-1);
+}
+
+.selection-banner-text {
+  font-size: 15px;
+}
+
+.selection-banner-text .pairs {
+  color: var(--el-color-primary);
+  font-size: 20px;
+  margin: 0 2px;
+}
 </style>

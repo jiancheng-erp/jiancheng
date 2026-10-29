@@ -2367,6 +2367,146 @@ def get_all_order_status():
     return jsonify(result)
 
 
+@order_bp.route("/order/getoutboundremaining", methods=["GET"])
+def get_order_outbound_remaining():
+    """订单成品出库剩余明细：按颜色、配码、尺码给出订单数 / 已出库 / 剩余双数。
+
+    出库记录明细（ShoeOutboundRecordDetail）不记录尺码，所以：
+    - 颜色级已出库取自出库记录，与订单列表“部分出库(已出x/y双)”口径一致；
+    - 配码级已出库取自已完成的出库申请明细，尺码剩余按配码剩余比例折算。
+    两者不一致（如历史直接出库未记配码）时返回 batchDetailMismatch=True。
+    """
+    from shared_apis.batch_info_type import get_order_batch_type_helper
+
+    order_id = request.args.get("orderId", type=int)
+    order = db.session.query(Order).filter_by(order_id=order_id).first()
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    size_meta = get_order_batch_type_helper(order_id)
+    size_columns = [
+        {"size": SHOESIZERANGE[idx], "label": meta["label"]}
+        for idx, meta in enumerate(size_meta[: len(SHOESIZERANGE)])
+    ]
+
+    color_rows = (
+        db.session.query(OrderShoe, Shoe, OrderShoeType, Color)
+        .join(Shoe, Shoe.shoe_id == OrderShoe.shoe_id)
+        .join(OrderShoeType, OrderShoeType.order_shoe_id == OrderShoe.order_shoe_id)
+        .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+        .join(Color, Color.color_id == ShoeType.color_id)
+        .filter(OrderShoe.order_id == order_id)
+        .order_by(OrderShoe.order_shoe_id, OrderShoeType.order_shoe_type_id)
+        .all()
+    )
+    ost_ids = [row.OrderShoeType.order_shoe_type_id for row in color_rows]
+
+    batches_by_ost = {}
+    batch_outbound_map = {}
+    color_outbound_map = {}
+    if ost_ids:
+        for bi in (
+            db.session.query(OrderShoeBatchInfo)
+            .filter(OrderShoeBatchInfo.order_shoe_type_id.in_(ost_ids))
+            .order_by(OrderShoeBatchInfo.order_shoe_batch_info_id)
+            .all()
+        ):
+            batches_by_ost.setdefault(bi.order_shoe_type_id, []).append(bi)
+
+        batch_ids = [bi.order_shoe_batch_info_id for bis in batches_by_ost.values() for bi in bis]
+        if batch_ids:
+            batch_outbound_map = {
+                row.batch_id: int(row.out_pairs or 0)
+                for row in db.session.query(
+                    ShoeOutboundApplyDetail.order_shoe_batch_info_id.label("batch_id"),
+                    func.sum(ShoeOutboundApplyDetail.total_pairs).label("out_pairs"),
+                )
+                .join(
+                    ShoeOutboundApply,
+                    ShoeOutboundApply.apply_id == ShoeOutboundApplyDetail.apply_id,
+                )
+                .filter(
+                    ShoeOutboundApplyDetail.order_shoe_batch_info_id.in_(batch_ids),
+                    ShoeOutboundApply.status == 4,
+                )
+                .group_by(ShoeOutboundApplyDetail.order_shoe_batch_info_id)
+                .all()
+            }
+
+        color_outbound_map = {
+            row.ost_id: int(row.out_pairs or 0)
+            for row in db.session.query(
+                FinishedShoeStorage.order_shoe_type_id.label("ost_id"),
+                func.sum(ShoeOutboundRecordDetail.outbound_amount).label("out_pairs"),
+            )
+            .join(
+                ShoeOutboundRecordDetail,
+                ShoeOutboundRecordDetail.finished_shoe_storage_id
+                == FinishedShoeStorage.finished_shoe_id,
+            )
+            .filter(FinishedShoeStorage.order_shoe_type_id.in_(ost_ids))
+            .group_by(FinishedShoeStorage.order_shoe_type_id)
+            .all()
+        }
+
+    items = []
+    for row in color_rows:
+        ost_id = row.OrderShoeType.order_shoe_type_id
+        color_ordered = 0
+        batch_tracked_out = 0
+        color_size_remaining = {col["size"]: 0 for col in size_columns}
+        batch_list = []
+        for bi in batches_by_ost.get(ost_id, []):
+            total = int(bi.total_amount or 0)
+            out = batch_outbound_map.get(bi.order_shoe_batch_info_id, 0)
+            remaining = max(total - out, 0)
+            size_remaining = {}
+            for col in size_columns:
+                size_amount = int(getattr(bi, f"size_{col['size']}_amount") or 0)
+                value = round(size_amount * remaining / total) if total > 0 else 0
+                size_remaining[col["size"]] = value
+                color_size_remaining[col["size"]] += value
+            color_ordered += total
+            batch_tracked_out += out
+            batch_list.append(
+                {
+                    "batchInfoId": bi.order_shoe_batch_info_id,
+                    "batchName": bi.name,
+                    "totalAmount": total,
+                    "outboundedAmount": out,
+                    "remainingAmount": remaining,
+                    "sizeRemaining": size_remaining,
+                }
+            )
+        color_out = color_outbound_map.get(ost_id, 0)
+        items.append(
+            {
+                "orderShoeTypeId": ost_id,
+                "shoeRId": row.Shoe.shoe_rid,
+                "customerProductName": row.OrderShoe.customer_product_name,
+                "colorName": row.Color.color_name,
+                "totalAmount": color_ordered,
+                "outboundedAmount": color_out,
+                "remainingAmount": max(color_ordered - color_out, 0),
+                "sizeRemaining": color_size_remaining,
+                "batchDetailMismatch": color_out != batch_tracked_out,
+                "batches": batch_list,
+            }
+        )
+
+    return jsonify(
+        {
+            "orderId": order.order_id,
+            "orderRid": order.order_rid,
+            "sizeColumns": size_columns,
+            "totalAmount": sum(i["totalAmount"] for i in items),
+            "outboundedAmount": sum(i["outboundedAmount"] for i in items),
+            "remainingAmount": sum(i["remainingAmount"] for i in items),
+            "items": items,
+        }
+    )
+
+
 @order_bp.route("/order/deleteorder", methods=["DELETE"])
 def delete_order():
     order_id = request.args.get("orderId")
