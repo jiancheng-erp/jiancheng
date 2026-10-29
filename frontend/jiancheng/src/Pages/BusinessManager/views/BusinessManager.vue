@@ -38,6 +38,10 @@
             <el-icon><SoldOut /></el-icon>
             <span>订单出库</span>
           </el-menu-item>
+          <el-menu-item index="16" @click="handleMenuClick(16)">
+            <el-icon><Box /></el-icon>
+            <span>出库剩余明细</span>
+          </el-menu-item>
           <el-menu-item index="11" @click="handleMenuClick(11)">
             <el-icon><Finished /></el-icon>
             <span>历史（已完成）订单</span>
@@ -83,7 +87,7 @@
 
 <script>
 import AllHeader from '@/components/AllHeader.vue'
-import { UserFilled, Menu, ShoppingCart, DataBoard, TrendCharts, SoldOut, Finished, OfficeBuilding, Goods, Management, Download, Odometer, Memo, User } from '@element-plus/icons-vue'
+import { UserFilled, Menu, ShoppingCart, DataBoard, TrendCharts, SoldOut, Box, Finished, OfficeBuilding, Goods, Management, Download, Odometer, Memo, User } from '@element-plus/icons-vue'
 import OrderManagement from '../components/OrderManagement.vue';
 import ForecastManagement from '../components/ForecastManagement.vue';
 import CustomerManagement from '../components/CustomerManagement.vue';
@@ -97,6 +101,7 @@ import HistoryOrder from '../components/HistoryOrder.vue';
 import OutboundRecordsDownload from '@/Pages/TotalWarehouse/FinishedWarehouse/components/OutboundRecordsDownload.vue';
 import OrderProgress from '../components/OrderProgress.vue';
 import BusinessStatistics from '../components/BusinessStatistics.vue';
+import OutboundRemaining from '../components/OutboundRemaining.vue';
 export default {
     components: {
         AllHeader,
@@ -105,6 +110,7 @@ export default {
         DataBoard,
         TrendCharts,
         SoldOut,
+        Box,
         Finished,
         OfficeBuilding,
         Goods,
@@ -124,7 +130,8 @@ export default {
         OutboundProduct,
         HistoryOrder,
         OutboundRecordsDownload,
-        OrderProgress
+        OrderProgress,
+        OutboundRemaining
     },
     data() {
         return {
@@ -189,6 +196,9 @@ export default {
                     break
                 case 15:
                     this.currentComponent = 'BusinessStatistics'
+                    break
+                case 16:
+                    this.currentComponent = 'OutboundRemaining'
                     break
             }
         },

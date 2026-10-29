@@ -92,6 +92,8 @@
                     <el-tag
                         :type="{ '未排产': 'info', '裁断': '', '针车预备': '', '针车': '', '成型': 'warning', '未入库': 'warning', '部分入库': 'warning', '出库审核中': 'danger', '待出库': 'danger', '已出库': 'success' }[scope.row.productionStatus] || 'info'"
                         v-if="scope.row.productionStatus"
+                        :style="isPartialOutbound(scope.row) ? 'cursor: pointer' : ''"
+                        @click="isPartialOutbound(scope.row) && openOutboundRemaining(scope.row)"
                     >{{ scope.row.productionStatus }}</el-tag>
                 </template>
             </el-table-column>
@@ -419,6 +421,7 @@
         @edit-template="editOrderTemplate" />
     <AddCustomerBatchDialog v-model:batchForm="batchForm" :attr-mapping="attrMapping" :cur-batch-type="curBatchType"
         @close="dialogStore.closeCustomerBatchDialog()" @submit="submitAddCustomerBatchForm" />
+    <OutboundRemainingDialog v-model="outboundRemainingVisible" :order-id="outboundRemainingOrderId" />
     <ReUploadImageDialog ref="reUploadImageDialog" :image-url="imageUrl" @file-change="onFileChange"
         @close="dialogStore.closeReUploadImageDialog()" @upload="uploadCroppedImage" />
     <CustomerBatchTemplateDialog :batch-template-display-data="batchTemplateDisplayData" :attr-mapping="attrMapping"
@@ -539,6 +542,7 @@ import AddColorDialog from './orderDialogs/AddColorDialog.vue'
 import TemplateSelectDialog from './orderDialogs/TemplateSelectDialog.vue'
 import AddCustomerBatchDialog from './orderDialogs/AddCustomerBatchDialog.vue'
 import ReUploadImageDialog from './orderDialogs/ReUploadImageDialog.vue'
+import OutboundRemainingDialog from './OutboundRemainingDialog.vue'
 import CustomerBatchTemplateDialog from './orderDialogs/CustomerBatchTemplateDialog.vue'
 import CustomerBatchTemplateSaveDialog from './orderDialogs/CustomerBatchTemplateSaveDialog.vue'
 
@@ -550,6 +554,7 @@ export default {
         }
     },
     components: {
+        OutboundRemainingDialog,
         AddShoeDialog,
         AddShoeTypeDialog,
         AddColorDialog,
@@ -739,6 +744,8 @@ export default {
             selectedDispatchRows: [],
             selectedSummaryRows: [],
             exportingSummary: false,
+            outboundRemainingVisible: false,
+            outboundRemainingOrderId: null,
             batchOrderRidDialogVis: false,
             batchSendDialogVis: false,
             batchFillCandidateRows: [],
@@ -3127,6 +3134,13 @@ export default {
         },
         isDispatchableRow(row) {
             return this.isBatchOperableRow(row) && !!(row?.orderRid || '').trim()
+        },
+        isPartialOutbound(row) {
+            return (row?.productionStatus || '').startsWith('部分出库')
+        },
+        openOutboundRemaining(row) {
+            this.outboundRemainingOrderId = row.orderDbId
+            this.outboundRemainingVisible = true
         },
         handleDispatchSelectionChange(selection) {
             this.selectedSummaryRows = selection || []
