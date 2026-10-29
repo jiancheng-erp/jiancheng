@@ -738,7 +738,12 @@ def batch_edit_materials():
         # -------- PurchaseOrderItem (含供应商拆分) --------
         if t["po_item_ids"]:
             vals = {}
-            if new_material_id: vals[PurchaseOrderItem.material_id] = new_material_id
+            if new_material_id:
+                vals[PurchaseOrderItem.material_id] = new_material_id
+                # 入库材料与单位需与新材料保持一致
+                new_mat = Material.query.get(new_material_id)
+                vals[PurchaseOrderItem.inbound_material_id] = new_material_id
+                vals[PurchaseOrderItem.inbound_unit] = new_mat.material_unit if new_mat else None
             if new_model is not None: vals[PurchaseOrderItem.material_model] = new_model
             if new_spec is not None: vals[PurchaseOrderItem.material_specification] = new_spec
             if new_color is not None: vals[PurchaseOrderItem.color] = new_color
