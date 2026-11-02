@@ -429,6 +429,14 @@
                                         </template>
                                     </el-table-column>
 
+                                    <el-table-column label="一次采购烫底" min-width="220">
+                                        <template #default="scope">
+                                            <div v-for="(hs, hsIndex) in scope.row.firstPurchaseHotsole || []" :key="hsIndex">
+                                                {{ [hs.supplierName, hs.materialName, hs.materialModel, hs.materialSpecification, hs.color].filter(Boolean).join(' ') }}
+                                                <span>：采购 {{ hs.purchaseAmount }}{{ hs.unit }}</span>
+                                            </div>
+                                        </template>
+                                    </el-table-column>
                                     <el-table-column prop="purchaseAmount" label="采购数量" />
                                     <el-table-column :label="`分码数量 (${currentShoeSizeType})`">
                                         <el-table-column v-for="column in filteredColumns(
@@ -450,6 +458,14 @@
                                     <el-table-column label="工艺" min-width="180">
                                         <template #default="scope">
                                             <span style="white-space: pre-wrap">{{ scope.row.craftName }}</span>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column label="一次采购烫底" min-width="220">
+                                        <template #default="scope">
+                                            <div v-for="(hs, hsIndex) in scope.row.firstPurchaseHotsole || []" :key="hsIndex">
+                                                {{ [hs.supplierName, hs.materialName, hs.materialModel, hs.materialSpecification, hs.color].filter(Boolean).join(' ') }}
+                                                <span>：采购 {{ hs.purchaseAmount }}{{ hs.unit }}</span>
+                                            </div>
                                         </template>
                                     </el-table-column>
                                     <el-table-column prop="purchaseAmount" label="采购数量" />

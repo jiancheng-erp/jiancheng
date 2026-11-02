@@ -288,24 +288,66 @@ def _release_material_reuse_reservation(warehouse_usage_info):
             ).delete()
 
 
-def _get_hotsole_latest_craft(hotsole_bi):
-    """烫底采购订单生成时，工艺说明以投产指令单最新工艺(pre_craft_name)为准。
+def _split_crafts(craft_name):
+    return [c.strip() for c in (craft_name or "").split("@") if c and c.strip()]
 
-    BOM 中的 craft_name 可能是工艺被修改（退回）前的陈旧值，因此优先查找
-    关联的投产指令单明细。若无关联项或指令单工艺为空，则回退到 BOM 工艺名。
+
+def _resolve_hotsole_crafts(hotsole_bis):
+    """返回 {bom_item_id: 工艺说明}，烫底采购订单生成时以投产指令单最新工艺(pre_craft_name)为准。
+
+    二次BOM 会把「a@b」形式的多工艺拆成多条 BomItem（每条一个工艺，共用同一
+    production_instruction_item_id），且 BOM 中的 craft_name 可能是工艺被修改（退回）
+    前的陈旧值。因此按 (bom_id, 指令单明细) 分组：
+    - 行的 craft_name 仍在最新工艺列表中：保留该行自己的工艺（不能把完整工艺串写到每一行）；
+    - 行的 craft_name 已陈旧：依次分配尚未被其它行占用的最新工艺；
+    - 只有一行：直接使用最新工艺全串；
+    - 无关联指令单或指令单工艺为空：回退到 BOM 工艺名。
     """
-    if hotsole_bi.production_instruction_item_id is not None:
-        pii = (
-            db.session.query(ProductionInstructionItem)
-            .filter(
-                ProductionInstructionItem.production_instruction_item_id
-                == hotsole_bi.production_instruction_item_id
+    pii_ids = {
+        bi.production_instruction_item_id
+        for bi in hotsole_bis
+        if bi.production_instruction_item_id is not None
+    }
+    latest_by_pii = {}
+    if pii_ids:
+        for pii_id, pre_craft in (
+            db.session.query(
+                ProductionInstructionItem.production_instruction_item_id,
+                ProductionInstructionItem.pre_craft_name,
             )
-            .first()
-        )
-        if pii and pii.pre_craft_name:
-            return pii.pre_craft_name
-    return hotsole_bi.craft_name
+            .filter(ProductionInstructionItem.production_instruction_item_id.in_(pii_ids))
+            .all()
+        ):
+            latest = _split_crafts(pre_craft)
+            if latest:
+                latest_by_pii[pii_id] = latest
+
+    groups = {}
+    for bi in sorted(hotsole_bis, key=lambda x: x.bom_item_id):
+        groups.setdefault((bi.bom_id, bi.production_instruction_item_id), []).append(bi)
+
+    result = {}
+    for (_, pii_id), rows in groups.items():
+        latest = latest_by_pii.get(pii_id)
+        if not latest:
+            for bi in rows:
+                result[bi.bom_item_id] = bi.craft_name
+            continue
+        if len(rows) == 1:
+            result[rows[0].bom_item_id] = "@".join(latest)
+            continue
+        unused = list(latest)
+        pending = []
+        for bi in rows:
+            own = (bi.craft_name or "").strip()
+            if own in unused:
+                unused.remove(own)
+                result[bi.bom_item_id] = own
+            else:
+                pending.append(bi)
+        for bi in pending:
+            result[bi.bom_item_id] = unused.pop(0) if unused else "@".join(latest)
+    return result
 
 
 def _attach_first_purchase_hotsole_refs(items, total_bom_id):
@@ -1409,6 +1451,12 @@ def get_purchase_divide_orders():
     # Convert the grouped results to a list
     result = list(grouped_results.values())
 
+    if query:
+        _attach_first_purchase_hotsole_refs(
+            [item for group in result for item in group["assetsItems"]],
+            query[0][1].bom_id,
+        )
+
     return jsonify(result)
 
 
@@ -1996,9 +2044,9 @@ def submit_purchase_divide_orders():
                                 Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
                                 Bom.bom_type == 0,
                                 BomItem.material_id != bom_material_id,
-                                BomItem.bom_item_add_type == "0",
                                 ProductionInstructionItem.material_type == "H",
                             )
+                            .order_by(BomItem.bom_item_id)
                             .all()
                         )
                         for um_bi, um_mat, um_bom, um_sup in use_material_rows:
@@ -2011,13 +2059,14 @@ def submit_purchase_divide_orders():
                                     + (" " + um_bi.material_specification if um_bi.material_specification else "")
                                     + (" " + um_bi.bom_item_color if um_bi.bom_item_color else "")
                                 )
+                    hotsole_craft_map = _resolve_hotsole_crafts([r[0] for r in hotsole_bom_rows])
                     for hotsole_bi, _, color_row in hotsole_bom_rows:
                         obj = {
                             "物品名称": material.material_name,
                             "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
-                            "工艺说明": _get_hotsole_latest_craft(hotsole_bi),
+                            "工艺说明": hotsole_craft_map.get(hotsole_bi.bom_item_id, hotsole_bi.craft_name),
                             "备注": hotsole_bi.remark,
                         }
                         for index, size_value in enumerate(size_values):
@@ -2744,9 +2793,9 @@ def download_purchase_order_zip():
                                 Bom.order_shoe_type_id.in_(list(ost_to_second_bom_id.keys())),
                                 Bom.bom_type == 0,
                                 BomItem.material_id != bom_material_id,
-                                BomItem.bom_item_add_type == "0",
                                 ProductionInstructionItem.material_type == "H",
                             )
+                            .order_by(BomItem.bom_item_id)
                             .all()
                         )
                         for um_bi, um_mat, um_bom, um_sup in use_material_rows:
@@ -2759,13 +2808,14 @@ def download_purchase_order_zip():
                                     + (" " + um_bi.material_specification if um_bi.material_specification else "")
                                     + (" " + um_bi.bom_item_color if um_bi.bom_item_color else "")
                                 )
+                    hotsole_craft_map = _resolve_hotsole_crafts([r[0] for r in hotsole_bom_rows])
                     for hotsole_bi, _, color_row in hotsole_bom_rows:
                         obj = {
                             "物品名称": material.material_name,
                             "使用材料": use_material_map.get(hotsole_bi.bom_id, material.material_name),
                             "工厂型号": order_shoe_rid,
                             "鞋面颜色": color_row.color_name,
-                            "工艺说明": _get_hotsole_latest_craft(hotsole_bi),
+                            "工艺说明": hotsole_craft_map.get(hotsole_bi.bom_item_id, hotsole_bi.craft_name),
                             "备注": hotsole_bi.remark,
                         }
                         for index, size_value in enumerate(size_values):

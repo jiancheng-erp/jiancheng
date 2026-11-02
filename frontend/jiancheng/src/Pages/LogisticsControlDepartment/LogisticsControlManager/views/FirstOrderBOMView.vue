@@ -260,7 +260,11 @@
                                     </el-select>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="unitUsage" label="单位用量"></el-table-column>
+                            <el-table-column prop="unitUsage" label="单位用量" min-width="120">
+                                <template #default="scope">
+                                    <span style="white-space: pre-wrap">{{ scope.row.unitUsageText || scope.row.unitUsage }}</span>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="approvalUsage" label="核定用量"></el-table-column>
                             <el-table-column prop="purchaseAmount" label="采购数量" width="150">
                                 <template #default="scope">
@@ -324,8 +328,9 @@
                                 <el-table-column prop="color" label="颜色"> </el-table-column>
                                 <el-table-column prop="unit" label="单位" />
                                 <el-table-column prop="supplierName" label="厂家名称" />
-                                <el-table-column prop="unitUsage" label="单位用量">
+                                <el-table-column prop="unitUsage" label="单位用量" min-width="120">
                                     <template #default="scope">
+                                        <span v-if="scope.row.materialCategory != 1" style="white-space: pre-wrap">{{ scope.row.unitUsageText || scope.row.unitUsage }}</span>
                                         <el-button v-if="scope.row.materialCategory == 1" type="primary" size="default"
                                             @click="openSizeDialog(scope.row, scope.$index)">尺码用量查看</el-button>
                                     </template>
@@ -1157,7 +1162,7 @@ export default {
             console.log(this.bomTestData)
             // Validate that all existing rows have non-empty fields
             for (const row of this.bomTestData) {
-                if (!row.purchaseAmount) {
+                if (row.purchaseAmount === null || row.purchaseAmount === undefined || row.purchaseAmount === '' || Number.isNaN(Number(row.purchaseAmount))) {
                     this.$message({
                         type: 'warning',
                         message: '请填写所有字段'
@@ -1217,7 +1222,7 @@ export default {
         async saveUsagePurchase() {
             // Validate that all existing rows have non-empty fields
             for (const row of this.bomTestData) {
-                if (!row.purchaseAmount) {
+                if (row.purchaseAmount === null || row.purchaseAmount === undefined || row.purchaseAmount === '' || Number.isNaN(Number(row.purchaseAmount))) {
                     this.$message({
                         type: 'warning',
                         message: '请填写所有字段'
