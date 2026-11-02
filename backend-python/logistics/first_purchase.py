@@ -319,6 +319,22 @@ def get_shoe_bom_items():
 
     # Dictionary to combine duplicated items
     combined_items = {}
+    bom_color_map = {
+        bom_id: color_name
+        for bom_id, color_name in (
+            db.session.query(Bom.bom_id, Color.color_name)
+            .join(TotalBom, Bom.total_bom_id == TotalBom.total_bom_id)
+            .join(
+                OrderShoeType,
+                Bom.order_shoe_type_id == OrderShoeType.order_shoe_type_id,
+            )
+            .join(ShoeType, ShoeType.shoe_type_id == OrderShoeType.shoe_type_id)
+            .join(Color, Color.color_id == ShoeType.color_id)
+            .filter(TotalBom.total_bom_rid == bom_rid)
+            .all()
+        )
+    }
+    unit_usage_by_color = {}
     for entity in entities:
         (
             bom_item,
@@ -337,6 +353,13 @@ def get_shoe_bom_items():
             bom_item.material_specification,
             bom_item.bom_item_color if bom_item.bom_item_color else "",
             supplier.supplier_name,
+        )
+
+        # 同一材料被多个鞋型颜色复用时，各颜色的单位用量可能不同，需要分别记录
+        color_usages = unit_usage_by_color.setdefault(key, {})
+        shoe_color = bom_color_map.get(bom_item.bom_id, "")
+        color_usages[shoe_color] = color_usages.get(shoe_color, Decimal(0)) + (
+            bom_item.unit_usage or Decimal(0)
         )
 
         # Initialize sizeInfo structure for this item
@@ -462,6 +485,20 @@ def get_shoe_bom_items():
             ] += purchase_amount
 
     # Format result for JSON response
+    def _format_usage(value):
+        text = format(Decimal(value).normalize(), "f")
+        return text
+
+    for key, value in combined_items.items():
+        color_usages = unit_usage_by_color.get(key, {})
+        if len(set(color_usages.values())) > 1:
+            value["unitUsageText"] = " / ".join(
+                f"{color or '-'}: {_format_usage(usage)}"
+                for color, usage in sorted(color_usages.items())
+            )
+        else:
+            value["unitUsageText"] = None
+
     result = [
         {
             **value,
